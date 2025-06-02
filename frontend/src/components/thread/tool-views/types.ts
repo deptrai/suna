@@ -1,4 +1,4 @@
-import { Project } from "@/lib/api";
+import { Project } from '@/lib/api';
 
 export interface ToolViewProps {
   assistantContent?: string;
@@ -13,8 +13,9 @@ export interface ToolViewProps {
   agentStatus?: string;
   currentIndex?: number;
   totalCalls?: number;
+  onFileClick?: (filePath: string) => void;
 }
 
 export interface BrowserToolViewProps extends ToolViewProps {
   name?: string;
-} 
+}

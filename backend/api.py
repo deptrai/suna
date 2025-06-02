@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+import sentry
 from contextlib import asynccontextmanager
 from agentpress.thread_manager import ThreadManager
 from services.supabase import DBConnection
@@ -16,13 +17,14 @@ from collections import OrderedDict
 # Import the agent API module
 from agent import api as agent_api
 from sandbox import api as sandbox_api
+from services import billing as billing_api
+from services import transcription as transcription_api
 
 # Load environment variables (these will be available through config)
 load_dotenv()
 
 # Initialize managers
 db = DBConnection()
-thread_manager = None
 instance_id = "single"
 
 # Rate limiter state
@@ -32,17 +34,14 @@ MAX_CONCURRENT_IPS = 25
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    global thread_manager
     logger.info(f"Starting up FastAPI application with instance ID: {instance_id} in {config.ENV_MODE.value} mode")
     
     try:
         # Initialize database
         await db.initialize()
-        thread_manager = ThreadManager()
         
         # Initialize the agent API with shared resources
         agent_api.initialize(
-            thread_manager,
             db,
             instance_id
         )
@@ -60,7 +59,7 @@ async def lifespan(app: FastAPI):
             # Continue without Redis - the application will handle Redis failures gracefully
         
         # Start background tasks
-        asyncio.create_task(agent_api.restore_running_agent_runs())
+        # asyncio.create_task(agent_api.restore_running_agent_runs())
         
         yield
         
@@ -108,19 +107,18 @@ async def log_requests_middleware(request: Request, call_next):
         raise
 
 # Define allowed origins based on environment
-allowed_origins = ["https://www.suna.so", "https://suna.so", "https://staging.suna.so", "http://localhost:3000"]
+allowed_origins = ["https://www.suna.so", "https://suna.so", "http://localhost:3000"]
+allow_origin_regex = None
 
 # Add staging-specific origins
 if config.ENV_MODE == EnvMode.STAGING:
-    allowed_origins.append("http://localhost:3000")
-    
-# Add local-specific origins
-if config.ENV_MODE == EnvMode.LOCAL:
-    allowed_origins.append("http://localhost:3000")
+    allowed_origins.append("https://staging.suna.so")
+    allow_origin_regex = r"https://suna-.*-prjcts\.vercel\.app"
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
+    allow_origin_regex=allow_origin_regex,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
@@ -131,6 +129,15 @@ app.include_router(agent_api.router, prefix="/api")
 
 # Include the sandbox router with a prefix
 app.include_router(sandbox_api.router, prefix="/api")
+
+# Include the billing router with a prefix
+app.include_router(billing_api.router, prefix="/api")
+
+# Import and include the MCP router
+from mcp_local import api as mcp_api
+app.include_router(mcp_api.router, prefix="/api")
+# Include the transcription router with a prefix
+app.include_router(transcription_api.router, prefix="/api")
 
 @app.get("/api/health")
 async def health_check():
@@ -152,5 +159,6 @@ if __name__ == "__main__":
         "api:app", 
         host="0.0.0.0", 
         port=8000,
-        workers=workers
+        workers=workers,
+        # reload=True
     )

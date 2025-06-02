@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 from agentpress.tool import ToolResult, openapi_schema, xml_schema
-from sandbox.sandbox import SandboxToolsBase, Sandbox
+from sandbox.tool_base import SandboxToolsBase
 from utils.files_utils import clean_path
 from agentpress.thread_manager import ThreadManager
 
@@ -54,10 +54,14 @@ class SandboxDeployTool(SandboxToolsBase):
         2. You have a complete, ready-to-deploy directory 
         
         NOTE: If the same name is used, it will redeploy to the same project as before
-                -->
+        -->
 
-        <deploy name="my-site" directory_path="website">
-        </deploy>
+        <function_calls>
+        <invoke name="deploy">
+        <parameter name="name">my-site</parameter>
+        <parameter name="directory_path">website</parameter>
+        </invoke>
+        </function_calls>
         '''
     )
     async def deploy(self, name: str, directory_path: str) -> ToolResult:
