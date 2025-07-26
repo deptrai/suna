@@ -9,4 +9,5 @@ enabled = False
 if public_key and secret_key:
     enabled = True
 
-langfuse = Langfuse(enabled=enabled)
+# langfuse = Langfuse(enabled=enabled)
+langfuse = None

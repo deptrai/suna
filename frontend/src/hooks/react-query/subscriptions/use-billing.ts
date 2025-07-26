@@ -8,24 +8,41 @@ import {
   CreateCheckoutSessionRequest
 } from '@/lib/api';
 import { modelKeys } from './keys';
+import { useAuth } from '@/components/AuthProvider';
 
-export const useAvailableModels = createQueryHook(
-  modelKeys.available,
-  getAvailableModels,
-  {
-    staleTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  }
-);
+export const useAvailableModels = () => {
+  const { user, isLoading } = useAuth();
 
-export const useBillingStatus = createQueryHook(
-  ['billing', 'status'],
-  checkBillingStatus,
-  {
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: true,
-  }
-);
+  // Only enable the query if user is authenticated and not loading
+  const shouldEnable = !isLoading && !!user;
+
+  return createQueryHook(
+    modelKeys.available,
+    getAvailableModels,
+    {
+      enabled: shouldEnable,
+      staleTime: 10 * 60 * 1000,
+      refetchOnWindowFocus: false,
+    }
+  )();
+};
+
+export const useBillingStatus = () => {
+  const { user, isLoading } = useAuth();
+
+  // Only enable the query if user is authenticated and not loading
+  const shouldEnable = !isLoading && !!user;
+
+  return createQueryHook(
+    ['billing', 'status'],
+    checkBillingStatus,
+    {
+      enabled: shouldEnable,
+      staleTime: 2 * 60 * 1000,
+      refetchOnWindowFocus: true,
+    }
+  )();
+};
 
 export const useCreateCheckoutSession = createMutationHook(
   (request: CreateCheckoutSessionRequest) => createCheckoutSession(request),

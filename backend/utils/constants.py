@@ -3,6 +3,8 @@ MODEL_ACCESS_TIERS = {
         "openrouter/deepseek/deepseek-chat",
         "openrouter/qwen/qwen3-235b-a22b",
         "openrouter/google/gemini-2.5-flash-preview-05-20",
+        "gemini/gemini-2.0-flash-exp",
+        "gemini/gemini-2.5-pro-preview",
     ],
     "tier_2_20": [
         "openrouter/deepseek/deepseek-chat",
@@ -123,7 +125,9 @@ MODEL_NAME_ALIASES = {
     "qwen3": "openrouter/qwen/qwen3-235b-a22b",  # Commented out in constants.py
     "gemini-flash-2.5": "openrouter/google/gemini-2.5-flash-preview-05-20",
     "gemini-2.5-flash:thinking":"openrouter/google/gemini-2.5-flash-preview-05-20:thinking",
-    
+    "gemini-2.5-pro": "gemini/gemini-2.5-pro-preview",
+    "gemini-2.0-flash": "gemini/gemini-2.0-flash-exp",
+
     # "google/gemini-2.5-flash-preview":"openrouter/google/gemini-2.5-flash-preview",
     # "google/gemini-2.5-flash-preview:thinking":"openrouter/google/gemini-2.5-flash-preview:thinking",
     "google/gemini-2.5-pro-preview":"openrouter/google/gemini-2.5-pro-preview",

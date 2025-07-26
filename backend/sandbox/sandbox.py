@@ -3,7 +3,7 @@ from daytona_api_client.models.workspace_state import WorkspaceState
 from dotenv import load_dotenv
 from utils.logger import logger
 from utils.config import config
-from utils.config import Configuration
+from utils.config import Configuration, EnvMode
 
 load_dotenv()
 
@@ -82,15 +82,27 @@ def start_supervisord_session(sandbox: Sandbox):
 
 def create_sandbox(password: str, project_id: str = None):
     """Create a new sandbox with all required services configured and running."""
-    
+
+    # Skip sandbox creation in local development mode
+    if config.ENV_MODE == EnvMode.LOCAL:
+        logger.info("Running in local development mode - skipping Daytona sandbox creation")
+        # Return a mock sandbox object for local development
+        class MockSandbox:
+            def __init__(self, project_id):
+                self.id = project_id or "local-sandbox"
+                self.url = "http://localhost:8080"
+                self.state = "running"
+
+        return MockSandbox(project_id)
+
     logger.debug("Creating new Daytona sandbox environment")
     logger.debug("Configuring sandbox with browser-use image and environment variables")
-    
+
     labels = None
     if project_id:
         logger.debug(f"Using sandbox_id as label: {project_id}")
         labels = {'id': project_id}
-        
+
     params = CreateSandboxParams(
         image=Configuration.SANDBOX_IMAGE_NAME,
         public=True,
@@ -114,14 +126,14 @@ def create_sandbox(password: str, project_id: str = None):
             "disk": 5,
         }
     )
-    
+
     # Create the sandbox
     sandbox = daytona.create(params)
     logger.debug(f"Sandbox created with ID: {sandbox.id}")
-    
+
     # Start supervisord in a session for new sandbox
     start_supervisord_session(sandbox)
-    
+
     logger.debug(f"Sandbox environment successfully initialized")
     return sandbox
 
