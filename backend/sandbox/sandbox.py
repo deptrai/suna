@@ -34,12 +34,25 @@ logger.debug("Daytona client initialized")
 
 async def get_or_start_sandbox(sandbox_id: str):
     """Retrieve a sandbox by ID, check its state, and start it if needed."""
-    
+
     logger.info(f"Getting or starting sandbox with ID: {sandbox_id}")
-    
+
+    # Skip sandbox retrieval in local development mode
+    if config.ENV_MODE == EnvMode.LOCAL:
+        logger.info("Running in local development mode - returning mock sandbox")
+        # Return a mock sandbox object for local development
+        class MockSandbox:
+            def __init__(self, sandbox_id):
+                self.id = sandbox_id
+                self.url = "http://localhost:8080"
+                self.state = "running"
+                self.instance = type('obj', (object,), {'state': 'running'})()
+
+        return MockSandbox(sandbox_id)
+
     try:
         sandbox = daytona.get_current_sandbox(sandbox_id)
-        
+
         # Check if sandbox needs to be started
         if sandbox.instance.state == WorkspaceState.ARCHIVED or sandbox.instance.state == WorkspaceState.STOPPED:
             logger.info(f"Sandbox is in {sandbox.instance.state} state. Starting...")
@@ -49,16 +62,16 @@ async def get_or_start_sandbox(sandbox_id: str):
                 # sleep(5)
                 # Refresh sandbox state after starting
                 sandbox = daytona.get_current_sandbox(sandbox_id)
-                
+
                 # Start supervisord in a session when restarting
                 start_supervisord_session(sandbox)
             except Exception as e:
                 logger.error(f"Error starting sandbox: {e}")
                 raise e
-        
+
         logger.info(f"Sandbox {sandbox_id} is ready")
         return sandbox
-        
+
     except Exception as e:
         logger.error(f"Error retrieving or starting sandbox: {str(e)}")
         raise e
@@ -140,14 +153,19 @@ def create_sandbox(password: str, project_id: str = None):
 async def delete_sandbox(sandbox_id: str):
     """Delete a sandbox by its ID."""
     logger.info(f"Deleting sandbox with ID: {sandbox_id}")
-    
+
+    # Skip sandbox deletion in local development mode
+    if config.ENV_MODE == EnvMode.LOCAL:
+        logger.info("Running in local development mode - skipping sandbox deletion")
+        return True
+
     try:
         # Get the sandbox
         sandbox = daytona.get_current_sandbox(sandbox_id)
-        
+
         # Delete the sandbox
         daytona.remove(sandbox)
-        
+
         logger.info(f"Successfully deleted sandbox {sandbox_id}")
         return True
     except Exception as e:
