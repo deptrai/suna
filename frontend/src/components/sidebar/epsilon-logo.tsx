@@ -20,14 +20,16 @@ export function EpsilonLogo({ size = 24 }: EpsilonLogoProps) {
     theme === 'dark' || (theme === 'system' && systemTheme === 'dark')
   );
 
+  const logoSrc = shouldInvert ? '/epsilon-logo-white.svg' : '/epsilon-logo.svg';
+
   return (
     <Image
-        src="/epsilon-symbol.svg"
+        src={logoSrc}
         alt="Epsilon"
-        width={size}
+        width={size * 3}
         height={size}
-        className={`${shouldInvert ? 'invert' : ''} flex-shrink-0`}
-        style={{ width: size, height: size, minWidth: size, minHeight: size }}
+        className="flex-shrink-0"
+        style={{ width: size * 3, height: size, minWidth: size * 3, minHeight: size }}
       />
   );
 }

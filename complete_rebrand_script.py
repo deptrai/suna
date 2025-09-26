@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Complete Rebrand Script for Suna -> Chainlens and Kortix -> Epsilon
+Complete Rebrand Script for Chainlens -> Chainlens and Epsilon -> Epsilon
 This script safely renames files, folders, and replaces content throughout the codebase.
 """
 
@@ -12,15 +12,15 @@ from pathlib import Path
 
 # Define replacement mappings
 REPLACEMENTS = {
-    # Suna -> Chainlens
-    'suna': 'chainlens',
-    'Suna': 'Chainlens', 
-    'SUNA': 'CHAINLENS',
+    # Chainlens -> Chainlens
+    'chainlens': 'chainlens',
+    'Chainlens': 'Chainlens', 
+    'CHAINLENS': 'CHAINLENS',
     
-    # Kortix -> Epsilon
-    'kortix': 'epsilon',
-    'Kortix': 'Epsilon',
-    'KORTIX': 'EPSILON',
+    # Epsilon -> Epsilon
+    'epsilon': 'epsilon',
+    'Epsilon': 'Epsilon',
+    'EPSILON': 'EPSILON',
 }
 
 # File extensions to process for content replacement
@@ -125,7 +125,7 @@ def rename_file_or_dir(old_path):
 
 def main():
     """Main function to execute the rebrand."""
-    print("🚀 Starting Complete Rebrand: Suna -> Chainlens, Kortix -> Epsilon")
+    print("🚀 Starting Complete Rebrand: Chainlens -> Chainlens, Epsilon -> Epsilon")
     print("=" * 60)
     
     # Get current directory

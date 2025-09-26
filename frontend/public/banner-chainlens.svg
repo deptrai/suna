@@ -1,0 +1,67 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1E293B;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#334155;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0F172A;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="chainlensGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#8B5CF6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#10B981;stop-opacity:1" />
+    </linearGradient>
+    <filter id="bannerGlow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bgGradient)"/>
+  
+  <!-- Background Pattern -->
+  <g opacity="0.1">
+    <circle cx="100" cy="100" r="50" fill="url(#chainlensGradient)"/>
+    <circle cx="1100" cy="530" r="80" fill="url(#chainlensGradient)"/>
+    <circle cx="200" cy="500" r="30" fill="url(#chainlensGradient)"/>
+    <circle cx="1000" cy="150" r="40" fill="url(#chainlensGradient)"/>
+  </g>
+  
+  <!-- Main Logo -->
+  <g transform="translate(100, 200)" filter="url(#bannerGlow)">
+    <!-- Chain Links -->
+    <circle cx="50" cy="100" r="25" fill="none" stroke="url(#chainlensGradient)" stroke-width="8"/>
+    <circle cx="120" cy="100" r="25" fill="none" stroke="url(#chainlensGradient)" stroke-width="8"/>
+    <circle cx="190" cy="100" r="25" fill="none" stroke="url(#chainlensGradient)" stroke-width="8"/>
+    
+    <!-- Connection lines -->
+    <line x1="75" y1="100" x2="95" y2="100" stroke="url(#chainlensGradient)" stroke-width="8"/>
+    <line x1="145" y1="100" x2="165" y2="100" stroke="url(#chainlensGradient)" stroke-width="8"/>
+    
+    <!-- Magnifying Glass -->
+    <circle cx="250" cy="85" r="35" fill="none" stroke="url(#chainlensGradient)" stroke-width="8"/>
+    <line x1="275" y1="110" x2="305" y2="140" stroke="url(#chainlensGradient)" stroke-width="8" stroke-linecap="round"/>
+  </g>
+  
+  <!-- Main Text -->
+  <g transform="translate(450, 250)">
+    <text x="0" y="0" font-family="Arial, sans-serif" font-size="72" font-weight="bold" fill="url(#chainlensGradient)">Chainlens</text>
+    <text x="0" y="60" font-family="Arial, sans-serif" font-size="32" fill="#E2E8F0">Blockchain Analytics Platform</text>
+    <text x="0" y="120" font-family="Arial, sans-serif" font-size="24" fill="#94A3B8">Open Source • Real-time • Comprehensive</text>
+  </g>
+  
+  <!-- Decorative Elements -->
+  <g opacity="0.6">
+    <path d="M800 400 Q850 350 900 400 Q950 450 1000 400" 
+          stroke="url(#chainlensGradient)" 
+          stroke-width="3" 
+          fill="none"/>
+    <path d="M800 450 Q850 400 900 450 Q950 500 1000 450" 
+          stroke="url(#chainlensGradient)" 
+          stroke-width="3" 
+          fill="none"/>
+  </g>
+</svg>
