@@ -39,7 +39,7 @@ BEGIN
                 v_initial_credits,
                 v_initial_credits,
                 'tier_grant',
-                'Welcome to Suna! Free tier initial credits'
+                'Welcome to Chainlens! Free tier initial credits'
             ) RETURNING id INTO v_transaction_id;
             
             RAISE LOG 'Created free tier credits for new user %: % credits', NEW.id, v_initial_credits;

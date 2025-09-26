@@ -659,8 +659,8 @@ class TriggerTool(AgentBuilderBaseTool):
             if not composio_trigger_id:
                 return self.fail_response("Failed to get Composio trigger id from response")
             
-            # Build Suna trigger config (same as API)
-            suna_config: Dict[str, Any] = {
+            # Build Chainlens trigger config (same as API)
+            chainlens_config: Dict[str, Any] = {
                 "provider_id": "composio",
                 "composio_trigger_id": composio_trigger_id,
                 "trigger_slug": slug,
@@ -668,29 +668,29 @@ class TriggerTool(AgentBuilderBaseTool):
                 "execution_type": route if route in ("agent", "workflow") else "agent",
                 "profile_id": profile_id,
             }
-            if suna_config["execution_type"] == "agent":
+            if chainlens_config["execution_type"] == "agent":
                 if agent_prompt:
-                    suna_config["agent_prompt"] = agent_prompt
+                    chainlens_config["agent_prompt"] = agent_prompt
             else:
                 if not workflow_id:
                     return self.fail_response("workflow_id is required for workflow route")
-                suna_config["workflow_id"] = workflow_id
+                chainlens_config["workflow_id"] = workflow_id
                 if workflow_input:
-                    suna_config["workflow_input"] = workflow_input
+                    chainlens_config["workflow_input"] = workflow_input
             
-            # Create Suna trigger
+            # Create Chainlens trigger
             trigger_svc = get_trigger_service(self.db)
             try:
                 trigger = await trigger_svc.create_trigger(
                     agent_id=self.agent_id,
                     provider_id="composio",
                     name=name or slug,
-                    config=suna_config,
+                    config=chainlens_config,
                     description=f"{slug}"
                 )
             except Exception as e:
-                logger.error(f"Failed to create Suna trigger: {e}")
-                return self.fail_response(f"Failed to create Suna trigger: {str(e)}")
+                logger.error(f"Failed to create Chainlens trigger: {e}")
+                return self.fail_response(f"Failed to create Chainlens trigger: {str(e)}")
 
             # Sync triggers to version config
             try:

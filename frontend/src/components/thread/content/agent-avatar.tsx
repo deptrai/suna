@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useAgent } from '@/hooks/react-query/agents/use-agents';
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { EpsilonLogo } from '@/components/sidebar/epsilon-logo';
 import { DynamicIcon } from 'lucide-react/dynamic';
 
 interface AgentAvatarProps {
@@ -16,7 +16,7 @@ export const AgentAvatar: React.FC<AgentAvatarProps> = ({
   agentId, 
   size = 16, 
   className = "", 
-  fallbackName = "Suna" 
+  fallbackName = "Chainlens" 
 }) => {
   const { data: agent, isLoading } = useAgent(agentId || '');
 
@@ -30,12 +30,12 @@ export const AgentAvatar: React.FC<AgentAvatarProps> = ({
   }
 
   if (!agent && !agentId) {
-    return <KortixLogo size={size} />;
+    return <EpsilonLogo size={size} />;
   }
 
-  const isSuna = agent?.metadata?.is_suna_default;
-  if (isSuna) {
-    return <KortixLogo size={size} />;
+  const isChainlens = agent?.metadata?.is_chainlens_default;
+  if (isChainlens) {
+    return <EpsilonLogo size={size} />;
   }
 
   if (agent?.icon_name) {
@@ -68,7 +68,7 @@ export const AgentAvatar: React.FC<AgentAvatarProps> = ({
     );
   }
 
-  return <KortixLogo size={size} />;
+  return <EpsilonLogo size={size} />;
 };
 
 interface AgentNameProps {
@@ -78,7 +78,7 @@ interface AgentNameProps {
 
 export const AgentName: React.FC<AgentNameProps> = ({ 
   agentId, 
-  fallback = "Suna" 
+  fallback = "Chainlens" 
 }) => {
   const { data: agent, isLoading } = useAgent(agentId || '');
 

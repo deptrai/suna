@@ -4,10 +4,10 @@ import Image from 'next/image';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 
-interface KortixLogoProps {
+interface EpsilonLogoProps {
   size?: number;
 }
-export function KortixLogo({ size = 24 }: KortixLogoProps) {
+export function EpsilonLogo({ size = 24 }: EpsilonLogoProps) {
   const { theme, systemTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -22,8 +22,8 @@ export function KortixLogo({ size = 24 }: KortixLogoProps) {
 
   return (
     <Image
-        src="/kortix-symbol.svg"
-        alt="Kortix"
+        src="/epsilon-symbol.svg"
+        alt="Epsilon"
         width={size}
         height={size}
         className={`${shouldInvert ? 'invert' : ''} flex-shrink-0`}

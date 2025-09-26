@@ -38,7 +38,7 @@ class AgentRun:
         return stream
 
 
-class KortixThread:
+class EpsilonThread:
     def __init__(self, client: ThreadsClient):
         self._client = client
 

@@ -29,7 +29,7 @@ import { Examples } from './examples';
 import { AgentExamples } from './examples/agent-examples';
 import { useThreadQuery } from '@/hooks/react-query/threads/use-threads';
 import { normalizeFilenameToNFC } from '@/lib/utils/unicode';
-import { KortixLogo } from '../sidebar/kortix-logo';
+import { EpsilonLogo } from '../sidebar/epsilon-logo';
 import { AgentRunLimitDialog } from '@/components/thread/agent-run-limit-dialog';
 import { CustomAgentsSection } from './custom-agents-section';
 import { toast } from 'sonner';
@@ -44,7 +44,7 @@ const PENDING_PROMPT_KEY = 'pendingAgentPrompt';
 const dashboardTourSteps: Step[] = [
   {
     target: '[data-tour="chat-input"]',
-    content: 'Type your questions or tasks here. Suna can help with research, analysis, automation, and much more.',
+    content: 'Type your questions or tasks here. Chainlens can help with research, analysis, automation, and much more.',
     title: 'Start a Conversation',
     placement: 'top',
     disableBeacon: true,
@@ -120,9 +120,9 @@ export function DashboardContent() {
   const selectedAgent = selectedAgentId
     ? agents.find(agent => agent.agent_id === selectedAgentId)
     : null;
-  const displayName = selectedAgent?.name || 'Suna';
+  const displayName = selectedAgent?.name || 'Chainlens';
   const agentAvatar = undefined;
-  const isSunaAgent = selectedAgent?.metadata?.is_suna_default || false;
+  const isChainlensAgent = selectedAgent?.metadata?.is_chainlens_default || false;
 
   const threadQuery = useThreadQuery(initiatedThreadId || '');
 

@@ -11,7 +11,7 @@ import {
     getUserFriendlyToolName,
     safeJsonParse,
 } from '@/components/thread/utils';
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { EpsilonLogo } from '@/components/sidebar/epsilon-logo';
 import { AgentLoader } from './loader';
 import { AgentAvatar, AgentName } from './agent-avatar';
 import { parseXmlToolCalls, isNewXmlFormat } from '@/components/thread/tool-views/xml-parser';
@@ -379,8 +379,8 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
     project,
     debugMode = false,
     isPreviewMode = false,
-    agentName = 'Suna',
-    agentAvatar = <KortixLogo size={16} />,
+    agentName = 'Chainlens',
+    agentAvatar = <EpsilonLogo size={16} />,
     emptyStateComponent,
     threadMetadata,
     scrollContainerRef,
@@ -406,15 +406,15 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
     // Helper function to get agent info robustly
     const getAgentInfo = useCallback(() => {
 
-        // Check if this is a Suna default agent from metadata
-        const isSunaDefaultAgent = agentMetadata?.is_suna_default || false;
+        // Check if this is a Chainlens default agent from metadata
+        const isChainlensDefaultAgent = agentMetadata?.is_chainlens_default || false;
 
         // Then check recent messages for agent info
         const recentAssistantWithAgent = [...displayMessages].reverse().find(msg =>
             msg.type === 'assistant' && msg.agents?.name
         );
 
-        if (agentData && !isSunaDefaultAgent) {
+        if (agentData && !isChainlensDefaultAgent) {
             const profileUrl = agentData.profile_image_url;
             const avatar = profileUrl ? (
                 <img src={profileUrl} alt={agentData.name || agentName} className="h-5 w-5 rounded object-cover" />
@@ -424,7 +424,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                 </div>
             ) : (
                 <div className="h-5 w-5 flex items-center justify-center rounded text-xs">
-                    <KortixLogo size={16} />
+                    <EpsilonLogo size={16} />
                 </div>
             );
             return {
@@ -434,16 +434,16 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
         }
 
         if (recentAssistantWithAgent?.agents?.name) {
-            const isSunaAgent = recentAssistantWithAgent.agents.name === 'Suna' || isSunaDefaultAgent;
+            const isChainlensAgent = recentAssistantWithAgent.agents.name === 'Chainlens' || isChainlensDefaultAgent;
             // Prefer profile image if available on the agent payload
             const profileUrl = (recentAssistantWithAgent as any)?.agents?.profile_image_url;
-            const avatar = profileUrl && !isSunaDefaultAgent ? (
+            const avatar = profileUrl && !isChainlensDefaultAgent ? (
                 <img src={profileUrl} alt={recentAssistantWithAgent.agents.name} className="h-5 w-5 rounded object-cover" />
-            ) : !isSunaDefaultAgent ? (
+            ) : !isChainlensDefaultAgent ? (
                 <>
-                    {isSunaAgent ? (
+                    {isChainlensAgent ? (
                         <div className="h-5 w-5 flex items-center justify-center rounded text-xs">
-                            <KortixLogo size={16} />
+                            <EpsilonLogo size={16} />
                         </div>
                     ) : (
                         <div className="h-5 w-5 flex items-center justify-center rounded text-xs">
@@ -453,7 +453,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                 </>
             ) : (
                 <div className="h-5 w-5 flex items-center justify-center rounded text-xs">
-                    <KortixLogo size={16} />
+                    <EpsilonLogo size={16} />
                 </div>
             );
             return {
@@ -462,20 +462,20 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
             };
         }
 
-        // Fallback: if this is a Suna default agent, always show KortixLogo
-        if (isSunaDefaultAgent) {
+        // Fallback: if this is a Chainlens default agent, always show EpsilonLogo
+        if (isChainlensDefaultAgent) {
             return {
-                name: agentName || 'Suna',
+                name: agentName || 'Chainlens',
                 avatar: (
                     <div className="h-5 w-5 flex items-center justify-center rounded text-xs">
-                        <KortixLogo size={16} />
+                        <EpsilonLogo size={16} />
                     </div>
                 )
             };
         }
 
         return {
-            name: agentName || 'Suna',
+            name: agentName || 'Chainlens',
             avatar: agentAvatar
         };
     }, [threadMetadata, displayMessages, agentName, agentAvatar, agentMetadata, agentData]);

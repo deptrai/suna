@@ -265,8 +265,8 @@ class Configuration:
     OPENROUTER_API_BASE: Optional[str] = "https://openrouter.ai/api/v1"
     OPENAI_COMPATIBLE_API_KEY: Optional[str] = None
     OPENAI_COMPATIBLE_API_BASE: Optional[str] = None
-    OR_SITE_URL: Optional[str] = "https://kortix.ai"
-    OR_APP_NAME: Optional[str] = "Kortix AI"    
+    OR_SITE_URL: Optional[str] = "https://epsilon.ai"
+    OR_APP_NAME: Optional[str] = "Epsilon AI"    
     
     # AWS Bedrock credentials
     AWS_ACCESS_KEY_ID: Optional[str] = None
@@ -311,8 +311,8 @@ class Configuration:
     STRIPE_PRODUCT_ID_STAGING: str = 'prod_SCgIj3G7yPOAWY'
     
     # Sandbox configuration
-    SANDBOX_IMAGE_NAME = "kortix/suna:0.1.3.19"
-    SANDBOX_SNAPSHOT_NAME = "kortix/suna:0.1.3.19"
+    SANDBOX_IMAGE_NAME = "epsilon/chainlens:0.1.3.19"
+    SANDBOX_SNAPSHOT_NAME = "epsilon/chainlens:0.1.3.19"
     SANDBOX_ENTRYPOINT = "/usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf"
 
     # LangFuse configuration
@@ -321,7 +321,7 @@ class Configuration:
     LANGFUSE_HOST: str = "https://cloud.langfuse.com"
 
     # Admin API key for server-side operations
-    KORTIX_ADMIN_API_KEY: Optional[str] = None
+    EPSILON_ADMIN_API_KEY: Optional[str] = None
 
     # API Keys system configuration
     API_KEY_SECRET: str = "default-secret-key-change-in-production"
@@ -411,7 +411,7 @@ class Configuration:
         return self.STRIPE_PRODUCT_ID_PROD
     
     def _generate_admin_api_key(self) -> str:
-        """Generate a secure admin API key for Kortix administrative functions."""
+        """Generate a secure admin API key for Epsilon administrative functions."""
         # Generate 32 random bytes and encode as hex for a readable API key
         key_bytes = secrets.token_bytes(32)
         return key_bytes.hex()
@@ -435,9 +435,9 @@ class Configuration:
         self._load_from_env()
         
         # Auto-generate admin API key if not present
-        if not self.KORTIX_ADMIN_API_KEY:
-            self.KORTIX_ADMIN_API_KEY = self._generate_admin_api_key()
-            logger.info("Auto-generated KORTIX_ADMIN_API_KEY for administrative functions")
+        if not self.EPSILON_ADMIN_API_KEY:
+            self.EPSILON_ADMIN_API_KEY = self._generate_admin_api_key()
+            logger.info("Auto-generated EPSILON_ADMIN_API_KEY for administrative functions")
         
         # Perform validation
         self._validate()

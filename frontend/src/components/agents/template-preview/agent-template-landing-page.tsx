@@ -101,7 +101,7 @@ export const AgentTemplateLandingPage: React.FC<AgentTemplateLandingPageProps> =
   const { user } = useAuth();
   const [isInstalling, setIsInstalling] = useState(false);
 
-  const isSunaAgent = template.is_kortix_team || false;
+  const isChainlensAgent = template.is_epsilon_team || false;
   const tools = template.mcp_requirements || [];
   const integrations = tools.filter(tool => !tool.custom_type || tool.custom_type !== 'sse');
   const customTools = tools.filter(tool => tool.custom_type === 'sse');
@@ -176,13 +176,13 @@ export const AgentTemplateLandingPage: React.FC<AgentTemplateLandingPageProps> =
             animate="animate"
             variants={staggerChildren}
           >
-            {isSunaAgent && (
+            {isChainlensAgent && (
               <motion.div 
                 className="inline-flex items-center gap-2 mb-6"
                 variants={fadeInUp}
               >
                 <Badge variant="secondary" className="px-3 py-1 text-white">
-                  Built by Kortix
+                  Built by Epsilon
                 </Badge>
               </motion.div>
             )}

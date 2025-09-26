@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Cpu, Search, Check, ChevronDown, Plus, ExternalLink, Loader2 } from 'lucide-react';
 import { useAgents } from '@/hooks/react-query/agents/use-agents';
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { EpsilonLogo } from '@/components/sidebar/epsilon-logo';
 import type { ModelOption } from '@/hooks/use-model-selection';
 
 export type SubscriptionStatus = 'no_subscription' | 'active';
@@ -207,7 +207,7 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = ({
                             <div className="flex items-center gap-2 min-w-0 max-w-[180px]">
                                 {renderAgentIcon(displayAgent)}
                                 <span className="truncate text-sm font-medium">
-                                    {displayAgent?.name || 'Suna'}
+                                    {displayAgent?.name || 'Chainlens'}
                                 </span>
                                 <ChevronDown size={12} className="opacity-60 flex-shrink-0" />
                             </div>
@@ -434,9 +434,9 @@ const GuestMenu: React.FC<UnifiedConfigMenuProps> = () => {
                         >
                             <div className="flex items-center gap-2 min-w-0 max-w-[180px]">
                                 <div className="flex-shrink-0">
-                                    <KortixLogo size={20} />
+                                    <EpsilonLogo size={20} />
                                 </div>
-                                <span className="truncate text-sm font-medium">Suna</span>
+                                <span className="truncate text-sm font-medium">Chainlens</span>
                                 <ChevronDown size={12} className="opacity-60 flex-shrink-0" />
                             </div>
                         </Button>

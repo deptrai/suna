@@ -99,7 +99,7 @@ export const MarketplaceAgentPreviewDialog: React.FC<MarketplaceAgentPreviewDial
   
   if (!agent) return null;
 
-  const isSunaAgent = agent.is_kortix_team || false;
+  const isChainlensAgent = agent.is_epsilon_team || false;
   
   const tools = agent.mcp_requirements || [];
   

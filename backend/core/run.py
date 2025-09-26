@@ -171,8 +171,8 @@ class ToolManager:
                 # logger.debug(f"⏭️ Skipping {tool_name} - disabled")
                 pass
     
-    def _register_suna_specific_tools(self, disabled_tools: List[str]):
-        """Register tools specific to Suna (the default agent)."""
+    def _register_chainlens_specific_tools(self, disabled_tools: List[str]):
+        """Register tools specific to Chainlens (the default agent)."""
         if 'agent_creation_tool' not in disabled_tools:
             from core.tools.agent_creation_tool import AgentCreationTool
             from core.services.supabase import DBConnection
@@ -181,7 +181,7 @@ class ToolManager:
             
             if hasattr(self, 'account_id') and self.account_id:
                 self.thread_manager.add_tool(AgentCreationTool, thread_manager=self.thread_manager, db_connection=db, account_id=self.account_id)
-                logger.debug("Registered agent_creation_tool for Suna")
+                logger.debug("Registered agent_creation_tool for Chainlens")
             else:
                 logger.warning("Could not register agent_creation_tool: account_id not available")
     
@@ -543,16 +543,16 @@ class AgentRunner:
         
         tool_manager.register_all_tools(agent_id=agent_id, disabled_tools=disabled_tools)
         
-        is_suna_agent = (self.config.agent_config and self.config.agent_config.get('is_suna_default', False)) or (self.config.agent_config is None)
-        logger.debug(f"Agent config check: agent_config={self.config.agent_config is not None}, is_suna_default={is_suna_agent}")
+        is_chainlens_agent = (self.config.agent_config and self.config.agent_config.get('is_chainlens_default', False)) or (self.config.agent_config is None)
+        logger.debug(f"Agent config check: agent_config={self.config.agent_config is not None}, is_chainlens_default={is_chainlens_agent}")
         
-        if is_suna_agent:
-            logger.debug("Registering Suna-specific tools...")
-            self._register_suna_specific_tools(disabled_tools)
+        if is_chainlens_agent:
+            logger.debug("Registering Chainlens-specific tools...")
+            self._register_chainlens_specific_tools(disabled_tools)
         else:
-            logger.debug("Not a Suna agent, skipping Suna-specific tool registration")
+            logger.debug("Not a Chainlens agent, skipping Chainlens-specific tool registration")
     
-    def _register_suna_specific_tools(self, disabled_tools: List[str]):
+    def _register_chainlens_specific_tools(self, disabled_tools: List[str]):
         if 'agent_creation_tool' not in disabled_tools:
             from core.tools.agent_creation_tool import AgentCreationTool
             from core.services.supabase import DBConnection
@@ -561,7 +561,7 @@ class AgentRunner:
             
             if hasattr(self, 'account_id') and self.account_id:
                 self.thread_manager.add_tool(AgentCreationTool, thread_manager=self.thread_manager, db_connection=db, account_id=self.account_id)
-                logger.debug("Registered agent_creation_tool for Suna")
+                logger.debug("Registered agent_creation_tool for Chainlens")
             else:
                 logger.warning("Could not register agent_creation_tool: account_id not available")
     
@@ -576,7 +576,7 @@ class AgentRunner:
         if not isinstance(raw_tools, dict):
             return disabled_tools
         
-        if self.config.agent_config.get('is_suna_default', False) and not raw_tools:
+        if self.config.agent_config.get('is_chainlens_default', False) and not raw_tools:
             return disabled_tools
         
         def is_tool_enabled(tool_name: str) -> bool:

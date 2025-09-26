@@ -523,7 +523,7 @@ export const ComposioRegistry: React.FC<ComposioRegistryProps> = ({
                     <AgentSelector
                       selectedAgentId={currentAgentId}
                       onAgentSelect={handleAgentSelect}
-                      isSunaAgent={agent?.metadata?.is_suna_default}
+                      isChainlensAgent={agent?.metadata?.is_chainlens_default}
                     />
                   )} */}
                 </div>

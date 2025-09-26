@@ -80,7 +80,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
     setSelectedAgent,
     initializeFromAgents,
     getCurrentAgent,
-    isSunaAgent,
+    isChainlensAgent,
   } = useAgentSelection();
 
   const { data: agentsResponse } = useAgents();
@@ -715,7 +715,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
   // SEO title update
   useEffect(() => {
     if (projectName) {
-      document.title = `${projectName} | Kortix Suna`;
+      document.title = `${projectName} | Epsilon Chainlens`;
 
       const metaDescription = document.querySelector(
         'meta[name="description"]',
@@ -723,13 +723,13 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
       if (metaDescription) {
         metaDescription.setAttribute(
           'content',
-          `${projectName} - Interactive agent conversation powered by Kortix Suna`,
+          `${projectName} - Interactive agent conversation powered by Epsilon Chainlens`,
         );
       }
 
       const ogTitle = document.querySelector('meta[property="og:title"]');
       if (ogTitle) {
-        ogTitle.setAttribute('content', `${projectName} | Kortix Suna`);
+        ogTitle.setAttribute('content', `${projectName} | Epsilon Chainlens`);
       }
 
       const ogDescription = document.querySelector(
@@ -759,7 +759,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
     ) {
       hasCheckedUpgradeDialog.current = true;
       const hasSeenUpgradeDialog = localStorage.getItem(
-        'suna_upgrade_dialog_displayed',
+        'chainlens_upgrade_dialog_displayed',
       );
       const isFreeTier = subscriptionStatus === 'no_subscription';
       if (!hasSeenUpgradeDialog && isFreeTier && !isLocalMode()) {
@@ -770,7 +770,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
 
   const handleDismissUpgradeDialog = () => {
     setShowUpgradeDialog(false);
-    localStorage.setItem('suna_upgrade_dialog_displayed', 'true');
+    localStorage.setItem('chainlens_upgrade_dialog_displayed', 'true');
   };
 
   useEffect(() => {

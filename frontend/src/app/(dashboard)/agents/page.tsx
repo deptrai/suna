@@ -72,7 +72,7 @@ export default function AgentsPage() {
   const [selectedItem, setSelectedItem] = useState<MarketplaceTemplate | null>(null);
   const [showInstallDialog, setShowInstallDialog] = useState(false);
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
-  const [marketplaceFilter, setMarketplaceFilter] = useState<'all' | 'kortix' | 'community' | 'mine'>('all');
+  const [marketplaceFilter, setMarketplaceFilter] = useState<'all' | 'epsilon' | 'community' | 'mine'>('all');
   
   const [templatesPage, setTemplatesPage] = useState(1);
   const [templatesPageSize, setTemplatesPageSize] = useState(20);
@@ -140,10 +140,10 @@ export default function AgentsPage() {
       sort_order: "desc"
     };
     
-    if (marketplaceFilter === 'kortix') {
-      params.is_kortix_team = true;
+    if (marketplaceFilter === 'epsilon') {
+      params.is_epsilon_team = true;
     } else if (marketplaceFilter === 'community') {
-      params.is_kortix_team = false;
+      params.is_epsilon_team = false;
     } else if (marketplaceFilter === 'mine') {
       params.mine = true;
     }
@@ -207,7 +207,7 @@ export default function AgentsPage() {
           icon_color: template.icon_color,
           icon_background: template.icon_background,
           template_id: template.template_id,
-          is_kortix_team: template.is_kortix_team,
+          is_epsilon_team: template.is_epsilon_team,
           mcp_requirements: template.mcp_requirements,
           metadata: template.metadata,
         };

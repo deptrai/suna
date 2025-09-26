@@ -1,4 +1,4 @@
-# Suna Backend
+# Chainlens Backend
 
 ## Quick Setup
 

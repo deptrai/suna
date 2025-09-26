@@ -353,7 +353,7 @@ wheels = [
 ]
 
 [[package]]
-name = "kortix"
+name = "epsilon"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useCreateTemplate, useUnpublishTemplate } from '@/hooks/react-query/secure-mcp/use-secure-mcp';
 import { toast } from 'sonner';
 import { AgentCard } from './custom-agents-page/agent-card';
-import { KortixLogo } from '../sidebar/kortix-logo';
+import { EpsilonLogo } from '../sidebar/epsilon-logo';
 import { DynamicIcon } from 'lucide-react/dynamic';
 import { AgentConfigurationDialog } from './agent-configuration-dialog';
 import { isStagingMode } from '@/lib/config';
@@ -35,7 +35,7 @@ interface Agent {
     version_number: number;
   };
   metadata?: {
-    is_suna_default?: boolean;
+    is_chainlens_default?: boolean;
     centrally_managed?: boolean;
     restrictions?: {
       system_prompt_editable?: boolean;
@@ -88,7 +88,7 @@ const AgentModal: React.FC<AgentModalProps> = ({
 }) => {
   if (!agent) return null;
 
-  const isSunaAgent = agent.metadata?.is_suna_default || false;
+  const isChainlensAgent = agent.metadata?.is_chainlens_default || false;
   
   const truncateDescription = (text?: string, maxLength = 120) => {
     if (!text || text.length <= maxLength) return text || 'Try out this agent';
@@ -101,9 +101,9 @@ const AgentModal: React.FC<AgentModalProps> = ({
         <DialogTitle className="sr-only">Agent actions</DialogTitle>
         <div className="relative">
           <div className={`p-4 h-24 flex items-start justify-start relative`}>
-            {isSunaAgent ? (
+            {isChainlensAgent ? (
               <div className="p-6">
-                <KortixLogo size={48} />
+                <EpsilonLogo size={48} />
               </div>
             ) : agent.icon_name ? (
               <div 
@@ -131,7 +131,7 @@ const AgentModal: React.FC<AgentModalProps> = ({
                 <h2 className="text-xl font-semibold text-foreground">
                   {agent.name}
                 </h2>
-                {!isSunaAgent && agent.current_version && (
+                {!isChainlensAgent && agent.current_version && (
                   <Badge variant="outline" className="text-xs">
                     <GitBranch className="h-3 w-3" />
                     {agent.current_version.version_name}
@@ -166,7 +166,7 @@ const AgentModal: React.FC<AgentModalProps> = ({
                 Chat
               </Button>
             </div>
-            {!isSunaAgent && isStagingMode && (
+            {!isChainlensAgent && isStagingMode && (
               <div className="pt-2">
                 {agent.is_public ? (
                   <div className="space-y-2">

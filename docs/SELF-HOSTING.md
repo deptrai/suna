@@ -1,6 +1,6 @@
-# Suna Self-Hosting Guide
+# Chainlens Self-Hosting Guide
 
-This guide walks you through hosting your own Suna instance, including required environment variables and two deployment options: with Docker and without Docker.
+This guide walks you through hosting your own Chainlens instance, including required environment variables and two deployment options: with Docker and without Docker.
 
 ## Table of Contents
 
@@ -21,7 +21,7 @@ This guide walks you through hosting your own Suna instance, including required 
 
 ## Overview
 
-Suna is composed of:
+Chainlens is composed of:
 
 1. Backend API (FastAPI) - REST endpoints, thread management, LLM orchestration
 2. Backend Worker (Dramatiq) - background agent task execution
@@ -79,7 +79,7 @@ Backend keys (by purpose):
 | Triggers      | WEBHOOK_BASE_URL              |                                       No | http://localhost:8000      | Public base URL for inbound webhooks                                |
 |               | TRIGGER_WEBHOOK_SECRET        |                              Recommended | -                          | Verifies inbound triggers                                           |
 | Billing       | STRIPE\_\*                    |                                       No | -                          | Only if you enable billing                                          |
-| Admin         | KORTIX_ADMIN_API_KEY          |                                       No | -                          | Protects admin APIs                                                 |
+| Admin         | EPSILON_ADMIN_API_KEY          |                                       No | -                          | Protects admin APIs                                                 |
 | Integrations  | COMPOSIO_API_KEY              |                                       No | -                          | Optional Composio integration for tool connections                  |
 |               | COMPOSIO_WEBHOOK_SECRET       |                                       No | -                          | Optional Composio webhook secret                                    |
 
@@ -115,8 +115,8 @@ Optional (but supported):
 1. Clone the repository
 
 ```bash
-git clone https://github.com/kortix-ai/suna.git
-cd suna
+git clone https://github.com/epsilon-ai/chainlens.git
+cd chainlens
 ```
 
 2. Prepare environment files
@@ -268,8 +268,8 @@ Visit http://localhost:3000 and sign up via Supabase auth.
 - LLM errors: ensure at least one LLM API key is set and not rate-limited
 - Daytona errors: verify API key/URL/target; sandbox operations require valid Daytona setup
 - Redis connection errors: ensure `REDIS_HOST=redis` when using Docker, `localhost` when fully local
-- if you get an issue saying `ghcr.io/suna-ai/suna-backend:latest` already exists, then try running the docker command again, it should work the second time automatically.
+- if you get an issue saying `ghcr.io/chainlens-net/chainlens-backend:latest` already exists, then try running the docker command again, it should work the second time automatically.
 
 If you get a startup error complaining about missing configuration fields, it means a required key from the table above is missing in `backend/.env`.
 
-For help, join the Suna Discord or open an issue on GitHub.
+For help, join the Chainlens Discord or open an issue on GitHub.

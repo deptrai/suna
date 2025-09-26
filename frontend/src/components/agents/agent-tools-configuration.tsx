@@ -11,11 +11,11 @@ interface AgentToolsConfigurationProps {
   tools: Record<string, boolean | { enabled: boolean; description: string }>;
   onToolsChange: (tools: Record<string, boolean | { enabled: boolean; description: string }>) => void;
   disabled?: boolean;
-  isSunaAgent?: boolean;
+  isChainlensAgent?: boolean;
   isLoading?: boolean;
 }
 
-export const AgentToolsConfiguration = ({ tools, onToolsChange, disabled = false, isSunaAgent = false, isLoading = false }: AgentToolsConfigurationProps) => {
+export const AgentToolsConfiguration = ({ tools, onToolsChange, disabled = false, isChainlensAgent = false, isLoading = false }: AgentToolsConfigurationProps) => {
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   const getIconComponent = (iconName: string) => {
@@ -48,9 +48,9 @@ export const AgentToolsConfiguration = ({ tools, onToolsChange, disabled = false
       return;
     }
     
-    if (disabled && isSunaAgent) {
+    if (disabled && isChainlensAgent) {
       toast.error("Tools cannot be modified", {
-        description: "Suna's default tools are managed centrally and cannot be changed.",
+        description: "Chainlens's default tools are managed centrally and cannot be changed.",
       });
       return;
     }
