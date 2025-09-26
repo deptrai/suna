@@ -1,0 +1,40 @@
+<svg width="200" height="60" viewBox="0 0 200 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="chainGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#8B5CF6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#10B981;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Chain Links -->
+  <g filter="url(#glow)">
+    <!-- Link 1 -->
+    <circle cx="15" cy="30" r="8" fill="none" stroke="url(#chainGradient)" stroke-width="3"/>
+    <!-- Link 2 -->
+    <circle cx="35" cy="30" r="8" fill="none" stroke="url(#chainGradient)" stroke-width="3"/>
+    <!-- Link 3 -->
+    <circle cx="55" cy="30" r="8" fill="none" stroke="url(#chainGradient)" stroke-width="3"/>
+    
+    <!-- Connection lines -->
+    <line x1="23" y1="30" x2="27" y2="30" stroke="url(#chainGradient)" stroke-width="3"/>
+    <line x1="43" y1="30" x2="47" y2="30" stroke="url(#chainGradient)" stroke-width="3"/>
+  </g>
+  
+  <!-- Magnifying Glass (Lens) -->
+  <g filter="url(#glow)">
+    <circle cx="75" cy="25" r="12" fill="none" stroke="url(#chainGradient)" stroke-width="3"/>
+    <line x1="84" y1="34" x2="92" y2="42" stroke="url(#chainGradient)" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  
+  <!-- Text -->
+  <text x="105" y="25" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="url(#chainGradient)">Chainlens</text>
+  <text x="105" y="42" font-family="Arial, sans-serif" font-size="10" fill="#6B7280">Blockchain Analytics</text>
+</svg>

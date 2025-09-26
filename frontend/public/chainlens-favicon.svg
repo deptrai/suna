@@ -1,0 +1,21 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="faviconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#8B5CF6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#10B981;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Simplified Chain + Lens for favicon -->
+  <g>
+    <!-- Chain links -->
+    <circle cx="8" cy="16" r="4" fill="none" stroke="url(#faviconGradient)" stroke-width="2"/>
+    <circle cx="16" cy="16" r="4" fill="none" stroke="url(#faviconGradient)" stroke-width="2"/>
+    <line x1="12" y1="16" x2="12" y2="16" stroke="url(#faviconGradient)" stroke-width="2"/>
+    
+    <!-- Magnifying glass -->
+    <circle cx="24" cy="12" r="5" fill="none" stroke="url(#faviconGradient)" stroke-width="2"/>
+    <line x1="27" y1="15" x2="30" y2="18" stroke="url(#faviconGradient)" stroke-width="2" stroke-linecap="round"/>
+  </g>
+</svg>

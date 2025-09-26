@@ -1,0 +1,35 @@
+<svg width="200" height="60" viewBox="0 0 200 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="glowWhite">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Chain Links -->
+  <g filter="url(#glowWhite)">
+    <!-- Link 1 -->
+    <circle cx="15" cy="30" r="8" fill="none" stroke="white" stroke-width="3"/>
+    <!-- Link 2 -->
+    <circle cx="35" cy="30" r="8" fill="none" stroke="white" stroke-width="3"/>
+    <!-- Link 3 -->
+    <circle cx="55" cy="30" r="8" fill="none" stroke="white" stroke-width="3"/>
+    
+    <!-- Connection lines -->
+    <line x1="23" y1="30" x2="27" y2="30" stroke="white" stroke-width="3"/>
+    <line x1="43" y1="30" x2="47" y2="30" stroke="white" stroke-width="3"/>
+  </g>
+  
+  <!-- Magnifying Glass (Lens) -->
+  <g filter="url(#glowWhite)">
+    <circle cx="75" cy="25" r="12" fill="none" stroke="white" stroke-width="3"/>
+    <line x1="84" y1="34" x2="92" y2="42" stroke="white" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  
+  <!-- Text -->
+  <text x="105" y="25" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="white">Chainlens</text>
+  <text x="105" y="42" font-family="Arial, sans-serif" font-size="10" fill="#E5E7EB">Blockchain Analytics</text>
+</svg>
