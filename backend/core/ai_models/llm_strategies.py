@@ -106,20 +106,13 @@ class LLMStrategyFactory:
     @staticmethod
     def get_strategy(model_name: str, router: Router = None) -> LLMStrategy:
         """Get the appropriate strategy for the given model."""
-        if model_name.startswith("openai-compatible/"):
-            logger.debug(
-                "Selected DirectLiteLLM strategy",
-                model=model_name,
-                reason="openai-compatible prefix"
-            )
-            return DirectLiteLLMStrategy()
-        else:
-            logger.debug(
-                "Selected Router strategy",
-                model=model_name,
-                reason="standard provider"
-            )
-            return RouterStrategy(router)
+        # Use Router for all models since it works better with openai-compatible
+        logger.debug(
+            "Selected Router strategy",
+            model=model_name,
+            reason="router works better for all providers including openai-compatible"
+        )
+        return RouterStrategy(router)
     
     @staticmethod
     def get_strategy_for_provider(provider: str, router: Router = None) -> LLMStrategy:

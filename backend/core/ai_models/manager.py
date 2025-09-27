@@ -239,7 +239,7 @@ class ModelManager:
         # Handle None or empty query
         if not query:
             logger.debug(f"🤖 AUTO SELECTION: No query provided, using efficient model as default")
-            return 'openai-compatible/gpt-4o-mini'  # $0.15/$0.60 - ultra cheap default
+            return 'openai-compatible/gpt-4o-mini'  # v98store model with correct prefix
 
         q = query.lower()
         logger.debug(f"🤖 AUTO SELECTION: Analyzing query: '{query[:100]}...' (length: {len(query.split())} words)")
@@ -254,11 +254,11 @@ class ModelManager:
         if is_complex:
             # Use premium model for complex tasks
             logger.debug(f"🤖 AUTO SELECTION: Complex query detected (keyword: {has_complex_keyword}, long: {is_long_query}), using premium model")
-            return 'openai-compatible/gpt-5-2025-08-07'  # $10.0/$30.0 - v98store premium
+            return 'openai-compatible/gpt-4o'  # v98store model with correct prefix
 
         # Default to efficient model for simple queries
         logger.debug(f"🤖 AUTO SELECTION: Simple query detected, using efficient model")
-        return 'openai-compatible/gpt-4o-mini'  # $0.15/$0.60 - ultra cheap default
+        return 'openai-compatible/gpt-4o-mini'  # v98store model with correct prefix
 
 
 model_manager = ModelManager()

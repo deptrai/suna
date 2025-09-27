@@ -26,7 +26,7 @@
 - [ ] `resolve_model_id()` supports optional query parameter
 - [ ] Auto selection logic routes between 2 models:
   - Simple queries → `openai-compatible/gpt-4o-mini` ($0.15/$0.60)
-  - Complex queries → `openai-compatible/gpt-5-2025-08-07` ($10.0/$30.0)
+  - Complex queries → `openai-compatible/gpt-4o` ($10.0/$30.0)
 - [ ] Selection overhead <5ms
 - [ ] Backward compatibility maintained
 
@@ -108,7 +108,7 @@ def _auto_select_model(self, query: str, user_context: dict = None) -> str:
     is_complex = (any(kw in q for kw in complex_patterns) and len(query.split()) > 15)
     
     if is_complex:
-        return 'openai-compatible/gpt-5-2025-08-07'  # Premium for complex
+        return 'openai-compatible/gpt-4o'  # Premium for complex
     
     return 'openai-compatible/gpt-4o-mini'  # Default efficient
 ```
@@ -163,7 +163,7 @@ AUTO_MODEL_ENABLED=true  # Enable auto model feature
 ### **Completion Notes**
 - ✅ All 5 tasks completed successfully
 - ✅ Feature flag `AUTO_MODEL_ENABLED=true` controls auto model availability
-- ✅ Auto selection logic works: simple → gpt-4o-mini, complex → gpt-5-2025-08-07
+- ✅ Auto selection logic works: simple → gpt-4o-mini, complex → gpt-4o
 - ✅ Backward compatibility maintained for existing model resolution
 - ✅ Frontend auto mode indicator displays cost savings
 - ✅ Performance <5ms overhead achieved

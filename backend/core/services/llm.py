@@ -82,9 +82,18 @@ def setup_provider_router(openai_compatible_api_key: str = None, openai_compatib
 
     model_list = [
         {
-            "model_name": "openai-compatible/*", # support OpenAI-Compatible LLM provider
+            "model_name": "openai-compatible/gpt-4o-mini", # Specific model for v98store
             "litellm_params": {
-                "model": "openai/*",  # Use openai/* pattern for LiteLLM
+                "model": "gpt-4o-mini",  # Transform to actual model name for v98store API
+                "api_key": openai_compatible_api_key or config.OPENAI_COMPATIBLE_API_KEY,
+                "api_base": openai_compatible_api_base or config.OPENAI_COMPATIBLE_API_BASE,
+                "custom_llm_provider": "openai",  # Tell LiteLLM to use OpenAI format
+            },
+        },
+        {
+            "model_name": "openai-compatible/gpt-4o", # Specific model for v98store
+            "litellm_params": {
+                "model": "gpt-4o",  # Transform to actual model name for v98store API
                 "api_key": openai_compatible_api_key or config.OPENAI_COMPATIBLE_API_KEY,
                 "api_base": openai_compatible_api_base or config.OPENAI_COMPATIBLE_API_BASE,
                 "custom_llm_provider": "openai",  # Tell LiteLLM to use OpenAI format
@@ -273,12 +282,11 @@ def prepare_params(
 
         setup_provider_router(api_key, api_base)
 
-        # Use centralized model name transformation
-        from core.ai_models import model_manager
-        actual_model_name = model_manager.registry.transform_model_name(model_name)
-        logger.info(f"🔄 Transformed model name: {model_name} -> {actual_model_name}")
+        # For Router strategy, keep original model name for pattern matching
+        # Model transformation will be handled by Router internally
+        logger.info(f"🔄 Using Router strategy - keeping original model name: {model_name}")
 
-        params["model"] = actual_model_name
+        params["model"] = model_name  # Keep original for Router pattern matching
 
         # Apply provider configuration
         credentials = provider_config.get_credentials()

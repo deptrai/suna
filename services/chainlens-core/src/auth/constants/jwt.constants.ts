@@ -54,6 +54,8 @@ export interface JwtPayload {
   tier: UserTier;
   iat?: number;
   exp?: number;
+  iss?: string; // Issuer
+  aud?: string; // Audience
 }
 
 export interface UserContext {
@@ -61,6 +63,7 @@ export interface UserContext {
   email: string;
   role: UserRole;
   tier: UserTier;
+  isActive?: boolean;
   rateLimit: {
     requests: number;
     window: number;

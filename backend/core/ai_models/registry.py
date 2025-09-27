@@ -204,7 +204,7 @@ class ModelRegistry:
         ))
 
         self.register(Model(
-            id="openai-compatible/gpt-5-2025-08-07",
+            id="openai-compatible/gpt-4o",
             name="GPT-5 (v98store)",
             provider=ModelProvider.OPENAI_COMPATIBLE,
             aliases=["gpt-5-v98", "v98store/gpt-5"],

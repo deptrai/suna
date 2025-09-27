@@ -115,7 +115,7 @@ def _auto_select_model(self, query: str, user_context: dict = None) -> str:
 
     if is_complex:
         # Use premium model for complex tasks
-        return 'openai-compatible/gpt-5-2025-08-07'  # $10.0/$30.0 - v98store premium
+        return 'openai-compatible/gpt-4o'  # $10.0/$30.0 - v98store premium
 
     # Default to efficient model for all other queries
     return 'openai-compatible/gpt-4o-mini'  # $0.15/$0.60 - ultra cheap default
@@ -271,7 +271,7 @@ export AUTO_MODEL_ENABLED=true
 | Query Type | Selected Model | Cost per Million | Savings vs Claude Sonnet 4 |
 |------------|----------------|------------------|----------------------------|
 | **Simple/Default Queries** | `openai-compatible/gpt-4o-mini` | $0.15/$0.60 | **95% cheaper** |
-| **Complex Queries** | `openai-compatible/gpt-5-2025-08-07` | $10.0/$30.0 | **33% cheaper** |
+| **Complex Queries** | `openai-compatible/gpt-4o` | $10.0/$30.0 | **33% cheaper** |
 
 **Average Cost Reduction: 65-95%** với simplified 2-model approach! 🎯
 

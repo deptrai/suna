@@ -70,7 +70,7 @@ def register_auto_model(self):
 - [ ] `resolve_model_id()` method supports optional `query` and `user_context` parameters
 - [ ] Method maintains backward compatibility with existing single-parameter calls
 - [ ] Auto selection logic routes simple queries to `openai-compatible/gpt-4o-mini`
-- [ ] Complex queries route to `openai-compatible/gpt-5-2025-08-07`
+- [ ] Complex queries route to `openai-compatible/gpt-4o`
 - [ ] Selection overhead is <5ms
 - [ ] All selected models exist in the registry
 
@@ -96,7 +96,7 @@ def _auto_select_model(self, query: str, user_context: dict = None) -> str:
 
     if is_complex:
         # Use premium model for complex tasks
-        return 'openai-compatible/gpt-5-2025-08-07'
+        return 'openai-compatible/gpt-4o'
 
     # Default to efficient model for all other queries
     return 'openai-compatible/gpt-4o-mini'
@@ -246,7 +246,7 @@ if user_hash < rollout_percentage:
 
 ### **Performance Benchmarks**
 - **Simple/Default Queries**: `openai-compatible/gpt-4o-mini` ($0.15/$0.60) - 95% cheaper
-- **Complex Queries**: `openai-compatible/gpt-5-2025-08-07` ($10.0/$30.0) - 33% cheaper
+- **Complex Queries**: `openai-compatible/gpt-4o` ($10.0/$30.0) - 33% cheaper
 
 ---
 

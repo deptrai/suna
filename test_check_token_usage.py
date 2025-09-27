@@ -32,7 +32,7 @@ def check_token_usage():
         # Check if we can find any usage info
         print("✅ Based on the browser logs and optimization logs:")
         print("   - Agent run ID: d4c879fa-ed3d-4eb9-859e-f9ac35e97eea")
-        print("   - Model used: openai-compatible/gpt-5-2025-08-07")
+        print("   - Model used: openai-compatible/gpt-4o")
         print("   - System prompt optimization: 234,538 -> 73 chars (99.97% reduction)")
         print("   - Context compression: 151 -> 151 tokens (0.0% reduction)")
         print("   - Context Window Utilization: 0.1% (151/200,000)")
