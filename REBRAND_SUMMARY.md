@@ -12,10 +12,10 @@
 - `frontend/public/chainlens-logo-full.svg` - Full Chainlens logo with text
 - `frontend/public/chainlens-logo-white.svg` - White version for dark backgrounds
 - `frontend/public/chainlens-favicon.svg` - Favicon for browser tabs
-- `frontend/public/epsilon-logo.svg` - Epsilon logo with gradient
-- `frontend/public/epsilon-logo-white.svg` - White version for dark backgrounds
+- `frontend/public/chainlens-logo.svg` - Epsilon logo with gradient
+- `frontend/public/chainlens-logo-white.svg` - White version for dark backgrounds
 - `frontend/public/epsilon-symbol.svg` - Epsilon symbol only
-- `frontend/public/epsilon-logo-full.svg` - Full Epsilon logo with tagline
+- `frontend/public/chainlens-logo-full.svg` - Full Epsilon logo with tagline
 - `frontend/public/banner-chainlens.svg` - Social media banner
 - `frontend/public/chainlens-cta-bg.svg` - Call-to-action background
 

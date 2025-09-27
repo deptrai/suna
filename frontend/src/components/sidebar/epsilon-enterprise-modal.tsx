@@ -64,8 +64,8 @@ export function EpsilonEnterpriseModal({
             <div className="relative z-10 flex flex-col h-full">
               <div className="mb-6 flex-shrink-0">
                 <Image
-                  src={isDarkMode ? '/epsilon-logo-white.svg' : '/epsilon-logo.svg'}
-                  alt="Epsilon Logo"
+                  src={isDarkMode ? '/chainlens-logo-white.svg' : '/chainlens-logo.svg'}
+                  alt="Chainlens Logo"
                   width={80}
                   height={28}
                   className="h-7 w-auto"

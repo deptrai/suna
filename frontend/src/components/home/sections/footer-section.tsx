@@ -20,10 +20,10 @@ export function FooterSection() {
   }, []);
 
   const logoSrc = !mounted
-    ? '/epsilon-logo.svg'
+    ? '/chainlens-logo.svg'
     : resolvedTheme === 'dark'
-      ? '/epsilon-logo-white.svg'
-      : '/epsilon-logo.svg';
+      ? '/chainlens-logo-white.svg'
+      : '/chainlens-logo.svg';
 
   return (
     <footer id="footer" className="w-full pb-0 px-6">
@@ -34,7 +34,7 @@ export function FooterSection() {
               <Link href="/" className="flex items-center gap-2">
                 <Image
                   src={logoSrc}
-                  alt="Epsilon Logo"
+                  alt="Chainlens Logo"
                   width={122}
                   height={22}
                   priority

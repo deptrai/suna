@@ -104,10 +104,10 @@ export function Navbar() {
   const handleOverlayClick = () => setIsDrawerOpen(false);
 
   const logoSrc = !mounted
-    ? '/epsilon-logo.svg'
+    ? '/chainlens-logo.svg'
     : resolvedTheme === 'dark'
-      ? '/epsilon-logo-white.svg'
-      : '/epsilon-logo.svg';
+      ? '/chainlens-logo-white.svg'
+      : '/chainlens-logo.svg';
 
   return (
     <header
@@ -135,7 +135,7 @@ export function Navbar() {
               <Link href="/" className="flex items-center gap-3">
                 <Image
                   src={logoSrc}
-                  alt="Epsilon Logo"
+                  alt="Chainlens Logo"
                   width={80}
                   height={14}
                   className="md:w-[100px] md:h-[18px]"

@@ -104,10 +104,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   }, []);
 
   const logoSrc = !mounted
-    ? '/epsilon-logo.svg'
+    ? '/chainlens-logo.svg'
     : resolvedTheme === 'dark'
-      ? '/epsilon-logo-white.svg'
-      : '/epsilon-logo.svg';
+      ? '/chainlens-logo-white.svg'
+      : '/chainlens-logo.svg';
   
 
   const isActive = (url: string) => {

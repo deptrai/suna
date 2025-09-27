@@ -20,16 +20,16 @@ export function EpsilonLogo({ size = 24 }: EpsilonLogoProps) {
     theme === 'dark' || (theme === 'system' && systemTheme === 'dark')
   );
 
-  const logoSrc = shouldInvert ? '/epsilon-logo-white.svg' : '/epsilon-logo.svg';
+  const logoSrc = shouldInvert ? '/chainlens-logo-white.svg' : '/chainlens-logo.svg';
 
   return (
     <Image
         src={logoSrc}
-        alt="Epsilon"
-        width={size * 3}
+        alt="Chainlens"
+        width={size * 2.5}
         height={size}
         className="flex-shrink-0"
-        style={{ width: size * 3, height: size, minWidth: size * 3, minHeight: size }}
+        style={{ width: size * 2.5, height: size, minWidth: size * 2.5, minHeight: size }}
       />
   );
 }

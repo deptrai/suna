@@ -405,8 +405,8 @@ export default function TemplateSharePage() {
               <div className="flex items-center">
                 <Link href="/" className="flex items-center">
                   <img 
-                    src={resolvedTheme === 'dark' ? '/epsilon-logo-white.svg' : '/epsilon-logo.svg'} 
-                    alt="Epsilon" 
+                    src={resolvedTheme === 'dark' ? '/chainlens-logo-white.svg' : '/chainlens-logo.svg'}
+                    alt="Chainlens"
                     className="h-6 opacity-70"
                   />
                 </Link>
