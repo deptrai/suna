@@ -65,4 +65,5 @@ export interface UserContext {
     requests: number;
     window: number;
   };
+  metadata?: any;
 }

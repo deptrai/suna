@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
-import { ConfigService } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { AuthTestController } from './controllers/auth-test.controller';
@@ -12,6 +12,8 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { ApiKeyAuthGuard } from './guards/api-key-auth.guard';
 import { JWT_CONSTANTS } from './constants/jwt.constants';
 import { LoggerModule } from '../common/logger/logger.module';
+import { SupabaseService } from './services/supabase.service';
+import supabaseConfig from '../config/supabase.config';
 
 @Module({
   imports: [
@@ -32,6 +34,7 @@ import { LoggerModule } from '../common/logger/logger.module';
   controllers: [AuthController, AuthTestController],
   providers: [
     AuthService,
+    SupabaseService,
     JwtStrategy,
     // SupabaseStrategy,
     // ApiKeyStrategy,
@@ -40,6 +43,7 @@ import { LoggerModule } from '../common/logger/logger.module';
   ],
   exports: [
     AuthService,
+    SupabaseService,
     JwtStrategy,
     JwtAuthGuard,
     ApiKeyAuthGuard,

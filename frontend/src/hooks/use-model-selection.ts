@@ -127,8 +127,14 @@ export const useModelSelection = () => {
     updateCustomModel: (_id: string, _model: any) => {}, // No-op
     removeCustomModel: (_id: string) => {}, // No-op
     
-    // Get the actual model ID to send to the backend (no transformation needed now)
-    getActualModelId: (modelId: string) => modelId,
+    // Get the actual model ID to send to the backend - convert auto mode to "auto"
+    getActualModelId: (modelId: string) => {
+      // Convert auto mode display names to "auto" for backend
+      if (modelId?.includes('Auto') || modelId?.includes('🤖')) {
+        return 'auto';
+      }
+      return modelId;
+    },
 
     // Refresh function for compatibility (no-op since we use API)
     refreshCustomModels: () => {},

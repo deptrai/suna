@@ -2,17 +2,16 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, ExtractJwt } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { JWT_CONSTANTS, JwtPayload, UserContext } from '../constants/jwt.constants';
 import { LoggerService } from '../../common/services/logger.service';
+import { SupabaseService } from '../services/supabase.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
-  private supabase: SupabaseClient;
-
   constructor(
     private configService: ConfigService,
     private logger: LoggerService,
+    private supabaseService: SupabaseService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -20,12 +19,6 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       secretOrKey: configService.get<string>('JWT_SECRET', JWT_CONSTANTS.SECRET),
       algorithms: ['HS256'],
     });
-
-    // Initialize Supabase client
-    this.supabase = createClient(
-      configService.get<string>('SUPABASE_URL', JWT_CONSTANTS.SUPABASE_URL),
-      configService.get<string>('SUPABASE_ANON_KEY', JWT_CONSTANTS.SUPABASE_ANON_KEY),
-    );
   }
 
   async validate(payload: JwtPayload): Promise<UserContext> {
@@ -38,10 +31,20 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
         throw new UnauthorizedException('Invalid token payload');
       }
 
-      // For development, we'll create a mock user context
-      // In production, verify user exists in Supabase
-      const role = payload.role || JWT_CONSTANTS.ROLES.FREE;
-      const tier = payload.tier || 'free';
+      // Try to get user from Supabase for enhanced validation
+      let supabaseUser = null;
+      try {
+        supabaseUser = await this.supabaseService.getUserProfile(payload.sub);
+      } catch (error) {
+        this.logger.debug('Could not fetch Supabase user profile, using JWT payload', {
+          userId: payload.sub,
+          error: error.message
+        });
+      }
+
+      // Use Supabase data if available, otherwise fall back to JWT payload
+      const role = supabaseUser?.role || payload.role || JWT_CONSTANTS.ROLES.FREE;
+      const tier = supabaseUser?.tier || payload.tier || 'free';
 
       // Get rate limit configuration for user tier
       const rateLimit = JWT_CONSTANTS.RATE_LIMITS[tier.toUpperCase() as keyof typeof JWT_CONSTANTS.RATE_LIMITS]
@@ -53,6 +56,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
         role,
         tier,
         rateLimit,
+        metadata: supabaseUser || {},
       };
 
       this.logger.debug('JWT validation successful', {
