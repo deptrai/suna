@@ -159,6 +159,8 @@ class ModelRegistry:
         ))
 
         # Add v98store models via OpenAI-compatible API
+
+        # OpenAI Models via v98store
         self.register(Model(
             id="openai-compatible/gpt-4o-mini",
             name="GPT-4o Mini (v98store)",
@@ -176,6 +178,155 @@ class ModelRegistry:
             ),
             tier_availability=["free", "paid"],
             priority=94,
+            enabled=True
+        ))
+
+        self.register(Model(
+            id="openai-compatible/gpt-4o",
+            name="GPT-4o (v98store)",
+            provider=ModelProvider.OPENAI_COMPATIBLE,
+            aliases=["gpt-4o-v98", "v98store/gpt-4o"],
+            context_window=128_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.VISION,
+                ModelCapability.STRUCTURED_OUTPUT,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=5.0,
+                output_cost_per_million_tokens=15.0
+            ),
+            tier_availability=["paid"],
+            priority=93,
+            enabled=True
+        ))
+
+        self.register(Model(
+            id="openai-compatible/gpt-5-2025-08-07",
+            name="GPT-5 (v98store)",
+            provider=ModelProvider.OPENAI_COMPATIBLE,
+            aliases=["gpt-5-v98", "v98store/gpt-5"],
+            context_window=200_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.VISION,
+                ModelCapability.THINKING,
+                ModelCapability.STRUCTURED_OUTPUT,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=10.0,
+                output_cost_per_million_tokens=30.0
+            ),
+            tier_availability=["paid"],
+            priority=92,
+            enabled=True
+        ))
+
+        self.register(Model(
+            id="openai-compatible/gpt-5-nano-2025-08-07",
+            name="GPT-5 Nano (v98store)",
+            provider=ModelProvider.OPENAI_COMPATIBLE,
+            aliases=["gpt-5-nano-v98", "v98store/gpt-5-nano"],
+            context_window=32_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.STRUCTURED_OUTPUT,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=1.0,
+                output_cost_per_million_tokens=3.0
+            ),
+            tier_availability=["free", "paid"],
+            priority=91,
+            enabled=True
+        ))
+
+        # Qwen Models via v98store
+        self.register(Model(
+            id="openai-compatible/qwen3-32b",
+            name="Qwen 3 32B (v98store)",
+            provider=ModelProvider.OPENAI_COMPATIBLE,
+            aliases=["qwen3-32b-v98", "v98store/qwen3-32b"],
+            context_window=32_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.STRUCTURED_OUTPUT,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=2.0,
+                output_cost_per_million_tokens=6.0
+            ),
+            tier_availability=["paid"],
+            priority=90,
+            enabled=True
+        ))
+
+        self.register(Model(
+            id="openai-compatible/qwen3-235b-a22b",
+            name="Qwen 3 235B A22B (v98store)",
+            provider=ModelProvider.OPENAI_COMPATIBLE,
+            aliases=["qwen3-235b-a22b-v98", "v98store/qwen3-235b-a22b"],
+            context_window=128_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.THINKING,
+                ModelCapability.STRUCTURED_OUTPUT,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=8.0,
+                output_cost_per_million_tokens=24.0
+            ),
+            tier_availability=["paid"],
+            priority=89,
+            enabled=True
+        ))
+
+        # Claude Models via v98store
+        self.register(Model(
+            id="openai-compatible/claude-3-7-sonnet-20250219",
+            name="Claude 3.7 Sonnet (v98store)",
+            provider=ModelProvider.OPENAI_COMPATIBLE,
+            aliases=["claude-3-7-sonnet-v98", "v98store/claude-3-7-sonnet"],
+            context_window=200_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.THINKING,
+                ModelCapability.STRUCTURED_OUTPUT,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=3.0,
+                output_cost_per_million_tokens=15.0
+            ),
+            tier_availability=["paid"],
+            priority=88,
+            enabled=True
+        ))
+
+        # Grok Models via v98store
+        self.register(Model(
+            id="openai-compatible/grok-4",
+            name="Grok 4 (v98store)",
+            provider=ModelProvider.OPENAI_COMPATIBLE,
+            aliases=["grok-4-v98", "v98store/grok-4"],
+            context_window=128_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.THINKING,
+                ModelCapability.STRUCTURED_OUTPUT,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=5.0,
+                output_cost_per_million_tokens=15.0
+            ),
+            tier_availability=["paid"],
+            priority=87,
             enabled=True
         ))
         
