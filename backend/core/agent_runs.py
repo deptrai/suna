@@ -990,16 +990,23 @@ async def initiate_agent_with_files(
         request_id = structlog.contextvars.get_contextvars().get('request_id')
 
         # Run agent in background
-        run_agent_background.send(
-            agent_run_id=agent_run_id, thread_id=thread_id, instance_id=utils.instance_id,
-            project_id=project_id,
-            model_name=model_name,  # Already resolved above
-            enable_thinking=enable_thinking, reasoning_effort=reasoning_effort,
-            stream=stream, enable_context_manager=enable_context_manager,
-            enable_prompt_caching=enable_prompt_caching,
-            agent_config=agent_config,  # Pass agent configuration
-            request_id=request_id,
-        )
+        logger.debug(f"🚀 About to enqueue agent task: {agent_run_id}")
+        try:
+            run_agent_background.send(
+                agent_run_id=agent_run_id, thread_id=thread_id, instance_id=utils.instance_id,
+                project_id=project_id,
+                model_name=model_name,  # Already resolved above
+                enable_thinking=enable_thinking, reasoning_effort=reasoning_effort,
+                stream=stream, enable_context_manager=enable_context_manager,
+                enable_prompt_caching=enable_prompt_caching,
+                agent_config=agent_config,  # Pass agent configuration
+                request_id=request_id,
+            )
+            logger.debug(f"✅ Successfully enqueued agent task: {agent_run_id}")
+        except Exception as e:
+            logger.error(f"❌ Failed to enqueue agent task: {agent_run_id}, error: {e}")
+            import traceback
+            traceback.print_exc()
 
         return {"thread_id": thread_id, "agent_run_id": agent_run_id}
 

@@ -1,0 +1,167 @@
+# ChainLens Development Environment Configuration
+# Cấu hình môi trường phát triển ChainLens Platform
+
+# Monitoring Configuration (Cấu hình Monitoring)
+monitoring:
+  realtime_interval: 1          # seconds - Real-time monitoring frequency
+  service_check_interval: 10    # seconds - External services check frequency
+  memory_check_interval: 5      # seconds - Memory usage check frequency
+  log_retention_days: 7         # days - Log file retention period
+  max_log_size_mb: 100         # MB - Maximum log file size before rotation
+
+# Timeout Configuration (Cấu hình Timeout)
+timeouts:
+  api_health_check: 3           # seconds - API health check timeout
+  external_service: 5           # seconds - External service check timeout
+  service_startup: 30           # seconds - Service startup timeout
+  graceful_shutdown: 10         # seconds - Graceful shutdown timeout
+
+# Service Configuration (Cấu hình Services)
+services:
+  # Core Infrastructure Services (Dịch vụ Hạ tầng Cốt lõi)
+  infrastructure:
+    redis:
+      host: "localhost"
+      port: 6379
+      health_endpoint: "ping"
+      required: true
+    supabase:
+      host: "localhost"
+      port: 54321
+      health_endpoint: "/rest/v1/"
+      required: true
+
+  # Application Services (Dịch vụ Ứng dụng)
+  application:
+    frontend:
+      host: "localhost"
+      port: 3000
+      health_endpoint: "/"
+      startup_time: 15
+      required: true
+    backend:
+      host: "127.0.0.1"
+      port: 8000
+      health_endpoint: "/api/health"
+      startup_time: 10
+      required: true
+    worker:
+      process_pattern: "dramatiq.*run_agent_background"
+      max_processes: 3
+      startup_time: 5
+      required: true
+      max_dramatiq_processes: 3
+      max_total_processes: 15
+      max_spawn_processes: 12
+
+  # External Services (Dịch vụ Bên ngoài)
+  external:
+    openai:
+      endpoint: "https://api.openai.com/v1/models"
+      auth_header: "Authorization"
+      auth_prefix: "Bearer"
+      required: false
+    anthropic:
+      endpoint: "https://api.anthropic.com/v1/messages"
+      auth_header: "x-api-key"
+      method: "POST"
+      required: false
+    tavily:
+      endpoint: "https://api.tavily.com/search"
+      auth_header: "Authorization"
+      auth_prefix: "Bearer"
+      required: false
+    firecrawl:
+      endpoint: "/v0/scrape"
+      auth_header: "Authorization"
+      auth_prefix: "Bearer"
+      required: false
+    daytona:
+      endpoint: "/workspaces"
+      auth_header: "Authorization"
+      auth_prefix: "Bearer"
+      required: false
+    langfuse:
+      endpoint: "/api/public/health"
+      required: false
+    stripe:
+      endpoint: "https://api.stripe.com/v1/customers"
+      auth_method: "basic"
+      limit_param: "?limit=1"
+      required: false
+    composio:
+      endpoint: "/v1/apps"
+      auth_header: "X-API-Key"
+      required: false
+    pipedream:
+      endpoint: "https://api.pipedream.com/v1/users/me"
+      required: false
+
+# Logging Configuration (Cấu hình Logging)
+logging:
+  level: "INFO"                 # DEBUG, INFO, WARN, ERROR
+  format: "structured"          # structured, simple
+  output:
+    console: true
+    file: true
+    structured_file: true
+  files:
+    monitoring: "logs/monitoring.log"
+    metrics: "logs/metrics.log"
+    services: "logs/services.log"
+    structured: "logs/structured.jsonl"
+    errors: "logs/errors.log"
+
+# Alert Configuration (Cấu hình Cảnh báo)
+alerts:
+  process_conflict_threshold: 15  # Maximum Dramatiq processes before alert (increased)
+  memory_threshold_mb: 1000     # Memory usage threshold for alerts
+  response_time_threshold_ms: 5000  # Response time threshold for alerts
+  error_rate_threshold: 0.1     # Error rate threshold (10%)
+
+# Development Configuration (Cấu hình Development)
+development:
+  auto_restart: true            # Auto-restart services on failure
+  debug_mode: true              # Enable debug logging
+  hot_reload: true              # Enable hot reload for development
+  preserve_logs: true           # Preserve logs between restarts
+
+# Environment Variables (Biến Môi trường)
+environment:
+  backend_env_file: "backend/.env"
+  required_vars:
+    - "SUPABASE_URL"
+    - "SUPABASE_ANON_KEY"
+    - "REDIS_URL"
+  optional_vars:
+    - "OPENAI_API_KEY"
+    - "ANTHROPIC_API_KEY"
+    - "TAVILY_API_KEY"
+    - "FIRECRAWL_API_KEY"
+    - "DAYTONA_API_KEY"
+    - "LANGFUSE_PUBLIC_KEY"
+    - "STRIPE_SECRET_KEY"
+    - "COMPOSIO_API_KEY"
+    - "PIPEDREAM_CLIENT_ID"
+
+# Health Check Configuration (Cấu hình Health Check)
+health_checks:
+  startup_checks:
+    - "environment_variables"
+    - "infrastructure_services"
+    - "application_services"
+  runtime_checks:
+    - "process_monitoring"
+    - "memory_monitoring"
+    - "external_services"
+  failure_actions:
+    - "log_error"
+    - "send_alert"
+    - "attempt_restart"
+
+# Performance Configuration (Cấu hình Performance)
+performance:
+  max_concurrent_checks: 5      # Maximum concurrent health checks
+  check_batch_size: 3          # Batch size for external service checks
+  memory_sampling_rate: 0.1    # Memory sampling rate (10%)
+  metrics_aggregation_window: 60  # seconds - Metrics aggregation window

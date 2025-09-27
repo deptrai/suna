@@ -1,0 +1,531 @@
+#!/bin/bash
+
+# ChainLens Smart Dependency Management System v2.0
+# Quản lý thứ tự khởi động services với dependency resolution
+
+# Prevent multiple sourcing
+if [[ -n "$DEPENDENCY_MANAGER_LOADED" ]]; then
+    return 0
+fi
+export DEPENDENCY_MANAGER_LOADED=1
+
+
+# Source utilities
+LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$LIB_DIR/utils.sh"
+source "$LIB_DIR/enhanced_health_checks.sh"
+
+# Service definitions và dependency graph - Bash 3.x compatible
+    # Use associative arrays for Bash 4+
+    declare -A SERVICE_DEPENDENCIES
+    declare -A SERVICE_READINESS_CHECKS
+    declare -A SERVICE_STARTUP_TIMEOUTS
+    declare -A SERVICE_STATUS
+    declare -A SERVICE_START_TIMES
+    declare -A SERVICE_RETRY_COUNTS
+
+# Helper functions for cross-version compatibility
+set_service_value() {
+    local array_name="$1"
+    local key="$2"
+    local value="$3"
+    
+        case "$array_name" in
+            "SERVICE_DEPENDENCIES")
+                SERVICE_DEPENDENCIES["$key"]="$value"
+                ;;
+            "SERVICE_READINESS_CHECKS")
+                SERVICE_READINESS_CHECKS["$key"]="$value"
+                ;;
+            "SERVICE_STARTUP_TIMEOUTS")
+                SERVICE_STARTUP_TIMEOUTS["$key"]="$value"
+                ;;
+            "SERVICE_STATUS")
+                SERVICE_STATUS["$key"]="$value"
+                ;;
+            "SERVICE_START_TIMES")
+                SERVICE_START_TIMES["$key"]="$value"
+                ;;
+            "SERVICE_RETRY_COUNTS")
+                SERVICE_RETRY_COUNTS["$key"]="$value"
+                ;;
+        esac
+}
+
+get_service_value() {
+    local array_name="$1"
+    local key="$2"
+    local default_value="${3:-}"
+    
+        case "$array_name" in
+            "SERVICE_DEPENDENCIES")
+                echo "${SERVICE_DEPENDENCIES[$key]:-$default_value}"
+                ;;
+            "SERVICE_READINESS_CHECKS")
+                echo "${SERVICE_READINESS_CHECKS[$key]:-$default_value}"
+                ;;
+            "SERVICE_STARTUP_TIMEOUTS")
+                echo "${SERVICE_STARTUP_TIMEOUTS[$key]:-$default_value}"
+                ;;
+            "SERVICE_STATUS")
+                echo "${SERVICE_STATUS[$key]:-$default_value}"
+                ;;
+            "SERVICE_START_TIMES")
+                echo "${SERVICE_START_TIMES[$key]:-$default_value}"
+                ;;
+            "SERVICE_RETRY_COUNTS")
+                echo "${SERVICE_RETRY_COUNTS[$key]:-$default_value}"
+                ;;
+        esac
+}
+
+# Get all service keys for compatibility
+get_all_service_keys() {
+    local array_name="$1"
+    
+        case "$array_name" in
+            "SERVICE_DEPENDENCIES")
+                printf "%s\n" "${!SERVICE_DEPENDENCIES[@]}"
+                ;;
+            "SERVICE_READINESS_CHECKS")
+                printf "%s\n" "${!SERVICE_READINESS_CHECKS[@]}"
+                ;;
+            "SERVICE_STARTUP_TIMEOUTS")
+                printf "%s\n" "${!SERVICE_STARTUP_TIMEOUTS[@]}"
+                ;;
+            "SERVICE_STATUS")
+                printf "%s\n" "${!SERVICE_STATUS[@]}"
+                ;;
+            "SERVICE_START_TIMES")
+                printf "%s\n" "${!SERVICE_START_TIMES[@]}"
+                ;;
+            "SERVICE_RETRY_COUNTS")
+                printf "%s\n" "${!SERVICE_RETRY_COUNTS[@]}"
+                ;;
+        esac
+}
+
+# Service startup states
+readonly SERVICE_PENDING="pending"
+readonly SERVICE_STARTING="starting"
+readonly SERVICE_READY="ready"
+readonly SERVICE_FAILED="failed"
+readonly SERVICE_TIMEOUT="timeout"
+
+# Initialize dependency system
+init_dependency_system() {
+    log_structured "INFO" "dependency_manager" "Initializing smart dependency management system"
+    
+    # Define service dependencies (child depends on parent)
+    set_service_value "SERVICE_DEPENDENCIES" "redis" ""
+    set_service_value "SERVICE_DEPENDENCIES" "supabase" ""
+    set_service_value "SERVICE_DEPENDENCIES" "worker" "redis,supabase"
+    set_service_value "SERVICE_DEPENDENCIES" "backend" "redis,supabase,worker"
+    set_service_value "SERVICE_DEPENDENCIES" "frontend" "backend"
+    set_service_value "SERVICE_DEPENDENCIES" "monitor" "redis,backend,frontend"
+    
+    # Define readiness check functions
+    set_service_value "SERVICE_READINESS_CHECKS" "redis" "enhanced_check_redis_health"
+    set_service_value "SERVICE_READINESS_CHECKS" "supabase" "enhanced_check_supabase_health"
+    set_service_value "SERVICE_READINESS_CHECKS" "worker" "enhanced_check_worker_health"
+    set_service_value "SERVICE_READINESS_CHECKS" "backend" "enhanced_check_backend_health"
+    set_service_value "SERVICE_READINESS_CHECKS" "frontend" "enhanced_check_frontend_health"
+    set_service_value "SERVICE_READINESS_CHECKS" "monitor" "check_monitor_health"
+    
+    # Define startup timeouts (seconds)
+    set_service_value "SERVICE_STARTUP_TIMEOUTS" "redis" "10"
+    set_service_value "SERVICE_STARTUP_TIMEOUTS" "supabase" "15"
+    set_service_value "SERVICE_STARTUP_TIMEOUTS" "worker" "20"
+    set_service_value "SERVICE_STARTUP_TIMEOUTS" "backend" "25"
+    set_service_value "SERVICE_STARTUP_TIMEOUTS" "frontend" "30"
+    set_service_value "SERVICE_STARTUP_TIMEOUTS" "monitor" "5"
+    
+    # Initialize all services as pending
+    local services=("redis" "supabase" "worker" "backend" "frontend" "monitor")
+    for service in "${services[@]}"; do
+        set_service_value "SERVICE_STATUS" "$service" "$SERVICE_PENDING"
+        set_service_value "SERVICE_START_TIMES" "$service" "0"
+        set_service_value "SERVICE_RETRY_COUNTS" "$service" "0"
+    done
+    
+    log_structured "INFO" "dependency_manager" "Dependency system initialized with ${#services[@]} services"
+}
+
+# Get service dependencies
+get_service_dependencies() {
+    local service="$1"
+    get_service_value "SERVICE_DEPENDENCIES" "$service"
+}
+
+# Check if service dependencies are ready
+check_dependencies_ready() {
+    local service="$1"
+    local dependencies=$(get_service_dependencies "$service")
+    
+    # No dependencies - ready to start
+    if [[ -z "$dependencies" ]]; then
+        return 0
+    fi
+    
+    # Check each dependency
+    IFS=',' read -ra DEPS <<< "$dependencies"
+    for dep in "${DEPS[@]}"; do
+        dep=$(echo "$dep" | xargs)  # Trim whitespace
+        local status=$(get_service_value "SERVICE_STATUS" "$dep")
+        
+        if [[ "$status" != "$SERVICE_READY" ]]; then
+            # Special handling for optional services
+            if [[ "$dep" == "supabase" ]]; then
+                # Check if Supabase is actually available
+                if enhanced_check_supabase_health | grep -q "$HEALTH_SKIP"; then
+                    log_structured "INFO" "dependency_manager" "Skipping optional dependency: $dep"
+                    continue
+                fi
+            fi
+            
+            log_structured "DEBUG" "dependency_manager" "Service $service waiting for dependency $dep (status: $status)"
+            return 1
+        fi
+    done
+    
+    return 0
+}
+
+# Calculate startup order using topological sort
+calculate_startup_order() {
+    local -a startup_order=()
+    local -A in_degree
+    local -A temp_deps
+    
+    # Copy dependencies for manipulation
+    for service in "${!SERVICE_DEPENDENCIES[@]}"; do
+        temp_deps["$service"]="${SERVICE_DEPENDENCIES[$service]}"
+    done
+    
+    # Calculate in-degrees (number of dependencies)
+    for service in "${!temp_deps[@]}"; do
+        in_degree["$service"]=0
+    done
+    
+    for service in "${!temp_deps[@]}"; do
+        local deps="${temp_deps[$service]}"
+        if [[ -n "$deps" ]]; then
+            IFS=',' read -ra DEPS <<< "$deps"
+            for dep in "${DEPS[@]}"; do
+                dep=$(echo "$dep" | xargs)
+                in_degree["$service"]=$((in_degree["$service"] + 1))
+            done
+        fi
+    done
+    
+    # Topological sort
+    while [[ ${#startup_order[@]} -lt ${#SERVICE_DEPENDENCIES[@]} ]]; do
+        local found_service=""
+        
+        # Find service with no dependencies (in_degree = 0)
+        for service in "${!in_degree[@]}"; do
+            if [[ ${in_degree["$service"]} -eq 0 ]]; then
+                found_service="$service"
+                break
+            fi
+        done
+        
+        if [[ -z "$found_service" ]]; then
+            log_structured "ERROR" "dependency_manager" "Circular dependency detected!"
+            return 1
+        fi
+        
+        # Add to startup order
+        startup_order+=("$found_service")
+        unset in_degree["$found_service"]
+        
+        # Reduce in-degree for dependent services
+        for service in "${!temp_deps[@]}"; do
+            local deps="${temp_deps[$service]}"
+            if [[ "$deps" == *"$found_service"* ]]; then
+                in_degree["$service"]=$((in_degree["$service"] - 1))
+            fi
+        done
+    done
+    
+    # Print startup order
+    printf "%s\\n" "${startup_order[@]}"
+    
+    log_structured "INFO" "dependency_manager" "Calculated optimal startup order" "{\"order\":\"$(IFS=,; echo "${startup_order[*]}")\"}"
+}
+
+# Smart wait for service readiness với adaptive timeout
+smart_wait_for_service() {
+    local service="$1"
+    local base_timeout="${SERVICE_STARTUP_TIMEOUTS[$service]}"
+    local check_function="${SERVICE_READINESS_CHECKS[$service]}"
+    
+    if [[ -z "$check_function" ]]; then
+        log_structured "ERROR" "dependency_manager" "No readiness check defined for service: $service"
+        return 1
+    fi
+    
+    log_structured "INFO" "dependency_manager" "Waiting for service $service to be ready" "{\"timeout\":$base_timeout,\"check_function\":\"$check_function\"}"
+    
+    local start_time=$(date +%s)
+    local elapsed=0
+    local check_interval=2
+    local last_status=""
+    
+    while [[ $elapsed -lt $base_timeout ]]; do
+        # Call health check function
+        local health_status=$($check_function)
+        
+        case "$health_status" in
+            "$HEALTH_OK")
+                log_structured "INFO" "dependency_manager" "Service $service is ready" "{\"elapsed_time\":$elapsed}"
+                return 0
+                ;;
+            "$HEALTH_DEGRADED")
+                # Degraded is acceptable for some services
+                if [[ "$service" == "frontend" || "$service" == "backend" ]]; then
+                    log_structured "INFO" "dependency_manager" "Service $service is ready (degraded)" "{\"elapsed_time\":$elapsed}"
+                    return 0
+                fi
+                ;;
+            "$HEALTH_SKIP")
+                # Supabase is optional
+                if [[ "$service" == "supabase" ]]; then
+                    log_structured "INFO" "dependency_manager" "Service $service skipped (optional)" "{\"elapsed_time\":$elapsed}"
+                    return 0
+                fi
+                ;;
+            *)
+                # Log status changes only
+                if [[ "$health_status" != "$last_status" ]]; then
+                    log_structured "DEBUG" "dependency_manager" "Service $service status: $health_status" "{\"elapsed_time\":$elapsed}"
+                    last_status="$health_status"
+                fi
+                ;;
+        esac
+        
+        sleep $check_interval
+        elapsed=$(( $(date +%s) - start_time ))
+        
+        # Adaptive check interval - increase as time goes on
+        if [[ $elapsed -gt 15 ]]; then
+            check_interval=3
+        fi
+        
+        if [[ $elapsed -gt 30 ]]; then
+            check_interval=5
+        fi
+    done
+    
+    log_structured "WARN" "dependency_manager" "Service $service readiness timeout" "{\"timeout\":$base_timeout}"
+    return 1
+}
+
+# Start service with dependency checking
+start_service_smart() {
+    local service="$1"
+    local start_command="$2"
+    
+    log_structured "INFO" "dependency_manager" "Starting service with smart dependency checking" "{\"service\":\"$service\"}"
+    
+    # Check if dependencies are ready
+    if ! check_dependencies_ready "$service"; then
+        log_structured "ERROR" "dependency_manager" "Dependencies not ready for service: $service"
+        SERVICE_STATUS["$service"]="$SERVICE_FAILED"
+        return 1
+    fi
+    
+    # Mark as starting
+    SERVICE_STATUS["$service"]="$SERVICE_STARTING"
+    SERVICE_START_TIMES["$service"]=$(date +%s)
+    
+    # Execute start command
+    log_structured "INFO" "dependency_manager" "Executing start command for $service"
+    eval "$start_command" &
+    local start_pid=$!
+    
+    # Wait for service to be ready
+    if smart_wait_for_service "$service"; then
+        SERVICE_STATUS["$service"]="$SERVICE_READY"
+        log_structured "INFO" "dependency_manager" "Service $service started successfully" "{\"pid\":$start_pid}"
+        return 0
+    else
+        SERVICE_STATUS["$service"]="$SERVICE_FAILED"
+        log_structured "ERROR" "dependency_manager" "Service $service failed to start" "{\"pid\":$start_pid}"
+        
+        # Kill the process if it's still running
+        if kill -0 $start_pid 2>/dev/null; then
+            kill $start_pid
+        fi
+        
+        return 1
+    fi
+}
+
+# Execute full startup sequence
+execute_startup_sequence() {
+    log_structured "INFO" "dependency_manager" "Executing smart startup sequence"
+    
+    # Get optimal startup order
+    local -a startup_order
+    mapfile -t startup_order < <(calculate_startup_order)
+    
+    if [[ ${#startup_order[@]} -eq 0 ]]; then
+        log_structured "ERROR" "dependency_manager" "Failed to calculate startup order"
+        return 1
+    fi
+    
+    # Start services in order
+    for service in "${startup_order[@]}"; do
+        log_structured "INFO" "dependency_manager" "Processing service in startup sequence" "{\"service\":\"$service\"}"
+        
+        # Skip if already ready
+        if [[ "${SERVICE_STATUS[$service]}" == "$SERVICE_READY" ]]; then
+            log_structured "INFO" "dependency_manager" "Service $service already ready, skipping"
+            continue
+        fi
+        
+        # Get service start command
+        local start_command
+        case "$service" in
+            "redis")
+                start_command="echo 'Redis should be started externally'"
+                SERVICE_STATUS["redis"]="$SERVICE_READY"  # Assume external
+                ;;
+            "supabase")
+                start_command="echo 'Supabase should be started externally'"
+                # Check if available, mark as ready or skip
+                if enhanced_check_supabase_health | grep -q "$HEALTH_OK"; then
+                    SERVICE_STATUS["supabase"]="$SERVICE_READY"
+                else
+                    SERVICE_STATUS["supabase"]="$SERVICE_READY"  # Skip optional
+                fi
+                ;;
+            "worker")
+                start_command="cd \"$PROJECT_ROOT/backend\" && nohup bash -c 'unset VIRTUAL_ENV && source .venv/bin/activate && python3 -m dramatiq run_agent_background' > \"$PROJECT_ROOT/logs/worker.log\" 2>&1"
+                ;;
+            "backend")
+                start_command="cd \"$PROJECT_ROOT/backend\" && nohup uv run uvicorn api:app --host 0.0.0.0 --port $(get_config_value 'services.application.backend.port' '8000') --reload > \"$PROJECT_ROOT/logs/backend.log\" 2>&1"
+                ;;
+            "frontend")
+                start_command="cd \"$PROJECT_ROOT/frontend\" && nohup npm run dev > \"$PROJECT_ROOT/logs/frontend.log\" 2>&1"
+                ;;
+            "monitor")
+                start_command="nohup \"$PROJECT_ROOT/logs/monitor.sh\" > \"$PROJECT_ROOT/logs/monitor_output.log\" 2>&1"
+                ;;
+            *)
+                log_structured "WARN" "dependency_manager" "Unknown service: $service"
+                continue
+                ;;
+        esac
+        
+        # Start the service
+        if ! start_service_smart "$service" "$start_command"; then
+            # Handle failure based on service criticality
+            if [[ "$service" == "supabase" ]]; then
+                log_structured "WARN" "dependency_manager" "Optional service $service failed, continuing"
+            else
+                log_structured "ERROR" "dependency_manager" "Critical service $service failed, stopping startup"
+                return 1
+            fi
+        fi
+        
+        # Add delay between services to prevent resource contention
+        sleep 2
+    done
+    
+    log_structured "INFO" "dependency_manager" "Startup sequence completed successfully"
+    return 0
+}
+
+# Get service status
+get_service_status() {
+    local service="$1"
+    echo "${SERVICE_STATUS[$service]:-unknown}"
+}
+
+# Get all services status
+get_all_services_status() {
+    local json_parts=()
+    
+    for service in "${!SERVICE_STATUS[@]}"; do
+        local status="${SERVICE_STATUS[$service]}"
+        local start_time="${SERVICE_START_TIMES[$service]}"
+        local retry_count="${SERVICE_RETRY_COUNTS[$service]}"
+        
+        json_parts+=("\"$service\":{\"status\":\"$status\",\"start_time\":$start_time,\"retries\":$retry_count}")
+    done
+    
+    local json="{$(IFS=','; echo "${json_parts[*]}")}"
+    echo "$json"
+}
+
+# Monitor health check for monitoring service
+check_monitor_health() {
+    local monitor_pid_file="$PROJECT_ROOT/logs/monitor.pid"
+    
+    if [[ -f "$monitor_pid_file" ]]; then
+        local monitor_pid=$(cat "$monitor_pid_file")
+        if kill -0 "$monitor_pid" 2>/dev/null; then
+            echo "$HEALTH_OK"
+            return 0
+        fi
+    fi
+    
+    # Check if monitor script exists and is executable
+    if [[ -x "$PROJECT_ROOT/logs/monitor.sh" ]]; then
+        echo "$HEALTH_DEGRADED"
+        return 0
+    fi
+    
+    echo "$HEALTH_FAIL"
+    return 1
+}
+
+# Graceful shutdown in dependency order (reverse)
+graceful_shutdown() {
+    log_structured "INFO" "dependency_manager" "Initiating graceful shutdown"
+    
+    # Get shutdown order (reverse of startup)
+    local -a startup_order
+    mapfile -t startup_order < <(calculate_startup_order)
+    
+    # Reverse the array
+    local -a shutdown_order
+    for ((i=${#startup_order[@]}-1; i>=0; i--)); do
+        shutdown_order+=("${startup_order[i]}")
+    done
+    
+    # Shutdown services in reverse order
+    for service in "${shutdown_order[@]}"; do
+        if [[ "${SERVICE_STATUS[$service]}" == "$SERVICE_READY" ]]; then
+            log_structured "INFO" "dependency_manager" "Shutting down service: $service"
+            
+            case "$service" in
+                "monitor")
+                    pkill -f "monitor.sh" 2>/dev/null || true
+                    ;;
+                "frontend")
+                    pkill -f "npm.*dev" 2>/dev/null || true
+                    ;;
+                "backend")
+                    pkill -f "uvicorn.*api" 2>/dev/null || true
+                    ;;
+                "worker")
+                    pkill -f "dramatiq.*run_agent_background" 2>/dev/null || true
+                    ;;
+            esac
+            
+            SERVICE_STATUS["$service"]="$SERVICE_PENDING"
+            sleep 1
+        fi
+    done
+    
+    log_structured "INFO" "dependency_manager" "Graceful shutdown completed"
+}
+
+# Export metrics for monitoring
+export_dependency_metrics() {
+    local status_json=$(get_all_services_status)
+    log_structured "INFO" "dependency_metrics" "Service dependency status" "$status_json"
+}

@@ -84,64 +84,75 @@
 			"name": "🔐 Authentication & API Keys",
 			"item": [
 				{
-					"name": "Generate Test JWT Token",
+					"name": "Login with Supabase Auth",
 					"event": [
 						{
 							"listen": "test",
 							"script": {
 								"exec": [
-									"// Generate a test JWT token for authentication",
-									"const CryptoJS = require('crypto-js');",
-									"",
-									"// Create payload",
-									"const header = {",
-									"    'alg': 'HS256',",
-									"    'typ': 'JWT'",
-									"};",
-									"",
-									"const payload = {",
-									"    'sub': pm.globals.replaceIn('{{$randomUUID}}'),",
-									"    'iat': Math.floor(Date.now() / 1000),",
-									"    'exp': Math.floor(Date.now() / 1000) + (60 * 60), // 1 hour",
-									"    'aud': 'authenticated',",
-									"    'iss': 'supabase'",
-									"};",
-									"",
-									"// JWT secret from backend .env",
-									"const secret = 'super-secret-jwt-token-with-at-least-32-characters-long';",
-									"",
-									"// Create JWT manually",
-									"const encodedHeader = CryptoJS.enc.Base64url.stringify(CryptoJS.enc.Utf8.parse(JSON.stringify(header)));",
-									"const encodedPayload = CryptoJS.enc.Base64url.stringify(CryptoJS.enc.Utf8.parse(JSON.stringify(payload)));",
-									"const signature = CryptoJS.HmacSHA256(encodedHeader + '.' + encodedPayload, secret);",
-									"const encodedSignature = CryptoJS.enc.Base64url.stringify(signature);",
-									"",
-									"const token = encodedHeader + '.' + encodedPayload + '.' + encodedSignature;",
-									"",
-									"// Set environment variables",
-									"pm.environment.set('jwt_token', token);",
-									"pm.environment.set('test_user_id', payload.sub);",
-									"",
-									"console.log('✅ Generated JWT Token:', token);",
-									"console.log('✅ Test User ID:', payload.sub);",
-									"console.log('✅ Token expires in 1 hour');",
-									"",
-									"pm.test('JWT Token generated successfully', function () {",
-									"    pm.expect(token).to.be.a('string');",
-									"    pm.expect(token.split('.')).to.have.lengthOf(3);",
-									"});"
+									"// Login with real Supabase auth and get JWT token",
+									"if (pm.response.code === 200) {",
+									"    const responseJson = pm.response.json();",
+									"    ",
+									"    // Extract access token and user info",
+									"    const accessToken = responseJson.access_token;",
+									"    const user = responseJson.user;",
+									"    ",
+									"    // Set environment variables",
+									"    pm.environment.set('jwt_token', accessToken);",
+									"    pm.environment.set('user_id', user.id);",
+									"    pm.environment.set('user_email', user.email);",
+									"    ",
+									"    console.log('✅ Login successful!');",
+									"    console.log('✅ JWT Token:', accessToken);",
+									"    console.log('✅ User ID:', user.id);",
+									"    console.log('✅ Email:', user.email);",
+									"    console.log('✅ Token expires in 1 hour');",
+									"    ",
+									"    pm.test('Login successful', function () {",
+									"        pm.expect(accessToken).to.be.a('string');",
+									"        pm.expect(user.id).to.be.a('string');",
+									"        pm.expect(user.email).to.equal('admin@example.com');",
+									"    });",
+									"} else {",
+									"    console.log('❌ Login failed:', pm.response.text());",
+									"    pm.test('Login failed', function () {",
+									"        pm.expect.fail('Login request failed');",
+									"    });",
+									"}"
 								],
 								"type": "text/javascript"
 							}
 						}
 					],
 					"request": {
-						"method": "GET",
-						"header": [],
+						"method": "POST",
+						"header": [
+							{
+								"key": "apikey",
+								"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"Admin@123\"\n}"
+						},
 						"url": {
-							"raw": "{{base_url}}/api/health",
-							"host": ["{{base_url}}"],
-							"path": ["api", "health"]
+							"raw": "http://localhost:54321/auth/v1/token?grant_type=password",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "54321",
+							"path": ["auth", "v1", "token"],
+							"query": [
+								{
+									"key": "grant_type",
+									"value": "password"
+								}
+							]
 						}
 					}
 				},

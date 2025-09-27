@@ -14,16 +14,15 @@ This is a comprehensive Postman collection for the **Suna AI Agent Platform** wi
 
 ### 2. Setup Authentication
 
-#### Option A: JWT Token (Recommended for Development)
-```javascript
-// Run the "Generate Test JWT Token" request in Testing folder
-// This will automatically set jwt_token in environment
-```
+#### Option A: Login with Supabase Auth (Recommended)
+1. Run **"Login with Supabase Auth"** request in Authentication folder
+2. This will automatically login with `admin@example.com` and set JWT token
+3. JWT token will be valid for 1 hour
 
-#### Option B: API Key
-1. Create an API key using "Create API Key" endpoint
-2. Copy the response: `pk_xxx:sk_xxx`
-3. Set `api_key` variable in environment
+#### Option B: Use Pre-configured JWT Token
+- JWT token is already set in environment for user `admin@example.com`
+- Valid for immediate testing
+- User ID: `6cc2fbb4-0b8c-4fd1-a198-3d69a6ceb29e`
 
 #### Option C: Admin API Key (Admin Operations Only)
 - Already configured in environment
@@ -32,7 +31,7 @@ This is a comprehensive Postman collection for the **Suna AI Agent Platform** wi
 ### 3. Test the Setup
 
 1. Run **Health Check** to verify backend is running
-2. Run **Generate Test JWT Token** to setup authentication
+2. Run **Login with Supabase Auth** to get fresh JWT token (optional)
 3. Try **List Threads** to test authentication
 
 ## 📚 Collection Structure
