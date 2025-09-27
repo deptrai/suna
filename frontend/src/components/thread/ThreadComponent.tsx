@@ -150,8 +150,8 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
     billingStatusQuery,
   } = useBilling(null, agentStatus, initialLoadCompleted);
 
-  // Real-time project updates (for sandbox creation)
-  useProjectRealtime(projectId);
+  // Real-time project updates (for sandbox creation) - DISABLED to fix WebSocket errors
+  // useProjectRealtime(projectId);
 
   // Keyboard shortcuts
   useKeyboardShortcuts({

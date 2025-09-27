@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { threadKeys } from '@/hooks/react-query/threads/keys';
 import { Project } from '../app/(dashboard)/projects/[projectId]/thread/_types';
+import { useAuth } from '@/components/AuthProvider';
 
 /**
  * Hook to subscribe to real-time project updates and invalidate React Query cache
@@ -12,9 +13,10 @@ import { Project } from '../app/(dashboard)/projects/[projectId]/thread/_types';
  */
 export function useProjectRealtime(projectId?: string) {
   const queryClient = useQueryClient();
+  const { session } = useAuth();
 
   useEffect(() => {
-    if (!projectId) return;
+    if (!projectId || !session) return;
 
     const supabase = createClient();
 
@@ -51,5 +53,5 @@ export function useProjectRealtime(projectId?: string) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [projectId, queryClient]);
+  }, [projectId, queryClient, session]);
 }

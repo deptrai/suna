@@ -273,6 +273,25 @@ async def deduct_token_usage(
 async def get_credit_balance(
     account_id: str = Depends(verify_and_get_user_id_from_jwt)
 ) -> Dict:
+    if config.ENV_MODE == EnvMode.LOCAL:
+        return {
+            'balance': 999999.0,
+            'expiring_credits': 0.0,
+            'non_expiring_credits': 999999.0,
+            'tier': 'local',
+            'tier_display_name': 'Local Development',
+            'is_trial': False,
+            'trial_status': None,
+            'trial_ends_at': None,
+            'can_purchase_credits': False,
+            'next_credit_grant': None,
+            'breakdown': {
+                'expiring': 0.0,
+                'non_expiring': 999999.0,
+                'total': 999999.0
+            }
+        }
+
     db = DBConnection()
     client = await db.client
     
@@ -348,6 +367,35 @@ async def stripe_webhook(request: Request):
 async def get_subscription(
     account_id: str = Depends(verify_and_get_user_id_from_jwt)
 ) -> Dict:
+    if config.ENV_MODE == EnvMode.LOCAL:
+        return {
+            'status': 'active',
+            'plan_name': 'local',
+            'display_plan_name': 'Local Development',
+            'price_id': 'local_dev',
+            'subscription': None,
+            'subscription_id': None,
+            'current_usage': 0.0,
+            'cost_limit': 999999,
+            'credit_balance': 999999.0,
+            'can_purchase_credits': False,
+            'tier': {
+                'name': 'local',
+                'display_name': 'Local Development',
+                'credits': 999999
+            },
+            'is_trial': False,
+            'trial_status': None,
+            'trial_ends_at': None,
+            'credits': {
+                'balance': 999999.0,
+                'tier_credits': 999999,
+                'lifetime_granted': 999999.0,
+                'lifetime_purchased': 0.0,
+                'lifetime_used': 0.0
+            }
+        }
+
     try:
         subscription_info = await subscription_service.get_subscription(account_id)
         

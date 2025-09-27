@@ -1,0 +1,1212 @@
+{
+	"info": {
+		"_postman_id": "suna-api-collection-2025",
+		"name": "Suna AI Agent Platform - Complete API Collection",
+		"description": "Complete API collection for Suna AI Agent Platform with ChainLens integration. Includes authentication, agents, threads, billing, knowledge base, and all integrations.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "suna-platform"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{jwt_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"exec": [
+					"// Auto-set base URL if not set",
+					"if (!pm.environment.get('base_url')) {",
+					"    pm.environment.set('base_url', 'http://localhost:8000');",
+					"}",
+					"",
+					"// Auto-set API prefix",
+					"if (!pm.environment.get('api_prefix')) {",
+					"    pm.environment.set('api_prefix', '/api');",
+					"}"
+				],
+				"type": "text/javascript"
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000",
+			"type": "string"
+		},
+		{
+			"key": "api_prefix",
+			"value": "api",
+			"type": "string"
+		},
+		{
+			"key": "jwt_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "api_key",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "admin_api_key",
+			"value": "118a93b2b7e9adf1430726252bf6115c67938f0b76197ff7779fa818214b8e03",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "🏥 Health & System",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/health",
+							"host": ["{{base_url}}"],
+							"path": ["api", "health"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🔐 Authentication & API Keys",
+			"item": [
+				{
+					"name": "Generate Test JWT Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Generate a test JWT token for authentication",
+									"const CryptoJS = require('crypto-js');",
+									"",
+									"// Create payload",
+									"const header = {",
+									"    'alg': 'HS256',",
+									"    'typ': 'JWT'",
+									"};",
+									"",
+									"const payload = {",
+									"    'sub': pm.globals.replaceIn('{{$randomUUID}}'),",
+									"    'iat': Math.floor(Date.now() / 1000),",
+									"    'exp': Math.floor(Date.now() / 1000) + (60 * 60), // 1 hour",
+									"    'aud': 'authenticated',",
+									"    'iss': 'supabase'",
+									"};",
+									"",
+									"// JWT secret from backend .env",
+									"const secret = 'super-secret-jwt-token-with-at-least-32-characters-long';",
+									"",
+									"// Create JWT manually",
+									"const encodedHeader = CryptoJS.enc.Base64url.stringify(CryptoJS.enc.Utf8.parse(JSON.stringify(header)));",
+									"const encodedPayload = CryptoJS.enc.Base64url.stringify(CryptoJS.enc.Utf8.parse(JSON.stringify(payload)));",
+									"const signature = CryptoJS.HmacSHA256(encodedHeader + '.' + encodedPayload, secret);",
+									"const encodedSignature = CryptoJS.enc.Base64url.stringify(signature);",
+									"",
+									"const token = encodedHeader + '.' + encodedPayload + '.' + encodedSignature;",
+									"",
+									"// Set environment variables",
+									"pm.environment.set('jwt_token', token);",
+									"pm.environment.set('test_user_id', payload.sub);",
+									"",
+									"console.log('✅ Generated JWT Token:', token);",
+									"console.log('✅ Test User ID:', payload.sub);",
+									"console.log('✅ Token expires in 1 hour');",
+									"",
+									"pm.test('JWT Token generated successfully', function () {",
+									"    pm.expect(token).to.be.a('string');",
+									"    pm.expect(token.split('.')).to.have.lengthOf(3);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/health",
+							"host": ["{{base_url}}"],
+							"path": ["api", "health"]
+						}
+					}
+				},
+				{
+					"name": "Create API Key",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Test API Key\",\n  \"description\": \"API key for testing\",\n  \"expires_in_days\": 30\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/api-keys",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "api-keys"]
+						}
+					}
+				},
+				{
+					"name": "List API Keys",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/api-keys",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "api-keys"]
+						}
+					}
+				},
+				{
+					"name": "Revoke API Key",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/api-keys/{{key_id}}/revoke",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "api-keys", "{{key_id}}", "revoke"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🤖 Agents",
+			"item": [
+				{
+					"name": "Create Agent",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Test Agent\",\n  \"description\": \"A test agent for API testing\",\n  \"system_prompt\": \"You are a helpful AI assistant.\",\n  \"configured_mcps\": [],\n  \"custom_mcps\": [],\n  \"agentpress_tools\": {},\n  \"is_default\": false,\n  \"icon_name\": \"robot\",\n  \"icon_color\": \"#3B82F6\",\n  \"icon_background\": \"#EFF6FF\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/agents",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "agents"]
+						}
+					}
+				},
+				{
+					"name": "List Agents",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/agents?page=1&limit=20",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "agents"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Agent",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/agents/{{agent_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "agents", "{{agent_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Update Agent",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Agent Name\",\n  \"description\": \"Updated description\",\n  \"system_prompt\": \"You are an updated helpful AI assistant.\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/agents/{{agent_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "agents", "{{agent_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Delete Agent",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/agents/{{agent_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "agents", "{{agent_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Export Agent",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/agents/{{agent_id}}/export",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "agents", "{{agent_id}}", "export"]
+						}
+					}
+				},
+				{
+					"name": "Import Agent",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"agent_data\": {\n    \"name\": \"Imported Agent\",\n    \"description\": \"Agent imported from export\",\n    \"system_prompt\": \"You are an imported AI assistant.\",\n    \"agentpress_tools\": {},\n    \"configured_mcps\": [],\n    \"custom_mcps\": [],\n    \"export_version\": \"1.1\",\n    \"exported_at\": \"2025-01-01T00:00:00Z\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/agents/import",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "agents", "import"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🧵 Threads & Conversations",
+			"item": [
+				{
+					"name": "Create Thread",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "name",
+									"value": "Test Thread",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/threads",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "threads"]
+						}
+					}
+				},
+				{
+					"name": "List Threads",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/threads?page=1&limit=20",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "threads"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Thread",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/threads/{{thread_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "threads", "{{thread_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Add Message to Thread",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "message",
+									"value": "Hello! Can you help me with blockchain analysis?",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/threads/{{thread_id}}/messages/add",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "threads", "{{thread_id}}", "messages", "add"]
+						}
+					}
+				},
+				{
+					"name": "Create Message",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"type\": \"user\",\n  \"content\": \"Hello! Can you analyze Bitcoin trends?\",\n  \"is_llm_message\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/threads/{{thread_id}}/messages",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "threads", "{{thread_id}}", "messages"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🚀 Agent Runs & Execution",
+			"item": [
+				{
+					"name": "Initiate Agent (with Files)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "prompt",
+									"value": "Hello! Can you analyze Bitcoin's current market trends and provide insights?",
+									"type": "text"
+								},
+								{
+									"key": "model_name",
+									"value": "claude-sonnet-4",
+									"type": "text"
+								},
+								{
+									"key": "enable_thinking",
+									"value": "false",
+									"type": "text"
+								},
+								{
+									"key": "reasoning_effort",
+									"value": "low",
+									"type": "text"
+								},
+								{
+									"key": "stream",
+									"value": "true",
+									"type": "text"
+								},
+								{
+									"key": "enable_context_manager",
+									"value": "true",
+									"type": "text"
+								},
+								{
+									"key": "enable_prompt_caching",
+									"value": "false",
+									"type": "text"
+								},
+								{
+									"key": "agent_id",
+									"value": "",
+									"type": "text",
+									"disabled": true
+								},
+								{
+									"key": "files",
+									"type": "file",
+									"src": [],
+									"disabled": true
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/agent/initiate",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "agent", "initiate"]
+						}
+					}
+				},
+				{
+					"name": "Start Agent for Thread",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"model_name\": \"claude-sonnet-4\",\n  \"enable_thinking\": false,\n  \"reasoning_effort\": \"low\",\n  \"stream\": true,\n  \"enable_context_manager\": true,\n  \"enable_prompt_caching\": true,\n  \"agent_id\": null\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/thread/{{thread_id}}/agent/start",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "thread", "{{thread_id}}", "agent", "start"]
+						}
+					}
+				},
+				{
+					"name": "Get Agent Runs",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/agent-runs/{{thread_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "agent-runs", "{{thread_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Stream Agent Response",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/event-stream"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/agent-runs/{{agent_run_id}}/stream",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "agent-runs", "{{agent_run_id}}", "stream"]
+						}
+					}
+				},
+				{
+					"name": "Stop Agent",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/agent-runs/{{agent_run_id}}/stop",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "agent-runs", "{{agent_run_id}}", "stop"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "📊 Billing & Subscriptions",
+			"item": [
+				{
+					"name": "Get Available Models",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/billing/models",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "billing", "models"]
+						}
+					}
+				},
+				{
+					"name": "Get Credit Balance",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/billing/credits",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "billing", "credits"]
+						}
+					}
+				},
+				{
+					"name": "Get Usage Statistics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/billing/usage?start_date=2025-01-01&end_date=2025-01-31",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "billing", "usage"],
+							"query": [
+								{
+									"key": "start_date",
+									"value": "2025-01-01"
+								},
+								{
+									"key": "end_date",
+									"value": "2025-01-31"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Checkout Session",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"price_id\": \"price_xxx\",\n  \"success_url\": \"{{base_url}}/success\",\n  \"cancel_url\": \"{{base_url}}/cancel\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/billing/checkout",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "billing", "checkout"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "📚 Knowledge Base",
+			"item": [
+				{
+					"name": "Create Folder",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Test Folder\",\n  \"description\": \"A test folder for knowledge base\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/knowledge-base/folders",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "knowledge-base", "folders"]
+						}
+					}
+				},
+				{
+					"name": "List Folders",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/knowledge-base/folders",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "knowledge-base", "folders"]
+						}
+					}
+				},
+				{
+					"name": "Upload File to Folder",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": []
+								},
+								{
+									"key": "summary",
+									"value": "Test document for knowledge base",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/knowledge-base/folders/{{folder_id}}/upload",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "knowledge-base", "folders", "{{folder_id}}", "upload"]
+						}
+					}
+				},
+				{
+					"name": "Get Folder Entries",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/folders/{{folder_id}}/entries",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "folders", "{{folder_id}}", "entries"]
+						}
+					}
+				},
+				{
+					"name": "Get Agent Knowledge Context",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/agents/{{agent_id}}/context?max_tokens=4000",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "agents", "{{agent_id}}", "context"],
+							"query": [
+								{
+									"key": "max_tokens",
+									"value": "4000"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🔧 Admin Operations",
+			"item": [
+				{
+					"name": "Install Chainlens Agent for User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-Admin-Api-Key",
+								"value": "{{admin_api_key}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/admin/chainlens-agents/install-user/{{account_id}}?replace_existing=false",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "admin", "chainlens-agents", "install-user", "{{account_id}}"],
+							"query": [
+								{
+									"key": "replace_existing",
+									"value": "false"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "List Users (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Admin-Api-Key",
+								"value": "{{admin_api_key}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/admin/users/list?page=1&page_size=20",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "admin", "users", "list"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "20"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get User Details (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Admin-Api-Key",
+								"value": "{{admin_api_key}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/admin/users/{{user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "admin", "users", "{{user_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Adjust User Credits (Admin)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-Admin-Api-Key",
+								"value": "{{admin_api_key}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"amount\": 1000,\n  \"reason\": \"Admin credit adjustment for testing\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/admin/users/adjust-credits",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "admin", "users", "adjust-credits"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🔗 Integrations",
+			"item": [
+				{
+					"name": "Pipedream - Create Connection Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"app\": \"github\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/pipedream/connection-token",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "pipedream", "connection-token"]
+						}
+					}
+				},
+				{
+					"name": "Pipedream - Get User Connections",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/pipedream/connections",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "pipedream", "connections"]
+						}
+					}
+				},
+				{
+					"name": "Composio - List Toolkits",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/composio/toolkits",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "composio", "toolkits"]
+						}
+					}
+				},
+				{
+					"name": "Composio - Get Toolkit Tools",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/composio/toolkits/{{toolkit_slug}}/tools",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "composio", "toolkits", "{{toolkit_slug}}", "tools"]
+						}
+					}
+				},
+				{
+					"name": "MCP - List Servers",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/mcp/servers",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "mcp", "servers"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🎯 Triggers & Workflows",
+			"item": [
+				{
+					"name": "List Agent Triggers",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/agents/{{agent_id}}/triggers",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "agents", "{{agent_id}}", "triggers"]
+						}
+					}
+				},
+				{
+					"name": "Create Trigger",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Test Trigger\",\n  \"provider_id\": \"webhook\",\n  \"config\": {\n    \"webhook_url\": \"https://example.com/webhook\",\n    \"method\": \"POST\"\n  },\n  \"description\": \"A test trigger for API testing\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/agents/{{agent_id}}/triggers",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "agents", "{{agent_id}}", "triggers"]
+						}
+					}
+				},
+				{
+					"name": "List Agent Workflows",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/agents/{{agent_id}}/workflows",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "agents", "{{agent_id}}", "workflows"]
+						}
+					}
+				},
+				{
+					"name": "Execute Workflow",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"input_data\": {\n    \"symbol\": \"BTC\",\n    \"analysis_type\": \"comprehensive\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/agents/{{agent_id}}/workflows/{{workflow_id}}/execute",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "agents", "{{agent_id}}", "workflows", "{{workflow_id}}", "execute"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "📄 Templates & Documents",
+			"item": [
+				{
+					"name": "List Templates",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/templates",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "templates"]
+						}
+					}
+				},
+				{
+					"name": "Create Template",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Test Template\",\n  \"description\": \"A test template\",\n  \"content\": \"This is a test template content\",\n  \"category\": \"general\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/templates",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "templates"]
+						}
+					}
+				},
+				{
+					"name": "Get Template",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/templates/{{template_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "templates", "{{template_id}}"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🎤 Transcription & Media",
+			"item": [
+				{
+					"name": "Transcribe Audio",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": []
+								},
+								{
+									"key": "model",
+									"value": "whisper-1",
+									"type": "text"
+								},
+								{
+									"key": "language",
+									"value": "en",
+									"type": "text",
+									"disabled": true
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/transcribe",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "transcribe"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "📧 Email Services",
+			"item": [
+				{
+					"name": "Send Welcome Email (Admin)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-Admin-Api-Key",
+								"value": "{{admin_api_key}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"test@example.com\",\n  \"name\": \"Test User\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/send-welcome-email",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "send-welcome-email"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🔐 Alternative Authentication",
+			"item": [
+				{
+					"name": "Test with API Key Header",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-api-key",
+								"value": "{{api_key}}",
+								"description": "Format: pk_xxx:sk_xxx"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/threads",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "threads"]
+						}
+					}
+				},
+				{
+					"name": "Test with Admin API Key",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-Admin-Api-Key",
+								"value": "{{admin_api_key}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/admin/chainlens-agents/install-user/test-user-123",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "admin", "chainlens-agents", "install-user", "test-user-123"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🧪 Testing & Development",
+			"item": [
+				{
+					"name": "Generate Test JWT Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Generate a test JWT token",
+									"const jwt = require('jsonwebtoken');",
+									"const uuid = require('uuid');",
+									"",
+									"const payload = {",
+									"    sub: uuid.v4(),",
+									"    iat: Math.floor(Date.now() / 1000),",
+									"    exp: Math.floor(Date.now() / 1000) + (60 * 60), // 1 hour",
+									"    aud: 'authenticated',",
+									"    iss: 'supabase'",
+									"};",
+									"",
+									"const secret = 'super-secret-jwt-token-with-at-least-32-characters-long';",
+									"const token = jwt.sign(payload, secret);",
+									"",
+									"pm.environment.set('jwt_token', token);",
+									"pm.environment.set('test_user_id', payload.sub);",
+									"",
+									"console.log('Generated JWT Token:', token);",
+									"console.log('Test User ID:', payload.sub);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/health",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "health"]
+						}
+					}
+				},
+				{
+					"name": "Test E2E Flow",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test the complete E2E flow",
+									"pm.test('Health check successful', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"// Set variables for next requests",
+									"if (pm.response.json().status === 'ok') {",
+									"    console.log('Backend is healthy, ready for E2E testing');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}{{api_prefix}}/health",
+							"host": ["{{base_url}}"],
+							"path": ["{{api_prefix}}", "health"]
+						}
+					}
+				}
+			]
+		}
+	]
+}
