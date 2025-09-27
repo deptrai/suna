@@ -129,8 +129,17 @@ export const useModelSelection = () => {
     
     // Get the actual model ID to send to the backend (no transformation needed now)
     getActualModelId: (modelId: string) => modelId,
-    
+
     // Refresh function for compatibility (no-op since we use API)
     refreshCustomModels: () => {},
+
+    // Auto mode helpers
+    isAutoMode: (modelId: string) => modelId === 'auto',
+    getCostSavingsText: (modelId: string) => {
+      if (modelId === 'auto') {
+        return '65-95% rẻ hơn trung bình';
+      }
+      return '';
+    },
   };
 };

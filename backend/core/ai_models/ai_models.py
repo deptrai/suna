@@ -11,6 +11,7 @@ class ModelProvider(Enum):
     XAI = "xai"
     MOONSHOTAI = "moonshotai"
     OPENAI_COMPATIBLE = "openai_compatible"
+    CHAINLENS = "chainlens"
 
 class ModelCapability(Enum):
     CHAT = "chat"
@@ -20,6 +21,7 @@ class ModelCapability(Enum):
     WEB_SEARCH = "web_search"
     THINKING = "thinking"
     STRUCTURED_OUTPUT = "structured_output"
+    AUTO_SELECTION = "auto_selection"
 
 
 @dataclass

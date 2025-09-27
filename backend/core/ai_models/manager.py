@@ -3,6 +3,7 @@ from .registry import registry
 from .ai_models import Model, ModelCapability
 from core.utils.logger import logger
 from .registry import DEFAULT_PREMIUM_MODEL, DEFAULT_FREE_MODEL
+import os
 
 class ModelManager:
     def __init__(self):
@@ -11,9 +12,17 @@ class ModelManager:
     def get_model(self, model_id: str) -> Optional[Model]:
         return self.registry.get(model_id)
     
-    def resolve_model_id(self, model_id: str) -> str:
-        logger.debug(f"🔍 MODEL MANAGER: resolve_model_id called with: '{model_id}' (type: {type(model_id)})")
+    def resolve_model_id(self, model_id: str, query: str = None, user_context: dict = None) -> str:
+        """Enhanced resolve with auto selection support - backward compatible"""
+        logger.debug(f"🔍 MODEL MANAGER: resolve_model_id called with: '{model_id}', query: {query is not None}")
 
+        # Auto selection logic
+        if model_id == "auto" and query and os.getenv('AUTO_MODEL_ENABLED', 'false').lower() == 'true':
+            selected = self._auto_select_model(query, user_context)
+            logger.info(f"🤖 AUTO SELECTION: {selected} for query: {query[:50]}...")
+            return selected
+
+        # Existing logic unchanged for backward compatibility
         resolved = self.registry.resolve_model_id(model_id)
         logger.debug(f"🔍 MODEL MANAGER: registry.resolve_model_id returned: '{resolved}'")
         if resolved:
@@ -222,5 +231,22 @@ class ModelManager:
             logger.warning(f"Failed to determine user tier for {user_id}: {e}")
             return DEFAULT_FREE_MODEL
 
+    def _auto_select_model(self, query: str, user_context: dict = None) -> str:
+        """Ultra-fast auto selection with simplified 2-model approach"""
+        q = query.lower()
 
-model_manager = ModelManager() 
+        # Complex task detection
+        complex_patterns = ['code', 'implement', 'create', 'analyze', 'design', 'strategy', 'build', 'develop']
+        is_complex = (any(kw in q for kw in complex_patterns) and len(query.split()) > 15)
+
+        if is_complex:
+            # Use premium model for complex tasks
+            logger.debug(f"🤖 AUTO SELECTION: Complex query detected, using premium model")
+            return 'openai-compatible/gpt-5-2025-08-07'  # $10.0/$30.0 - v98store premium
+
+        # Default to efficient model for all other queries
+        logger.debug(f"🤖 AUTO SELECTION: Simple query detected, using efficient model")
+        return 'openai-compatible/gpt-4o-mini'  # $0.15/$0.60 - ultra cheap default
+
+
+model_manager = ModelManager()

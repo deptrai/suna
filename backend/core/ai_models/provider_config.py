@@ -8,7 +8,7 @@ easily extensible and maintainable.
 
 from dataclasses import dataclass
 from typing import Dict, Optional
-from core import config
+from core.utils.config import config
 import structlog
 
 logger = structlog.get_logger(__name__)

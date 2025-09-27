@@ -63,9 +63,13 @@ async def start_agent(
     model_name = body.model_name
     logger.debug(f"Original model_name from request: {model_name}")
 
+    # Extract query context for auto selection (start endpoint doesn't have direct query)
+    query_context = None  # start endpoint doesn't provide query directly
+    user_context = {'user_id': user_id, 'tier': 'free'}  # Default context
+
     # Log the model name after alias resolution using new model manager
     from core.ai_models import model_manager
-    resolved_model = model_manager.resolve_model_id(model_name)
+    resolved_model = model_manager.resolve_model_id(model_name, query=query_context, user_context=user_context)
     logger.debug(f"Resolved model name: {resolved_model}")
 
     # Update model_name to use the resolved version
@@ -666,9 +670,13 @@ async def initiate_agent_with_files(
         model_name = "openai/gpt-5-mini"
         logger.debug(f"Using default model: {model_name}")
 
+    # Extract query context for auto selection
+    query_context = prompt if prompt else None
+    user_context = {'user_id': user_id, 'tier': 'free'}  # Default context
+
     from core.ai_models import model_manager
     # Log the model name after alias resolution using new model manager
-    resolved_model = model_manager.resolve_model_id(model_name)
+    resolved_model = model_manager.resolve_model_id(model_name, query=query_context, user_context=user_context)
     logger.debug(f"Resolved model name: {resolved_model}")
 
     # Update model_name to use the resolved version

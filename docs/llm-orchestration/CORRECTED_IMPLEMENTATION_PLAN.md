@@ -105,32 +105,19 @@ def resolve_model_id(self, model_id: str, query: str = None, user_context: dict 
     return resolved if resolved else model_id
 
 def _auto_select_model(self, query: str, user_context: dict = None) -> str:
-    """Ultra-fast auto selection với architecture-compliant models"""
+    """Ultra-fast auto selection với simplified 2-model approach"""
     q = query.lower()
 
-    # Get user tier from context
-    user_tier = user_context.get('tier', 'free') if user_context else 'free'
-
-    # Ultra-aggressive cost optimization - simple queries
-    simple_patterns = ['price', 'giá', 'what is', 'who is', 'when', 'where', 'define']
-    if any(pattern in q for pattern in simple_patterns):
-        # Use v98store for ultra-cheap queries
-        return 'openai-compatible/gpt-4o-mini'  # $0.15/$0.60 - cheapest via v98store
-
+    # Simplified 2-model strategy for MVP
     # Complex task detection
-    complex_patterns = ['code', 'implement', 'create', 'analyze', 'design', 'strategy']
-    is_complex = (any(kw in q for kw in complex_patterns) and len(query.split()) > 20)
+    complex_patterns = ['code', 'implement', 'create', 'analyze', 'design', 'strategy', 'build', 'develop']
+    is_complex = (any(kw in q for kw in complex_patterns) and len(query.split()) > 15)
 
     if is_complex:
-        # Premium models for complex tasks based on user tier
-        if user_tier == 'paid':
-            # Use official OpenAI for complex paid tasks
-            return 'openai/gpt-5'  # $1.25/$10.00 - official OpenAI premium
-        else:
-            # Use v98store for complex free tasks
-            return 'openai-compatible/gpt-5-nano-2025-08-07'  # $1.0/$3.0 - v98store efficient
+        # Use premium model for complex tasks
+        return 'openai-compatible/gpt-5-2025-08-07'  # $10.0/$30.0 - v98store premium
 
-    # Default to most efficient v98store model
+    # Default to efficient model for all other queries
     return 'openai-compatible/gpt-4o-mini'  # $0.15/$0.60 - ultra cheap default
 ```
 
@@ -283,12 +270,10 @@ export AUTO_MODEL_ENABLED=true
 
 | Query Type | Selected Model | Cost per Million | Savings vs Claude Sonnet 4 |
 |------------|----------------|------------------|----------------------------|
-| **Simple Queries** | `openai-compatible/gpt-4o-mini` | $0.15/$0.60 | **95% cheaper** |
-| **Complex (Free Tier)** | `openai-compatible/gpt-5-nano-2025-08-07` | $1.0/$3.0 | **80% cheaper** |
-| **Complex (Paid Tier)** | `openai/gpt-5` | $1.25/$10.00 | **58% cheaper** |
-| **Default Fallback** | `openai-compatible/gpt-4o-mini` | $0.15/$0.60 | **95% cheaper** |
+| **Simple/Default Queries** | `openai-compatible/gpt-4o-mini` | $0.15/$0.60 | **95% cheaper** |
+| **Complex Queries** | `openai-compatible/gpt-5-2025-08-07` | $10.0/$30.0 | **33% cheaper** |
 
-**Average Cost Reduction: 85-95%** với architecture-compliant models! 🎯
+**Average Cost Reduction: 65-95%** với simplified 2-model approach! 🎯
 
 ## 🏗️ **Architecture Compliance Updates**
 

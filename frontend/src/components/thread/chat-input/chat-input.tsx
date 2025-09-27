@@ -151,6 +151,8 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
       canAccessModel,
       getActualModelId,
       refreshCustomModels,
+      isAutoMode,
+      getCostSavingsText,
     } = useModelSelection();
 
     const { data: subscriptionData } = useSubscriptionData();
@@ -423,6 +425,16 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
               </CardContent>
             </div>
           </Card>
+
+          {/* Auto Mode Indicator */}
+          {isAutoMode && isAutoMode(selectedModel) && (
+            <div className="w-full max-w-4xl mx-auto -mt-2 mb-2 px-4">
+              <div className="flex items-center justify-center gap-2 text-xs text-blue-600 bg-blue-50 dark:bg-blue-950/30 dark:text-blue-400 px-3 py-2 rounded-lg border border-blue-200 dark:border-blue-800">
+                <Brain className="w-3 h-3" />
+                <span>🤖 AI chọn model tối ưu • {getCostSavingsText && getCostSavingsText(selectedModel)}</span>
+              </div>
+            </div>
+          )}
 
           {enableAdvancedConfig && selectedAgentId && (
             <div className="w-full max-w-4xl mx-auto -mt-12 relative z-20">

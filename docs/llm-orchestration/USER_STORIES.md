@@ -70,8 +70,7 @@ def register_auto_model(self):
 - [ ] `resolve_model_id()` method supports optional `query` and `user_context` parameters
 - [ ] Method maintains backward compatibility with existing single-parameter calls
 - [ ] Auto selection logic routes simple queries to `openai-compatible/gpt-4o-mini`
-- [ ] Complex queries for paid users route to `openai/gpt-5`
-- [ ] Complex queries for free users route to `openai-compatible/gpt-5-nano-2025-08-07`
+- [ ] Complex queries route to `openai-compatible/gpt-5-2025-08-07`
 - [ ] Selection overhead is <5ms
 - [ ] All selected models exist in the registry
 
@@ -88,24 +87,18 @@ def resolve_model_id(self, model_id: str, query: str = None, user_context: dict 
     return resolved if resolved else model_id
 
 def _auto_select_model(self, query: str, user_context: dict = None) -> str:
+    """Simplified 2-model auto selection for MVP"""
     q = query.lower()
-    user_tier = user_context.get('tier', 'free') if user_context else 'free'
-    
-    # Simple queries -> ultra-cheap model
-    simple_patterns = ['price', 'giá', 'what is', 'who is', 'when', 'where', 'define']
-    if any(pattern in q for pattern in simple_patterns):
-        return 'openai-compatible/gpt-4o-mini'
-    
-    # Complex queries -> tier-based selection
-    complex_patterns = ['code', 'implement', 'create', 'analyze', 'design', 'strategy']
-    is_complex = (any(kw in q for kw in complex_patterns) and len(query.split()) > 20)
-    
+
+    # Complex task detection
+    complex_patterns = ['code', 'implement', 'create', 'analyze', 'design', 'strategy', 'build', 'develop']
+    is_complex = (any(kw in q for kw in complex_patterns) and len(query.split()) > 15)
+
     if is_complex:
-        if user_tier == 'paid':
-            return 'openai/gpt-5'
-        else:
-            return 'openai-compatible/gpt-5-nano-2025-08-07'
-    
+        # Use premium model for complex tasks
+        return 'openai-compatible/gpt-5-2025-08-07'
+
+    # Default to efficient model for all other queries
     return 'openai-compatible/gpt-4o-mini'
 ```
 
@@ -252,9 +245,8 @@ if user_hash < rollout_percentage:
 - **User Satisfaction**: No decrease in response quality ratings
 
 ### **Performance Benchmarks**
-- **Simple Queries**: `openai-compatible/gpt-4o-mini` ($0.15/$0.60) - 95% cheaper
-- **Complex Free**: `openai-compatible/gpt-5-nano-2025-08-07` ($1.0/$3.0) - 80% cheaper  
-- **Complex Paid**: `openai/gpt-5` ($1.25/$10.00) - 58% cheaper
+- **Simple/Default Queries**: `openai-compatible/gpt-4o-mini` ($0.15/$0.60) - 95% cheaper
+- **Complex Queries**: `openai-compatible/gpt-5-2025-08-07` ($10.0/$30.0) - 33% cheaper
 
 ---
 

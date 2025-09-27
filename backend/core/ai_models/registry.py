@@ -2,6 +2,7 @@ from typing import Dict, List, Optional, Set
 from .ai_models import Model, ModelProvider, ModelCapability, ModelPricing
 from .provider_config import ProviderConfigFactory
 import structlog
+import os
 
 logger = structlog.get_logger(__name__)
 
@@ -434,7 +435,32 @@ class ModelRegistry:
             enabled=False  # Currently disabled
         ))
         """
-    
+
+        # Auto model registration (conditional on feature flag)
+        if os.getenv('AUTO_MODEL_ENABLED', 'false').lower() == 'true':
+            logger.info("🤖 AUTO MODEL: Registering auto model (feature flag enabled)")
+            self.register(Model(
+                id="auto",
+                name="🤖 Auto (Smart Selection)",
+                provider=ModelProvider.CHAINLENS,
+                aliases=["smart", "intelligent", "auto-select"],
+                context_window=128_000,
+                capabilities=[
+                    ModelCapability.CHAT,
+                    ModelCapability.AUTO_SELECTION,
+                    ModelCapability.FUNCTION_CALLING,
+                    ModelCapability.STRUCTURED_OUTPUT,
+                ],
+                pricing=None,  # Dynamic pricing based on selected model
+                enabled=True,
+                tier_availability=["free", "paid"],
+                metadata={"virtual": True, "auto_selection": True},
+                priority=1000,  # Highest priority to appear first
+                recommended=True
+            ))
+        else:
+            logger.debug("🤖 AUTO MODEL: Feature flag disabled, skipping auto model registration")
+
     def register(self, model: Model) -> None:
         self._models[model.id] = model
         for alias in model.aliases:
