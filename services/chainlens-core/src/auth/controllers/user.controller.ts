@@ -1,15 +1,16 @@
-import { 
-  Controller, 
-  Get, 
-  Post, 
-  Put, 
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
   Delete,
-  Body, 
-  Param, 
+  Body,
+  Param,
   UseGuards,
   HttpStatus,
   HttpCode,
   Query,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { UserService, UserProfile } from '../services/user.service';
@@ -314,6 +315,76 @@ export class UserController {
     };
   }
 
+  @Get(':id/tier-info')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Get user tier information and permissions' })
+  @ApiParam({ name: 'id', description: 'User ID' })
+  @ApiResponse({ status: 200, description: 'User tier information retrieved successfully' })
+  @ApiResponse({ status: 403, description: 'Access denied' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async getUserTierInfo(
+    @Param('id') userId: string,
+    @CurrentUser() currentUser: UserContext
+  ) {
+    // Users can only access their own tier info unless they're enterprise
+    if (currentUser.id !== userId && currentUser.role !== 'enterprise') {
+      throw new ForbiddenException('Access denied');
+    }
+
+    this.logger.debug('Getting user tier info via API', {
+      userId,
+      requestedBy: currentUser.id
+    });
+
+    const tierInfo = await this.userService.getUserTierInfo(userId);
+
+    return {
+      success: true,
+      data: tierInfo,
+      meta: {
+        timestamp: new Date().toISOString(),
+        version: '1.0',
+      },
+      errors: [],
+    };
+  }
+
+  @Post(':id/validate-upgrade')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Validate tier upgrade possibility' })
+  @ApiParam({ name: 'id', description: 'User ID' })
+  @ApiResponse({ status: 200, description: 'Tier upgrade validation completed' })
+  @ApiResponse({ status: 403, description: 'Access denied' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async validateTierUpgrade(
+    @Param('id') userId: string,
+    @Body() body: { newTier: 'pro' | 'enterprise' },
+    @CurrentUser() currentUser: UserContext
+  ) {
+    // Users can only validate their own upgrades unless they're enterprise
+    if (currentUser.id !== userId && currentUser.role !== 'enterprise') {
+      throw new ForbiddenException('Access denied');
+    }
+
+    this.logger.debug('Validating tier upgrade via API', {
+      userId,
+      newTier: body.newTier,
+      requestedBy: currentUser.id
+    });
+
+    const validation = await this.userService.validateTierUpgrade(userId, body.newTier);
+
+    return {
+      success: true,
+      data: validation,
+      meta: {
+        timestamp: new Date().toISOString(),
+        version: '1.0',
+      },
+      errors: [],
+    };
+  }
+
   @Delete(':id')
   @UseGuards(RolesGuard)
   @Roles('enterprise') // Only enterprise users can deactivate other users
@@ -328,9 +399,9 @@ export class UserController {
     @Param('id') userId: string,
     @CurrentUser() currentUser: UserContext,
   ) {
-    this.logger.debug('Deactivating user via API', { 
+    this.logger.debug('Deactivating user via API', {
       userId,
-      requestedBy: currentUser.id 
+      requestedBy: currentUser.id
     });
 
     await this.userService.deactivateUser(userId);

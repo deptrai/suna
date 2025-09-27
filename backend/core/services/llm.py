@@ -340,6 +340,14 @@ async def make_llm_api_call(
 ) -> Union[Dict[str, Any], AsyncGenerator, ModelResponse]:
     """Make an API call to a language model using LiteLLM."""
     logger.info(f"Making LLM API call to model: {model_name} with {len(messages)} messages")
+
+    # DEBUG: Log actual messages content
+    logger.info(f"🔍 MESSAGES DEBUG: Total messages: {len(messages)}")
+    for i, msg in enumerate(messages):
+        role = msg.get('role', 'unknown')
+        content = msg.get('content', '')
+        content_preview = str(content)[:100] + "..." if len(str(content)) > 100 else str(content)
+        logger.info(f"🔍 MESSAGES DEBUG [{i}]: role={role}, content_length={len(str(content))}, preview='{content_preview}'")
     
     # DEBUG: Log if any messages have cache_control
     cache_messages = [i for i, msg in enumerate(messages) if 

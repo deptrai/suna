@@ -13,6 +13,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { ApiKeyAuthGuard } from './guards/api-key-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
+import { PermissionsGuard, TierGuard, ComprehensiveGuard } from './guards/permissions.guard';
 import { JWT_CONSTANTS } from './constants/jwt.constants';
 import { LoggerModule } from '../common/logger/logger.module';
 import { SupabaseService } from './services/supabase.service';
@@ -46,6 +47,9 @@ import supabaseConfig from '../config/supabase.config';
     JwtAuthGuard,
     ApiKeyAuthGuard,
     RolesGuard,
+    PermissionsGuard,
+    TierGuard,
+    ComprehensiveGuard,
   ],
   exports: [
     AuthService,

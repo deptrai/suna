@@ -269,6 +269,73 @@ export class UserService {
   }
 
   /**
+   * Get user tier information and permissions
+   */
+  async getUserTierInfo(userId: string): Promise<{
+    currentTier: string;
+    permissions: string[];
+    features: string[];
+    limits: {
+      apiRequestsPerHour: number;
+      analysisPerDay: number;
+      exportPerMonth: number;
+    };
+    upgradeOptions: string[];
+  }> {
+    try {
+      const user = await this.getUserById(userId);
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      const tierInfo = this.getTierConfiguration(user.tier);
+      const upgradeOptions = this.getAvailableUpgrades(user.tier);
+
+      return {
+        currentTier: user.tier,
+        permissions: tierInfo.permissions,
+        features: tierInfo.features,
+        limits: tierInfo.limits,
+        upgradeOptions,
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      this.logger.error('Error getting user tier info', error.stack, 'UserService', { userId });
+      throw new BadRequestException('Failed to get user tier information');
+    }
+  }
+
+  /**
+   * Validate tier upgrade
+   */
+  async validateTierUpgrade(userId: string, newTier: 'pro' | 'enterprise'): Promise<{
+    isValid: boolean;
+    reason?: string;
+    currentTier: string;
+  }> {
+    try {
+      const user = await this.getUserById(userId);
+      if (!user) {
+        return { isValid: false, reason: 'User not found', currentTier: 'unknown' };
+      }
+
+      const currentTier = user.tier;
+      const isValid = this.isValidTierUpgrade(currentTier, newTier);
+
+      return {
+        isValid,
+        reason: isValid ? undefined : `Cannot upgrade from ${currentTier} to ${newTier}`,
+        currentTier,
+      };
+    } catch (error) {
+      this.logger.error('Error validating tier upgrade', error.stack, 'UserService', { userId, newTier });
+      return { isValid: false, reason: 'Validation error', currentTier: 'unknown' };
+    }
+  }
+
+  /**
    * Check if Supabase service is healthy
    */
   async isHealthy(): Promise<boolean> {
@@ -280,5 +347,59 @@ export class UserService {
       this.logger.error('UserService health check failed', error.stack, 'UserService');
       return false;
     }
+  }
+
+  // ===== TIER VALIDATION HELPERS =====
+
+  private isValidTierUpgrade(currentTier: string, newTier: string): boolean {
+    const tierHierarchy = ['free', 'pro', 'enterprise'];
+    const currentIndex = tierHierarchy.indexOf(currentTier);
+    const newIndex = tierHierarchy.indexOf(newTier);
+
+    return newIndex > currentIndex;
+  }
+
+  private getTierConfiguration(tier: string) {
+    const configurations = {
+      free: {
+        permissions: ['analysis:basic', 'user:profile'],
+        features: ['basic_dashboard', 'csv_export'],
+        limits: {
+          apiRequestsPerHour: 10,
+          analysisPerDay: 5,
+          exportPerMonth: 10,
+        },
+      },
+      pro: {
+        permissions: ['analysis:basic', 'analysis:advanced', 'user:profile', 'user:api'],
+        features: ['advanced_dashboard', 'csv_export', 'pdf_export', 'alerts'],
+        limits: {
+          apiRequestsPerHour: 100,
+          analysisPerDay: 50,
+          exportPerMonth: 100,
+        },
+      },
+      enterprise: {
+        permissions: ['analysis:all', 'user:all', 'team:management'],
+        features: ['custom_dashboard', 'all_exports', 'team_collaboration', 'api_access'],
+        limits: {
+          apiRequestsPerHour: 1000,
+          analysisPerDay: 500,
+          exportPerMonth: 1000,
+        },
+      },
+    };
+
+    return configurations[tier] || configurations.free;
+  }
+
+  private getAvailableUpgrades(currentTier: string): string[] {
+    const upgradeMap = {
+      free: ['pro', 'enterprise'],
+      pro: ['enterprise'],
+      enterprise: [],
+    };
+
+    return upgradeMap[currentTier] || [];
   }
 }
