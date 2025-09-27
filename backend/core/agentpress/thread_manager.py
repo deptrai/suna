@@ -320,7 +320,7 @@ class ThreadManager:
                 logger.debug("Context manager disabled, using raw messages")
 
             # Always apply system prompt optimization
-            logger.info(f"🔧 OPTIMIZATION DEBUG: enable_context_manager={enable_context_manager}")
+            logger.info(f"🔧 OPTIMIZATION DEBUG: use_context_manager={use_context_manager}")
             optimized_system_prompt = system_prompt
             try:
                 ctx_optimizer = ContextManager()
