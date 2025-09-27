@@ -40,7 +40,7 @@ export class MetricsController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
-  async getPerformanceMetrics() {
+  async getPerformanceMetrics(): Promise<any> {
     return this.metricsService.getPerformanceMetrics();
   }
 }

@@ -10,7 +10,7 @@ class AgentStartRequest(BaseModel):
     enable_thinking: Optional[bool] = False
     reasoning_effort: Optional[str] = 'low'
     stream: Optional[bool] = True
-    enable_context_manager: Optional[bool] = True
+    enable_context_manager: Optional[bool] = True  # ALWAYS True for balanced optimization
     enable_prompt_caching: Optional[bool] = True
     agent_id: Optional[str] = None  # Custom agent to use
     query: Optional[str] = None  # Query context for auto model selection

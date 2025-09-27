@@ -48,24 +48,47 @@ export class LoggerService implements NestLoggerService {
     }
   }
 
-  log(message: any, context?: string) {
-    this.logger.info(message, { context });
+  log(message: any, context?: string | object) {
+    if (typeof context === 'object') {
+      this.logger.info(message, context);
+    } else {
+      this.logger.info(message, { context });
+    }
   }
 
-  error(message: any, trace?: string, context?: string) {
-    this.logger.error(message, { trace, context });
+  error(message: any, trace?: string | object, context?: string, metadata?: object) {
+    if (arguments.length === 4 && typeof metadata === 'object') {
+      // Handle 4-argument case: message, trace, context, metadata
+      this.logger.error(message, { trace, context, ...metadata });
+    } else if (typeof trace === 'object') {
+      this.logger.error(message, trace);
+    } else {
+      this.logger.error(message, { trace, context });
+    }
   }
 
-  warn(message: any, context?: string) {
-    this.logger.warn(message, { context });
+  warn(message: any, context?: string | object) {
+    if (typeof context === 'object') {
+      this.logger.warn(message, context);
+    } else {
+      this.logger.warn(message, { context });
+    }
   }
 
-  debug(message: any, context?: string) {
-    this.logger.debug(message, { context });
+  debug(message: any, context?: string | object) {
+    if (typeof context === 'object') {
+      this.logger.debug(message, context);
+    } else {
+      this.logger.debug(message, { context });
+    }
   }
 
-  verbose(message: any, context?: string) {
-    this.logger.verbose(message, { context });
+  verbose(message: any, context?: string | object) {
+    if (typeof context === 'object') {
+      this.logger.verbose(message, context);
+    } else {
+      this.logger.verbose(message, { context });
+    }
   }
 
   // Custom methods for structured logging

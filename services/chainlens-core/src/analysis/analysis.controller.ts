@@ -247,7 +247,7 @@ export class AnalysisController {
     @Query('limit') limit: number = 10,
     @Query('offset') offset: number = 0,
     @Query('projectId') projectId?: string,
-  ) {
+  ): Promise<any> {
     const user = req.user;
     const correlationId = req.correlationId;
 
@@ -310,7 +310,7 @@ export class AnalysisController {
   async getPopularProjects(
     @Query('limit') limit: number = 10,
     @Request() req: any,
-  ) {
+  ): Promise<any> {
     const correlationId = req.correlationId;
 
     this.logger.log('Popular projects requested', {

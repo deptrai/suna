@@ -49,7 +49,7 @@ export class HealthController {
   @Get('detailed')
   @ApiOperation({ summary: 'Get detailed health status including microservices' })
   @ApiResponse({ status: 200, description: 'Detailed health check successful' })
-  async getDetailedHealth() {
+  async getDetailedHealth(): Promise<any> {
     return this.healthService.getDetailedHealthStatus();
   }
 
@@ -85,7 +85,7 @@ export class HealthController {
   @Get('metrics')
   @ApiOperation({ summary: 'Get health metrics for monitoring' })
   @ApiResponse({ status: 200, description: 'Health metrics retrieved' })
-  async getHealthMetrics() {
+  async getHealthMetrics(): Promise<any> {
     return this.healthService.getHealthMetrics();
   }
 }

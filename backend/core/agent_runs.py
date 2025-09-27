@@ -53,7 +53,9 @@ async def start_agent(
     user_id: str = Depends(verify_and_get_user_id_from_jwt)
 ):
     """Start an agent for a specific thread in the background"""
-    logger.info(f"🔧 AGENT START DEBUG: enable_context_manager={body.enable_context_manager}")
+    # Force enable context manager for balanced optimization
+    body.enable_context_manager = True
+    logger.info(f"🔧 AGENT START DEBUG: enable_context_manager={body.enable_context_manager} (FORCED)")
     structlog.contextvars.bind_contextvars(
         thread_id=thread_id,
     )
@@ -680,7 +682,9 @@ async def initiate_agent_with_files(
 
     [WARNING] Keep in sync with create thread endpoint.
     """
-    logger.info(f"🔧 AGENT INITIATE DEBUG: enable_context_manager={enable_context_manager}")
+    # Force enable context manager for balanced optimization
+    enable_context_manager = True
+    logger.info(f"🔧 AGENT INITIATE DEBUG: enable_context_manager={enable_context_manager} (FORCED)")
     if not utils.instance_id:
         raise HTTPException(status_code=500, detail="Agent API not initialized with instance ID")
 

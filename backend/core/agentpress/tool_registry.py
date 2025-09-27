@@ -134,25 +134,25 @@ class ToolRegistry:
 
         query_lower = query.lower()
 
-        # Essential tools that should ALWAYS be available
+        # Essential tools that should ALWAYS be available (using actual tool names)
         essential_tools = [
             'interactive_feedback_MCP_Feedback_Enhanced',
-            'web-search', 'web-fetch',  # Web research
-            'add_tasks', 'update_tasks', 'view_tasklist',  # Task management
+            'web_search', 'scrape_webpage',  # Web research
+            'create_tasks', 'update_tasks', 'view_tasks',  # Task management
             'remember', 'create_entities_memory',  # Memory
-            'str-replace-editor', 'save-file', 'view',  # File operations
+            'str_replace', 'create_file', 'edit_file',  # File operations
             'codebase-retrieval', 'git-commit-retrieval',  # Context retrieval
             'sequentialthinking_Sequential_thinking'  # Advanced reasoning
         ]
 
-        # Query-specific tool categories
+        # Query-specific tool categories (using actual tool names)
         query_specific_categories = {
-            'file_ops': ['remove-files', 'diagnostics'],
+            'file_ops': ['delete_file', 'full_file_rewrite', 'search_files'],
             'git_ops': ['git_status_git', 'git_add_git', 'git_commit_git', 'git_diff_git'],
-            'browser_ops': ['chrome_navigate_chrome-browser', 'chrome_get_web_content_chrome-browser', 'chrome_click_element_chrome-browser'],
-            'process_ops': ['launch-process', 'read-process', 'write-process'],
+            'browser_ops': ['browser_navigate_to', 'browser_extract_content', 'browser_act', 'browser_screenshot'],
+            'process_ops': ['execute_command', 'check_command_output', 'terminate_command'],
             'memory_ops': ['add_observations_memory', 'search_nodes_memory', 'open_nodes_memory'],
-            'advanced_ops': ['render-mermaid', 'open-browser']
+            'advanced_ops': ['render-mermaid', 'open-browser', 'designer_create_or_edit']
         }
 
         # Start with essential tools
@@ -172,10 +172,12 @@ class ToolRegistry:
         if any(word in query_lower for word in ['diagram', 'chart', 'visualization', 'mermaid']):
             relevant_tools.extend(query_specific_categories['advanced_ops'])
 
-        # Filter schemas - use partial matching for flexibility
+        # Filter schemas - use exact matching for essential tools, partial for others
         filtered = []
         for tool_name, tool_info in self.tools.items():
-            if any(relevant in tool_name or tool_name.startswith(relevant) for relevant in relevant_tools):
+            # Exact match for essential tools or partial match for query-specific tools
+            if (tool_name in relevant_tools or
+                any(relevant in tool_name or tool_name.startswith(relevant) for relevant in relevant_tools)):
                 if tool_info['schema'].schema_type == SchemaType.OPENAPI:
                     filtered.append(tool_info['schema'].schema)
 

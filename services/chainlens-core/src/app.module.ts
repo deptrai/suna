@@ -9,6 +9,7 @@ import * as winston from 'winston';
 
 // Core modules
 import { HealthModule } from './health/health.module';
+import { SimpleHealthModule } from './simple-health/simple-health.module';
 import { AuthModule } from './auth/auth.module';
 import { AnalysisModule } from './analysis/analysis.module';
 import { OrchestrationModule } from './orchestration/orchestration.module';
@@ -68,57 +69,58 @@ import servicesConfig from './config/services.config';
       inject: [ConfigService],
     }),
 
-    // Database
-    TypeOrmModule.forRootAsync({
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        url: configService.get<string>('DATABASE_URL'),
-        entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        migrations: [__dirname + '/migrations/*{.ts,.js}'],
-        synchronize: configService.get<string>('NODE_ENV') === 'development',
-        logging: configService.get<string>('NODE_ENV') === 'development',
-        ssl: configService.get<string>('NODE_ENV') === 'production' ? { rejectUnauthorized: false } : false,
-        retryAttempts: 3,
-        retryDelay: 3000,
-        autoLoadEntities: true,
-      }),
-      inject: [ConfigService],
-    }),
+    // Database - Temporarily disabled for testing
+    // TypeOrmModule.forRootAsync({
+    //   useFactory: (configService: ConfigService) => ({
+    //     type: 'postgres',
+    //     url: configService.get<string>('DATABASE_URL'),
+    //     entities: [__dirname + '/**/*.entity{.ts,.js}'],
+    //     migrations: [__dirname + '/migrations/*{.ts,.js}'],
+    //     synchronize: configService.get<string>('NODE_ENV') === 'development',
+    //     logging: configService.get<string>('NODE_ENV') === 'development',
+    //     ssl: configService.get<string>('NODE_ENV') === 'production' ? { rejectUnauthorized: false } : false,
+    //     retryAttempts: 3,
+    //     retryDelay: 3000,
+    //     autoLoadEntities: true,
+    //   }),
+    //   inject: [ConfigService],
+    // }),
 
     // Rate Limiting
     ThrottlerModule.forRootAsync({
       useFactory: (configService: ConfigService) => ({
-        ttl: configService.get<number>('THROTTLE_TTL', 60),
-        limit: configService.get<number>('THROTTLE_LIMIT', 100),
-        storage: configService.get<string>('REDIS_URL') ? {
-          type: 'redis',
-          url: configService.get<string>('REDIS_URL'),
-        } : undefined,
+        throttlers: [
+          {
+            name: 'default',
+            ttl: configService.get<number>('THROTTLE_TTL', 60) * 1000,
+            limit: configService.get<number>('THROTTLE_LIMIT', 100),
+          },
+        ],
       }),
       inject: [ConfigService],
     }),
 
-    // Bull Queue
-    BullModule.forRootAsync({
-      useFactory: (configService: ConfigService) => ({
-        redis: {
-          host: configService.get<string>('REDIS_HOST', 'localhost'),
-          port: configService.get<number>('REDIS_PORT', 6379),
-          password: configService.get<string>('REDIS_PASSWORD'),
-          db: configService.get<number>('REDIS_DB', 0),
-        },
-        defaultJobOptions: {
-          removeOnComplete: 10,
-          removeOnFail: 5,
-          attempts: 3,
-          backoff: {
-            type: 'exponential',
-            delay: 2000,
-          },
-        },
-      }),
-      inject: [ConfigService],
-    }),
+    // Bull Queue - Temporarily disabled for testing
+    // BullModule.forRootAsync({
+    //   useFactory: (configService: ConfigService) => ({
+    //     redis: {
+    //       host: configService.get<string>('REDIS_HOST', 'localhost'),
+    //       port: configService.get<number>('REDIS_PORT', 6379),
+    //       password: configService.get<string>('REDIS_PASSWORD'),
+    //       db: configService.get<number>('REDIS_DB', 0),
+    //     },
+    //     defaultJobOptions: {
+    //       removeOnComplete: 10,
+    //       removeOnFail: 5,
+    //       attempts: 3,
+    //       backoff: {
+    //         type: 'exponential',
+    //         delay: 2000,
+    //       },
+    //     },
+    //   }),
+    //   inject: [ConfigService],
+    // }),
 
     // HTTP Client
     HttpModule.registerAsync({
@@ -133,13 +135,14 @@ import servicesConfig from './config/services.config';
 
     // Feature modules
     LoggerModule,
-    DatabaseModule,
-    HealthModule,
-    AuthModule,
-    CacheModule,
-    MetricsModule,
-    AnalysisModule,
-    OrchestrationModule,
+    // DatabaseModule,
+    // HealthModule,
+    SimpleHealthModule,
+    // AuthModule,
+    // CacheModule,
+    // MetricsModule,
+    // AnalysisModule,
+    // OrchestrationModule,
   ],
   controllers: [],
   providers: [],
