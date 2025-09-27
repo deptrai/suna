@@ -4,21 +4,24 @@ import { PassportModule } from '@nestjs/passport';
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
+import { AuthTestController } from './controllers/auth-test.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
-import { SupabaseStrategy } from './strategies/supabase.strategy';
-import { ApiKeyStrategy } from './strategies/api-key.strategy';
-import { AuthGuard } from './guards/auth.guard';
-import { RolesGuard } from './guards/roles.guard';
-import { ApiKeyGuard } from './guards/api-key.guard';
+// import { SupabaseStrategy } from './strategies/supabase.strategy';
+// import { ApiKeyStrategy } from './strategies/api-key.strategy';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { ApiKeyAuthGuard } from './guards/api-key-auth.guard';
+import { JWT_CONSTANTS } from './constants/jwt.constants';
+import { LoggerModule } from '../common/logger/logger.module';
 
 @Module({
   imports: [
+    LoggerModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET'),
+        secret: configService.get<string>('JWT_SECRET', JWT_CONSTANTS.SECRET),
         signOptions: {
-          expiresIn: configService.get<string>('JWT_EXPIRES_IN', '1h'),
+          expiresIn: configService.get<string>('JWT_EXPIRES_IN', JWT_CONSTANTS.EXPIRES_IN),
           issuer: 'chainlens-core',
           audience: 'chainlens-services',
         },
@@ -26,21 +29,20 @@ import { ApiKeyGuard } from './guards/api-key.guard';
       inject: [ConfigService],
     }),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, AuthTestController],
   providers: [
     AuthService,
     JwtStrategy,
-    SupabaseStrategy,
-    ApiKeyStrategy,
-    AuthGuard,
-    RolesGuard,
-    ApiKeyGuard,
+    // SupabaseStrategy,
+    // ApiKeyStrategy,
+    JwtAuthGuard,
+    ApiKeyAuthGuard,
   ],
   exports: [
     AuthService,
-    AuthGuard,
-    RolesGuard,
-    ApiKeyGuard,
+    JwtStrategy,
+    JwtAuthGuard,
+    ApiKeyAuthGuard,
     PassportModule,
     JwtModule,
   ],

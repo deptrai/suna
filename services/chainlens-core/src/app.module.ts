@@ -9,7 +9,6 @@ import * as winston from 'winston';
 
 // Core modules
 import { HealthModule } from './health/health.module';
-import { SimpleHealthModule } from './simple-health/simple-health.module';
 import { AuthModule } from './auth/auth.module';
 import { AnalysisModule } from './analysis/analysis.module';
 import { OrchestrationModule } from './orchestration/orchestration.module';
@@ -69,7 +68,7 @@ import servicesConfig from './config/services.config';
       inject: [ConfigService],
     }),
 
-    // Database - Temporarily disabled for testing
+    // Database - Temporarily disabled for basic testing
     // TypeOrmModule.forRootAsync({
     //   useFactory: (configService: ConfigService) => ({
     //     type: 'postgres',
@@ -86,21 +85,20 @@ import servicesConfig from './config/services.config';
     //   inject: [ConfigService],
     // }),
 
-    // Rate Limiting
-    ThrottlerModule.forRootAsync({
-      useFactory: (configService: ConfigService) => ({
-        throttlers: [
-          {
-            name: 'default',
-            ttl: configService.get<number>('THROTTLE_TTL', 60) * 1000,
-            limit: configService.get<number>('THROTTLE_LIMIT', 100),
-          },
-        ],
-      }),
-      inject: [ConfigService],
-    }),
+    // Rate Limiting - Temporarily disabled for basic testing
+    // ThrottlerModule.forRootAsync({
+    //   useFactory: (configService: ConfigService) => ({
+    //     ttl: configService.get<number>('THROTTLE_TTL', 60),
+    //     limit: configService.get<number>('THROTTLE_LIMIT', 100),
+    //     storage: configService.get<string>('REDIS_URL') ? {
+    //       type: 'redis',
+    //       url: configService.get<string>('REDIS_URL'),
+    //     } : undefined,
+    //   }),
+    //   inject: [ConfigService],
+    // }),
 
-    // Bull Queue - Temporarily disabled for testing
+    // Bull Queue - Temporarily disabled for basic testing
     // BullModule.forRootAsync({
     //   useFactory: (configService: ConfigService) => ({
     //     redis: {
@@ -135,14 +133,13 @@ import servicesConfig from './config/services.config';
 
     // Feature modules
     LoggerModule,
-    // DatabaseModule,
-    // HealthModule,
-    SimpleHealthModule,
-    // AuthModule,
-    // CacheModule,
-    // MetricsModule,
-    // AnalysisModule,
-    // OrchestrationModule,
+    DatabaseModule,
+    HealthModule,
+    AuthModule,
+    CacheModule,
+    MetricsModule,
+    AnalysisModule,
+    OrchestrationModule,
   ],
   controllers: [],
   providers: [],
