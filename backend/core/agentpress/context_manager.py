@@ -216,10 +216,16 @@ class ContextManager:
         # logger.debug(f"Model {llm_model}: context_window={context_window}, effective_limit={max_tokens}")
 
         result = messages
+        logger.debug(f"🔍 CONTEXT DEBUG: Initial messages count: {len(result)}")
+
         result = self.limit_recent_messages(result, max_count=8)
+        logger.debug(f"🔍 CONTEXT DEBUG: After limit_recent_messages: {len(result)}")
+
         result = self.remove_meta_messages(result)
+        logger.debug(f"🔍 CONTEXT DEBUG: After remove_meta_messages: {len(result)}")
 
         uncompressed_total_token_count = token_counter(model=llm_model, messages=result)
+        logger.debug(f"🔍 CONTEXT DEBUG: Messages after meta removal: {[msg.get('role', 'unknown') for msg in result]}")
 
         result = self.compress_tool_result_messages(result, llm_model, max_tokens, token_threshold)
         result = self.compress_user_messages(result, llm_model, max_tokens, token_threshold)

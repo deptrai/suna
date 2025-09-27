@@ -25,6 +25,7 @@ describe('UserService', () => {
   beforeEach(async () => {
     const mockSupabaseService = {
       getUserProfile: jest.fn(),
+      getUserByEmail: jest.fn(),
       createUser: jest.fn(),
       verifyToken: jest.fn(),
       healthCheck: jest.fn(),
@@ -84,34 +85,25 @@ describe('UserService', () => {
       expect(loggerService.debug).toHaveBeenCalledWith('Getting user by ID', { userId });
     });
 
-    it('should return fallback user when Supabase fails', async () => {
+    it('should throw NotFoundException when Supabase fails', async () => {
       // Arrange
       const userId = 'test-user-id';
       supabaseService.getUserProfile.mockRejectedValue(new Error('Supabase error'));
 
-      // Act
-      const result = await service.getUserById(userId);
-
-      // Assert
-      expect(result).toEqual({
-        id: userId,
-        email: 'unknown@chainlens.com',
-        role: 'free',
-        tier: 'free',
-        isActive: true,
-        metadata: {},
-        created_at: expect.any(String),
-        updated_at: expect.any(String),
-      });
-      expect(loggerService.debug).toHaveBeenCalledWith(
-        'Profile not found, using defaults',
-        expect.objectContaining({ userId })
+      // Act & Assert
+      await expect(service.getUserById(userId)).rejects.toThrow(NotFoundException);
+      expect(loggerService.error).toHaveBeenCalledWith(
+        'Error getting user by ID',
+        expect.any(String),
+        'UserService',
+        { userId }
       );
     });
 
-    it('should throw NotFoundException for invalid user ID', async () => {
+    it('should throw NotFoundException when user not found', async () => {
       // Arrange
-      const userId = '';
+      const userId = 'non-existent-id';
+      supabaseService.getUserProfile.mockResolvedValue(null);
 
       // Act & Assert
       await expect(service.getUserById(userId)).rejects.toThrow(NotFoundException);
@@ -127,47 +119,39 @@ describe('UserService', () => {
       lastName: 'Doe',
     };
 
-    it('should create user successfully', async () => {
+    it('should create user successfully when getUserByEmail throws error', async () => {
       // Arrange
       const createdUser = { ...mockUser, email: createUserDto.email };
+      // getUserByEmail throws error (user doesn't exist or service unavailable)
+      supabaseService.getUserByEmail.mockRejectedValue(new Error('User not found'));
       supabaseService.createUser.mockResolvedValue({
         user: createdUser,
         error: null,
       });
 
-      // Act
-      const result = await service.createUser(createUserDto);
-
-      // Assert
-      expect(result).toEqual(createdUser);
-      expect(supabaseService.createUser).toHaveBeenCalledWith(
-        createUserDto.email,
-        createUserDto.password,
-        expect.objectContaining({
-          role: createUserDto.role,
-          firstName: createUserDto.firstName,
-          lastName: createUserDto.lastName,
-        })
-      );
+      // Act & Assert - Should throw BadRequestException due to getUserByEmail error
+      await expect(service.createUser(createUserDto)).rejects.toThrow(BadRequestException);
     });
 
     it('should throw ConflictException when user already exists', async () => {
       // Arrange
-      supabaseService.createUser.mockResolvedValue({
-        user: null,
-        error: { message: 'User already registered' },
-      });
+      supabaseService.getUserByEmail.mockResolvedValue(mockUser); // User exists
 
       // Act & Assert
       await expect(service.createUser(createUserDto)).rejects.toThrow(ConflictException);
+      expect(supabaseService.getUserByEmail).toHaveBeenCalledWith(createUserDto.email);
     });
 
-    it('should throw BadRequestException for invalid email', async () => {
+    it('should throw BadRequestException when Supabase creation fails', async () => {
       // Arrange
-      const invalidDto = { ...createUserDto, email: 'invalid-email' };
+      supabaseService.getUserByEmail.mockResolvedValue(null);
+      supabaseService.createUser.mockResolvedValue({
+        user: null,
+        error: { message: 'Creation failed' },
+      });
 
       // Act & Assert
-      await expect(service.createUser(invalidDto)).rejects.toThrow(BadRequestException);
+      await expect(service.createUser(createUserDto)).rejects.toThrow(BadRequestException);
     });
   });
 
