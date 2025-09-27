@@ -73,7 +73,10 @@ export default function DashboardLayoutContent({
   // Check authentication status
   useEffect(() => {
     if (!isLoading && !user) {
-      router.push('/auth');
+      // Get current path for redirect
+      const currentPath = window.location.pathname;
+      const redirectParam = encodeURIComponent(currentPath);
+      router.push(`/auth?redirect=${redirectParam}`);
     }
   }, [user, isLoading, router]);
 

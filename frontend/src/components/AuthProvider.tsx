@@ -35,9 +35,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const {
           data: { session: currentSession },
         } = await supabase.auth.getSession();
+
+        console.log('🔍 AuthProvider - Initial session check:', {
+          hasSession: !!currentSession,
+          hasUser: !!currentSession?.user,
+          userId: currentSession?.user?.id,
+          sessionExpiry: currentSession?.expires_at
+        });
+
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
       } catch (error) {
+        console.error('❌ AuthProvider - Error getting session:', error);
       } finally {
         setIsLoading(false);
       }
