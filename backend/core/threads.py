@@ -384,6 +384,7 @@ async def create_message(
     user_id: str = Depends(verify_and_get_user_id_from_jwt)
 ):
     """Create a new message in a thread."""
+    logger.info(f"🔧 MESSAGE CREATE DEBUG: thread_id={thread_id}, content={message_data.content[:100]}...")
     logger.debug(f"Creating message in thread: {thread_id}")
     client = await utils.db.client
     

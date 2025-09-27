@@ -166,6 +166,7 @@ async def run_agent_background(
         await redis.set(instance_active_key, "running", ex=redis.REDIS_KEY_TTL)
 
         # Initialize agent generator
+        logger.info(f"🔧 OPTIMIZATION DEBUG: enable_context_manager={enable_context_manager}")
         agent_gen = run_agent(
             thread_id=thread_id, project_id=project_id, stream=stream,
             model_name=effective_model,

@@ -457,8 +457,8 @@ When using the tools:
 
 
 class MessageManager:
-    def __init__(self, client, thread_id: str, model_name: str, trace: Optional[StatefulTraceClient], 
-                 agent_config: Optional[dict] = None, enable_context_manager: bool = False):
+    def __init__(self, client, thread_id: str, model_name: str, trace: Optional[StatefulTraceClient],
+                 agent_config: Optional[dict] = None, enable_context_manager: bool = True):
         self.client = client
         self.thread_id = thread_id
         self.model_name = model_name
@@ -818,9 +818,9 @@ async def run_agent(
     model_name: str = "openai/gpt-5-mini",
     enable_thinking: Optional[bool] = False,
     reasoning_effort: Optional[str] = 'low',
-    enable_context_manager: bool = False,
+    enable_context_manager: bool = True,
     enable_prompt_caching: bool = False,
-    agent_config: Optional[dict] = None,    
+    agent_config: Optional[dict] = None,
     trace: Optional[StatefulTraceClient] = None
 ):
     effective_model = model_name

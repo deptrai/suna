@@ -240,6 +240,7 @@ class ThreadManager:
 
         # Determine if context manager should be used (default to True)
         use_context_manager = enable_context_manager if enable_context_manager is not None else True
+        logger.info(f"🔧 THREAD MANAGER DEBUG: enable_context_manager={enable_context_manager}, use_context_manager={use_context_manager}")
 
         # Ensure we have a valid ProcessorConfig object
         if processor_config is None:
@@ -309,8 +310,8 @@ class ThreadManager:
             # Apply context compression if enabled
             if use_context_manager:
                 logger.debug(f"Context manager enabled, compressing {len(messages)} messages")
-                context_manager = ContextManager()
-                compressed_messages = context_manager.compress_messages(
+                ctx_mgr = ContextManager()
+                compressed_messages = ctx_mgr.compress_messages(
                     messages, llm_model, max_tokens=llm_max_tokens
                 )
                 logger.debug(f"Context compression completed: {len(messages)} -> {len(compressed_messages)} messages")
@@ -318,19 +319,30 @@ class ThreadManager:
             else:
                 logger.debug("Context manager disabled, using raw messages")
 
-            # Optimize system prompt if possible
+            # Always apply system prompt optimization
+            logger.info(f"🔧 OPTIMIZATION DEBUG: enable_context_manager={enable_context_manager}")
             optimized_system_prompt = system_prompt
-            if user_query and hasattr(self, '_optimize_system_prompt'):
-                try:
-                    from core.agentpress.context_manager import ContextManager
-                    cm = ContextManager()
+            try:
+                ctx_optimizer = ContextManager()
+
+                # Get user query for optimization
+                user_query = ""
+                if messages:
+                    for msg in reversed(messages):
+                        if isinstance(msg, dict) and msg.get('role') == 'user':
+                            user_query = str(msg.get('content', ''))[:200]  # First 200 chars
+                            break
+
+                logger.info(f"🔍 User query extracted for optimization: {user_query[:100]}...")
+                if user_query and system_prompt and isinstance(system_prompt, dict):
                     original_content = system_prompt.get('content', '')
-                    optimized_content = cm.get_optimized_system_prompt(user_query, original_content)
+                    optimized_content = ctx_optimizer.get_optimized_system_prompt(user_query, original_content)
                     optimized_system_prompt = system_prompt.copy()
                     optimized_system_prompt['content'] = optimized_content
-                except Exception as e:
-                    logger.warning(f"System prompt optimization failed: {e}")
-                    optimized_system_prompt = system_prompt
+                    logger.info(f"📝 System prompt optimized: {len(original_content)} -> {len(optimized_content)} chars")
+            except Exception as e:
+                logger.warning(f"System prompt optimization failed: {e}")
+                optimized_system_prompt = system_prompt
 
             # Apply caching if enabled
             if enable_prompt_caching:

@@ -1,0 +1,208 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chainlens-core
+  namespace: chainlens-crypto
+  labels:
+    app: chainlens-core
+    service: api-gateway
+    version: v1
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: chainlens-core
+  template:
+    metadata:
+      labels:
+        app: chainlens-core
+        service: api-gateway
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3006"
+        prometheus.io/path: "/api/v1/metrics"
+    spec:
+      containers:
+      - name: chainlens-core
+        image: chainlens/chainlens-core:latest
+        ports:
+        - containerPort: 3006
+          name: http
+          protocol: TCP
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "3006"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: chainlens-secrets
+              key: database-url
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: chainlens-secrets
+              key: redis-url
+        - name: SUPABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: chainlens-secrets
+              key: supabase-url
+        - name: SUPABASE_JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: chainlens-secrets
+              key: supabase-jwt-secret
+        - name: LOG_LEVEL
+          value: "info"
+        - name: THROTTLE_TTL
+          value: "60"
+        - name: THROTTLE_LIMIT
+          value: "1000"
+        resources:
+          requests:
+            cpu: 300m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+        livenessProbe:
+          httpGet:
+            path: /api/v1/health
+            port: 3006
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/v1/health
+            port: 3006
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+      securityContext:
+        fsGroup: 1000
+      serviceAccountName: chainlens-core
+      automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chainlens-core-service
+  namespace: chainlens-crypto
+  labels:
+    app: chainlens-core
+    service: api-gateway
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3006
+    targetPort: 3006
+    protocol: TCP
+    name: http
+  selector:
+    app: chainlens-core
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: chainlens-core
+  namespace: chainlens-crypto
+  labels:
+    app: chainlens-core
+automountServiceAccountToken: false
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: chainlens-core-ingress
+  namespace: chainlens-crypto
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  tls:
+  - hosts:
+    - api-crypto.chainlens.com
+    secretName: chainlens-core-tls
+  rules:
+  - host: api-crypto.chainlens.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: chainlens-core-service
+            port:
+              number: 3006
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: chainlens-core-pdb
+  namespace: chainlens-crypto
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: chainlens-core
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: chainlens-core-hpa
+  namespace: chainlens-crypto
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: chainlens-core
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60

@@ -53,6 +53,7 @@ async def start_agent(
     user_id: str = Depends(verify_and_get_user_id_from_jwt)
 ):
     """Start an agent for a specific thread in the background"""
+    logger.info(f"🔧 AGENT START DEBUG: enable_context_manager={body.enable_context_manager}")
     structlog.contextvars.bind_contextvars(
         thread_id=thread_id,
     )
@@ -668,7 +669,7 @@ async def initiate_agent_with_files(
     enable_thinking: Optional[bool] = Form(False),
     reasoning_effort: Optional[str] = Form("low"),
     stream: Optional[bool] = Form(True),
-    enable_context_manager: Optional[bool] = Form(False),
+    enable_context_manager: Optional[bool] = Form(True),
     enable_prompt_caching: Optional[bool] = Form(False),
     agent_id: Optional[str] = Form(None),  # Add agent_id parameter
     files: List[UploadFile] = File(default=[]),
@@ -679,6 +680,7 @@ async def initiate_agent_with_files(
 
     [WARNING] Keep in sync with create thread endpoint.
     """
+    logger.info(f"🔧 AGENT INITIATE DEBUG: enable_context_manager={enable_context_manager}")
     if not utils.instance_id:
         raise HTTPException(status_code=500, detail="Agent API not initialized with instance ID")
 

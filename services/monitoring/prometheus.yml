@@ -1,0 +1,296 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'chainlens-crypto'
+    environment: 'production'
+
+rule_files:
+  - "rules/*.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+scrape_configs:
+  # ChainLens Core API Gateway
+  - job_name: 'chainlens-core'
+    static_configs:
+      - targets: ['chainlens-core:3006']
+    metrics_path: '/api/v1/metrics'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    honor_labels: true
+    params:
+      format: ['prometheus']
+
+  # OnChain Analysis Service
+  - job_name: 'onchain-analysis'
+    static_configs:
+      - targets: ['onchain-service:3001']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # Sentiment Analysis Service
+  - job_name: 'sentiment-analysis'
+    static_configs:
+      - targets: ['sentiment-service:3002']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # Tokenomics Analysis Service
+  - job_name: 'tokenomics-analysis'
+    static_configs:
+      - targets: ['tokenomics-service:3003']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # Team Verification Service
+  - job_name: 'team-verification'
+    static_configs:
+      - targets: ['team-service:3004']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # PostgreSQL Database
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # Redis Cache
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # Node Exporter (System Metrics)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # Kubernetes API Server
+  - job_name: 'kubernetes-apiservers'
+    kubernetes_sd_configs:
+    - role: endpoints
+    scheme: https
+    tls_config:
+      ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+    relabel_configs:
+    - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+      action: keep
+      regex: default;kubernetes;https
+
+  # Kubernetes Nodes
+  - job_name: 'kubernetes-nodes'
+    kubernetes_sd_configs:
+    - role: node
+    scheme: https
+    tls_config:
+      ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+    relabel_configs:
+    - action: labelmap
+      regex: __meta_kubernetes_node_label_(.+)
+    - target_label: __address__
+      replacement: kubernetes.default.svc:443
+    - source_labels: [__meta_kubernetes_node_name]
+      regex: (.+)
+      target_label: __metrics_path__
+      replacement: /api/v1/nodes/${1}/proxy/metrics
+
+  # Kubernetes Pods
+  - job_name: 'kubernetes-pods'
+    kubernetes_sd_configs:
+    - role: pod
+    relabel_configs:
+    - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+      action: keep
+      regex: true
+    - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+      action: replace
+      target_label: __metrics_path__
+      regex: (.+)
+    - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+      action: replace
+      regex: ([^:]+)(?::\d+)?;(\d+)
+      replacement: $1:$2
+      target_label: __address__
+    - action: labelmap
+      regex: __meta_kubernetes_pod_label_(.+)
+    - source_labels: [__meta_kubernetes_namespace]
+      action: replace
+      target_label: kubernetes_namespace
+    - source_labels: [__meta_kubernetes_pod_name]
+      action: replace
+      target_label: kubernetes_pod_name
+
+  # External API Monitoring (Synthetic)
+  - job_name: 'external-apis'
+    static_configs:
+      - targets: ['blackbox-exporter:9115']
+    params:
+      module: [http_2xx]
+      target:
+        - https://api.coingecko.com/api/v3/ping
+        - https://api.llama.fi/protocols
+        - https://api.dexscreener.com/latest/dex/tokens/ethereum/0xa0b86a33e6ba3b1b4c1b4b8b1b4b8b1b4b8b1b4b
+    relabel_configs:
+      - source_labels: [__param_target]
+        target_label: instance
+      - source_labels: [__param_target]
+        target_label: __tmp_url
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+      - source_labels: [__tmp_url]
+        target_label: __param_target
+      - target_label: __metrics_path__
+        replacement: /probe
+
+  # Application Performance Monitoring
+  - job_name: 'apm-server'
+    static_configs:
+      - targets: ['apm-server:8200']
+    metrics_path: '/stats'
+    scrape_interval: 30s
+
+# Recording rules for aggregated metrics
+recording_rules:
+  - name: chainlens_crypto_rules
+    rules:
+    # Request rate per service
+    - record: chainlens:request_rate_5m
+      expr: rate(http_requests_total[5m])
+    
+    # Error rate per service
+    - record: chainlens:error_rate_5m
+      expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m])
+    
+    # Response time percentiles
+    - record: chainlens:response_time_p95_5m
+      expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))
+    
+    - record: chainlens:response_time_p99_5m
+      expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m]))
+    
+    # Analysis success rate
+    - record: chainlens:analysis_success_rate_5m
+      expr: rate(analysis_requests_total{status="success"}[5m]) / rate(analysis_requests_total[5m])
+    
+    # Cache hit rate
+    - record: chainlens:cache_hit_rate_5m
+      expr: rate(cache_hits_total[5m]) / (rate(cache_hits_total[5m]) + rate(cache_misses_total[5m]))
+    
+    # Database connection pool usage
+    - record: chainlens:db_pool_usage
+      expr: db_connections_active / db_connections_max
+    
+    # Memory usage percentage
+    - record: chainlens:memory_usage_percent
+      expr: (process_resident_memory_bytes / node_memory_MemTotal_bytes) * 100
+    
+    # CPU usage percentage
+    - record: chainlens:cpu_usage_percent
+      expr: rate(process_cpu_seconds_total[5m]) * 100
+
+# Alerting rules
+alerting_rules:
+  - name: chainlens_crypto_alerts
+    rules:
+    # High error rate
+    - alert: HighErrorRate
+      expr: chainlens:error_rate_5m > 0.05
+      for: 5m
+      labels:
+        severity: warning
+        service: "{{ $labels.service }}"
+      annotations:
+        summary: "High error rate detected"
+        description: "Error rate is {{ $value | humanizePercentage }} for service {{ $labels.service }}"
+    
+    # High response time
+    - alert: HighResponseTime
+      expr: chainlens:response_time_p95_5m > 5
+      for: 5m
+      labels:
+        severity: warning
+        service: "{{ $labels.service }}"
+      annotations:
+        summary: "High response time detected"
+        description: "95th percentile response time is {{ $value }}s for service {{ $labels.service }}"
+    
+    # Low analysis success rate
+    - alert: LowAnalysisSuccessRate
+      expr: chainlens:analysis_success_rate_5m < 0.95
+      for: 10m
+      labels:
+        severity: critical
+        service: "{{ $labels.service }}"
+      annotations:
+        summary: "Low analysis success rate"
+        description: "Analysis success rate is {{ $value | humanizePercentage }} for service {{ $labels.service }}"
+    
+    # High memory usage
+    - alert: HighMemoryUsage
+      expr: chainlens:memory_usage_percent > 85
+      for: 10m
+      labels:
+        severity: warning
+        service: "{{ $labels.service }}"
+      annotations:
+        summary: "High memory usage"
+        description: "Memory usage is {{ $value }}% for service {{ $labels.service }}"
+    
+    # High CPU usage
+    - alert: HighCPUUsage
+      expr: chainlens:cpu_usage_percent > 80
+      for: 10m
+      labels:
+        severity: warning
+        service: "{{ $labels.service }}"
+      annotations:
+        summary: "High CPU usage"
+        description: "CPU usage is {{ $value }}% for service {{ $labels.service }}"
+    
+    # Database connection pool exhaustion
+    - alert: DatabasePoolExhaustion
+      expr: chainlens:db_pool_usage > 0.9
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Database connection pool near exhaustion"
+        description: "Database connection pool usage is {{ $value | humanizePercentage }}"
+    
+    # External API failure
+    - alert: ExternalAPIFailure
+      expr: probe_success == 0
+      for: 5m
+      labels:
+        severity: warning
+        api: "{{ $labels.instance }}"
+      annotations:
+        summary: "External API failure"
+        description: "External API {{ $labels.instance }} is not responding"
+    
+    # Service down
+    - alert: ServiceDown
+      expr: up == 0
+      for: 1m
+      labels:
+        severity: critical
+        service: "{{ $labels.job }}"
+      annotations:
+        summary: "Service is down"
+        description: "Service {{ $labels.job }} has been down for more than 1 minute"
