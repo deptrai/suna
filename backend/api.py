@@ -138,6 +138,7 @@ if config.ENV_MODE == EnvMode.LOCAL:
 if config.ENV_MODE == EnvMode.STAGING:
     allowed_origins.append("https://staging.chainlens.net")
     allowed_origins.append("http://localhost:3000")
+    allowed_origins.append("http://localhost:3001")  # Add port 3001 for development
     allow_origin_regex = r"https://chainlens-.*-prjcts\.vercel\.app"
 
 app.add_middleware(

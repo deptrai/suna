@@ -735,6 +735,7 @@ export const startAgent = async (
     reasoning_effort?: string;
     stream?: boolean;
     agent_id?: string; // Optional again
+    query?: string; // Query context for auto model selection
   },
 ): Promise<{ agent_run_id: string }> => {
   try {
@@ -769,11 +770,21 @@ export const startAgent = async (
       reasoning_effort: finalOptions.reasoning_effort,
       stream: finalOptions.stream,
     };
-    
+
     // Only include agent_id if it's provided
     if (finalOptions.agent_id) {
       body.agent_id = finalOptions.agent_id;
     }
+
+    // Only include query if it's provided
+    if (finalOptions.query) {
+      body.query = finalOptions.query;
+      console.log('🔍 API: Sending query context:', finalOptions.query.substring(0, 100) + '...');
+    } else {
+      console.log('🔍 API: No query context provided');
+    }
+
+    console.log('🔍 API: Request body:', JSON.stringify(body, null, 2));
 
     const response = await fetch(`${API_URL}/thread/${threadId}/agent/start`, {
       method: 'POST',

@@ -435,6 +435,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
           options: {
             ...options,
             agent_id: selectedAgentId,
+            query: message, // Pass the user message as query context for auto selection
           },
         });
 

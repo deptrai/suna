@@ -14,17 +14,20 @@ class ModelManager:
     
     def resolve_model_id(self, model_id: str, query: str = None, user_context: dict = None) -> str:
         """Enhanced resolve with auto selection support - backward compatible"""
-        logger.debug(f"🔍 MODEL MANAGER: resolve_model_id called with: '{model_id}', query: {query is not None}")
+        query_preview = query[:50] if query else "None"
+        logger.debug(f"🔍 MODEL MANAGER: resolve_model_id called with: '{model_id}', query: {query_preview}...")
 
-        # Auto selection logic
-        if model_id == "auto" and query and os.getenv('AUTO_MODEL_ENABLED', 'false').lower() == 'true':
-            selected = self._auto_select_model(query, user_context)
-            logger.info(f"🤖 AUTO SELECTION: {selected} for query: {query[:50]}...")
-            return selected
-
-        # Existing logic unchanged for backward compatibility
+        # First resolve the model_id to get the actual ID
         resolved = self.registry.resolve_model_id(model_id)
         logger.debug(f"🔍 MODEL MANAGER: registry.resolve_model_id returned: '{resolved}'")
+
+        # Auto selection logic - check if resolved ID is "auto"
+        if resolved == "auto" and os.getenv('AUTO_MODEL_ENABLED', 'false').lower() == 'true':
+            selected = self._auto_select_model(query, user_context)
+            logger.info(f"🤖 AUTO SELECTION: {selected} for query: {query_preview}...")
+            return selected
+
+        # Return resolved ID or original if no resolution found
         if resolved:
             logger.debug(f"🔍 MODEL MANAGER: returning resolved model: '{resolved}'")
             return resolved
@@ -233,18 +236,27 @@ class ModelManager:
 
     def _auto_select_model(self, query: str, user_context: dict = None) -> str:
         """Ultra-fast auto selection with simplified 2-model approach"""
-        q = query.lower()
+        # Handle None or empty query
+        if not query:
+            logger.debug(f"🤖 AUTO SELECTION: No query provided, using efficient model as default")
+            return 'openai-compatible/gpt-4o-mini'  # $0.15/$0.60 - ultra cheap default
 
-        # Complex task detection
-        complex_patterns = ['code', 'implement', 'create', 'analyze', 'design', 'strategy', 'build', 'develop']
-        is_complex = (any(kw in q for kw in complex_patterns) and len(query.split()) > 15)
+        q = query.lower()
+        logger.debug(f"🤖 AUTO SELECTION: Analyzing query: '{query[:100]}...' (length: {len(query.split())} words)")
+
+        # Complex task detection - relaxed criteria
+        complex_patterns = ['code', 'implement', 'create', 'analyze', 'design', 'strategy', 'build', 'develop', 'function', 'class', 'algorithm', 'optimize', 'debug', 'refactor']
+        has_complex_keyword = any(kw in q for kw in complex_patterns)
+        is_long_query = len(query.split()) > 8  # Reduced from 15 to 8 words
+
+        is_complex = has_complex_keyword or is_long_query
 
         if is_complex:
             # Use premium model for complex tasks
-            logger.debug(f"🤖 AUTO SELECTION: Complex query detected, using premium model")
+            logger.debug(f"🤖 AUTO SELECTION: Complex query detected (keyword: {has_complex_keyword}, long: {is_long_query}), using premium model")
             return 'openai-compatible/gpt-5-2025-08-07'  # $10.0/$30.0 - v98store premium
 
-        # Default to efficient model for all other queries
+        # Default to efficient model for simple queries
         logger.debug(f"🤖 AUTO SELECTION: Simple query detected, using efficient model")
         return 'openai-compatible/gpt-4o-mini'  # $0.15/$0.60 - ultra cheap default
 

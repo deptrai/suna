@@ -63,8 +63,27 @@ async def start_agent(
     model_name = body.model_name
     logger.debug(f"Original model_name from request: {model_name}")
 
-    # Extract query context for auto selection (start endpoint doesn't have direct query)
-    query_context = None  # start endpoint doesn't provide query directly
+    # Extract query context for auto selection - prioritize request query over database
+    query_context = body.query  # Use query from request if provided
+    logger.debug(f"🔍 AGENT_RUNS: Received query from request: {query_context}")
+    if not query_context:
+        # Fallback to latest message from thread if no query in request
+        try:
+            client = await utils.db.client
+            messages_response = await client.table('messages').select('content').eq('thread_id', thread_id).order('created_at', desc=True).limit(1).execute()
+            if messages_response.data:
+                latest_message = messages_response.data[0]
+                query_context = latest_message.get('content', '')
+                logger.debug(f"🔍 AUTO SELECTION: Using latest message as query context: {query_context[:100]}...")
+            else:
+                logger.debug("🔍 AUTO SELECTION: No messages found in thread, using None as query context")
+        except Exception as e:
+            logger.warning(f"🔍 AUTO SELECTION: Failed to get thread messages for query context: {e}")
+            query_context = None
+    else:
+        logger.debug(f"🔍 AUTO SELECTION: Using query from request: {query_context[:100] if query_context else 'None'}...")
+
+    logger.debug(f"🔍 AGENT_RUNS: Final query_context before model resolution: {query_context}")
     user_context = {'user_id': user_id, 'tier': 'free'}  # Default context
 
     # Log the model name after alias resolution using new model manager

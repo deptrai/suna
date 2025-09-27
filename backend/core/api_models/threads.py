@@ -13,6 +13,7 @@ class AgentStartRequest(BaseModel):
     enable_context_manager: Optional[bool] = True
     enable_prompt_caching: Optional[bool] = True
     agent_id: Optional[str] = None  # Custom agent to use
+    query: Optional[str] = None  # Query context for auto model selection
 
 
 class InitiateAgentResponse(BaseModel):

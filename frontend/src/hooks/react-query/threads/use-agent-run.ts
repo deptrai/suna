@@ -25,6 +25,7 @@ export const useStartAgentMutation = () =>
         reasoning_effort?: string;
         stream?: boolean;
         agent_id?: string;
+        query?: string;
       };
     }) => startAgent(threadId, options),
     {
