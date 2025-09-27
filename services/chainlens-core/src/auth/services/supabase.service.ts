@@ -15,7 +15,6 @@ export interface SupabaseUser {
 
 export interface AuthResponse {
   user: SupabaseUser | null;
-  session: Session | null;
   error?: any;
 }
 
@@ -170,14 +169,14 @@ export class SupabaseService implements OnModuleInit {
 
       // Note: Supabase doesn't have getUserByEmail, we'll use listUsers and filter
       const { data, error } = await this.adminClient.auth.admin.listUsers();
-      
+
       if (error) {
         this.logger.error('Error getting user by email', error.stack, 'SupabaseService', { email });
         throw error;
       }
 
       // Find user by email
-      const user = data.users.find(u => u.email === email);
+      const user = data.users.find((u: any) => u.email === email);
 
       if (!user) {
         return null;
@@ -189,7 +188,7 @@ export class SupabaseService implements OnModuleInit {
         role: user.user_metadata?.role || 'free',
         tier: user.user_metadata?.tier || 'free',
         created_at: user.created_at,
-        last_sign_in_at: user.last_sign_in_at,
+        updated_at: user.updated_at || user.created_at,
       };
     } catch (error) {
       this.logger.error('Error getting user by email', error.stack, 'SupabaseService', { email });
@@ -215,7 +214,7 @@ export class SupabaseService implements OnModuleInit {
 
       if (error) {
         this.logger.error('Error creating user', error.stack, 'SupabaseService', { email });
-        return { user: null, session: null, error };
+        return { user: null, error };
       }
 
       // Create profile
@@ -239,7 +238,7 @@ export class SupabaseService implements OnModuleInit {
           created_at: data.user.created_at,
           updated_at: data.user.updated_at || data.user.created_at,
         } : null,
-        // session: data.session, // Remove session as it's not available in admin API
+        // Note: session not available in admin API
         error: null,
       };
     } catch (error) {
