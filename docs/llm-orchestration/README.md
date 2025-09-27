@@ -11,16 +11,21 @@
 ## 📚 **Documentation Navigation**
 
 ### 🎯 **Start Here**
+- **[PROJECT_SUMMARY.md](./PROJECT_SUMMARY.md)** - **EXECUTIVE OVERVIEW** 📊 Complete project status and next steps
 - **[PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md)** - Executive summary and project scope
 - **[ARCHITECTURE_DECISION_RECORD.md](./ARCHITECTURE_DECISION_RECORD.md)** - Technical decisions and rationale
 
 ### 🛠️ **Implementation**
-- **[implementation-plan.md](./implementation-plan.md)** - **PRIMARY PLAN** ⭐ Detailed technical implementation
+- **[CORRECTED_IMPLEMENTATION_PLAN.md](./CORRECTED_IMPLEMENTATION_PLAN.md)** - **CURRENT PLAN** 🎯 Architecture-compliant implementation (16h)
+- **[USER_STORIES.md](./USER_STORIES.md)** - **DEVELOPMENT READY** 📋 User stories for sprint planning
+- **[implementation-plan.md](./implementation-plan.md)** - Original detailed plan (4 weeks, 98h)
 - **[IMPLEMENTATION_CHECKLIST.md](./IMPLEMENTATION_CHECKLIST.md)** - Task breakdown and progress tracking
 
 ### 🔬 **Research & Analysis**
 - **[research/cost-optimization-research.md](./research/cost-optimization-research.md)** - Comprehensive solution design
-- **[simplified-implementation-plan.md](./simplified-implementation-plan.md)** - Alternative minimal approach
+- **[SIMPLIFIED_IMPLEMENTATION_PLAN.md](./SIMPLIFIED_IMPLEMENTATION_PLAN.md)** - ⚠️ Superseded simplified approach
+- **[SIMPLIFIED_ADR.md](./SIMPLIFIED_ADR.md)** - ⚠️ Superseded architecture decisions
+- **[SIMPLIFIED_CHECKLIST.md](./SIMPLIFIED_CHECKLIST.md)** - ⚠️ Superseded checklist
 
 ### 📊 **System Architecture**
 - **[../diagram/chainlens-chat-flow.md](../diagram/chainlens-chat-flow.md)** - Visual system flow documentation
@@ -30,14 +35,15 @@
 ## 🎯 **Quick Start Guide**
 
 ### **For Decision Makers**
-1. Read [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md) for business impact
-2. Review [ARCHITECTURE_DECISION_RECORD.md](./ARCHITECTURE_DECISION_RECORD.md) for technical approach
-3. Check expected outcomes: **50-70% cost reduction**, **2-3x faster simple queries**
+1. **START HERE**: [PROJECT_SUMMARY.md](./PROJECT_SUMMARY.md) for complete project status
+2. Review [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md) for business impact
+3. Check expected outcomes: **85-95% cost reduction**, **16h implementation**, **$1,095+ monthly savings**
 
 ### **For Developers**
-1. Start with [implementation-plan.md](./implementation-plan.md) for technical details
-2. Use [IMPLEMENTATION_CHECKLIST.md](./IMPLEMENTATION_CHECKLIST.md) for task tracking
-3. Reference [../diagram/chainlens-chat-flow.md](../diagram/chainlens-chat-flow.md) for system integration
+1. **START HERE**: [USER_STORIES.md](./USER_STORIES.md) for development-ready user stories
+2. **Technical Details**: [CORRECTED_IMPLEMENTATION_PLAN.md](./CORRECTED_IMPLEMENTATION_PLAN.md) for implementation guidance
+3. **Task Tracking**: [IMPLEMENTATION_CHECKLIST.md](./IMPLEMENTATION_CHECKLIST.md) for progress monitoring
+4. **System Integration**: [../diagram/chainlens-chat-flow.md](../diagram/chainlens-chat-flow.md) for architecture context
 
 ### **For Architects**
 1. Review [ARCHITECTURE_DECISION_RECORD.md](./ARCHITECTURE_DECISION_RECORD.md) for design decisions
