@@ -329,6 +329,28 @@ class ModelRegistry:
             priority=87,
             enabled=True
         ))
+
+        # Kimi Models via v98store
+        self.register(Model(
+            id="openai-compatible/kimi-k2-0711-preview",
+            name="Kimi K2 Preview (v98store)",
+            provider=ModelProvider.OPENAI_COMPATIBLE,
+            aliases=["kimi-k2-v98", "v98store/kimi-k2", "kimi-k2-0711-preview-v98"],
+            context_window=200_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.THINKING,
+                ModelCapability.STRUCTURED_OUTPUT,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=3.0,
+                output_cost_per_million_tokens=9.0
+            ),
+            tier_availability=["paid"],
+            priority=86,
+            enabled=True
+        ))
         
         self.register(Model(
             id="gemini/gemini-2.5-pro",
