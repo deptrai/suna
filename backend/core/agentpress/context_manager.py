@@ -13,7 +13,7 @@ from core.services.supabase import DBConnection
 from core.utils.logger import logger
 from core.ai_models import model_manager
 
-DEFAULT_TOKEN_THRESHOLD = 15000
+DEFAULT_TOKEN_THRESHOLD = 25000  # Balanced threshold for better tool availability
 
 class ContextManager:
     """Manages thread context including token counting and summarization."""
@@ -349,36 +349,65 @@ class ContextManager:
         return result
 
     def get_optimized_system_prompt(self, query_context: str, base_prompt: str) -> str:
-        """Get optimized system prompt based on query context."""
+        """Get balanced system prompt - keep core instructions but optimize based on query."""
 
         # If base prompt is already short, don't optimize
-        if len(base_prompt) < 200:
+        if len(base_prompt) < 1000:
             return base_prompt
 
-        # Core instructions (always included)
-        core_instructions = "You are a helpful AI assistant."
-
-        # Conditional instructions based on query
         query_lower = query_context.lower()
 
-        # Only add specific guidance if query is complex or specific
+        # Core instructions (always included) - essential identity and guidelines
+        core_instructions = """You are Augment Agent developed by Augment Code, an agentic coding AI assistant with access to the developer's codebase through Augment's world-leading context engine and integrations.
+
+# Identity
+You are based on Claude Sonnet 4 by Anthropic, with access to the developer's codebase through Augment's world-leading context engine and integrations.
+
+# Key Guidelines:
+- Search for information to carry out user requests using codebase-retrieval and git-commit-retrieval
+- Consider using task management tools for complex work that benefits from structured planning
+- Make sure you have all the information before making edits
+- Always use package managers for dependency management instead of manually editing package files
+- Focus on following user instructions and ask before carrying out actions beyond the user's instructions
+- Wrap code excerpts in <augment_code_snippet> XML tags with path= and mode="EXCERPT" attributes
+- Use parallel tool calls wherever possible for maximum efficiency
+- Always use MCP feedback enhanced after completing tasks
+
+# Available Tools:
+You have access to web search, task management, memory, file operations, git, browser automation, codebase retrieval, and advanced reasoning tools. Use them efficiently and in parallel when possible.
+
+# Making Edits:
+When making edits, use str_replace_editor - do NOT just write a new file. Before calling str_replace_editor, ALWAYS first call codebase-retrieval asking for detailed information about the code you want to edit.
+
+# Testing:
+You are very good at writing unit tests. If you write code, suggest to the user to test the code by writing tests and running them."""
+
+        # Query-specific instructions (add based on context)
+        specific_instructions = ""
+
         if any(word in query_lower for word in ['code', 'file', 'edit', 'python', 'javascript', 'programming']):
-            optimized_prompt = f"{core_instructions} Focus on code quality and best practices."
-        elif any(word in query_lower for word in ['git', 'commit', 'branch', 'merge', 'repository']):
-            optimized_prompt = f"{core_instructions} Provide clear git workflow guidance."
-        elif any(word in query_lower for word in ['web', 'search', 'research', 'information', 'find']):
-            optimized_prompt = f"{core_instructions} Provide accurate, up-to-date information."
-        elif any(word in query_lower for word in ['debug', 'error', 'fix', 'problem', 'issue']):
-            optimized_prompt = f"{core_instructions} Focus on systematic debugging."
-        else:
-            # For general queries, use minimal prompt
-            optimized_prompt = core_instructions
+            specific_instructions += "\n\n# Coding Focus:\n- Prioritize code quality and best practices\n- Use codebase-retrieval before making edits\n- Consider writing tests for new code"
+
+        if any(word in query_lower for word in ['git', 'commit', 'branch', 'merge', 'repository']):
+            specific_instructions += "\n\n# Git Operations:\n- Use appropriate git commands\n- Write clear commit messages\n- Check status before operations"
+
+        if any(word in query_lower for word in ['web', 'search', 'research', 'information', 'find']):
+            specific_instructions += "\n\n# Research Focus:\n- Use web-search for current information\n- Verify information from multiple sources\n- Provide accurate, up-to-date data"
+
+        if any(word in query_lower for word in ['task', 'plan', 'organize', 'manage']):
+            specific_instructions += "\n\n# Task Management:\n- Use task management tools for complex work\n- Break down large tasks into manageable steps\n- Track progress systematically"
+
+        if any(word in query_lower for word in ['debug', 'error', 'fix', 'problem', 'issue']):
+            specific_instructions += "\n\n# Debugging Focus:\n- Use systematic debugging approach\n- Check logs and error messages\n- Test solutions thoroughly"
+
+        # Combine core + specific instructions
+        optimized_prompt = core_instructions + specific_instructions
 
         # Log optimization
         original_length = len(base_prompt)
         optimized_length = len(optimized_prompt)
         reduction = (original_length - optimized_length) / original_length * 100 if original_length > 0 else 0
 
-        logger.debug(f"System prompt optimization: {original_length} -> {optimized_length} chars ({reduction:.1f}% reduction)")
+        logger.debug(f"Balanced system prompt optimization: {original_length} -> {optimized_length} chars ({reduction:.1f}% reduction)")
 
         return optimized_prompt

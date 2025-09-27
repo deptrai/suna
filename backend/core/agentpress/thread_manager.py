@@ -362,8 +362,8 @@ class ThreadManager:
                             user_query = str(msg.get('content', ''))[:200]  # First 200 chars
                             break
 
-                # Use minimal schemas for better token efficiency
-                openapi_tool_schemas = self.tool_registry.get_minimal_schemas(user_query)
+                # Use balanced schemas (essential + query-specific tools)
+                openapi_tool_schemas = self.tool_registry.get_filtered_schemas(user_query)
 
             # Update generation tracking
             if generation:

@@ -128,42 +128,58 @@ class ToolRegistry:
         return examples
 
     def get_filtered_schemas(self, query: str = "") -> List[Dict[str, Any]]:
-        """Get filtered tool schemas based on query keywords."""
+        """Get balanced tool schemas - essential tools + query-specific tools."""
         if not query.strip():
             return self.get_openapi_schemas()
 
         query_lower = query.lower()
 
-        # Define tool categories
-        tool_categories = {
-            'file_ops': ['str-replace-editor', 'save-file', 'view', 'codebase-retrieval'],
-            'git_ops': ['git_status_git', 'git_add_git', 'git_commit_git'],
-            'web_ops': ['web-search', 'web-fetch'],
-            'browser_ops': ['chrome_navigate_chrome-browser', 'chrome_get_web_content_chrome-browser'],
-            'core': ['interactive_feedback_MCP_Feedback_Enhanced']
+        # Essential tools that should ALWAYS be available
+        essential_tools = [
+            'interactive_feedback_MCP_Feedback_Enhanced',
+            'web-search', 'web-fetch',  # Web research
+            'add_tasks', 'update_tasks', 'view_tasklist',  # Task management
+            'remember', 'create_entities_memory',  # Memory
+            'str-replace-editor', 'save-file', 'view',  # File operations
+            'codebase-retrieval', 'git-commit-retrieval',  # Context retrieval
+            'sequentialthinking_Sequential_thinking'  # Advanced reasoning
+        ]
+
+        # Query-specific tool categories
+        query_specific_categories = {
+            'file_ops': ['remove-files', 'diagnostics'],
+            'git_ops': ['git_status_git', 'git_add_git', 'git_commit_git', 'git_diff_git'],
+            'browser_ops': ['chrome_navigate_chrome-browser', 'chrome_get_web_content_chrome-browser', 'chrome_click_element_chrome-browser'],
+            'process_ops': ['launch-process', 'read-process', 'write-process'],
+            'memory_ops': ['add_observations_memory', 'search_nodes_memory', 'open_nodes_memory'],
+            'advanced_ops': ['render-mermaid', 'open-browser']
         }
 
-        # Always include core tools
-        relevant_tools = tool_categories['core'].copy()
+        # Start with essential tools
+        relevant_tools = essential_tools.copy()
 
-        # Add category-specific tools based on query
-        if any(word in query_lower for word in ['file', 'code', 'edit', 'create', 'read', 'write']):
-            relevant_tools.extend(tool_categories['file_ops'])
-        if any(word in query_lower for word in ['git', 'commit', 'branch']):
-            relevant_tools.extend(tool_categories['git_ops'])
-        if any(word in query_lower for word in ['web', 'search', 'url']):
-            relevant_tools.extend(tool_categories['web_ops'])
-        if any(word in query_lower for word in ['browser', 'chrome', 'navigate']):
-            relevant_tools.extend(tool_categories['browser_ops'])
+        # Add query-specific tools based on keywords
+        if any(word in query_lower for word in ['file', 'code', 'edit', 'create', 'read', 'write', 'programming']):
+            relevant_tools.extend(query_specific_categories['file_ops'])
+        if any(word in query_lower for word in ['git', 'commit', 'branch', 'repository', 'version']):
+            relevant_tools.extend(query_specific_categories['git_ops'])
+        if any(word in query_lower for word in ['browser', 'chrome', 'navigate', 'click', 'website']):
+            relevant_tools.extend(query_specific_categories['browser_ops'])
+        if any(word in query_lower for word in ['run', 'execute', 'command', 'process', 'terminal']):
+            relevant_tools.extend(query_specific_categories['process_ops'])
+        if any(word in query_lower for word in ['memory', 'remember', 'knowledge', 'entity']):
+            relevant_tools.extend(query_specific_categories['memory_ops'])
+        if any(word in query_lower for word in ['diagram', 'chart', 'visualization', 'mermaid']):
+            relevant_tools.extend(query_specific_categories['advanced_ops'])
 
-        # Filter schemas
+        # Filter schemas - use partial matching for flexibility
         filtered = []
         for tool_name, tool_info in self.tools.items():
-            if any(relevant in tool_name for relevant in relevant_tools):
+            if any(relevant in tool_name or tool_name.startswith(relevant) for relevant in relevant_tools):
                 if tool_info['schema'].schema_type == SchemaType.OPENAPI:
                     filtered.append(tool_info['schema'].schema)
 
-        logger.debug(f"Tool filtering: {len(filtered)}/{len(self.tools)} tools for query: '{query[:50]}...'")
+        logger.debug(f"Balanced tool filtering: {len(filtered)}/{len(self.tools)} tools for query: '{query[:50]}...'")
         return filtered
 
     def get_minimal_schemas(self, query_context: str = "") -> List[Dict[str, Any]]:
