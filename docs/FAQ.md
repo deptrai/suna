@@ -816,7 +816,7 @@ See [CONTRIBUTING.md](../CONTRIBUTING.md) for detailed guidelines.
 
 - **📚 Documentation**: [https://docs.chainlens.net](https://docs.chainlens.net)
 - **💬 Discord**: [https://discord.gg/Py6pCBUUPw](https://discord.gg/Py6pCBUUPw)
-- **🐛 GitHub Issues**: [https://github.com/epsilon-ai/chainlens/issues](https://github.com/epsilon-ai/chainlens/issues)
+- **🐛 GitHub Issues**: [https://github.com/deptrai/chainlens/issues](https://github.com/deptrai/chainlens/issues)
 - **📧 Email**: support@chainlens.net
 
 ### **Community Resources:**

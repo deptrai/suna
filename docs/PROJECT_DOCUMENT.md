@@ -13,7 +13,7 @@
 - **Core Product**: ChainLens - Flagship AI Worker
 - **License**: Apache-2.0
 - **Version**: 1.0 (Backend), Multi-component versioning
-- **Repository**: https://github.com/epsilon-ai/chainlens
+- **Repository**: https://github.com/deptrai/chainlens
 - **Website**: https://www.chainlens.net/
 
 ### 🎨 Brand & Community
@@ -207,7 +207,7 @@
 ### 🏗️ Setup Process
 ```bash
 # 1. Clone Repository
-git clone https://github.com/epsilon-ai/chainlens.git
+git clone https://github.com/deptrai/chainlens.git
 cd chainlens
 
 # 2. Interactive Setup (14-step wizard)

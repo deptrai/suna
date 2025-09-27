@@ -7,7 +7,8 @@ __pycache__/
 
 # C extensions
 *.so
-
+.augment/
+.bmad-core/
 # Distribution / packaging
 .Python
 build/
@@ -222,3 +223,6 @@ apps/mobile/*.pem
 apps/mobile/.env
 apps/mobile/.env*.local
 apps/mobile/app-example
+# BMAD (local only)
+.bmad-core/
+.bmad-*/

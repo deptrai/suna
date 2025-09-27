@@ -108,7 +108,7 @@ export const siteConfig = {
       </svg>
     ),
     badge: '100% OPEN SOURCE',
-    githubUrl: 'https://github.com/epsilon-ai/chainlens',
+    githubUrl: 'https://github.com/deptrai/chainlens',
     title: 'Epsilon – Build, manage and train your AI Workforce.',
     description:
       'Epsilon – open-source platform to build, manage and train your AI Workforce.',

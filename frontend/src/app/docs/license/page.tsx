@@ -196,7 +196,7 @@ export default function LicensePage() {
               { 
                 label: 'View License', 
                 variant: 'default',
-                onClick: () => window.open('https://github.com/epsilon-ai/chainlens/blob/main/LICENSE', '_blank')
+                onClick: () => window.open('https://github.com/deptrai/chainlens/blob/main/LICENSE', '_blank')
               }
             ]}
           />

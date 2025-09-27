@@ -46,7 +46,7 @@ export function FooterSection() {
 
               <div className="flex items-center gap-4">
             <a
-              href="https://github.com/epsilon-ai/chainlens"
+              href="https://github.com/deptrai/chainlens"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="GitHub"

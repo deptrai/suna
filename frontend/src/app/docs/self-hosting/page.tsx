@@ -61,7 +61,7 @@ export default function QuickStartPage() {
             data={[{
               language: "bash",
               filename: "terminal",
-              code: `git clone https://github.com/epsilon-ai/chainlens.git
+              code: `git clone https://github.com/deptrai/chainlens.git
 cd chainlens`
             }]}
             defaultValue="bash"

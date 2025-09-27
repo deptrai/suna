@@ -28,7 +28,7 @@
       "research",
       "data analysis"
     ],
-    "githubUrl": "https://github.com/epsilon-ai/chainlens",
+    "githubUrl": "https://github.com/deptrai/chainlens",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.epsilon.chainlens",
@@ -57,7 +57,7 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png",
+      "favicon": "./assets/images/chainlens-favicon.svg",
       "name": "Chainlens - Open Source Generalist AI Agent",
       "shortName": "Chainlens",
       "description": "Chainlens is a fully open source AI assistant that helps you accomplish real-world tasks with ease through natural conversation.",

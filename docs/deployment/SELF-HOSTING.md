@@ -115,7 +115,7 @@ Optional (but supported):
 1. Clone the repository
 
 ```bash
-git clone https://github.com/epsilon-ai/chainlens.git
+git clone https://github.com/deptrai/chainlens.git
 cd chainlens
 ```
 

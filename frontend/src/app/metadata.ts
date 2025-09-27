@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     siteName: siteConfig.name,
     images: [
       {
-        url: '/banner.png',
+        url: '/banner-chainlens.svg',
         width: 1200,
         height: 630,
         alt: siteConfig.name,
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     title: siteConfig.name,
     description: siteConfig.description,
     creator: '@epsilonai',
-    images: ['/banner.png'],
+    images: ['/banner-chainlens.svg'],
   },
   robots: {
     index: true,

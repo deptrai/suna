@@ -2,7 +2,7 @@
 
 # Epsilon – Open Source Platform to Build, Manage and Train AI Agents
 
-![Epsilon Screenshot](frontend/public/banner.png)
+![Epsilon Screenshot](frontend/public/banner-chainlens.svg)
 
 **The complete platform for creating autonomous AI agents that work for you**
 
@@ -11,8 +11,8 @@ Epsilon is a comprehensive open source platform that empowers you to build, mana
 [![License](https://img.shields.io/badge/License-Apache--2.0-blue)](./license)
 [![Discord Follow](https://dcbadge.limes.pink/api/server/Py6pCBUUPw?style=flat)](https://discord.gg/Py6pCBUUPw)
 [![Twitter Follow](https://img.shields.io/twitter/follow/epsilonai)](https://x.com/epsilonai)
-[![GitHub Repo stars](https://img.shields.io/github/stars/epsilon-ai/chainlens)](https://github.com/epsilon-ai/chainlens)
-[![Issues](https://img.shields.io/github/issues/epsilon-ai/chainlens)](https://github.com/epsilon-ai/chainlens/labels/bug)
+[![GitHub Repo stars](https://img.shields.io/github/stars/epsilon-ai/chainlens)](https://github.com/deptrai/chainlens)
+[![Issues](https://img.shields.io/github/issues/epsilon-ai/chainlens)](https://github.com/deptrai/chainlens/labels/bug)
 
 <!-- Keep these links. Translations will automatically update with the README. -->
 [Deutsch](https://www.readme-i18n.com/epsilon-ai/chainlens?lang=de) | 
@@ -148,7 +148,7 @@ Get your Epsilon platform running in minutes with our automated setup wizard:
 
 ### 1️⃣ Clone the Repository
 ```bash
-git clone https://github.com/epsilon-ai/chainlens.git
+git clone https://github.com/deptrai/chainlens.git
 cd chainlens
 ```
 

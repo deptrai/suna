@@ -35,7 +35,7 @@ const data = {
   user: {
     name: "Epsilon User",
     email: "docs@epsilon.ai",
-    avatar: "/favicon.png",
+    avatar: "/chainlens-favicon.svg",
   },
   teams: [
     {
@@ -81,7 +81,7 @@ const data = {
       items: [
         {
           title: "GitHub Repository",
-          url: "https://github.com/epsilon-ai/chainlens",
+          url: "https://github.com/deptrai/chainlens",
           external: true,
         },
         {

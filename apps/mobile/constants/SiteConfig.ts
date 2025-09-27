@@ -19,7 +19,7 @@ export const siteConfig = {
   category: 'Technology',
   applicationName: 'Chainlens',
   twitterHandle: '@epsilonai',
-  githubUrl: 'https://github.com/epsilon-ai/chainlens',
+  githubUrl: 'https://github.com/deptrai/chainlens',
   
   // Mobile-specific configurations
   bundleId: {
@@ -60,7 +60,7 @@ export const mobileMetadata = {
     siteName: siteConfig.name,
     images: [
       {
-        url: '/banner.png',
+        url: '/banner-chainlens.svg',
         width: 1200,
         height: 630,
         alt: 'Chainlens - Open Source Generalist AI Agent',
@@ -78,7 +78,7 @@ export const mobileMetadata = {
     site: siteConfig.twitterHandle,
     images: [
       {
-        url: '/banner.png',
+        url: '/banner-chainlens.svg',
         width: 1200,
         height: 630,
         alt: 'Chainlens - Open Source Generalist AI Agent',
@@ -86,8 +86,8 @@ export const mobileMetadata = {
     ],
   },
   icons: {
-    icon: [{ url: '/favicon.png', sizes: 'any' }],
-    shortcut: '/favicon.png',
+    icon: [{ url: '/chainlens-favicon.svg', sizes: 'any' }],
+    shortcut: '/chainlens-favicon.svg',
   },
   alternates: {
     canonical: siteConfig.url,

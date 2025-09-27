@@ -88,7 +88,7 @@ dependencies = [
 
 [project.urls]
 homepage = "https://www.chainlens.net/"
-repository = "https://github.com/epsilon-ai/chainlens"
+repository = "https://github.com/deptrai/chainlens"
 
 [tool.uv]
 package = false

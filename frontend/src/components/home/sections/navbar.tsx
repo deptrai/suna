@@ -154,7 +154,7 @@ export function Navbar() {
               <div className="flex flex-row items-center gap-2 md:gap-3 shrink-0">
                 <div className="flex items-center space-x-3">
                   <Link
-                    href="https://github.com/epsilon-ai/chainlens"
+                    href="https://github.com/deptrai/chainlens"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="hidden md:flex items-center gap-1.5 h-7 px-2.5 text-xs font-medium rounded-full bg-transparent text-muted-foreground/60 hover:text-muted-foreground hover:bg-accent/30 transition-all duration-200"
@@ -292,7 +292,7 @@ export function Navbar() {
 
                 {/* GitHub link for mobile */}
                 <Link
-                  href="https://github.com/epsilon-ai/chainlens"
+                  href="https://github.com/deptrai/chainlens"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-1.5 h-7 px-2.5 text-xs font-medium rounded-full bg-transparent text-muted-foreground/60 hover:text-muted-foreground hover:bg-accent/30 transition-all duration-200"

@@ -73,7 +73,7 @@ export const metadata: Metadata = {
     siteName: 'Chainlens',
     images: [
       {
-        url: '/banner.png',
+        url: '/banner-chainlens.svg',
         width: 1200,
         height: 630,
         alt: 'Chainlens - Open Source Generalist AI Worker',
@@ -92,7 +92,7 @@ export const metadata: Metadata = {
     site: '@epsilonai',
     images: [
       {
-        url: '/banner.png',
+        url: '/banner-chainlens.svg',
         width: 1200,
         height: 630,
         alt: 'Chainlens - Open Source Generalist AI Worker',
@@ -100,8 +100,8 @@ export const metadata: Metadata = {
     ],
   },
   icons: {
-    icon: [{ url: '/favicon.png', sizes: 'any' }],
-    shortcut: '/favicon.png',
+    icon: [{ url: '/chainlens-favicon.svg', sizes: 'any' }],
+    shortcut: '/chainlens-favicon.svg',
   },
   // manifest: "/manifest.json",
   alternates: {

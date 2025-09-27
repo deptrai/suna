@@ -161,7 +161,7 @@ class SandboxWebSearchTool(SandboxToolsBase):
     @usage_example('''
         <function_calls>
         <invoke name="scrape_webpage">
-        <parameter name="urls">https://www.epsilon.ai/,https://github.com/epsilon-ai/chainlens</parameter>
+        <parameter name="urls">https://www.epsilon.ai/,https://github.com/deptrai/chainlens</parameter>
         </invoke>
         </function_calls>
         

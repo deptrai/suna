@@ -220,7 +220,7 @@ resource "azurerm_postgresql_flexible_server" "suna_db" {
 #### **1. Infrastructure Setup**
 ```bash
 # Clone deployment configurations
-git clone https://github.com/epsilon-ai/chainlens.git
+git clone https://github.com/deptrai/chainlens.git
 cd chainlens/deployment/aws
 
 # Initialize Terraform

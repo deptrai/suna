@@ -229,7 +229,7 @@ export default function ContributingPage() {
               { 
                 label: 'View Discussions', 
                 variant: 'default',
-                onClick: () => window.open('https://github.com/epsilon-ai/chainlens/issues', '_blank')
+                onClick: () => window.open('https://github.com/deptrai/chainlens/issues', '_blank')
               }
             ]}
           />

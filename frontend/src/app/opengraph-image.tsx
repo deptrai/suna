@@ -31,7 +31,7 @@ export default async function Image() {
           }}
         >
           <img
-            src={`${baseUrl}/banner.png`}
+            src={`${baseUrl}/banner-chainlens.svg`}
             alt={alt}
             style={{
               width: '100%',
