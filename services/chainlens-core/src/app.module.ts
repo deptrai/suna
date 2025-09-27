@@ -9,6 +9,7 @@ import * as winston from 'winston';
 
 // Core modules
 import { HealthModule } from './health/health.module';
+import { SimpleHealthModule } from './simple-health/simple-health.module';
 import { AuthModule } from './auth/auth.module';
 import { AnalysisModule } from './analysis/analysis.module';
 import { OrchestrationModule } from './orchestration/orchestration.module';
@@ -133,13 +134,8 @@ import servicesConfig from './config/services.config';
 
     // Feature modules
     LoggerModule,
-    DatabaseModule,
-    HealthModule,
+    SimpleHealthModule,
     AuthModule,
-    CacheModule,
-    MetricsModule,
-    AnalysisModule,
-    OrchestrationModule,
   ],
   controllers: [],
   providers: [],
