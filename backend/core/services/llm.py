@@ -14,6 +14,9 @@ from litellm.files.main import ModelResponse
 from core.utils.logger import logger
 from core.utils.config import config
 from core.agentpress.error_processor import ErrorProcessor
+from core.ai_models.provider_config import ProviderConfigFactory, CredentialValidator
+from core.ai_models.llm_strategies import LLMCallContext, LLMStrategyFactory
+from core.ai_models.llm_metrics import track_llm_call, record_llm_call
 
 # Configure LiteLLM
 os.environ['LITELLM_LOG'] = 'INFO'  # Reduced verbosity
@@ -72,9 +75,8 @@ def setup_api_keys() -> None:
 def setup_provider_router(openai_compatible_api_key: str = None, openai_compatible_api_base: str = None):
     global provider_router
 
-    # Only setup router if we have openai-compatible credentials
-    if not (openai_compatible_api_key or config.OPENAI_COMPATIBLE_API_KEY) or \
-       not (openai_compatible_api_base or config.OPENAI_COMPATIBLE_API_BASE):
+    # Use centralized credential validation
+    if not CredentialValidator.validate_openai_compatible(openai_compatible_api_key, openai_compatible_api_base):
         logger.warning("OpenAI-compatible credentials not available, skipping router setup")
         return
 
@@ -262,26 +264,25 @@ def prepare_params(
     if model_name.startswith("openai-compatible/"):
         logger.info(f"🔍 Processing openai-compatible model: {model_name}")
 
-        # Check if have required config either from parameters or environment
-        if (not api_key and not config.OPENAI_COMPATIBLE_API_KEY) or (
-            not api_base and not config.OPENAI_COMPATIBLE_API_BASE
-        ):
+        # Use centralized configuration management
+        provider_config = ProviderConfigFactory.create_openai_compatible_config(api_key, api_base)
+        if not provider_config.validate():
             raise LLMError(
-                "OPENAI_COMPATIBLE_API_KEY and OPENAI_COMPATIBLE_API_BASE is required for openai-compatible models. If just updated the environment variables,  wait a few minutes or restart the service to ensure they are loaded."
+                "OPENAI_COMPATIBLE_API_KEY and OPENAI_COMPATIBLE_API_BASE is required for openai-compatible models. If just updated the environment variables, wait a few minutes or restart the service to ensure they are loaded."
             )
 
         setup_provider_router(api_key, api_base)
 
-        # Transform model name for LiteLLM: openai-compatible/gpt-4o-mini -> gpt-4o-mini
-        actual_model_name = model_name.replace("openai-compatible/", "")
+        # Use centralized model name transformation
+        from core.ai_models import model_manager
+        actual_model_name = model_manager.registry.transform_model_name(model_name)
         logger.info(f"🔄 Transformed model name: {model_name} -> {actual_model_name}")
 
         params["model"] = actual_model_name
-        params["custom_llm_provider"] = "openai"
 
-        # Set API credentials for this specific call
-        params["api_key"] = api_key or config.OPENAI_COMPATIBLE_API_KEY
-        params["api_base"] = api_base or config.OPENAI_COMPATIBLE_API_BASE
+        # Apply provider configuration
+        credentials = provider_config.get_credentials()
+        params.update(credentials)
 
         logger.info(f"🔑 Using API base: {params['api_base']}")
         logger.info(f"🔑 Using API key: {params['api_key'][:10]}...{params['api_key'][-4:] if params['api_key'] else 'None'}")
@@ -372,27 +373,46 @@ async def make_llm_api_call(
         reasoning_effort=reasoning_effort,
     )
     
+    # Start metrics tracking
+    provider = "openai_compatible" if model_name.startswith("openai-compatible/") else "standard"
+    strategy = "DirectLiteLLM" if model_name.startswith("openai-compatible/") else "Router"
+    metrics = track_llm_call(model_name, provider, strategy, stream)
+
     try:
         logger.info(f"🔍 MAKE_LLM_API_CALL: model_name='{model_name}', params['model']='{params.get('model')}'")
 
-        # For openai-compatible models, use direct LiteLLM call instead of router
-        if model_name.startswith("openai-compatible/"):
-            logger.info(f"🚀 Using DIRECT LiteLLM call for openai-compatible model: {model_name}")
-            response = await litellm.acompletion(**params)
-        else:
-            logger.info(f"🚀 Using ROUTER for model: {model_name}")
-            # Use router for other models
-            if provider_router is None:
-                setup_provider_router()
-            response = await provider_router.acompletion(**params)
+        # Use strategy pattern for LLM calls
+        call_context = LLMCallContext(model_name, provider_router)
+        logger.info(f"🚀 Using strategy: {call_context.get_strategy_info()}")
+
+        response = await call_context.execute_call(**params)
 
         # For streaming responses, we need to handle errors that occur during iteration
         if hasattr(response, '__aiter__') and stream:
+            # Mark success for streaming (we'll track tokens later if available)
+            metrics.mark_success()
+            record_llm_call(metrics)
             return _wrap_streaming_response(response)
 
+        # Extract token usage if available
+        token_usage = {}
+        if hasattr(response, 'usage') and response.usage:
+            token_usage = {
+                'prompt_tokens': getattr(response.usage, 'prompt_tokens', 0),
+                'completion_tokens': getattr(response.usage, 'completion_tokens', 0),
+                'total_tokens': getattr(response.usage, 'total_tokens', 0)
+            }
+
+        metrics.mark_success(token_usage)
+        record_llm_call(metrics)
         return response
 
     except Exception as e:
+        # Record failure metrics
+        error_type = type(e).__name__
+        metrics.mark_failure(error_type, str(e))
+        record_llm_call(metrics)
+
         # Use ErrorProcessor to handle the error consistently
         processed_error = ErrorProcessor.process_llm_error(e, context={"model": model_name})
         ErrorProcessor.log_error(processed_error)

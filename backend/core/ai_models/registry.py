@@ -1,5 +1,6 @@
 from typing import Dict, List, Optional, Set
 from .ai_models import Model, ModelProvider, ModelCapability, ModelPricing
+from .provider_config import ProviderConfigFactory
 import structlog
 
 logger = structlog.get_logger(__name__)
@@ -304,6 +305,14 @@ class ModelRegistry:
         model = self.get(model_id)
         logger.debug(f"🔍 REGISTRY: get() returned model: {model.id if model else None}")
         return model.id if model else None
+
+    def transform_model_name(self, model_id: str) -> str:
+        """Transform model name according to provider requirements."""
+        # Get provider config for transformation
+        provider_config = ProviderConfigFactory.get_config_for_model(model_id)
+        if provider_config and hasattr(provider_config, 'transform_model_name'):
+            return provider_config.transform_model_name(model_id)
+        return model_id
     
     def get_aliases(self, model_id: str) -> List[str]:
         model = self.get(model_id)
