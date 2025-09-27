@@ -1,0 +1,172 @@
+{
+  "name": "chainlens-crypto-services",
+  "version": "1.0.0",
+  "description": "ChainLens Crypto Services - Microservices for cryptocurrency analysis",
+  "author": "ChainLens Team",
+  "private": true,
+  "license": "UNLICENSED",
+  "workspaces": [
+    "chainlens-core",
+    "onchain-analysis",
+    "sentiment-analysis",
+    "tokenomics-analysis",
+    "team-verification"
+  ],
+  "scripts": {
+    "install:all": "npm install && npm run install:services",
+    "install:services": "npm run install:core && npm run install:onchain && npm run install:sentiment && npm run install:tokenomics && npm run install:team",
+    "install:core": "cd chainlens-core && npm install",
+    "install:onchain": "cd onchain-analysis && npm install",
+    "install:sentiment": "cd sentiment-analysis && npm install",
+    "install:tokenomics": "cd tokenomics-analysis && npm install",
+    "install:team": "cd team-verification && npm install",
+    
+    "build:all": "npm run build:core && npm run build:onchain && npm run build:sentiment && npm run build:tokenomics && npm run build:team",
+    "build:core": "cd chainlens-core && npm run build",
+    "build:onchain": "cd onchain-analysis && npm run build",
+    "build:sentiment": "cd sentiment-analysis && npm run build",
+    "build:tokenomics": "cd tokenomics-analysis && npm run build",
+    "build:team": "cd team-verification && npm run build",
+    
+    "start:all": "concurrently \"npm run start:core\" \"npm run start:onchain\" \"npm run start:sentiment\" \"npm run start:tokenomics\" \"npm run start:team\"",
+    "start:core": "cd chainlens-core && npm run start",
+    "start:onchain": "cd onchain-analysis && npm run start",
+    "start:sentiment": "cd sentiment-analysis && npm run start",
+    "start:tokenomics": "cd tokenomics-analysis && npm run start",
+    "start:team": "cd team-verification && npm run start",
+    
+    "dev:all": "concurrently \"npm run dev:core\" \"npm run dev:onchain\" \"npm run dev:sentiment\" \"npm run dev:tokenomics\" \"npm run dev:team\"",
+    "dev:core": "cd chainlens-core && npm run start:dev",
+    "dev:onchain": "cd onchain-analysis && npm run start:dev",
+    "dev:sentiment": "cd sentiment-analysis && npm run start:dev",
+    "dev:tokenomics": "cd tokenomics-analysis && npm run start:dev",
+    "dev:team": "cd team-verification && npm run start:dev",
+    
+    "test:all": "npm run test:core && npm run test:onchain && npm run test:sentiment && npm run test:tokenomics && npm run test:team",
+    "test:core": "cd chainlens-core && npm run test",
+    "test:onchain": "cd onchain-analysis && npm run test",
+    "test:sentiment": "cd sentiment-analysis && npm run test",
+    "test:tokenomics": "cd tokenomics-analysis && npm run test",
+    "test:team": "cd team-verification && npm run test",
+    
+    "test:cov:all": "npm run test:cov:core && npm run test:cov:onchain && npm run test:cov:sentiment && npm run test:cov:tokenomics && npm run test:cov:team",
+    "test:cov:core": "cd chainlens-core && npm run test:cov",
+    "test:cov:onchain": "cd onchain-analysis && npm run test:cov",
+    "test:cov:sentiment": "cd sentiment-analysis && npm run test:cov",
+    "test:cov:tokenomics": "cd tokenomics-analysis && npm run test:cov",
+    "test:cov:team": "cd team-verification && npm run test:cov",
+    
+    "test:e2e:all": "npm run test:e2e:core && npm run test:e2e:onchain && npm run test:e2e:sentiment && npm run test:e2e:tokenomics && npm run test:e2e:team",
+    "test:e2e:core": "cd chainlens-core && npm run test:e2e",
+    "test:e2e:onchain": "cd onchain-analysis && npm run test:e2e",
+    "test:e2e:sentiment": "cd sentiment-analysis && npm run test:e2e",
+    "test:e2e:tokenomics": "cd tokenomics-analysis && npm run test:e2e",
+    "test:e2e:team": "cd team-verification && npm run test:e2e",
+    
+    "lint:all": "npm run lint:core && npm run lint:onchain && npm run lint:sentiment && npm run lint:tokenomics && npm run lint:team",
+    "lint:core": "cd chainlens-core && npm run lint",
+    "lint:onchain": "cd onchain-analysis && npm run lint",
+    "lint:sentiment": "cd sentiment-analysis && npm run lint",
+    "lint:tokenomics": "cd tokenomics-analysis && npm run lint",
+    "lint:team": "cd team-verification && npm run lint",
+    
+    "format:all": "npm run format:core && npm run format:onchain && npm run format:sentiment && npm run format:tokenomics && npm run format:team",
+    "format:core": "cd chainlens-core && npm run format",
+    "format:onchain": "cd onchain-analysis && npm run format",
+    "format:sentiment": "cd sentiment-analysis && npm run format",
+    "format:tokenomics": "cd tokenomics-analysis && npm run format",
+    "format:team": "cd team-verification && npm run format",
+    
+    "docker:build": "docker-compose -f docker-compose.dev.yml build",
+    "docker:up": "docker-compose -f docker-compose.dev.yml up -d",
+    "docker:down": "docker-compose -f docker-compose.dev.yml down",
+    "docker:logs": "docker-compose -f docker-compose.dev.yml logs -f",
+    "docker:clean": "docker-compose -f docker-compose.dev.yml down -v --remove-orphans",
+    
+    "db:migrate": "cd chainlens-core && npm run migration:run",
+    "db:migrate:revert": "cd chainlens-core && npm run migration:revert",
+    "db:migrate:generate": "cd chainlens-core && npm run migration:generate",
+    
+    "health:check": "node scripts/health-check.js",
+    "health:all": "npm run health:core && npm run health:onchain && npm run health:sentiment && npm run health:tokenomics && npm run health:team",
+    "health:core": "curl -f http://localhost:3006/api/v1/health || exit 1",
+    "health:onchain": "curl -f http://localhost:3001/health || exit 1",
+    "health:sentiment": "curl -f http://localhost:3002/health || exit 1",
+    "health:tokenomics": "curl -f http://localhost:3003/health || exit 1",
+    "health:team": "curl -f http://localhost:3004/health || exit 1",
+    
+    "test:load": "artillery run test/performance/load-test.yml",
+    "test:stress": "k6 run test/performance/stress-test.js",
+    "test:integration": "jest --config test/integration/jest.config.js",
+    
+    "setup:dev": "npm run install:all && npm run db:migrate && npm run docker:up",
+    "setup:test": "npm run install:all && npm run test:all",
+    "setup:prod": "npm run install:all && npm run build:all && npm run test:all",
+    
+    "clean:all": "npm run clean:core && npm run clean:onchain && npm run clean:sentiment && npm run clean:tokenomics && npm run clean:team",
+    "clean:core": "cd chainlens-core && rm -rf dist node_modules",
+    "clean:onchain": "cd onchain-analysis && rm -rf dist node_modules",
+    "clean:sentiment": "cd sentiment-analysis && rm -rf dist node_modules",
+    "clean:tokenomics": "cd tokenomics-analysis && rm -rf dist node_modules",
+    "clean:team": "cd team-verification && rm -rf dist node_modules",
+    
+    "logs:core": "docker logs chainlens-core -f",
+    "logs:onchain": "docker logs chainlens-onchain-analysis -f",
+    "logs:sentiment": "docker logs chainlens-sentiment-analysis -f",
+    "logs:tokenomics": "docker logs chainlens-tokenomics-analysis -f",
+    "logs:team": "docker logs chainlens-team-verification -f",
+    
+    "metrics:collect": "node scripts/collect-metrics.js",
+    "metrics:dashboard": "open http://localhost:3000",
+    "metrics:prometheus": "open http://localhost:9090",
+    
+    "docs:generate": "node scripts/generate-docs.js",
+    "docs:serve": "npx http-server docs -p 8080",
+    
+    "security:audit": "npm audit --audit-level high",
+    "security:scan": "npm run security:audit && npm run security:snyk",
+    "security:snyk": "snyk test",
+    
+    "pre-commit": "npm run lint:all && npm run test:all",
+    "pre-push": "npm run build:all && npm run test:e2e:all"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "artillery": "^2.0.0",
+    "k6": "^0.0.0",
+    "jest": "^29.5.0",
+    "@types/jest": "^29.5.2",
+    "supertest": "^6.3.3",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.2.0",
+    "snyk": "^1.1275.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "keywords": [
+    "chainlens",
+    "crypto",
+    "analysis",
+    "microservices",
+    "blockchain",
+    "defi",
+    "nestjs"
+  ],
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged",
+      "pre-push": "npm run pre-push"
+    }
+  },
+  "lint-staged": {
+    "*.{ts,js}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
+  }
+}
