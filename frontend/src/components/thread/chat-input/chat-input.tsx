@@ -69,6 +69,7 @@ export interface ChatInputProps {
   enableAdvancedConfig?: boolean;
   onConfigureAgent?: (agentId: string) => void;
   hideAgentSelection?: boolean;
+  hideModelSelection?: boolean;
   defaultShowSnackbar?: 'tokens' | 'upgrade' | false;
   showToLowCreditUsers?: boolean;
   agentMetadata?: {
@@ -116,6 +117,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
       enableAdvancedConfig = false,
       onConfigureAgent,
       hideAgentSelection = false,
+      hideModelSelection = false,
       defaultShowSnackbar = false,
       showToLowCreditUsers = true,
       agentMetadata,
@@ -421,6 +423,7 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
                   selectedAgentId={selectedAgentId}
                   onAgentSelect={onAgentSelect}
                   hideAgentSelection={hideAgentSelection}
+                  hideModelSelection={false}
                 />
               </CardContent>
             </div>

@@ -48,6 +48,7 @@ type UnifiedConfigMenuProps = {
     canAccessModel: (modelId: string) => boolean;
     refreshCustomModels?: () => void;
     onUpgradeRequest?: () => void;
+    hideModelSelection?: boolean;
 };
 
 const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = ({
@@ -60,6 +61,7 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = ({
     canAccessModel,
     subscriptionStatus,
     onUpgradeRequest,
+    hideModelSelection = false,
 }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -306,16 +308,20 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = ({
                     {onAgentSelect && <DropdownMenuSeparator className="!mt-0" />}
 
                     {/* Models */}
-                    <div className="px-1.5">
-                        <div className="px-3 py-1 text-[11px] font-medium text-muted-foreground">Models</div>
-                        <AgentModelSelector
-                            value={selectedModel}
-                            onChange={onModelChange}
-                            disabled={false}
-                            variant="menu-item"
-                        />
-                    </div>
-                    <DropdownMenuSeparator />
+                    {!hideModelSelection && (
+                        <>
+                            <div className="px-1.5">
+                                <div className="px-3 py-1 text-[11px] font-medium text-muted-foreground">Models</div>
+                                <AgentModelSelector
+                                    value={selectedModel}
+                                    onChange={onModelChange}
+                                    disabled={false}
+                                    variant="menu-item"
+                                />
+                            </div>
+                            <DropdownMenuSeparator />
+                        </>
+                    )}
                     {onAgentSelect && (selectedAgentId || displayAgent?.agent_id) && (
                         <div className="px-1.5">
                             <DropdownMenuItem

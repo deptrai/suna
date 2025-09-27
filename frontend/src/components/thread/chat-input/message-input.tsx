@@ -7,6 +7,7 @@ import { UploadedFile } from './chat-input';
 import { FileUploadHandler } from './file-upload-handler';
 import { VoiceRecorder } from './voice-recorder';
 import { UnifiedConfigMenu } from './unified-config-menu';
+import { AgentModelSelector } from '@/components/agents/config/model-selector';
 // Note: canAccessModel is now part of useModelSelection hook
 export type SubscriptionStatus = 'no_subscription' | 'active';
 import { isLocalMode } from '@/lib/config';
@@ -49,6 +50,7 @@ interface MessageInputProps {
   onAgentSelect?: (agentId: string | undefined) => void;
   enableAdvancedConfig?: boolean;
   hideAgentSelection?: boolean;
+  hideModelSelection?: boolean;
   isChainlensAgent?: boolean;
 }
 
@@ -88,6 +90,7 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
       onAgentSelect,
       enableAdvancedConfig = false,
       hideAgentSelection = false,
+      hideModelSelection = false,
       isChainlensAgent,
     },
     ref,
@@ -162,6 +165,11 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
       if (!mounted) {
         return <div className="flex items-center gap-2 h-8" />; // Placeholder with same height
       }
+      // Hide the entire menu if both agent and model selection are hidden
+      if (hideAgentSelection && hideModelSelection) {
+        return null;
+      }
+
       // Unified compact menu for both logged and non-logged (non-logged shows only models subset via menu trigger)
       return (
         <div className="flex items-center gap-2" data-tour="agent-selector">
@@ -169,12 +177,13 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
             isLoggedIn={isLoggedIn}
             selectedAgentId={!hideAgentSelection ? selectedAgentId : undefined}
             onAgentSelect={!hideAgentSelection ? onAgentSelect : undefined}
-            selectedModel={selectedModel}
-            onModelChange={onModelChange}
-            modelOptions={modelOptions}
+            selectedModel={!hideModelSelection ? selectedModel : ''}
+            onModelChange={!hideModelSelection ? onModelChange : () => {}}
+            modelOptions={!hideModelSelection ? modelOptions : []}
             subscriptionStatus={subscriptionStatus}
             canAccessModel={canAccessModel}
             refreshCustomModels={refreshCustomModels}
+            hideModelSelection={hideModelSelection}
           />
         </div>
       );
@@ -235,6 +244,17 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
           } */}
 
           <div className='flex items-center gap-2'>
+            {/* Model Selector bên cạnh nút Send */}
+            {!hideModelSelection && (
+              <AgentModelSelector
+                value={selectedModel}
+                onChange={onModelChange}
+                disabled={loading || (disabled && !isAgentRunning)}
+                variant="compact"
+                className="w-auto min-w-[120px]"
+              />
+            )}
+
             {renderDropdown()}
             <BillingModal
               open={billingModalOpen}

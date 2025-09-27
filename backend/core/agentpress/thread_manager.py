@@ -318,15 +318,40 @@ class ThreadManager:
             else:
                 logger.debug("Context manager disabled, using raw messages")
 
+            # Optimize system prompt if possible
+            optimized_system_prompt = system_prompt
+            if user_query and hasattr(self, '_optimize_system_prompt'):
+                try:
+                    from core.agentpress.context_manager import ContextManager
+                    cm = ContextManager()
+                    original_content = system_prompt.get('content', '')
+                    optimized_content = cm.get_optimized_system_prompt(user_query, original_content)
+                    optimized_system_prompt = system_prompt.copy()
+                    optimized_system_prompt['content'] = optimized_content
+                except Exception as e:
+                    logger.warning(f"System prompt optimization failed: {e}")
+                    optimized_system_prompt = system_prompt
+
             # Apply caching if enabled
             if enable_prompt_caching:
-                prepared_messages = apply_anthropic_caching_strategy(system_prompt, messages, llm_model)
+                prepared_messages = apply_anthropic_caching_strategy(optimized_system_prompt, messages, llm_model)
                 prepared_messages = validate_cache_blocks(prepared_messages, llm_model)
             else:
-                prepared_messages = [system_prompt] + messages
+                prepared_messages = [optimized_system_prompt] + messages
 
-            # Get tool schemas if needed
-            openapi_tool_schemas = self.tool_registry.get_openapi_schemas() if config.native_tool_calling else None
+            # Get tool schemas if needed with query-based filtering
+            openapi_tool_schemas = None
+            if config.native_tool_calling:
+                # Get user query for tool filtering
+                user_query = ""
+                if messages:
+                    for msg in reversed(messages):
+                        if isinstance(msg, dict) and msg.get('role') == 'user':
+                            user_query = str(msg.get('content', ''))[:200]  # First 200 chars
+                            break
+
+                # Use minimal schemas for better token efficiency
+                openapi_tool_schemas = self.tool_registry.get_minimal_schemas(user_query)
 
             # Update generation tracking
             if generation:

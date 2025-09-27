@@ -13,7 +13,7 @@ from core.services.supabase import DBConnection
 from core.utils.logger import logger
 from core.ai_models import model_manager
 
-DEFAULT_TOKEN_THRESHOLD = 120000
+DEFAULT_TOKEN_THRESHOLD = 15000
 
 class ContextManager:
     """Manages thread context including token counting and summarization."""
@@ -216,6 +216,7 @@ class ContextManager:
         # logger.debug(f"Model {llm_model}: context_window={context_window}, effective_limit={max_tokens}")
 
         result = messages
+        result = self.limit_recent_messages(result, max_count=8)
         result = self.remove_meta_messages(result)
 
         uncompressed_total_token_count = token_counter(model=llm_model, messages=result)
@@ -226,7 +227,17 @@ class ContextManager:
 
         compressed_token_count = token_counter(model=llm_model, messages=result)
 
-        logger.info(f"Context compression: {uncompressed_total_token_count} -> {compressed_token_count} tokens")
+        # Calculate and log optimization metrics
+        reduction_ratio = ((uncompressed_total_token_count - compressed_token_count) / uncompressed_total_token_count * 100) if uncompressed_total_token_count > 0 else 0
+        context_window = model_manager.get_context_window(llm_model)
+        cwu_ratio = (compressed_token_count / context_window * 100) if context_window > 0 else 0
+
+        logger.info(f"Context compression: {uncompressed_total_token_count} -> {compressed_token_count} tokens ({reduction_ratio:.1f}% reduction)")
+        logger.info(f"Context Window Utilization: {cwu_ratio:.1f}% ({compressed_token_count}/{context_window})")
+
+        # Alert if CWU is too high
+        if cwu_ratio > 70:
+            logger.warning(f"High context utilization: {cwu_ratio:.1f}% - consider further optimization")
 
         if max_iterations <= 0:
             logger.warning(f"compress_messages: Max iterations reached, omitting messages")
@@ -319,4 +330,55 @@ class ContextManager:
         keep_start = max_messages // 2
         keep_end = max_messages - keep_start
         
-        return messages[:keep_start] + messages[-keep_end:] 
+        return messages[:keep_start] + messages[-keep_end:]
+
+    def limit_recent_messages(self, messages: List[Dict[str, Any]], max_count: int = 8) -> List[Dict[str, Any]]:
+        """Keep only the most recent messages plus system message."""
+        if len(messages) <= max_count:
+            return messages
+
+        # Always keep system message if present
+        system_msg = messages[0] if messages and messages[0].get('role') == 'system' else None
+        other_messages = messages[1:] if system_msg else messages
+
+        # Keep most recent messages
+        recent_messages = other_messages[-(max_count-1):] if system_msg else other_messages[-max_count:]
+
+        result = ([system_msg] + recent_messages) if system_msg else recent_messages
+        logger.debug(f"Message limiting: {len(messages)} -> {len(result)} messages")
+        return result
+
+    def get_optimized_system_prompt(self, query_context: str, base_prompt: str) -> str:
+        """Get optimized system prompt based on query context."""
+
+        # If base prompt is already short, don't optimize
+        if len(base_prompt) < 200:
+            return base_prompt
+
+        # Core instructions (always included)
+        core_instructions = "You are a helpful AI assistant."
+
+        # Conditional instructions based on query
+        query_lower = query_context.lower()
+
+        # Only add specific guidance if query is complex or specific
+        if any(word in query_lower for word in ['code', 'file', 'edit', 'python', 'javascript', 'programming']):
+            optimized_prompt = f"{core_instructions} Focus on code quality and best practices."
+        elif any(word in query_lower for word in ['git', 'commit', 'branch', 'merge', 'repository']):
+            optimized_prompt = f"{core_instructions} Provide clear git workflow guidance."
+        elif any(word in query_lower for word in ['web', 'search', 'research', 'information', 'find']):
+            optimized_prompt = f"{core_instructions} Provide accurate, up-to-date information."
+        elif any(word in query_lower for word in ['debug', 'error', 'fix', 'problem', 'issue']):
+            optimized_prompt = f"{core_instructions} Focus on systematic debugging."
+        else:
+            # For general queries, use minimal prompt
+            optimized_prompt = core_instructions
+
+        # Log optimization
+        original_length = len(base_prompt)
+        optimized_length = len(optimized_prompt)
+        reduction = (original_length - optimized_length) / original_length * 100 if original_length > 0 else 0
+
+        logger.debug(f"System prompt optimization: {original_length} -> {optimized_length} chars ({reduction:.1f}% reduction)")
+
+        return optimized_prompt

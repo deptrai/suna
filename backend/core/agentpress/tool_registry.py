@@ -127,3 +127,100 @@ class ToolRegistry:
         # logger.debug(f"Retrieved {len(examples)} usage examples")
         return examples
 
+    def get_filtered_schemas(self, query: str = "") -> List[Dict[str, Any]]:
+        """Get filtered tool schemas based on query keywords."""
+        if not query.strip():
+            return self.get_openapi_schemas()
+
+        query_lower = query.lower()
+
+        # Define tool categories
+        tool_categories = {
+            'file_ops': ['str-replace-editor', 'save-file', 'view', 'codebase-retrieval'],
+            'git_ops': ['git_status_git', 'git_add_git', 'git_commit_git'],
+            'web_ops': ['web-search', 'web-fetch'],
+            'browser_ops': ['chrome_navigate_chrome-browser', 'chrome_get_web_content_chrome-browser'],
+            'core': ['interactive_feedback_MCP_Feedback_Enhanced']
+        }
+
+        # Always include core tools
+        relevant_tools = tool_categories['core'].copy()
+
+        # Add category-specific tools based on query
+        if any(word in query_lower for word in ['file', 'code', 'edit', 'create', 'read', 'write']):
+            relevant_tools.extend(tool_categories['file_ops'])
+        if any(word in query_lower for word in ['git', 'commit', 'branch']):
+            relevant_tools.extend(tool_categories['git_ops'])
+        if any(word in query_lower for word in ['web', 'search', 'url']):
+            relevant_tools.extend(tool_categories['web_ops'])
+        if any(word in query_lower for word in ['browser', 'chrome', 'navigate']):
+            relevant_tools.extend(tool_categories['browser_ops'])
+
+        # Filter schemas
+        filtered = []
+        for tool_name, tool_info in self.tools.items():
+            if any(relevant in tool_name for relevant in relevant_tools):
+                if tool_info['schema'].schema_type == SchemaType.OPENAPI:
+                    filtered.append(tool_info['schema'].schema)
+
+        logger.debug(f"Tool filtering: {len(filtered)}/{len(self.tools)} tools for query: '{query[:50]}...'")
+        return filtered
+
+    def get_minimal_schemas(self, query_context: str = "") -> List[Dict[str, Any]]:
+        """Get minimal tool schemas with only essential information."""
+
+        full_schemas = self.get_filtered_schemas(query_context)
+        minimal_schemas = []
+
+        for schema in full_schemas:
+            # Keep only essential fields
+            minimal_schema = {
+                'type': 'function',
+                'function': {
+                    'name': schema['function']['name'],
+                    'description': self.compress_description(schema['function']['description']),
+                    'parameters': self.compress_parameters(schema['function']['parameters'])
+                }
+            }
+            minimal_schemas.append(minimal_schema)
+
+        logger.debug(f"Schema compression: {len(full_schemas)} schemas minimized")
+        return minimal_schemas
+
+    def compress_description(self, description: str) -> str:
+        """Compress tool description to essential information."""
+        if not description:
+            return description
+
+        # Keep only first sentence or up to 60 characters
+        sentences = description.split('.')
+        if sentences and sentences[0]:
+            first_sentence = sentences[0].strip()
+            if len(first_sentence) <= 60:
+                return first_sentence
+            else:
+                return first_sentence[:57] + '...'
+
+        return description[:60] + ('...' if len(description) > 60 else '')
+
+    def compress_parameters(self, parameters: Dict[str, Any]) -> Dict[str, Any]:
+        """Compress parameter descriptions."""
+        if not isinstance(parameters, dict) or 'properties' not in parameters:
+            return parameters
+
+        compressed_props = {}
+        for prop_name, prop_info in parameters['properties'].items():
+            if isinstance(prop_info, dict):
+                compressed_props[prop_name] = {
+                    'type': prop_info.get('type', 'string'),
+                    'description': self.compress_description(prop_info.get('description', ''))
+                }
+            else:
+                compressed_props[prop_name] = prop_info
+
+        return {
+            'type': parameters.get('type', 'object'),
+            'properties': compressed_props,
+            'required': parameters.get('required', [])
+        }
+

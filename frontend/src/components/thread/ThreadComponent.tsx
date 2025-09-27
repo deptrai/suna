@@ -50,6 +50,7 @@ import { threadKeys } from '@/hooks/react-query/threads/keys';
 import { useProjectRealtime } from '@/hooks/useProjectRealtime';
 import { handleGoogleSlidesUpload } from './tool-views/utils/presentation-utils';
 
+
 interface ThreadComponentProps {
   projectId: string;
   threadId: string;
@@ -933,6 +934,8 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
 
           {/* Compact Chat Input */}
           <div className="flex-shrink-0 border-t border-border/20 bg-background p-4">
+
+
             <ChatInput
               value={newMessage}
               onChange={setNewMessage}
@@ -957,6 +960,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
               selectedAgentId={selectedAgentId}
               onAgentSelect={handleAgentSelect}
               hideAgentSelection={!!configuredAgentId}
+              hideModelSelection={false}
               toolCalls={toolCalls}
               toolCallIndex={currentToolIndex}
               showToolPreview={!isSidePanelOpen && toolCalls.length > 0}
@@ -1065,6 +1069,8 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
           )}
         >
           <div className={cn('mx-auto', isMobile ? 'w-full' : 'max-w-3xl')}>
+
+
             <ChatInput
               value={newMessage}
               onChange={setNewMessage}
@@ -1089,6 +1095,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
               selectedAgentId={selectedAgentId}
               onAgentSelect={handleAgentSelect}
               hideAgentSelection={!!configuredAgentId}
+              hideModelSelection={false}
               toolCalls={toolCalls}
               toolCallIndex={currentToolIndex}
               showToolPreview={!isSidePanelOpen && toolCalls.length > 0}
