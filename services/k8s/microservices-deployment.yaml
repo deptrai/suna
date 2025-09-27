@@ -1,0 +1,372 @@
+# =====================================================
+# Sentiment Analysis Service
+# =====================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentiment-analysis
+  namespace: chainlens-crypto
+  labels:
+    app: sentiment-analysis
+    service: crypto-analysis
+    version: v1
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: sentiment-analysis
+  template:
+    metadata:
+      labels:
+        app: sentiment-analysis
+        service: crypto-analysis
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3002"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+      - name: sentiment-analysis
+        image: chainlens/sentiment-analysis:latest
+        ports:
+        - containerPort: 3002
+          name: http
+          protocol: TCP
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "3002"
+        - name: SERVICE_NAME
+          value: "sentiment-analysis"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: chainlens-secrets
+              key: microservices-database-url
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: chainlens-secrets
+              key: redis-url
+        - name: TWITTER_BEARER_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: chainlens-secrets
+              key: twitter-bearer-token
+        - name: NEWS_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: chainlens-secrets
+              key: news-api-key
+        - name: REDDIT_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: chainlens-secrets
+              key: reddit-client-id
+        - name: REDDIT_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: chainlens-secrets
+              key: reddit-client-secret
+        resources:
+          requests:
+            cpu: 200m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3002
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3002
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1002
+          capabilities:
+            drop:
+            - ALL
+      serviceAccountName: sentiment-analysis
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentiment-analysis-service
+  namespace: chainlens-crypto
+  labels:
+    app: sentiment-analysis
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3002
+    targetPort: 3002
+    protocol: TCP
+    name: http
+  selector:
+    app: sentiment-analysis
+---
+# =====================================================
+# Tokenomics Analysis Service
+# =====================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tokenomics-analysis
+  namespace: chainlens-crypto
+  labels:
+    app: tokenomics-analysis
+    service: crypto-analysis
+    version: v1
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: tokenomics-analysis
+  template:
+    metadata:
+      labels:
+        app: tokenomics-analysis
+        service: crypto-analysis
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3003"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+      - name: tokenomics-analysis
+        image: chainlens/tokenomics-analysis:latest
+        ports:
+        - containerPort: 3003
+          name: http
+          protocol: TCP
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "3003"
+        - name: SERVICE_NAME
+          value: "tokenomics-analysis"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: chainlens-secrets
+              key: microservices-database-url
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: chainlens-secrets
+              key: redis-url
+        - name: DEFILLAMA_API_URL
+          value: "https://api.llama.fi"
+        - name: COINGECKO_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: chainlens-secrets
+              key: coingecko-api-key
+        resources:
+          requests:
+            cpu: 200m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3003
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3003
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1003
+          capabilities:
+            drop:
+            - ALL
+      serviceAccountName: tokenomics-analysis
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tokenomics-analysis-service
+  namespace: chainlens-crypto
+  labels:
+    app: tokenomics-analysis
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3003
+    targetPort: 3003
+    protocol: TCP
+    name: http
+  selector:
+    app: tokenomics-analysis
+---
+# =====================================================
+# Team Verification Service
+# =====================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: team-verification
+  namespace: chainlens-crypto
+  labels:
+    app: team-verification
+    service: crypto-analysis
+    version: v1
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: team-verification
+  template:
+    metadata:
+      labels:
+        app: team-verification
+        service: crypto-analysis
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3004"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+      - name: team-verification
+        image: chainlens/team-verification:latest
+        ports:
+        - containerPort: 3004
+          name: http
+          protocol: TCP
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "3004"
+        - name: SERVICE_NAME
+          value: "team-verification"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: chainlens-secrets
+              key: microservices-database-url
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: chainlens-secrets
+              key: redis-url
+        - name: GITHUB_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: chainlens-secrets
+              key: github-token
+        - name: LINKEDIN_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: chainlens-secrets
+              key: linkedin-api-key
+        resources:
+          requests:
+            cpu: 200m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3004
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3004
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1004
+          capabilities:
+            drop:
+            - ALL
+      serviceAccountName: team-verification
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: team-verification-service
+  namespace: chainlens-crypto
+  labels:
+    app: team-verification
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3004
+    targetPort: 3004
+    protocol: TCP
+    name: http
+  selector:
+    app: team-verification
+---
+# =====================================================
+# Service Accounts
+# =====================================================
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sentiment-analysis
+  namespace: chainlens-crypto
+  labels:
+    app: sentiment-analysis
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tokenomics-analysis
+  namespace: chainlens-crypto
+  labels:
+    app: tokenomics-analysis
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: team-verification
+  namespace: chainlens-crypto
+  labels:
+    app: team-verification
+automountServiceAccountToken: false

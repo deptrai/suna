@@ -1,0 +1,46 @@
+# =====================================================
+# ChainLens Core - Development Dockerfile
+# =====================================================
+
+FROM node:18-alpine
+
+# Install development dependencies
+RUN apk add --no-cache python3 make g++ curl
+
+# Create app user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S chainlens -u 1001
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY tsconfig*.json ./
+
+# Install all dependencies (including dev dependencies)
+RUN npm install
+
+# Copy source code
+COPY . .
+
+# Create logs directory
+RUN mkdir -p logs && chown -R chainlens:nodejs /app
+
+# Set environment variables
+ENV NODE_ENV=development
+ENV PORT=3006
+ENV LOG_LEVEL=debug
+
+# Expose port
+EXPOSE 3006
+
+# Switch to non-root user
+USER chainlens
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:3006/api/v1/health || exit 1
+
+# Start the application in development mode
+CMD ["npm", "run", "start:dev"]

@@ -21,8 +21,11 @@ import {
 import { ThrottlerGuard } from '@nestjs/throttler';
 
 import { AnalysisService } from './analysis.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { TierBasedRateLimitGuard } from '../auth/guards/tier-rate-limit.guard';
+import { AuthGuard } from '../auth/guards/auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { RequirePermissions } from '../auth/decorators/permissions.decorator';
+import { GetUser } from '../auth/decorators/get-user.decorator';
+import { User } from '../auth/auth.service';
 import { AnalysisRequestDto } from './dto/analysis-request.dto';
 import { AnalysisResponseDto } from './dto/analysis-response.dto';
 import { AnalysisStatusDto } from './dto/analysis-status.dto';
@@ -30,7 +33,7 @@ import { LoggerService } from '../common/services/logger.service';
 
 @ApiTags('Analysis')
 @Controller('analyze')
-@UseGuards(ThrottlerGuard, JwtAuthGuard, TierBasedRateLimitGuard)
+@UseGuards(ThrottlerGuard, AuthGuard, RolesGuard)
 @ApiBearerAuth('JWT-auth')
 export class AnalysisController {
   constructor(
@@ -40,6 +43,7 @@ export class AnalysisController {
 
   @Post()
   @HttpCode(HttpStatus.OK)
+  @RequirePermissions('crypto:analyze')
   @ApiOperation({
     summary: 'Request crypto analysis',
     description: 'Initiates a comprehensive cryptocurrency analysis by orchestrating multiple microservices',
@@ -76,11 +80,11 @@ export class AnalysisController {
   })
   async requestAnalysis(
     @Body() analysisRequest: AnalysisRequestDto,
+    @GetUser() user: User,
     @Request() req: any,
   ): Promise<AnalysisResponseDto | { analysisId: string; status: string; estimatedCompletion: number; message: string }> {
     const startTime = Date.now();
-    const user = req.user;
-    const correlationId = req.correlationId;
+    const correlationId = req.headers['x-correlation-id'] || 'unknown';
 
     this.logger.log('Analysis request received', {
       projectId: analysisRequest.projectId,

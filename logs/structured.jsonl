@@ -480,3 +480,7 @@ unhealthy","memory_mb":0},"redis":{"status":"healthy","memory_mb":10.3281},"supa
 {"timestamp":"2025-09-27T14:14:40.3NZ","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Parallel dependency system initialized with enhanced process tracking","extra":{}}
 {"timestamp":"2025-09-27T14:14:40.3NZ","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Calculating dependency waves for parallel startup","extra":{}}
 {"timestamp":"2025-09-27T14:14:40.3NZ","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Calculated 2 dependency waves","extra":{}}
+{"timestamp":"2025-09-27T18:04:43.620Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"ChainLens Development Environment v3.1 starting","extra":{}}
+{"timestamp":"2025-09-27T18:04:43.639Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Creating necessary directories","extra":{}}
+{"timestamp":"2025-09-27T18:05:00.790Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"ChainLens Development Environment v3.1 starting","extra":{}}
+{"timestamp":"2025-09-27T18:05:00.800Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Creating necessary directories","extra":{}}

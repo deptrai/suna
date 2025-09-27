@@ -1,0 +1,305 @@
+# =====================================================
+# PostgreSQL for Microservices
+# =====================================================
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-microservices
+  namespace: chainlens-crypto
+  labels:
+    app: postgres-microservices
+    service: database
+spec:
+  serviceName: postgres-microservices
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-microservices
+  template:
+    metadata:
+      labels:
+        app: postgres-microservices
+        service: database
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        ports:
+        - containerPort: 5432
+          name: postgres
+        env:
+        - name: POSTGRES_DB
+          value: "chainlens_microservices"
+        - name: POSTGRES_USER
+          value: "chainlens"
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: chainlens-secrets
+              key: postgres-password
+        - name: PGDATA
+          value: "/var/lib/postgresql/data/pgdata"
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        - name: postgres-config
+          mountPath: /etc/postgresql/postgresql.conf
+          subPath: postgresql.conf
+        - name: postgres-initdb
+          mountPath: /docker-entrypoint-initdb.d
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 1000m
+            memory: 2Gi
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - chainlens
+            - -d
+            - chainlens_microservices
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - chainlens
+            - -d
+            - chainlens_microservices
+          initialDelaySeconds: 10
+          periodSeconds: 5
+      volumes:
+      - name: postgres-config
+        configMap:
+          name: postgres-config
+      - name: postgres-initdb
+        configMap:
+          name: postgres-initdb
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-storage
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: "fast-ssd"
+      resources:
+        requests:
+          storage: 20Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-microservices-service
+  namespace: chainlens-crypto
+  labels:
+    app: postgres-microservices
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
+    name: postgres
+  selector:
+    app: postgres-microservices
+---
+# =====================================================
+# Redis Cache
+# =====================================================
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  namespace: chainlens-crypto
+  labels:
+    app: redis
+    service: cache
+spec:
+  serviceName: redis
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+        service: cache
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+          name: redis
+        command:
+        - redis-server
+        - /etc/redis/redis.conf
+        env:
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: chainlens-secrets
+              key: redis-password
+        volumeMounts:
+        - name: redis-storage
+          mountPath: /data
+        - name: redis-config
+          mountPath: /etc/redis
+        resources:
+          requests:
+            cpu: 200m
+            memory: 512Mi
+          limits:
+            cpu: 500m
+            memory: 1Gi
+        livenessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 10
+          periodSeconds: 5
+      volumes:
+      - name: redis-config
+        configMap:
+          name: redis-config
+  volumeClaimTemplates:
+  - metadata:
+      name: redis-storage
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: "fast-ssd"
+      resources:
+        requests:
+          storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service
+  namespace: chainlens-crypto
+  labels:
+    app: redis
+spec:
+  type: ClusterIP
+  ports:
+  - port: 6379
+    targetPort: 6379
+    protocol: TCP
+    name: redis
+  selector:
+    app: redis
+---
+# =====================================================
+# ConfigMaps
+# =====================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-config
+  namespace: chainlens-crypto
+data:
+  postgresql.conf: |
+    # PostgreSQL Configuration for ChainLens Microservices
+    listen_addresses = '*'
+    port = 5432
+    max_connections = 200
+    shared_buffers = 256MB
+    effective_cache_size = 1GB
+    maintenance_work_mem = 64MB
+    checkpoint_completion_target = 0.9
+    wal_buffers = 16MB
+    default_statistics_target = 100
+    random_page_cost = 1.1
+    effective_io_concurrency = 200
+    work_mem = 4MB
+    min_wal_size = 1GB
+    max_wal_size = 4GB
+    max_worker_processes = 8
+    max_parallel_workers_per_gather = 2
+    max_parallel_workers = 8
+    max_parallel_maintenance_workers = 2
+    
+    # Logging
+    log_destination = 'stderr'
+    logging_collector = on
+    log_directory = 'log'
+    log_filename = 'postgresql-%Y-%m-%d_%H%M%S.log'
+    log_statement = 'all'
+    log_min_duration_statement = 1000
+    
+    # Security
+    ssl = off
+    password_encryption = scram-sha-256
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-initdb
+  namespace: chainlens-crypto
+data:
+  001_create_schemas.sql: |
+    -- Create schemas for microservices
+    CREATE SCHEMA IF NOT EXISTS onchain_analysis;
+    CREATE SCHEMA IF NOT EXISTS sentiment_analysis;
+    CREATE SCHEMA IF NOT EXISTS tokenomics_analysis;
+    CREATE SCHEMA IF NOT EXISTS team_verification;
+    
+    -- Grant permissions
+    GRANT ALL PRIVILEGES ON SCHEMA onchain_analysis TO chainlens;
+    GRANT ALL PRIVILEGES ON SCHEMA sentiment_analysis TO chainlens;
+    GRANT ALL PRIVILEGES ON SCHEMA tokenomics_analysis TO chainlens;
+    GRANT ALL PRIVILEGES ON SCHEMA team_verification TO chainlens;
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config
+  namespace: chainlens-crypto
+data:
+  redis.conf: |
+    # Redis Configuration for ChainLens Microservices
+    bind 0.0.0.0
+    port 6379
+    protected-mode yes
+    requirepass ${REDIS_PASSWORD}
+    
+    # Memory management
+    maxmemory 512mb
+    maxmemory-policy allkeys-lru
+    
+    # Persistence
+    save 900 1
+    save 300 10
+    save 60 10000
+    
+    # Append only file
+    appendonly yes
+    appendfsync everysec
+    
+    # Logging
+    loglevel notice
+    logfile ""
+    
+    # Performance
+    tcp-keepalive 300
+    timeout 0
+    tcp-backlog 511
+    
+    # Security
+    rename-command FLUSHDB ""
+    rename-command FLUSHALL ""
+    rename-command DEBUG ""

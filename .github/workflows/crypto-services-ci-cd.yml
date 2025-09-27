@@ -1,0 +1,337 @@
+name: ChainLens Crypto Services CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'services/**'
+      - 'database/**'
+      - '.github/workflows/crypto-services-ci-cd.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'services/**'
+      - 'database/**'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME_PREFIX: chainlens
+
+jobs:
+  # =====================================================
+  # Test and Build Jobs
+  # =====================================================
+  test:
+    name: Test Services
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [chainlens-core, onchain-analysis, sentiment-analysis, tokenomics-analysis, team-verification]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: services/${{ matrix.service }}/package-lock.json
+
+    - name: Install dependencies
+      working-directory: services/${{ matrix.service }}
+      run: npm ci
+
+    - name: Run linting
+      working-directory: services/${{ matrix.service }}
+      run: npm run lint
+
+    - name: Run unit tests
+      working-directory: services/${{ matrix.service }}
+      run: npm run test:cov
+
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        file: services/${{ matrix.service }}/coverage/lcov.info
+        flags: ${{ matrix.service }}
+        name: ${{ matrix.service }}-coverage
+
+  # =====================================================
+  # Integration Tests
+  # =====================================================
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: test
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: chainlens_test
+          POSTGRES_USER: chainlens
+          POSTGRES_PASSWORD: test_password
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: services/package-lock.json
+
+    - name: Install root dependencies
+      working-directory: services
+      run: npm ci
+
+    - name: Install service dependencies
+      working-directory: services
+      run: npm run install:all
+
+    - name: Run database migrations
+      working-directory: services
+      env:
+        DATABASE_URL: postgresql://chainlens:test_password@localhost:5432/chainlens_test
+      run: |
+        cd chainlens-core
+        npm run migration:run
+
+    - name: Run integration tests
+      working-directory: services
+      env:
+        DATABASE_URL: postgresql://chainlens:test_password@localhost:5432/chainlens_test
+        REDIS_URL: redis://localhost:6379
+        NODE_ENV: test
+      run: npm run test:e2e:all
+
+  # =====================================================
+  # Build and Push Docker Images
+  # =====================================================
+  build-and-push:
+    name: Build and Push Images
+    runs-on: ubuntu-latest
+    needs: [test, integration-test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    strategy:
+      matrix:
+        service: [chainlens-core, onchain-analysis, sentiment-analysis, tokenomics-analysis, team-verification]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_PREFIX }}/${{ matrix.service }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: services/${{ matrix.service }}
+        file: services/${{ matrix.service }}/Dockerfile
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        platforms: linux/amd64,linux/arm64
+
+  # =====================================================
+  # Security Scanning
+  # =====================================================
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    strategy:
+      matrix:
+        service: [chainlens-core, onchain-analysis, sentiment-analysis, tokenomics-analysis, team-verification]
+    
+    steps:
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_PREFIX }}/${{ matrix.service }}:latest
+        format: 'sarif'
+        output: 'trivy-results-${{ matrix.service }}.sarif'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results-${{ matrix.service }}.sarif'
+
+  # =====================================================
+  # Deploy to Staging
+  # =====================================================
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [build-and-push, security-scan]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: staging
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure kubectl
+      uses: azure/k8s-set-context@v3
+      with:
+        method: kubeconfig
+        kubeconfig: ${{ secrets.KUBE_CONFIG_STAGING }}
+
+    - name: Create namespace
+      run: |
+        kubectl create namespace chainlens-crypto-staging --dry-run=client -o yaml | kubectl apply -f -
+
+    - name: Deploy to staging
+      run: |
+        # Update image tags in deployment files
+        sed -i 's|image: chainlens/|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_PREFIX }}/|g' services/k8s/*.yaml
+        sed -i 's|:latest|:${{ github.sha }}|g' services/k8s/*.yaml
+        sed -i 's|namespace: chainlens-crypto|namespace: chainlens-crypto-staging|g' services/k8s/*.yaml
+        
+        # Apply Kubernetes manifests
+        kubectl apply -f services/k8s/namespace.yaml
+        kubectl apply -f services/k8s/secrets-template.yaml
+        kubectl apply -f services/k8s/database-deployment.yaml
+        kubectl apply -f services/k8s/chainlens-core-deployment.yaml
+        kubectl apply -f services/k8s/onchain-analysis-deployment.yaml
+        kubectl apply -f services/k8s/microservices-deployment.yaml
+
+    - name: Wait for deployment
+      run: |
+        kubectl rollout status deployment/chainlens-core -n chainlens-crypto-staging --timeout=300s
+        kubectl rollout status deployment/onchain-analysis -n chainlens-crypto-staging --timeout=300s
+        kubectl rollout status deployment/sentiment-analysis -n chainlens-crypto-staging --timeout=300s
+        kubectl rollout status deployment/tokenomics-analysis -n chainlens-crypto-staging --timeout=300s
+        kubectl rollout status deployment/team-verification -n chainlens-crypto-staging --timeout=300s
+
+    - name: Run smoke tests
+      run: |
+        # Wait for services to be ready
+        sleep 60
+        
+        # Get service URLs
+        CORE_URL=$(kubectl get service chainlens-core-service -n chainlens-crypto-staging -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+        
+        # Run basic health checks
+        curl -f http://$CORE_URL:3006/api/v1/health || exit 1
+        
+        echo "Staging deployment successful!"
+
+  # =====================================================
+  # Deploy to Production
+  # =====================================================
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure kubectl
+      uses: azure/k8s-set-context@v3
+      with:
+        method: kubeconfig
+        kubeconfig: ${{ secrets.KUBE_CONFIG_PRODUCTION }}
+
+    - name: Create namespace
+      run: |
+        kubectl create namespace chainlens-crypto --dry-run=client -o yaml | kubectl apply -f -
+
+    - name: Deploy to production
+      run: |
+        # Update image tags in deployment files
+        sed -i 's|image: chainlens/|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_PREFIX }}/|g' services/k8s/*.yaml
+        sed -i 's|:latest|:${{ github.sha }}|g' services/k8s/*.yaml
+        
+        # Apply Kubernetes manifests
+        kubectl apply -f services/k8s/namespace.yaml
+        kubectl apply -f services/k8s/database-deployment.yaml
+        kubectl apply -f services/k8s/chainlens-core-deployment.yaml
+        kubectl apply -f services/k8s/onchain-analysis-deployment.yaml
+        kubectl apply -f services/k8s/microservices-deployment.yaml
+
+    - name: Wait for deployment
+      run: |
+        kubectl rollout status deployment/chainlens-core -n chainlens-crypto --timeout=600s
+        kubectl rollout status deployment/onchain-analysis -n chainlens-crypto --timeout=600s
+        kubectl rollout status deployment/sentiment-analysis -n chainlens-crypto --timeout=600s
+        kubectl rollout status deployment/tokenomics-analysis -n chainlens-crypto --timeout=600s
+        kubectl rollout status deployment/team-verification -n chainlens-crypto --timeout=600s
+
+    - name: Run production health checks
+      run: |
+        # Wait for services to be ready
+        sleep 120
+        
+        # Run comprehensive health checks
+        kubectl get pods -n chainlens-crypto
+        kubectl get services -n chainlens-crypto
+        
+        echo "Production deployment successful!"
+
+    - name: Notify deployment success
+      uses: 8398a7/action-slack@v3
+      with:
+        status: success
+        text: "🚀 ChainLens Crypto Services deployed to production successfully!"
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      if: success()
+
+    - name: Notify deployment failure
+      uses: 8398a7/action-slack@v3
+      with:
+        status: failure
+        text: "❌ ChainLens Crypto Services deployment to production failed!"
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      if: failure()
