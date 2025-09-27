@@ -71,13 +71,21 @@ def setup_api_keys() -> None:
 
 def setup_provider_router(openai_compatible_api_key: str = None, openai_compatible_api_base: str = None):
     global provider_router
+
+    # Only setup router if we have openai-compatible credentials
+    if not (openai_compatible_api_key or config.OPENAI_COMPATIBLE_API_KEY) or \
+       not (openai_compatible_api_base or config.OPENAI_COMPATIBLE_API_BASE):
+        logger.warning("OpenAI-compatible credentials not available, skipping router setup")
+        return
+
     model_list = [
         {
             "model_name": "openai-compatible/*", # support OpenAI-Compatible LLM provider
             "litellm_params": {
-                "model": "openai/*",
+                "model": "openai/*",  # Use openai/* pattern for LiteLLM
                 "api_key": openai_compatible_api_key or config.OPENAI_COMPATIBLE_API_KEY,
                 "api_base": openai_compatible_api_base or config.OPENAI_COMPATIBLE_API_BASE,
+                "custom_llm_provider": "openai",  # Tell LiteLLM to use OpenAI format
             },
         },
         {
@@ -88,6 +96,7 @@ def setup_provider_router(openai_compatible_api_key: str = None, openai_compatib
         },
     ]
     provider_router = Router(model_list=model_list)
+    logger.info(f"Provider router setup complete with {len(model_list)} model configurations")
 
 def _configure_token_limits(params: Dict[str, Any], model_name: str, max_tokens: Optional[int]) -> None:
     """Configure token limits based on model type."""
@@ -227,9 +236,11 @@ def prepare_params(
     reasoning_effort: Optional[str] = "low",
 ) -> Dict[str, Any]:
     from core.ai_models import model_manager
+
+    logger.info(f"🔍 PREPARE_PARAMS: Input model_name='{model_name}'")
     resolved_model_name = model_manager.resolve_model_id(model_name)
-    # logger.debug(f"Model resolution: '{model_name}' -> '{resolved_model_name}'")
-    
+    logger.info(f"🔍 PREPARE_PARAMS: Resolved model_name='{resolved_model_name}'")
+
     params = {
         "model": resolved_model_name,
         "messages": messages,
@@ -245,14 +256,12 @@ def prepare_params(
         params["stream_options"] = {"include_usage": True}
         # logger.debug(f"Added stream_options for usage tracking: {params['stream_options']}")
 
-    if api_key:
-        params["api_key"] = api_key
-    if api_base:
-        params["api_base"] = api_base
     if model_id:
         params["model_id"] = model_id
 
     if model_name.startswith("openai-compatible/"):
+        logger.info(f"🔍 Processing openai-compatible model: {model_name}")
+
         # Check if have required config either from parameters or environment
         if (not api_key and not config.OPENAI_COMPATIBLE_API_KEY) or (
             not api_base and not config.OPENAI_COMPATIBLE_API_BASE
@@ -260,8 +269,30 @@ def prepare_params(
             raise LLMError(
                 "OPENAI_COMPATIBLE_API_KEY and OPENAI_COMPATIBLE_API_BASE is required for openai-compatible models. If just updated the environment variables,  wait a few minutes or restart the service to ensure they are loaded."
             )
-        
+
         setup_provider_router(api_key, api_base)
+
+        # Transform model name for LiteLLM: openai-compatible/gpt-4o-mini -> gpt-4o-mini
+        actual_model_name = model_name.replace("openai-compatible/", "")
+        logger.info(f"🔄 Transformed model name: {model_name} -> {actual_model_name}")
+
+        params["model"] = actual_model_name
+        params["custom_llm_provider"] = "openai"
+
+        # Set API credentials for this specific call
+        params["api_key"] = api_key or config.OPENAI_COMPATIBLE_API_KEY
+        params["api_base"] = api_base or config.OPENAI_COMPATIBLE_API_BASE
+
+        logger.info(f"🔑 Using API base: {params['api_base']}")
+        logger.info(f"🔑 Using API key: {params['api_key'][:10]}...{params['api_key'][-4:] if params['api_key'] else 'None'}")
+        logger.info(f"📋 Final params for LiteLLM: model={params['model']}, custom_llm_provider={params.get('custom_llm_provider')}")
+        logger.info(f"📋 All LiteLLM params: {list(params.keys())}")
+    else:
+        # For non-openai-compatible models, set API credentials normally
+        if api_key:
+            params["api_key"] = api_key
+        if api_base:
+            params["api_base"] = api_base
 
     # Handle token limits
     _configure_token_limits(params, resolved_model_name, max_tokens)
@@ -342,15 +373,25 @@ async def make_llm_api_call(
     )
     
     try:
-        # logger.debug(f"Calling LiteLLM acompletion for {model_name}")
-        response = await provider_router.acompletion(**params)
-        
+        logger.info(f"🔍 MAKE_LLM_API_CALL: model_name='{model_name}', params['model']='{params.get('model')}'")
+
+        # For openai-compatible models, use direct LiteLLM call instead of router
+        if model_name.startswith("openai-compatible/"):
+            logger.info(f"🚀 Using DIRECT LiteLLM call for openai-compatible model: {model_name}")
+            response = await litellm.acompletion(**params)
+        else:
+            logger.info(f"🚀 Using ROUTER for model: {model_name}")
+            # Use router for other models
+            if provider_router is None:
+                setup_provider_router()
+            response = await provider_router.acompletion(**params)
+
         # For streaming responses, we need to handle errors that occur during iteration
         if hasattr(response, '__aiter__') and stream:
             return _wrap_streaming_response(response)
-        
+
         return response
-        
+
     except Exception as e:
         # Use ErrorProcessor to handle the error consistently
         processed_error = ErrorProcessor.process_llm_error(e, context={"model": model_name})

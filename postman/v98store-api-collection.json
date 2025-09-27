@@ -1,0 +1,92 @@
+{
+  "info": {
+    "name": "v98store API Collection",
+    "description": "Collection for testing v98store OpenAI-compatible API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://v98store.com",
+      "type": "string"
+    },
+    {
+      "key": "api_key",
+      "value": "sk-Righ5E8wjF9WMrNITGhjBZlgS17vzdvbxYK4S1IjaJu4soIi",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Check Balance",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/check-balance?key={{api_key}}",
+          "host": ["{{base_url}}"],
+          "path": ["check-balance"],
+          "query": [
+            {
+              "key": "key",
+              "value": "{{api_key}}"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Chat Completions - GPT-4o-mini",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{api_key}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"model\": \"gpt-4o-mini\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Hello! Test message from v98store API\"\n    }\n  ],\n  \"max_tokens\": 100,\n  \"temperature\": 0.7\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/v1/chat/completions",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "chat", "completions"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Chat Completions - GPT-4o-mini (Streaming)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{api_key}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"model\": \"gpt-4o-mini\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Write a short poem about AI\"\n    }\n  ],\n  \"max_tokens\": 200,\n  \"temperature\": 0.8,\n  \"stream\": true\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/v1/chat/completions",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "chat", "completions"]
+        }
+      },
+      "response": []
+    }
+  ]
+}

@@ -1,5 +1,8 @@
 from typing import Dict, List, Optional, Set
 from .ai_models import Model, ModelProvider, ModelCapability, ModelPricing
+import structlog
+
+logger = structlog.get_logger(__name__)
 
 DEFAULT_FREE_MODEL = "Kimi K2"
 DEFAULT_PREMIUM_MODEL = "Claude Sonnet 4"
@@ -132,6 +135,48 @@ class ModelRegistry:
             priority=96,
             enabled=True
         ))
+
+        # Add GPT-4o-mini for OpenAI compatible usage
+        self.register(Model(
+            id="openai/gpt-4o-mini",
+            name="GPT-4o Mini",
+            provider=ModelProvider.OPENAI,
+            aliases=["gpt-4o-mini", "GPT-4o Mini", "openai/gpt-4o-mini"],
+            context_window=128_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.STRUCTURED_OUTPUT,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=0.15,
+                output_cost_per_million_tokens=0.60
+            ),
+            tier_availability=["free", "paid"],
+            priority=95,  # Higher priority to appear in list
+            enabled=True
+        ))
+
+        # Add v98store models via OpenAI-compatible API
+        self.register(Model(
+            id="openai-compatible/gpt-4o-mini",
+            name="GPT-4o Mini (v98store)",
+            provider=ModelProvider.OPENAI_COMPATIBLE,
+            aliases=["gpt-4o-mini-v98", "v98store/gpt-4o-mini"],
+            context_window=128_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.STRUCTURED_OUTPUT,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=0.15,
+                output_cost_per_million_tokens=0.60
+            ),
+            tier_availability=["free", "paid"],
+            priority=94,
+            enabled=True
+        ))
         
         self.register(Model(
             id="gemini/gemini-2.5-pro",
@@ -224,11 +269,16 @@ class ModelRegistry:
     def get(self, model_id: str) -> Optional[Model]:
         if model_id in self._models:
             return self._models[model_id]
-        
+
         if model_id in self._aliases:
             actual_id = self._aliases[model_id]
             return self._models.get(actual_id)
-        
+
+        # Try to find by name if not found by ID or alias
+        for model in self._models.values():
+            if model.name == model_id:
+                return model
+
         return None
     
     def get_all(self, enabled_only: bool = True) -> List[Model]:
@@ -250,7 +300,9 @@ class ModelRegistry:
         return [m for m in models if capability in m.capabilities]
     
     def resolve_model_id(self, model_id: str) -> Optional[str]:
+        logger.debug(f"🔍 REGISTRY: resolve_model_id called with: '{model_id}'")
         model = self.get(model_id)
+        logger.debug(f"🔍 REGISTRY: get() returned model: {model.id if model else None}")
         return model.id if model else None
     
     def get_aliases(self, model_id: str) -> List[str]:
@@ -311,7 +363,6 @@ class ModelRegistry:
         paid_models = [m.id for m in self.get_by_tier("paid")]
         
         # Debug logging
-        from core.utils.logger import logger
         logger.debug(f"Legacy format generation: {len(free_models)} free models, {len(paid_models)} paid models")
         logger.debug(f"Free models: {free_models}")
         logger.debug(f"Paid models: {paid_models}")

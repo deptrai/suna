@@ -12,12 +12,15 @@ class ModelManager:
         return self.registry.get(model_id)
     
     def resolve_model_id(self, model_id: str) -> str:
-        # logger.debug(f"resolve_model_id called with: '{model_id}' (type: {type(model_id)})")
-        
+        logger.debug(f"🔍 MODEL MANAGER: resolve_model_id called with: '{model_id}' (type: {type(model_id)})")
+
         resolved = self.registry.resolve_model_id(model_id)
+        logger.debug(f"🔍 MODEL MANAGER: registry.resolve_model_id returned: '{resolved}'")
         if resolved:
+            logger.debug(f"🔍 MODEL MANAGER: returning resolved model: '{resolved}'")
             return resolved
-            
+
+        logger.debug(f"🔍 MODEL MANAGER: no resolution found, returning original: '{model_id}'")
         return model_id
     
     def validate_model(self, model_id: str) -> Tuple[bool, str]:

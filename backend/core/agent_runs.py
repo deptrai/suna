@@ -248,16 +248,24 @@ async def start_agent(
 
     request_id = structlog.contextvars.get_contextvars().get('request_id')
 
-    run_agent_background.send(
-        agent_run_id=agent_run_id, thread_id=thread_id, instance_id=utils.instance_id,
-        project_id=project_id,
-        model_name=model_name,  # Already resolved above
-        enable_thinking=body.enable_thinking, reasoning_effort=body.reasoning_effort,
-        stream=body.stream, enable_context_manager=body.enable_context_manager,
-        enable_prompt_caching=body.enable_prompt_caching,
-        agent_config=agent_config,  # Pass agent configuration
-        request_id=request_id,
-    )
+    logger.debug(f"🚀 About to enqueue agent task: {agent_run_id} with model: {model_name}")
+    try:
+        run_agent_background.send(
+            agent_run_id=agent_run_id, thread_id=thread_id, instance_id=utils.instance_id,
+            project_id=project_id,
+            model_name=model_name,  # Already resolved above
+            enable_thinking=body.enable_thinking, reasoning_effort=body.reasoning_effort,
+            stream=body.stream, enable_context_manager=body.enable_context_manager,
+            enable_prompt_caching=body.enable_prompt_caching,
+            agent_config=agent_config,  # Pass agent configuration
+            request_id=request_id,
+        )
+        logger.debug(f"✅ Successfully enqueued agent task: {agent_run_id}")
+    except Exception as e:
+        logger.error(f"❌ Failed to enqueue agent task: {agent_run_id}, error: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
 
     return {"agent_run_id": agent_run_id, "status": "running"}
 

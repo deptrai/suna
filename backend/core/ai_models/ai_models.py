@@ -10,6 +10,7 @@ class ModelProvider(Enum):
     GOOGLE = "google"
     XAI = "xai"
     MOONSHOTAI = "moonshotai"
+    OPENAI_COMPATIBLE = "openai_compatible"
 
 class ModelCapability(Enum):
     CHAT = "chat"
