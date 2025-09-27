@@ -365,7 +365,7 @@ export class UserService {
         permissions: ['analysis:basic', 'user:profile'],
         features: ['basic_dashboard', 'csv_export'],
         limits: {
-          apiRequestsPerHour: 10,
+          apiRequestsPerHour: 10, // Matches architecture spec
           analysisPerDay: 5,
           exportPerMonth: 10,
         },
@@ -374,7 +374,7 @@ export class UserService {
         permissions: ['analysis:basic', 'analysis:advanced', 'user:profile', 'user:api'],
         features: ['advanced_dashboard', 'csv_export', 'pdf_export', 'alerts'],
         limits: {
-          apiRequestsPerHour: 100,
+          apiRequestsPerHour: 1000, // Updated to match architecture spec
           analysisPerDay: 50,
           exportPerMonth: 100,
         },
@@ -383,7 +383,7 @@ export class UserService {
         permissions: ['analysis:all', 'user:all', 'team:management'],
         features: ['custom_dashboard', 'all_exports', 'team_collaboration', 'api_access'],
         limits: {
-          apiRequestsPerHour: 1000,
+          apiRequestsPerHour: 10000, // Updated to match architecture spec
           analysisPerDay: 500,
           exportPerMonth: 1000,
         },
