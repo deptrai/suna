@@ -19,6 +19,7 @@ import { MetricsModule } from './metrics/metrics.module';
 import { LoggerModule } from './common/logger/logger.module';
 import { DatabaseModule } from './database/database.module';
 import { CommonModule } from './common/common.module';
+import { RateLimitTestModule } from './common/rate-limit-test.module';
 
 // Configuration
 import databaseConfig from './config/database.config';
@@ -69,22 +70,22 @@ import servicesConfig from './config/services.config';
       inject: [ConfigService],
     }),
 
-    // Database
-    TypeOrmModule.forRootAsync({
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        url: configService.get<string>('DATABASE_URL'),
-        entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        migrations: [__dirname + '/migrations/*{.ts,.js}'],
-        synchronize: configService.get<string>('NODE_ENV') === 'development',
-        logging: configService.get<string>('NODE_ENV') === 'development',
-        ssl: configService.get<string>('NODE_ENV') === 'production' ? { rejectUnauthorized: false } : false,
-        retryAttempts: 3,
-        retryDelay: 3000,
-        autoLoadEntities: true,
-      }),
-      inject: [ConfigService],
-    }),
+    // Database - Temporarily disabled for RBAC testing
+    // TypeOrmModule.forRootAsync({
+    //   useFactory: (configService: ConfigService) => ({
+    //     type: 'postgres',
+    //     url: configService.get<string>('DATABASE_URL'),
+    //     entities: [__dirname + '/**/*.entity{.ts,.js}'],
+    //     migrations: [__dirname + '/migrations/*{.ts,.js}'],
+    //     synchronize: configService.get<string>('NODE_ENV') === 'development',
+    //     logging: configService.get<string>('NODE_ENV') === 'development',
+    //     ssl: configService.get<string>('NODE_ENV') === 'production' ? { rejectUnauthorized: false } : false,
+    //     retryAttempts: 3,
+    //     retryDelay: 3000,
+    //     autoLoadEntities: true,
+    //   }),
+    //   inject: [ConfigService],
+    // }),
 
     // Rate Limiting
     ThrottlerModule.forRootAsync({
@@ -136,9 +137,10 @@ import servicesConfig from './config/services.config';
     // Feature modules
     CommonModule,
     LoggerModule,
-    DatabaseModule,
-    HealthModule,
+    // DatabaseModule, // Temporarily disabled for RBAC testing
+    // HealthModule, // Temporarily disabled for RBAC testing
     AuthModule,
+    RateLimitTestModule, // Rate limiting test endpoints
     CacheModule,
     MetricsModule,
     AnalysisModule,

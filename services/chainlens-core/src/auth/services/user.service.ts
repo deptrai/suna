@@ -360,32 +360,59 @@ export class UserService {
   }
 
   private getTierConfiguration(tier: string) {
+    // Import permission constants
+    const { ROLE_PERMISSIONS_COMPLETE, ROLES } = require('../constants/permissions.constants');
+
+    // Map tier to role
+    const tierToRole = {
+      free: ROLES.FREE,
+      pro: ROLES.PRO,
+      enterprise: ROLES.ENTERPRISE,
+      admin: ROLES.ADMIN,
+    };
+
+    const role = tierToRole[tier] || ROLES.FREE;
+    const permissions = ROLE_PERMISSIONS_COMPLETE[role] || [];
+
     const configurations = {
       free: {
-        permissions: ['analysis:basic', 'user:profile'],
-        features: ['basic_dashboard', 'csv_export'],
+        permissions,
+        features: ['basic_dashboard', 'csv_export', 'basic_analysis'],
         limits: {
           apiRequestsPerHour: 10, // Matches architecture spec
           analysisPerDay: 5,
           exportPerMonth: 10,
+          concurrentAnalysis: 1,
         },
       },
       pro: {
-        permissions: ['analysis:basic', 'analysis:advanced', 'user:profile', 'user:api'],
-        features: ['advanced_dashboard', 'csv_export', 'pdf_export', 'alerts'],
+        permissions,
+        features: ['advanced_dashboard', 'csv_export', 'pdf_export', 'alerts', 'historical_data', 'advanced_analysis'],
         limits: {
           apiRequestsPerHour: 1000, // Updated to match architecture spec
           analysisPerDay: 50,
           exportPerMonth: 100,
+          concurrentAnalysis: 3,
         },
       },
       enterprise: {
-        permissions: ['analysis:all', 'user:all', 'team:management'],
-        features: ['custom_dashboard', 'all_exports', 'team_collaboration', 'api_access'],
+        permissions,
+        features: ['custom_dashboard', 'all_exports', 'team_collaboration', 'api_access', 'webhooks', 'real_time_data', 'batch_requests'],
         limits: {
           apiRequestsPerHour: 10000, // Updated to match architecture spec
           analysisPerDay: 500,
           exportPerMonth: 1000,
+          concurrentAnalysis: 10,
+        },
+      },
+      admin: {
+        permissions,
+        features: ['admin_dashboard', 'system_monitoring', 'user_management', 'all_features'],
+        limits: {
+          apiRequestsPerHour: 100000, // Unlimited for admin
+          analysisPerDay: 10000,
+          exportPerMonth: 10000,
+          concurrentAnalysis: 50,
         },
       },
     };
@@ -397,9 +424,86 @@ export class UserService {
     const upgradeMap = {
       free: ['pro', 'enterprise'],
       pro: ['enterprise'],
-      enterprise: [],
+      enterprise: ['admin'], // Admin upgrade available for enterprise
+      admin: [],
     };
 
     return upgradeMap[currentTier] || [];
+  }
+
+  /**
+   * Check if user has specific permission based on tier
+   */
+  async userHasPermission(userId: string, permission: string): Promise<boolean> {
+    try {
+      const user = await this.getUserById(userId);
+      if (!user) {
+        return false;
+      }
+
+      const tierConfig = this.getTierConfiguration(user.tier);
+      return tierConfig.permissions.includes(permission);
+    } catch (error) {
+      this.logger.error('Error checking user permission', error.stack, 'UserService', { userId, permission });
+      return false;
+    }
+  }
+
+  /**
+   * Get user's effective rate limits
+   */
+  async getUserRateLimits(userId: string): Promise<{
+    apiRequestsPerHour: number;
+    analysisPerDay: number;
+    exportPerMonth: number;
+    concurrentAnalysis: number;
+  }> {
+    try {
+      const user = await this.getUserById(userId);
+      if (!user) {
+        // Return free tier limits as fallback
+        return this.getTierConfiguration('free').limits;
+      }
+
+      return this.getTierConfiguration(user.tier).limits;
+    } catch (error) {
+      this.logger.error('Error getting user rate limits', error.stack, 'UserService', { userId });
+      return this.getTierConfiguration('free').limits;
+    }
+  }
+
+  /**
+   * Bulk tier upgrade for multiple users
+   */
+  async bulkUpgradeUsers(userIds: string[], newTier: 'pro' | 'enterprise'): Promise<{
+    successful: string[];
+    failed: { userId: string; reason: string }[];
+  }> {
+    const successful: string[] = [];
+    const failed: { userId: string; reason: string }[] = [];
+
+    for (const userId of userIds) {
+      try {
+        const validation = await this.validateTierUpgrade(userId, newTier);
+        if (!validation.isValid) {
+          failed.push({ userId, reason: validation.reason || 'Invalid upgrade' });
+          continue;
+        }
+
+        await this.upgradeUserTier(userId, newTier);
+        successful.push(userId);
+      } catch (error) {
+        failed.push({ userId, reason: error.message || 'Upgrade failed' });
+      }
+    }
+
+    this.logger.log('Bulk tier upgrade completed', {
+      totalUsers: userIds.length,
+      successful: successful.length,
+      failed: failed.length,
+      newTier
+    });
+
+    return { successful, failed };
   }
 }

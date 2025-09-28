@@ -9,6 +9,14 @@ import { Reflector } from '@nestjs/core';
 import { AuthService, User } from '../auth.service';
 import { UserRole, UserContext } from '../constants/jwt.constants';
 import { LoggerService } from '../../common/services/logger.service';
+import {
+  ROLES,
+  USER_TIERS,
+  hasPermission,
+  isHigherRole,
+  getRolePermissions,
+  Permission
+} from '../constants/permissions.constants';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -19,26 +27,44 @@ export class RolesGuard implements CanActivate {
   ) {}
 
   canActivate(context: ExecutionContext): boolean {
-    // Get required roles from decorator
+    // Get all requirements from decorators
     const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>('roles', [
       context.getHandler(),
       context.getClass(),
     ]);
 
-    // Get required permissions from decorator
-    const requiredPermissions = this.reflector.getAllAndOverride<string[]>('permissions', [
+    const requiredPermissions = this.reflector.getAllAndOverride<Permission[]>('permissions', [
       context.getHandler(),
       context.getClass(),
     ]);
 
-    // Get required tiers from decorator
     const requiredTiers = this.reflector.getAllAndOverride<string[]>('tiers', [
       context.getHandler(),
       context.getClass(),
     ]);
 
-    // If no roles, permissions or tiers required, allow access
-    if (!requiredRoles && !requiredPermissions && !requiredTiers) {
+    const minimumTier = this.reflector.getAllAndOverride<string>('minimumTier', [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+
+    const requireAll = this.reflector.getAllAndOverride<boolean>('requireAll', [
+      context.getHandler(),
+      context.getClass(),
+    ]) || false;
+
+    // Check if endpoint is public
+    const isPublic = this.reflector.getAllAndOverride<boolean>('isPublic', [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+
+    if (isPublic) {
+      return true;
+    }
+
+    // If no requirements specified, allow access for authenticated users
+    if (!requiredRoles && !requiredPermissions && !requiredTiers && !minimumTier) {
       return true;
     }
 
@@ -54,12 +80,22 @@ export class RolesGuard implements CanActivate {
       throw new UnauthorizedException('Authentication required');
     }
 
-    // Check role requirements (primary check)
+    // Collect all access checks
+    const accessChecks = {
+      roleCheck: false,
+      permissionCheck: false,
+      tierCheck: false,
+      minimumTierCheck: false,
+    };
+
+    // Check role requirements with hierarchy support
     if (requiredRoles && requiredRoles.length > 0) {
       const userRole = user.role;
-      const hasRole = requiredRoles.includes(userRole);
+      accessChecks.roleCheck = requiredRoles.some(role =>
+        userRole === role || isHigherRole(userRole, role)
+      );
 
-      if (!hasRole) {
+      if (!accessChecks.roleCheck) {
         this.logger.warn('RolesGuard: Insufficient role permissions', {
           userId: user.id,
           userRole,
@@ -67,13 +103,45 @@ export class RolesGuard implements CanActivate {
           path: request.url,
           method: request.method,
         });
-        throw new UnauthorizedException(`Access requires one of these roles: ${requiredRoles.join(', ')}`);
+
+        if (requireAll) {
+          throw new ForbiddenException(`Access requires one of these roles: ${requiredRoles.join(', ')}`);
+        }
       }
+    } else {
+      accessChecks.roleCheck = true; // No role requirement
     }
 
-    // Check tier requirements
+    // Check permission requirements
+    if (requiredPermissions && requiredPermissions.length > 0) {
+      const userPermissions = getRolePermissions(user.role);
+      accessChecks.permissionCheck = requiredPermissions.every(permission =>
+        userPermissions.includes(permission)
+      );
+
+      if (!accessChecks.permissionCheck) {
+        this.logger.warn('RolesGuard: Insufficient permissions', {
+          userId: user.id,
+          userRole: user.role,
+          userPermissions: userPermissions.slice(0, 5), // Log first 5 for brevity
+          requiredPermissions,
+          path: request.url,
+          method: request.method,
+        });
+
+        if (requireAll) {
+          throw new ForbiddenException(`Insufficient permissions. Required: ${requiredPermissions.join(', ')}`);
+        }
+      }
+    } else {
+      accessChecks.permissionCheck = true; // No permission requirement
+    }
+
+    // Check tier requirements (exact match)
     if (requiredTiers && requiredTiers.length > 0) {
-      if (!requiredTiers.includes(user.tier)) {
+      accessChecks.tierCheck = requiredTiers.includes(user.tier);
+
+      if (!accessChecks.tierCheck) {
         this.logger.warn('RolesGuard: Insufficient tier permissions', {
           userId: user.id,
           userTier: user.tier,
@@ -81,37 +149,65 @@ export class RolesGuard implements CanActivate {
           path: request.url,
           method: request.method,
         });
-        throw new ForbiddenException(`Access requires one of these tiers: ${requiredTiers.join(', ')}`);
+
+        if (requireAll) {
+          throw new ForbiddenException(`Access requires one of these tiers: ${requiredTiers.join(', ')}`);
+        }
       }
+    } else {
+      accessChecks.tierCheck = true; // No tier requirement
     }
 
-    // Check permission requirements
-    if (requiredPermissions && requiredPermissions.length > 0) {
-      // Convert UserContext to User for compatibility
-      const userForPermissionCheck = {
-        ...user,
-        permissions: [], // Default empty permissions for now
-      };
-      const hasPermission = this.authService.hasAllPermissions(userForPermissionCheck, requiredPermissions);
+    // Check minimum tier requirement (hierarchy)
+    if (minimumTier) {
+      accessChecks.minimumTierCheck = this.authService.hasTierAccess(user.tier, minimumTier);
 
-      if (!hasPermission) {
-        this.logger.warn('RolesGuard: Insufficient permissions', {
+      if (!accessChecks.minimumTierCheck) {
+        this.logger.warn('RolesGuard: Below minimum tier requirement', {
           userId: user.id,
-          requiredPermissions,
+          userTier: user.tier,
+          minimumTier,
           path: request.url,
           method: request.method,
         });
-        throw new ForbiddenException(`Insufficient permissions. Required: ${requiredPermissions.join(', ')}`);
+
+        if (requireAll) {
+          throw new ForbiddenException(`Access requires minimum tier: ${minimumTier}`);
+        }
       }
+    } else {
+      accessChecks.minimumTierCheck = true; // No minimum tier requirement
+    }
+
+    // Final access decision
+    const hasAccess = requireAll
+      ? Object.values(accessChecks).every(check => check) // ALL requirements must be met
+      : Object.values(accessChecks).some(check => check);  // ANY requirement can be met
+
+    if (!hasAccess) {
+      this.logger.warn('RolesGuard: Access denied - insufficient privileges', {
+        userId: user.id,
+        userRole: user.role,
+        userTier: user.tier,
+        accessChecks,
+        requireAll,
+        requiredRoles,
+        requiredTiers,
+        requiredPermissions,
+        minimumTier,
+        path: request.url,
+        method: request.method,
+      });
+
+      throw new ForbiddenException('Access denied - insufficient privileges');
     }
 
     this.logger.debug('RolesGuard: Access granted', {
       userId: user.id,
       userRole: user.role,
       userTier: user.tier,
-      requiredRoles,
-      requiredTiers,
-      requiredPermissions,
+      accessChecks,
+      requireAll,
       path: request.url,
       method: request.method,
     });

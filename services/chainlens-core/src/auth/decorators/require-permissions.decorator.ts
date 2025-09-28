@@ -150,7 +150,7 @@ export const RequireApiManagement = () =>
 /**
  * Combined decorator for comprehensive access control
  * @param options - Object containing roles, permissions, tier, and minimumTier requirements
- * 
+ *
  * @example
  * @RequireAccess({
  *   roles: [ROLES.PRO, ROLES.ENTERPRISE],
@@ -165,6 +165,7 @@ export const RequireAccess = (options: {
   permissions?: string[];
   tier?: string;
   minimumTier?: string;
+  requireAll?: boolean; // If true, user must meet ALL requirements, not just one
 }) => {
   return (target: any, propertyKey: string, descriptor: PropertyDescriptor) => {
     if (options.roles) {
@@ -178,6 +179,9 @@ export const RequireAccess = (options: {
     }
     if (options.minimumTier) {
       SetMetadata('minimumTier', options.minimumTier)(target, propertyKey, descriptor);
+    }
+    if (options.requireAll !== undefined) {
+      SetMetadata('requireAll', options.requireAll)(target, propertyKey, descriptor);
     }
   };
 };

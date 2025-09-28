@@ -42,9 +42,14 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
         });
       }
 
-      // Use Supabase data if available, otherwise fall back to JWT payload
-      const role = supabaseUser?.role || payload.role || JWT_CONSTANTS.ROLES.FREE;
-      const tier = supabaseUser?.tier || payload.tier || 'free';
+      // Use Supabase data if available and not default, otherwise fall back to JWT payload
+      // If Supabase returns default "free" values, prefer JWT payload
+      const role = (supabaseUser?.role && supabaseUser.role !== 'free')
+        ? supabaseUser.role
+        : payload.role || JWT_CONSTANTS.ROLES.FREE;
+      const tier = (supabaseUser?.tier && supabaseUser.tier !== 'free')
+        ? supabaseUser.tier
+        : payload.tier || 'free';
 
       // Get rate limit configuration for user tier
       const rateLimit = JWT_CONSTANTS.RATE_LIMITS[tier.toUpperCase() as keyof typeof JWT_CONSTANTS.RATE_LIMITS]

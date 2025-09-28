@@ -4,11 +4,14 @@ import {
   ExecutionContext,
   HttpException,
   HttpStatus,
+  Logger,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Request, Response } from 'express';
 import { RedisService } from '../services/redis.service';
+import { RateLimitMetricsService } from '../services/rate-limit-metrics.service';
 import { UserContext } from '../../auth/interfaces/user-context.interface';
+import { JWT_CONSTANTS } from '../../auth/constants/jwt.constants';
 
 export interface RateLimitOptions {
   requests: number;
@@ -27,28 +30,31 @@ export interface TierRateLimits {
 
 @Injectable()
 export class RateLimitGuard implements CanActivate {
+  private readonly logger = new Logger(RateLimitGuard.name);
+
   private readonly defaultLimits: TierRateLimits = {
     free: {
-      requests: 10,
-      windowMs: 3600000, // 1 hour
+      requests: JWT_CONSTANTS.RATE_LIMITS.FREE.requests,
+      windowMs: JWT_CONSTANTS.RATE_LIMITS.FREE.window * 1000, // Convert to milliseconds
     },
     pro: {
-      requests: 1000,
-      windowMs: 3600000, // 1 hour
+      requests: JWT_CONSTANTS.RATE_LIMITS.PRO.requests,
+      windowMs: JWT_CONSTANTS.RATE_LIMITS.PRO.window * 1000, // Convert to milliseconds
     },
     enterprise: {
-      requests: 10000,
-      windowMs: 3600000, // 1 hour
+      requests: JWT_CONSTANTS.RATE_LIMITS.ENTERPRISE.requests,
+      windowMs: JWT_CONSTANTS.RATE_LIMITS.ENTERPRISE.window * 1000, // Convert to milliseconds
     },
     admin: {
-      requests: 100000,
-      windowMs: 3600000, // 1 hour - effectively unlimited
+      requests: JWT_CONSTANTS.RATE_LIMITS.ENTERPRISE.requests * 10, // 10x enterprise for admin
+      windowMs: JWT_CONSTANTS.RATE_LIMITS.ENTERPRISE.window * 1000, // Convert to milliseconds
     },
   };
 
   constructor(
     private reflector: Reflector,
     private redisService: RedisService,
+    private rateLimitMetricsService: RateLimitMetricsService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -72,11 +78,33 @@ export class RateLimitGuard implements CanActivate {
 
     try {
       const result = await this.checkRateLimit(key, rateLimit);
-      
+
       // Set rate limit headers
-      this.setRateLimitHeaders(response, result, rateLimit);
+      this.setRateLimitHeaders(response, result, rateLimit, user);
+
+      // Log rate limit usage for monitoring
+      this.logRateLimitUsage(user, request, result, rateLimit);
+
+      // Record metrics for monitoring and analytics
+      await this.rateLimitMetricsService.recordRateLimitEvent(
+        user,
+        request.path,
+        request.method,
+        result.exceeded,
+        result.count,
+        rateLimit.requests,
+      );
 
       if (result.exceeded) {
+        this.logger.warn(`Rate limit exceeded for ${user?.tier || 'anonymous'} user`, {
+          userId: user?.id,
+          tier: user?.tier,
+          path: request.path,
+          limit: rateLimit.requests,
+          current: result.count,
+          resetTime: new Date(Date.now() + result.resetTime),
+        });
+
         throw new HttpException(
           {
             success: false,
@@ -87,6 +115,7 @@ export class RateLimitGuard implements CanActivate {
                 limit: rateLimit.requests,
                 windowMs: rateLimit.windowMs,
                 resetTime: new Date(Date.now() + result.resetTime),
+                retryAfter: Math.ceil(result.resetTime / 1000),
               },
             },
             meta: {
@@ -103,9 +132,9 @@ export class RateLimitGuard implements CanActivate {
       if (error instanceof HttpException) {
         throw error;
       }
-      
+
       // If Redis is down, allow request but log error
-      console.error('Rate limiting error:', error);
+      this.logger.error('Rate limiting error - allowing request', error.stack);
       return true;
     }
   }
@@ -172,10 +201,55 @@ export class RateLimitGuard implements CanActivate {
     response: Response,
     result: { count: number; resetTime: number },
     options: RateLimitOptions,
+    user?: UserContext,
   ): void {
+    const remaining = Math.max(0, options.requests - result.count);
+    const resetTimestamp = Math.ceil((Date.now() + result.resetTime) / 1000);
+
+    // Standard rate limit headers
     response.setHeader('X-RateLimit-Limit', options.requests);
-    response.setHeader('X-RateLimit-Remaining', Math.max(0, options.requests - result.count));
-    response.setHeader('X-RateLimit-Reset', new Date(Date.now() + result.resetTime).toISOString());
-    response.setHeader('X-RateLimit-Window', options.windowMs);
+    response.setHeader('X-RateLimit-Remaining', remaining);
+    response.setHeader('X-RateLimit-Reset', resetTimestamp);
+    response.setHeader('X-RateLimit-Window', Math.ceil(options.windowMs / 1000));
+
+    // Additional headers for better client experience
+    response.setHeader('X-RateLimit-Used', result.count);
+    response.setHeader('X-RateLimit-Tier', user?.tier || 'free');
+
+    // Add retry-after header if close to limit
+    if (remaining <= 5) {
+      response.setHeader('Retry-After', Math.ceil(result.resetTime / 1000));
+    }
+  }
+
+  private logRateLimitUsage(
+    user: UserContext | undefined,
+    request: Request,
+    result: { count: number; resetTime: number },
+    options: RateLimitOptions,
+  ): void {
+    const remaining = Math.max(0, options.requests - result.count);
+    const usagePercent = (result.count / options.requests) * 100;
+
+    // Log high usage for monitoring
+    if (usagePercent >= 80) {
+      this.logger.warn(`High rate limit usage detected`, {
+        userId: user?.id,
+        tier: user?.tier,
+        path: request.path,
+        method: request.method,
+        usage: `${result.count}/${options.requests}`,
+        usagePercent: usagePercent.toFixed(1),
+        remaining,
+        resetTime: new Date(Date.now() + result.resetTime),
+      });
+    } else if (usagePercent >= 50) {
+      this.logger.debug(`Moderate rate limit usage`, {
+        userId: user?.id,
+        tier: user?.tier,
+        usage: `${result.count}/${options.requests}`,
+        usagePercent: usagePercent.toFixed(1),
+      });
+    }
   }
 }

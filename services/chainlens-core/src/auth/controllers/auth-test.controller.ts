@@ -2,10 +2,12 @@ import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtService } from '@nestjs/jwt';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
+import { RolesGuard } from '../guards/roles.guard';
 import { ApiKeyAuthGuard } from '../guards/api-key-auth.guard';
 import { Public } from '../decorators/public.decorator';
 import { Roles } from '../decorators/roles.decorator';
 import { User } from '../decorators/user.decorator';
+import { CurrentUser } from '../decorators/current-user.decorator';
 import { UserContext, JWT_CONSTANTS } from '../constants/jwt.constants';
 import { LoggerService } from '../../common/services/logger.service';
 
@@ -119,6 +121,89 @@ export class AuthTestController {
   async getPublicContent() {
     return {
       message: 'This is public content, no authentication required',
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  // ===== RBAC TEST ENDPOINTS =====
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('pro', 'enterprise', 'admin')
+  @Get('pro-only')
+  @ApiOperation({ summary: 'Pro tier and above only' })
+  @ApiResponse({ status: 200, description: 'Pro content accessed' })
+  @ApiResponse({ status: 403, description: 'Insufficient permissions' })
+  async getProContent(@CurrentUser() user: UserContext) {
+    return {
+      message: 'This content is available for Pro tier and above',
+      userTier: user.tier,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('enterprise', 'admin')
+  @Get('enterprise-only')
+  @ApiOperation({ summary: 'Enterprise tier and above only' })
+  @ApiResponse({ status: 200, description: 'Enterprise content accessed' })
+  @ApiResponse({ status: 403, description: 'Insufficient permissions' })
+  async getEnterpriseContent(@CurrentUser() user: UserContext) {
+    return {
+      message: 'This content is available for Enterprise tier and above',
+      userTier: user.tier,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @Get('admin-only')
+  @ApiOperation({ summary: 'Admin only' })
+  @ApiResponse({ status: 200, description: 'Admin content accessed' })
+  @ApiResponse({ status: 403, description: 'Insufficient permissions' })
+  async getAdminContent(@CurrentUser() user: UserContext) {
+    return {
+      message: 'This content is available for Admin only',
+      userTier: user.tier,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Get('user-info')
+  @ApiOperation({ summary: 'Get current user information with permissions' })
+  @ApiResponse({ status: 200, description: 'User information retrieved' })
+  async getUserInfo(@CurrentUser() user: UserContext) {
+    return {
+      message: 'User information retrieved successfully',
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        tier: user.tier,
+        rateLimit: user.rateLimit,
+      },
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Get('tier-features')
+  @ApiOperation({ summary: 'Get available features for current tier' })
+  @ApiResponse({ status: 200, description: 'Tier features retrieved' })
+  async getTierFeatures(@CurrentUser() user: UserContext) {
+    // This would normally call UserService.getUserTierInfo()
+    const tierFeatures = {
+      free: ['basic_dashboard', 'csv_export', 'basic_analysis'],
+      pro: ['advanced_dashboard', 'csv_export', 'pdf_export', 'alerts', 'historical_data'],
+      enterprise: ['custom_dashboard', 'all_exports', 'team_collaboration', 'api_access', 'webhooks'],
+      admin: ['admin_dashboard', 'system_monitoring', 'user_management', 'all_features'],
+    };
+
+    return {
+      message: 'Tier features retrieved successfully',
+      currentTier: user.tier,
+      availableFeatures: tierFeatures[user.tier] || tierFeatures.free,
       timestamp: new Date().toISOString(),
     };
   }

@@ -9,6 +9,7 @@ import { LoggerService } from './common/services/logger.service';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
+import { RateLimitGuard } from './common/guards/rate-limit.guard';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -64,6 +65,10 @@ async function bootstrap() {
 
   // Global response interceptor
   app.useGlobalInterceptors(new ResponseInterceptor());
+
+  // Global rate limiting guard - temporarily disabled for testing
+  // const rateLimitGuard = app.get(RateLimitGuard);
+  // app.useGlobalGuards(rateLimitGuard);
 
   // Swagger documentation
   if (nodeEnv !== 'production') {

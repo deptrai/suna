@@ -193,6 +193,41 @@ export class AuthService {
     return requiredPermissions.every(permission => user.permissions.includes(permission));
   }
 
+  /**
+   * Check if user has required role or higher in hierarchy
+   */
+  hasRole(user: User, requiredRole: string): boolean {
+    const { isHigherRole } = require('./constants/permissions.constants');
+    return user.tier === requiredRole || isHigherRole(user.tier, requiredRole);
+  }
+
+  /**
+   * Check if user has any of the required roles
+   */
+  hasAnyRole(user: User, requiredRoles: string[]): boolean {
+    return requiredRoles.some(role => this.hasRole(user, role));
+  }
+
+  /**
+   * Check if user tier meets minimum requirement
+   */
+  hasTierAccess(userTier: string, requiredTier: string): boolean {
+    const { PERMISSION_HIERARCHY } = require('./constants/permissions.constants');
+    const tierHierarchy = PERMISSION_HIERARCHY.TIER_HIERARCHY;
+    const userIndex = tierHierarchy.indexOf(userTier);
+    const requiredIndex = tierHierarchy.indexOf(requiredTier);
+
+    return userIndex >= requiredIndex;
+  }
+
+  /**
+   * Get user's effective permissions based on role and tier
+   */
+  getUserEffectivePermissions(user: User): string[] {
+    const { getRolePermissions } = require('./constants/permissions.constants');
+    return getRolePermissions(user.tier);
+  }
+
   checkRateLimit(user: User, resource: string): boolean {
     // Rate limiting logic based on user tier
     const limits = this.getRateLimits(user.tier);
@@ -202,28 +237,19 @@ export class AuthService {
   }
 
   private getTierPermissions(tier: string): string[] {
-    const permissions = {
-      free: [
-        'crypto:analyze',
-      ],
-      pro: [
-        'crypto:analyze',
-        'crypto:analyze:premium',
-        'crypto:history',
-        'data:export',
-      ],
-      enterprise: [
-        'crypto:analyze',
-        'crypto:analyze:premium',
-        'crypto:history',
-        'data:export',
-        'data:export:bulk',
-        'api:access',
-        'api:webhooks',
-      ],
+    // Import permission constants
+    const { ROLE_PERMISSIONS_COMPLETE, ROLES } = require('./constants/permissions.constants');
+
+    // Map tier to role for permission lookup
+    const tierToRole = {
+      free: ROLES.FREE,
+      pro: ROLES.PRO,
+      enterprise: ROLES.ENTERPRISE,
+      admin: ROLES.ADMIN,
     };
 
-    return permissions[tier] || permissions.free;
+    const role = tierToRole[tier] || ROLES.FREE;
+    return ROLE_PERMISSIONS_COMPLETE[role] || ROLE_PERMISSIONS_COMPLETE[ROLES.FREE];
   }
 
   private getRateLimits(tier: string): { perMinute: number; perHour: number; perDay: number } {

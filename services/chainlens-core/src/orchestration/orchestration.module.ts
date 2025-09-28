@@ -3,9 +3,13 @@ import { HttpModule } from '@nestjs/axios';
 import { OrchestrationService } from './orchestration.service';
 import { CircuitBreakerService } from './circuit-breaker.service';
 import { ServiceClientService } from './service-client.service';
+import { LoggerModule } from '../common/logger/logger.module';
+import { MetricsModule } from '../metrics/metrics.module';
 
 @Module({
   imports: [
+    LoggerModule,
+    MetricsModule,
     HttpModule.registerAsync({
       useFactory: () => ({
         timeout: 30000,
