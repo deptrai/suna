@@ -124,22 +124,40 @@ class LLMStrategyFactory:
     @staticmethod
     def get_strategy(model_name: str, router: Router = None) -> LLMStrategy:
         """Get the appropriate strategy for the given model."""
-        # Use Router for all models since it works better with openai-compatible
+        # Use DirectLiteLLM for openai-compatible models to avoid Router hanging with tools
+        if model_name.startswith("openai-compatible/"):
+            logger.debug(
+                "Selected DirectLiteLLM strategy for openai-compatible model",
+                model=model_name,
+                reason="router hangs with tools for openai-compatible models"
+            )
+            return DirectLiteLLMStrategy()
+
+        # Use Router for all other models
         logger.debug(
             "Selected Router strategy",
             model=model_name,
-            reason="router works better for all providers including openai-compatible"
+            reason="router works well for standard providers"
         )
         return RouterStrategy(router)
     
     @staticmethod
     def get_strategy_for_provider(provider: str, router: Router = None) -> LLMStrategy:
         """Get strategy based on provider type."""
-        # Use Router strategy for all providers including openai-compatible
+        # Use DirectLiteLLM for openai_compatible provider to avoid Router hanging with tools
+        if provider == "openai_compatible":
+            logger.debug(
+                "Selected DirectLiteLLM strategy for openai_compatible provider",
+                provider=provider,
+                reason="router hangs with tools for openai-compatible models"
+            )
+            return DirectLiteLLMStrategy()
+
+        # Use Router strategy for all other providers
         logger.debug(
             "Selected Router strategy for provider",
             provider=provider,
-            reason="router works better for all providers including openai-compatible"
+            reason="router works well for standard providers"
         )
         return RouterStrategy(router)
 

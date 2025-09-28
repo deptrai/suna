@@ -101,9 +101,17 @@ describe('DexScreenerService', () => {
           schemaVersion: '1.0.0',
           pairs: [mockPair],
         },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {
+          headers: {},
+          method: 'get',
+          url: '',
+        },
       };
 
-      httpService.get.mockReturnValue(of(mockResponse));
+      httpService.get.mockReturnValue(of(mockResponse as any));
 
       const result = await service.getPairsByToken(tokenAddress);
 
@@ -158,9 +166,17 @@ describe('DexScreenerService', () => {
           schemaVersion: '1.0.0',
           pairs: [mockPair],
         },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {
+          headers: {},
+          method: 'get',
+          url: '',
+        },
       };
 
-      httpService.get.mockReturnValue(of(mockResponse));
+      httpService.get.mockReturnValue(of(mockResponse as any));
 
       const result = await service.getPairInfo(pairAddress);
 
@@ -180,9 +196,17 @@ describe('DexScreenerService', () => {
           schemaVersion: '1.0.0',
           pairs: [],
         },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {
+          headers: {},
+          method: 'get',
+          url: '',
+        },
       };
 
-      httpService.get.mockReturnValue(of(mockResponse));
+      httpService.get.mockReturnValue(of(mockResponse as any));
 
       const result = await service.getPairInfo(pairAddress);
 
@@ -198,9 +222,17 @@ describe('DexScreenerService', () => {
           schemaVersion: '1.0.0',
           pairs: [mockPair],
         },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {
+          headers: {},
+          method: 'get',
+          url: '',
+        },
       };
 
-      httpService.get.mockReturnValue(of(mockResponse));
+      httpService.get.mockReturnValue(of(mockResponse as any));
 
       const result = await service.analyzePair(pairAddress);
 
@@ -236,9 +268,17 @@ describe('DexScreenerService', () => {
           schemaVersion: '1.0.0',
           pairs: [mockPair],
         },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {
+          headers: {},
+          method: 'get',
+          url: '',
+        },
       };
 
-      httpService.get.mockReturnValue(of(mockResponse));
+      httpService.get.mockReturnValue(of(mockResponse as any));
 
       const result = await service.analyzeLiquidity(tokenAddress);
 
@@ -263,9 +303,17 @@ describe('DexScreenerService', () => {
           schemaVersion: '1.0.0',
           pairs: [mockPair],
         },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {
+          headers: {},
+          method: 'get',
+          url: '',
+        },
       };
 
-      httpService.get.mockReturnValue(of(mockResponse));
+      httpService.get.mockReturnValue(of(mockResponse as any));
 
       const result = await service.analyzeLiquidity(tokenAddress, chainId);
 
