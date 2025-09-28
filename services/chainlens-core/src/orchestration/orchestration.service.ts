@@ -7,8 +7,10 @@ import { CircuitBreakerService, FallbackStrategy } from './circuit-breaker.servi
 import { ServiceClientService } from './service-client.service';
 import { ServiceClientFactoryService } from './services/service-client-factory.service';
 import { OrchestrationCacheService } from './services/orchestration-cache.service';
+import { OrchestrationQueueService } from './services/orchestration-queue.service';
 import { AnalysisRequestDto } from '../analysis/dto/analysis-request.dto';
 import { OrchestrationCacheOptions } from './interfaces/cache.interfaces';
+import { QueueMetrics, QueueHealth, QueueStatistics, JobStatus, JobProgress } from './interfaces/queue.interfaces';
 
 export interface ServiceResponse {
   status: 'success' | 'error' | 'timeout' | 'fallback' | 'circuit_open';
@@ -72,6 +74,7 @@ export class OrchestrationService {
     private serviceClientService: ServiceClientService,
     private serviceClientFactory: ServiceClientFactoryService,
     private orchestrationCacheService: OrchestrationCacheService,
+    private orchestrationQueueService: OrchestrationQueueService,
   ) {
     this.serviceEndpoints = {
       onchain: this.configService.get<string>('services.onchain.url', 'http://localhost:3001'),
@@ -450,5 +453,106 @@ export class OrchestrationService {
    */
   getCachePerformanceReport() {
     return this.orchestrationCacheService.getPerformanceReport();
+  }
+
+  // ===== T1.3.5: Queue Management Methods =====
+
+  /**
+   * T1.3.5a: Queue orchestration request for high load scenarios
+   */
+  async queueAnalysis(
+    request: AnalysisRequestDto,
+    user: User,
+    correlationId: string,
+  ): Promise<string> {
+    this.logger.log('Queueing analysis request', {
+      projectId: request.projectId,
+      analysisType: request.analysisType,
+      userId: user.id,
+      userTier: user.tier,
+      correlationId,
+    });
+
+    const jobId = await this.orchestrationQueueService.addJob(
+      request,
+      user,
+      correlationId,
+    );
+
+    this.logger.log('Analysis request queued successfully', {
+      jobId,
+      projectId: request.projectId,
+      userId: user.id,
+      correlationId,
+    });
+
+    return jobId;
+  }
+
+  /**
+   * Get job status and progress
+   */
+  async getJobStatus(jobId: string): Promise<{ status: JobStatus; progress?: JobProgress }> {
+    const result = await this.orchestrationQueueService.getJobStatus(jobId);
+    return {
+      status: result.status,
+      progress: result.progress,
+    };
+  }
+
+  /**
+   * T1.3.5b: Get queue metrics for monitoring
+   */
+  getQueueMetrics(): QueueMetrics {
+    return this.orchestrationQueueService.getMetrics();
+  }
+
+  /**
+   * T1.3.5b: Get queue health status
+   */
+  async getQueueHealth(): Promise<QueueHealth> {
+    return this.orchestrationQueueService.getHealth();
+  }
+
+  /**
+   * T1.3.5b: Get queue statistics for reporting
+   */
+  async getQueueStatistics(): Promise<QueueStatistics> {
+    return this.orchestrationQueueService.getStatistics();
+  }
+
+  /**
+   * T1.3.5b: Get dead letter queue entries
+   */
+  getDeadLetterQueue() {
+    return this.orchestrationQueueService.getDeadLetterQueue();
+  }
+
+  /**
+   * T1.3.5b: Retry job from dead letter queue
+   */
+  async retryDeadLetterJob(jobId: string): Promise<boolean> {
+    return this.orchestrationQueueService.retryDeadLetterJob(jobId);
+  }
+
+  /**
+   * Pause queue processing
+   */
+  async pauseQueue(): Promise<void> {
+    await this.orchestrationQueueService.pauseQueue();
+  }
+
+  /**
+   * Resume queue processing
+   */
+  async resumeQueue(): Promise<void> {
+    await this.orchestrationQueueService.resumeQueue();
+  }
+
+  /**
+   * Clean completed and failed jobs
+   */
+  async cleanQueue(): Promise<void> {
+    await this.orchestrationQueueService.cleanQueue();
   }
 }

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
+import { BullModule } from '@nestjs/bull';
 import { OrchestrationService } from './orchestration.service';
 import { CircuitBreakerService } from './circuit-breaker.service';
 import { ServiceClientService } from './service-client.service';
@@ -8,6 +9,8 @@ import { ServiceClientFactoryService } from './services/service-client-factory.s
 import { ServiceDiscoveryService } from './services/service-discovery.service';
 import { ParallelExecutionService } from './services/parallel-execution.service';
 import { OrchestrationCacheService } from './services/orchestration-cache.service';
+import { OrchestrationQueueService } from './services/orchestration-queue.service';
+import { OrchestrationQueueProcessor } from './services/orchestration-queue.processor';
 import { RequestInterceptorService } from './interceptors/request.interceptor';
 import { MetricsInterceptorService } from './interceptors/metrics.interceptor';
 import { HttpClientConfigService } from './config/http-client.config';
@@ -28,6 +31,19 @@ import { CacheModule } from '../cache/cache.module';
         retryDelay: 1000,
       }),
     }),
+    BullModule.registerQueue({
+      name: 'orchestration',
+      defaultJobOptions: {
+        removeOnComplete: 100,
+        removeOnFail: 50,
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 5000,
+        },
+        timeout: 300000, // 5 minutes
+      },
+    }),
   ],
   providers: [
     HttpClientConfigService,
@@ -38,6 +54,8 @@ import { CacheModule } from '../cache/cache.module';
     ServiceDiscoveryService,
     ParallelExecutionService,
     OrchestrationCacheService,
+    OrchestrationQueueService,
+    OrchestrationQueueProcessor,
     OrchestrationService,
     CircuitBreakerService,
     ServiceClientService, // Keep for backward compatibility
@@ -49,6 +67,7 @@ import { CacheModule } from '../cache/cache.module';
     ServiceDiscoveryService,
     EnhancedHttpClientService,
     OrchestrationCacheService,
+    OrchestrationQueueService,
     CircuitBreakerService,
   ],
 })

@@ -38,6 +38,23 @@ interface PerformanceMetrics {
     averageProcessingTime: number;
     byType: Record<string, number>;
   };
+  queue: {
+    total: number;
+    waiting: number;
+    active: number;
+    completed: number;
+    failed: number;
+    successRate: number;
+    averageWaitTime: number;
+    averageProcessingTime: number;
+    byQueue: Record<string, {
+      waiting: number;
+      active: number;
+      completed: number;
+      failed: number;
+      successRate: number;
+    }>;
+  };
   system: {
     uptime: number;
     memory: {
@@ -65,24 +82,54 @@ export class MetricsService {
   }
 
   recordHttpRequest(
+    endpoint: string,
     method: string,
-    route: string,
     statusCode: number,
     responseTime: number,
-    userId?: string,
+    result: string,
   ): void {
     this.recordMetric('http_requests_total', 1, {
       method,
-      route,
+      endpoint,
       status_code: statusCode.toString(),
-      user_tier: userId ? 'authenticated' : 'anonymous',
+      result,
     });
 
     this.recordMetric('http_request_duration_seconds', responseTime / 1000, {
       method,
-      route,
+      endpoint,
       status_code: statusCode.toString(),
     });
+  }
+
+  recordCircuitBreakerEvent(
+    serviceName: string,
+    result: string,
+    responseTime: number,
+  ): void {
+    this.recordMetric('circuit_breaker_events_total', 1, {
+      service_name: serviceName,
+      result: result.toLowerCase(),
+    });
+
+    if (responseTime > 0) {
+      this.recordMetric('circuit_breaker_response_time_seconds', responseTime / 1000, {
+        service_name: serviceName,
+        result: result.toLowerCase(),
+      });
+    }
+
+    // Record state transitions
+    if (result === 'REJECTED') {
+      this.recordMetric('circuit_breaker_rejections_total', 1, {
+        service_name: serviceName,
+      });
+    } else if (result.startsWith('FALLBACK')) {
+      this.recordMetric('circuit_breaker_fallbacks_total', 1, {
+        service_name: serviceName,
+        fallback_result: result.includes('SUCCESS') ? 'success' : 'failure',
+      });
+    }
   }
 
   recordCacheOperation(operation: 'hit' | 'miss' | 'set' | 'delete', cacheType: string): void {
@@ -165,6 +212,55 @@ export class MetricsService {
     });
   }
 
+  // T1.3.5b: Queue metrics recording methods
+  recordQueueOperation(operation: 'job_added' | 'job_completed' | 'job_failed' | 'dead_letter_added', queueName: string): void {
+    this.recordMetric('queue_operations_total', 1, {
+      operation,
+      queue_name: queueName,
+    });
+  }
+
+  recordQueueMetrics(queueName: string, metrics: {
+    waiting: number;
+    active: number;
+    completed: number;
+    failed: number;
+    successRate: number;
+  }): void {
+    this.recordMetric('queue_jobs_waiting', metrics.waiting, {
+      queue_name: queueName,
+    });
+
+    this.recordMetric('queue_jobs_active', metrics.active, {
+      queue_name: queueName,
+    });
+
+    this.recordMetric('queue_jobs_completed_total', metrics.completed, {
+      queue_name: queueName,
+    });
+
+    this.recordMetric('queue_jobs_failed_total', metrics.failed, {
+      queue_name: queueName,
+    });
+
+    this.recordMetric('queue_success_rate', metrics.successRate, {
+      queue_name: queueName,
+    });
+  }
+
+  recordQueueJobDuration(queueName: string, duration: number, success: boolean): void {
+    this.recordMetric('queue_job_duration_seconds', duration / 1000, {
+      queue_name: queueName,
+      success: success.toString(),
+    });
+  }
+
+  recordQueueJobWaitTime(queueName: string, waitTime: number): void {
+    this.recordMetric('queue_job_wait_time_seconds', waitTime / 1000, {
+      queue_name: queueName,
+    });
+  }
+
   async getPerformanceMetrics(): Promise<PerformanceMetrics> {
     const now = Date.now();
     const oneHourAgo = now - (60 * 60 * 1000);
@@ -177,6 +273,7 @@ export class MetricsService {
       cache: this.calculateCacheMetrics(recentMetrics),
       externalApis: this.calculateExternalApiMetrics(recentMetrics),
       analysis: this.calculateAnalysisMetrics(recentMetrics),
+      queue: this.calculateQueueMetrics(recentMetrics),
       system: this.calculateSystemMetrics(),
     };
   }
@@ -329,6 +426,91 @@ export class MetricsService {
     });
 
     return { total, successful, failed, averageProcessingTime, byType };
+  }
+
+  private calculateQueueMetrics(metrics: MetricData[]): PerformanceMetrics['queue'] {
+    const queueOperations = metrics.filter(m => m.name === 'queue_operations_total');
+    const waitTimeMetrics = metrics.filter(m => m.name === 'queue_job_wait_time_seconds');
+    const durationMetrics = metrics.filter(m => m.name === 'queue_job_duration_seconds');
+    const waitingMetrics = metrics.filter(m => m.name === 'queue_jobs_waiting');
+    const activeMetrics = metrics.filter(m => m.name === 'queue_jobs_active');
+    const completedMetrics = metrics.filter(m => m.name === 'queue_jobs_completed_total');
+    const failedMetrics = metrics.filter(m => m.name === 'queue_jobs_failed_total');
+
+    const total = queueOperations.length;
+    const waiting = waitingMetrics.length > 0 ? waitingMetrics[waitingMetrics.length - 1].value : 0;
+    const active = activeMetrics.length > 0 ? activeMetrics[activeMetrics.length - 1].value : 0;
+    const completed = completedMetrics.length > 0 ? completedMetrics[completedMetrics.length - 1].value : 0;
+    const failed = failedMetrics.length > 0 ? failedMetrics[failedMetrics.length - 1].value : 0;
+
+    const totalProcessed = completed + failed;
+    const successRate = totalProcessed > 0 ? completed / totalProcessed : 1;
+
+    const averageWaitTime = waitTimeMetrics.length > 0
+      ? waitTimeMetrics.reduce((sum, m) => sum + m.value, 0) / waitTimeMetrics.length
+      : 0;
+
+    const averageProcessingTime = durationMetrics.length > 0
+      ? durationMetrics.reduce((sum, m) => sum + m.value, 0) / durationMetrics.length
+      : 0;
+
+    // Calculate by queue
+    const byQueue: Record<string, any> = {};
+    queueOperations.forEach(metric => {
+      const queueName = metric.labels?.queue_name || 'unknown';
+      if (!byQueue[queueName]) {
+        byQueue[queueName] = {
+          waiting: 0,
+          active: 0,
+          completed: 0,
+          failed: 0,
+          successRate: 0,
+        };
+      }
+    });
+
+    // Update queue-specific metrics
+    waitingMetrics.forEach(metric => {
+      const queueName = metric.labels?.queue_name || 'unknown';
+      if (byQueue[queueName]) {
+        byQueue[queueName].waiting = metric.value;
+      }
+    });
+
+    activeMetrics.forEach(metric => {
+      const queueName = metric.labels?.queue_name || 'unknown';
+      if (byQueue[queueName]) {
+        byQueue[queueName].active = metric.value;
+      }
+    });
+
+    completedMetrics.forEach(metric => {
+      const queueName = metric.labels?.queue_name || 'unknown';
+      if (byQueue[queueName]) {
+        byQueue[queueName].completed = metric.value;
+      }
+    });
+
+    failedMetrics.forEach(metric => {
+      const queueName = metric.labels?.queue_name || 'unknown';
+      if (byQueue[queueName]) {
+        byQueue[queueName].failed = metric.value;
+        const queueTotal = byQueue[queueName].completed + byQueue[queueName].failed;
+        byQueue[queueName].successRate = queueTotal > 0 ? byQueue[queueName].completed / queueTotal : 1;
+      }
+    });
+
+    return {
+      total,
+      waiting,
+      active,
+      completed,
+      failed,
+      successRate,
+      averageWaitTime,
+      averageProcessingTime,
+      byQueue,
+    };
   }
 
   private calculateSystemMetrics(): PerformanceMetrics['system'] {
