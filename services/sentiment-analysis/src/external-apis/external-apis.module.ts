@@ -4,6 +4,7 @@ import { TwitterService } from './twitter.service';
 import { RedditService } from './reddit.service';
 import { NewsApiService } from './news-api.service';
 import { MetricsModule } from '../metrics/metrics.module';
+import { CacheModule } from '../cache/cache.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { MetricsModule } from '../metrics/metrics.module';
       maxRedirects: 5,
     }),
     MetricsModule,
+    CacheModule,
   ],
   providers: [
     TwitterService,

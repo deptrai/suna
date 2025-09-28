@@ -164,4 +164,10 @@ export class MetricsService implements OnModuleInit {
   setSentimentScore(symbol: string, source: string, score: number) {
     this.sentimentScoreGauge.set({ symbol, source }, score);
   }
+
+  // Generic counter increment
+  incrementCounter(name: string, labels: Record<string, string> = {}) {
+    // Use the error counter as a generic counter for now
+    this.errorCounter.inc({ type: name, source: 'system', ...labels });
+  }
 }
