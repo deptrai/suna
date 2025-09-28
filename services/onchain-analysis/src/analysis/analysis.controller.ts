@@ -8,6 +8,7 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AnalysisService } from './analysis.service';
 import { TokenAnalysisService } from './services/token-analysis.service';
 import { TransactionAnalysisService, TransactionAnalysisRequest, TransactionAnalysisResponse } from './services/transaction-analysis.service';
+import { RiskAssessmentService, RiskAssessmentRequest, ComprehensiveRiskAssessment } from './services/risk-assessment.service';
 import { TokenAnalysisRequestDto } from './dto/token-analysis-request.dto';
 import { TokenAnalysisResponseDto } from './dto/token-analysis-response.dto';
 
@@ -18,6 +19,7 @@ export class AnalysisController {
     private readonly analysisService: AnalysisService,
     private readonly tokenAnalysisService: TokenAnalysisService,
     private readonly transactionAnalysisService: TransactionAnalysisService,
+    private readonly riskAssessmentService: RiskAssessmentService,
   ) {}
 
   @Post('analyze')
@@ -99,5 +101,40 @@ export class AnalysisController {
   @ApiResponse({ status: 429, description: 'Rate limit exceeded' })
   async analyzeTransactions(@Body() request: TransactionAnalysisRequest): Promise<TransactionAnalysisResponse> {
     return this.transactionAnalysisService.analyzeTransactions(request);
+  }
+
+  @Post('risk/assess')
+  @ApiOperation({
+    summary: 'Comprehensive risk assessment',
+    description: 'Performs comprehensive risk assessment including protocol, market, yield, and liquidity risks with cross-chain data'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Risk assessment completed successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        tokenAddress: { type: 'string' },
+        chainId: { type: 'string' },
+        overallRiskScore: { type: 'number' },
+        riskCategory: { type: 'string', enum: ['low', 'medium', 'high', 'extreme'] },
+        confidence: { type: 'number' },
+        protocolRisk: { type: 'object' },
+        marketRisk: { type: 'object' },
+        yieldRisk: { type: 'object' },
+        liquidityRisk: { type: 'object' },
+        keyRiskFactors: { type: 'array', items: { type: 'string' } },
+        recommendations: { type: 'array', items: { type: 'string' } },
+        warnings: { type: 'array', items: { type: 'string' } },
+        crossChainData: { type: 'object' },
+        analyzedAt: { type: 'string', format: 'date-time' },
+        processingTime: { type: 'number' }
+      }
+    }
+  })
+  @ApiResponse({ status: 400, description: 'Invalid request parameters' })
+  @ApiResponse({ status: 429, description: 'Rate limit exceeded' })
+  async assessRisk(@Body() request: RiskAssessmentRequest): Promise<ComprehensiveRiskAssessment> {
+    return this.riskAssessmentService.assessRisk(request);
   }
 }

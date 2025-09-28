@@ -6,6 +6,8 @@
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { MoralisService } from './moralis.service';
+import { DeFiLlamaService } from './defillama.service';
+import { YieldFarmingService } from './yield-farming.service';
 import { CacheModule } from '../cache/cache.module';
 import { MetricsModule } from '../metrics/metrics.module';
 
@@ -18,7 +20,7 @@ import { MetricsModule } from '../metrics/metrics.module';
     CacheModule,
     MetricsModule,
   ],
-  providers: [MoralisService],
-  exports: [MoralisService],
+  providers: [MoralisService, DeFiLlamaService, YieldFarmingService],
+  exports: [MoralisService, DeFiLlamaService, YieldFarmingService],
 })
 export class ExternalApisModule {}
