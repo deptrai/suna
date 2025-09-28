@@ -9,6 +9,7 @@ import { AnalysisService } from './analysis.service';
 import { TokenAnalysisService } from './services/token-analysis.service';
 import { TransactionAnalysisService, TransactionAnalysisRequest, TransactionAnalysisResponse } from './services/transaction-analysis.service';
 import { RiskAssessmentService, RiskAssessmentRequest, ComprehensiveRiskAssessment } from './services/risk-assessment.service';
+import { RiskScoringService, TokenRiskData, RiskScore } from './services/risk-scoring.service';
 import { TokenAnalysisRequestDto } from './dto/token-analysis-request.dto';
 import { TokenAnalysisResponseDto } from './dto/token-analysis-response.dto';
 import { DexScreenerService } from '../external-apis/dexscreener.service';
@@ -18,6 +19,12 @@ import {
   DexTradingAnalysisRequestDto,
   MultiDexComparisonRequestDto
 } from './dto/dex-analysis-request.dto';
+import {
+  RiskScoringRequestDto,
+  TokenDataInputDto,
+  BulkRiskScoringRequestDto,
+  CustomRiskScoringRequestDto
+} from './dto/risk-scoring-request.dto';
 
 @ApiTags('onchain')
 @Controller('onchain')
@@ -27,6 +34,7 @@ export class AnalysisController {
     private readonly tokenAnalysisService: TokenAnalysisService,
     private readonly transactionAnalysisService: TransactionAnalysisService,
     private readonly riskAssessmentService: RiskAssessmentService,
+    private readonly riskScoringService: RiskScoringService,
     private readonly dexScreenerService: DexScreenerService,
   ) {}
 
@@ -231,5 +239,194 @@ export class AnalysisController {
   })
   async getTokenPairs(@Body() request: { tokenAddress: string }) {
     return this.dexScreenerService.getPairsByToken(request.tokenAddress);
+  }
+
+  // Risk Scoring Endpoints
+
+  @Post('risk/score')
+  @ApiOperation({
+    summary: 'Calculate comprehensive risk score',
+    description: 'Calculate detailed risk score for a token using multiple risk factors'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Risk score calculated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        overallScore: { type: 'number', description: 'Overall risk score (0-100)' },
+        riskCategory: { type: 'string', enum: ['low', 'medium', 'high', 'extreme'] },
+        confidence: { type: 'number', description: 'Confidence level (0-1)' },
+        factors: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              value: { type: 'number' },
+              weight: { type: 'number' },
+              category: { type: 'string' },
+              confidence: { type: 'number' },
+              description: { type: 'string' }
+            }
+          }
+        },
+        breakdown: {
+          type: 'object',
+          properties: {
+            liquidityRisk: { type: 'number' },
+            volatilityRisk: { type: 'number' },
+            holderRisk: { type: 'number' },
+            marketRisk: { type: 'number' },
+            technicalRisk: { type: 'number' }
+          }
+        },
+        recommendations: { type: 'array', items: { type: 'string' } },
+        warnings: { type: 'array', items: { type: 'string' } }
+      }
+    }
+  })
+  async calculateRiskScore(@Body() request: RiskScoringRequestDto): Promise<RiskScore> {
+    // Convert DTO to TokenRiskData format
+    const tokenData: TokenRiskData = {
+      tokenAddress: request.tokenAddress,
+      chainId: request.chainId,
+    };
+
+    return this.riskScoringService.calculateRiskScore(tokenData);
+  }
+
+  @Post('risk/score/custom')
+  @ApiOperation({
+    summary: 'Calculate risk score with custom data',
+    description: 'Calculate risk score using provided token data and optional custom weights'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Custom risk score calculated successfully'
+  })
+  async calculateCustomRiskScore(@Body() request: CustomRiskScoringRequestDto): Promise<RiskScore> {
+    const tokenData: TokenRiskData = {
+      tokenAddress: request.tokenAddress,
+      chainId: request.chainId,
+      liquidityUsd: request.liquidityUsd,
+      volume24h: request.volume24h,
+      priceChange24h: request.priceChange24h,
+      priceChange7d: request.priceChange7d,
+      marketCap: request.marketCap,
+      holders: request.holders,
+      topHolderPercentage: request.topHolderPercentage,
+      contractAge: request.contractAge,
+      isVerified: request.isVerified,
+      auditScore: request.auditScore,
+      transactionCount24h: request.transactionCount24h,
+      uniqueTraders24h: request.uniqueTraders24h,
+      liquidityConcentration: request.liquidityConcentration,
+      slippageEstimate: request.slippageEstimate,
+    };
+
+    return this.riskScoringService.calculateRiskScore(tokenData);
+  }
+
+  @Post('risk/score/bulk')
+  @ApiOperation({
+    summary: 'Calculate risk scores for multiple tokens',
+    description: 'Bulk risk scoring for multiple tokens with optional comparison'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Bulk risk scores calculated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        results: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              tokenAddress: { type: 'string' },
+              riskScore: { type: 'object' }
+            }
+          }
+        },
+        comparison: {
+          type: 'object',
+          properties: {
+            averageScore: { type: 'number' },
+            riskDistribution: { type: 'object' },
+            topRisks: { type: 'array' },
+            recommendations: { type: 'array' }
+          }
+        }
+      }
+    }
+  })
+  async calculateBulkRiskScores(@Body() request: BulkRiskScoringRequestDto) {
+    const results = [];
+
+    for (const tokenInput of request.tokens) {
+      const tokenData: TokenRiskData = {
+        tokenAddress: tokenInput.tokenAddress,
+        chainId: tokenInput.chainId,
+        liquidityUsd: tokenInput.liquidityUsd,
+        volume24h: tokenInput.volume24h,
+        priceChange24h: tokenInput.priceChange24h,
+        priceChange7d: tokenInput.priceChange7d,
+        marketCap: tokenInput.marketCap,
+        holders: tokenInput.holders,
+        topHolderPercentage: tokenInput.topHolderPercentage,
+        contractAge: tokenInput.contractAge,
+        isVerified: tokenInput.isVerified,
+        auditScore: tokenInput.auditScore,
+        transactionCount24h: tokenInput.transactionCount24h,
+        uniqueTraders24h: tokenInput.uniqueTraders24h,
+        liquidityConcentration: tokenInput.liquidityConcentration,
+        slippageEstimate: tokenInput.slippageEstimate,
+      };
+
+      const riskScore = await this.riskScoringService.calculateRiskScore(tokenData);
+      results.push({
+        tokenAddress: tokenInput.tokenAddress,
+        riskScore,
+      });
+    }
+
+    let comparison = null;
+    if (request.includeComparison) {
+      const scores = results.map(r => r.riskScore.overallScore);
+      const averageScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+
+      const riskDistribution = {
+        low: results.filter(r => r.riskScore.riskCategory === 'low').length,
+        medium: results.filter(r => r.riskScore.riskCategory === 'medium').length,
+        high: results.filter(r => r.riskScore.riskCategory === 'high').length,
+        extreme: results.filter(r => r.riskScore.riskCategory === 'extreme').length,
+      };
+
+      const topRisks = results
+        .sort((a, b) => b.riskScore.overallScore - a.riskScore.overallScore)
+        .slice(0, 3)
+        .map(r => ({
+          tokenAddress: r.tokenAddress,
+          score: r.riskScore.overallScore,
+          category: r.riskScore.riskCategory,
+        }));
+
+      comparison = {
+        averageScore,
+        riskDistribution,
+        topRisks,
+        recommendations: [
+          `Average risk score: ${averageScore.toFixed(1)}`,
+          `Risk distribution: ${riskDistribution.low} low, ${riskDistribution.medium} medium, ${riskDistribution.high} high, ${riskDistribution.extreme} extreme`,
+          'Consider diversification across different risk categories',
+        ],
+      };
+    }
+
+    return {
+      results,
+      comparison,
+    };
   }
 }

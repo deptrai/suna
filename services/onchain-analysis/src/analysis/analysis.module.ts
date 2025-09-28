@@ -10,6 +10,7 @@ import { AnalysisService } from './analysis.service';
 import { TokenAnalysisService } from './services/token-analysis.service';
 import { TransactionAnalysisService } from './services/transaction-analysis.service';
 import { RiskAssessmentService } from './services/risk-assessment.service';
+import { RiskScoringService } from './services/risk-scoring.service';
 import { DexScreenerService } from '../external-apis/dexscreener.service';
 import { DatabaseModule } from '../database/database.module';
 import { CacheModule } from '../cache/cache.module';
@@ -19,7 +20,7 @@ import { ExternalApisModule } from '../external-apis/external-apis.module';
 @Module({
   imports: [HttpModule, DatabaseModule, CacheModule, MetricsModule, ExternalApisModule],
   controllers: [AnalysisController],
-  providers: [AnalysisService, TokenAnalysisService, TransactionAnalysisService, RiskAssessmentService, DexScreenerService],
-  exports: [AnalysisService, TokenAnalysisService, TransactionAnalysisService, RiskAssessmentService, DexScreenerService],
+  providers: [AnalysisService, TokenAnalysisService, TransactionAnalysisService, RiskAssessmentService, RiskScoringService, DexScreenerService],
+  exports: [AnalysisService, TokenAnalysisService, TransactionAnalysisService, RiskAssessmentService, RiskScoringService, DexScreenerService],
 })
 export class AnalysisModule {}
