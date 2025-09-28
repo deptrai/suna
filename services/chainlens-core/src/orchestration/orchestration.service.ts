@@ -3,26 +3,66 @@ import { ConfigService } from '@nestjs/config';
 import { User } from '../auth/auth.service';
 import { LoggerService } from '../common/services/logger.service';
 import { MetricsService } from '../metrics/metrics.service';
-import { CircuitBreakerService } from './circuit-breaker.service';
+import { CircuitBreakerService, FallbackStrategy } from './circuit-breaker.service';
 import { ServiceClientService } from './service-client.service';
+import { ServiceClientFactoryService } from './services/service-client-factory.service';
+import { OrchestrationCacheService } from './services/orchestration-cache.service';
 import { AnalysisRequestDto } from '../analysis/dto/analysis-request.dto';
+import { OrchestrationCacheOptions } from './interfaces/cache.interfaces';
 
-interface ServiceResponse {
-  status: 'success' | 'error' | 'timeout';
+export interface ServiceResponse {
+  status: 'success' | 'error' | 'timeout' | 'fallback' | 'circuit_open';
   data: any;
   responseTime: number;
   error?: string;
+  serviceName: string;
+  retryAttempts?: number;
+  fallbackUsed?: boolean;
+  circuitBreakerState?: string;
 }
 
-interface OrchestrationResult {
+export interface ParallelExecutionConfig {
+  maxConcurrency: number;
+  timeout: number;
+  retryAttempts: number;
+  failFast: boolean;
+  aggregationStrategy: 'all' | 'partial' | 'best_effort';
+  requiredServices: string[];
+  optionalServices: string[];
+}
+
+export interface OrchestrationResult {
   services: Record<string, ServiceResponse>;
   warnings: string[];
   recommendations: string[];
+  executionTime: number;
+  successRate: number;
+  parallelExecutionStats: {
+    totalServices: number;
+    successfulServices: number;
+    failedServices: number;
+    timeoutServices: number;
+    fallbackServices: number;
+    averageResponseTime: number;
+  };
+}
+
+export interface ServiceExecutionPlan {
+  serviceName: string;
+  endpoint: string;
+  priority: number;
+  timeout: number;
+  retryAttempts: number;
+  dependencies: string[];
+  fallbackStrategies: FallbackStrategy<any>[];
+  required: boolean;
 }
 
 @Injectable()
 export class OrchestrationService {
   private readonly serviceEndpoints: Record<string, string>;
+  private readonly defaultExecutionConfig: ParallelExecutionConfig;
+  private readonly executionQueue: Map<string, Promise<ServiceResponse>> = new Map();
 
   constructor(
     private configService: ConfigService,
@@ -30,12 +70,24 @@ export class OrchestrationService {
     private metricsService: MetricsService,
     private circuitBreakerService: CircuitBreakerService,
     private serviceClientService: ServiceClientService,
+    private serviceClientFactory: ServiceClientFactoryService,
+    private orchestrationCacheService: OrchestrationCacheService,
   ) {
     this.serviceEndpoints = {
-      onchain: this.configService.get<string>('services.onchain.url'),
-      sentiment: this.configService.get<string>('services.sentiment.url'),
-      tokenomics: this.configService.get<string>('services.tokenomics.url'),
-      team: this.configService.get<string>('services.team.url'),
+      onchain: this.configService.get<string>('services.onchain.url', 'http://localhost:3001'),
+      sentiment: this.configService.get<string>('services.sentiment.url', 'http://localhost:3002'),
+      tokenomics: this.configService.get<string>('services.tokenomics.url', 'http://localhost:3003'),
+      team: this.configService.get<string>('services.team.url', 'http://localhost:3004'),
+    };
+
+    this.defaultExecutionConfig = {
+      maxConcurrency: this.configService.get<number>('orchestration.maxConcurrency', 4),
+      timeout: this.configService.get<number>('orchestration.timeout', 30000),
+      retryAttempts: this.configService.get<number>('orchestration.retryAttempts', 2),
+      failFast: this.configService.get<boolean>('orchestration.failFast', false),
+      aggregationStrategy: this.configService.get<'all' | 'partial' | 'best_effort'>('orchestration.aggregationStrategy', 'best_effort'),
+      requiredServices: this.configService.get<string[]>('orchestration.requiredServices', ['onchain']),
+      optionalServices: this.configService.get<string[]>('orchestration.optionalServices', ['sentiment', 'tokenomics', 'team']),
     };
   }
 
@@ -43,15 +95,49 @@ export class OrchestrationService {
     request: AnalysisRequestDto,
     user: User,
     correlationId: string,
+    executionConfig?: Partial<ParallelExecutionConfig>,
   ): Promise<OrchestrationResult> {
     const startTime = Date.now();
-    
-    this.logger.log('Starting analysis orchestration', {
+    const config = { ...this.defaultExecutionConfig, ...executionConfig };
+
+    this.logger.log('Starting parallel analysis orchestration', {
       projectId: request.projectId,
+      correlationId,
+      config,
       analysisType: request.analysisType,
       userId: user.id,
-      correlationId,
     });
+
+    // T1.3.4: Check cache first
+    const cacheKey = this.orchestrationCacheService.generateAnalysisKey(
+      request.projectId,
+      request.analysisType,
+      {
+        tokenAddress: request.tokenAddress,
+        chainId: request.chainId,
+        timeframe: request.options?.timeframe,
+        includeHistorical: request.options?.includeHistorical,
+        enableDetailedAnalysis: request.options?.enableDetailedAnalysis,
+        userId: user.id,
+      },
+    );
+
+    // Try to get cached result
+    const cachedResult = await this.orchestrationCacheService.getCachedAnalysisResult<OrchestrationResult>(
+      cacheKey,
+      'orchestration',
+    );
+
+    if (cachedResult) {
+      this.logger.log('Returning cached analysis result', {
+        projectId: request.projectId,
+        cacheKey,
+        responseTime: cachedResult.responseTime,
+        correlationId,
+      });
+
+      return cachedResult.data;
+    }
 
     // Determine which services to call based on analysis type
     const servicesToCall = this.determineServicesToCall(request.analysisType);
@@ -93,6 +179,7 @@ export class OrchestrationService {
           data: null,
           responseTime: 0,
           error: result.reason?.message || 'Service failed',
+          serviceName,
         };
         
         warnings.push(`${serviceName}_service_unavailable`);
@@ -114,11 +201,50 @@ export class OrchestrationService {
       correlationId,
     });
 
-    return {
+    const totalServices = Object.keys(services).length;
+    const successfulServices = Object.values(services).filter(s => s.status === 'success').length;
+    const successRate = totalServices > 0 ? successfulServices / totalServices : 0;
+    const averageResponseTime = totalServices > 0
+      ? Object.values(services).reduce((sum, s) => sum + s.responseTime, 0) / totalServices
+      : 0;
+
+    const result: OrchestrationResult = {
       services,
       warnings: [...new Set(warnings)], // Remove duplicates
       recommendations: [...new Set(recommendations)], // Remove duplicates
+      executionTime: Date.now() - startTime,
+      successRate,
+      parallelExecutionStats: {
+        totalServices,
+        successfulServices,
+        failedServices: totalServices - successfulServices,
+        timeoutServices: Object.values(services).filter(s => s.status === 'timeout').length,
+        fallbackServices: Object.values(services).filter(s => s.status === 'fallback').length,
+        averageResponseTime,
+      },
     };
+
+    // T1.3.4: Cache the result based on success rate and confidence
+    const cacheOptions: OrchestrationCacheOptions = {
+      confidence: successRate, // Use success rate as confidence
+      analysisType: request.analysisType,
+      tags: [
+        `project:${request.projectId}`,
+        `analysis:${request.analysisType}`,
+        `user:${user.id}`,
+      ],
+    };
+
+    // Cache the result asynchronously (don't wait for it)
+    this.orchestrationCacheService.cacheAnalysisResult(cacheKey, result, cacheOptions)
+      .catch(error => {
+        this.logger.error('Failed to cache analysis result', error.stack, 'OrchestrationService', {
+          cacheKey,
+          projectId: request.projectId,
+        });
+      });
+
+    return result;
   }
 
   private determineServicesToCall(analysisType: string): string[] {
@@ -215,6 +341,7 @@ export class OrchestrationService {
         status: 'success',
         data: result,
         responseTime,
+        serviceName,
       };
     } catch (error) {
       const responseTime = Date.now() - startTime;
@@ -239,6 +366,7 @@ export class OrchestrationService {
         data: null,
         responseTime,
         error: error.message,
+        serviceName,
       };
     }
   }
@@ -277,7 +405,50 @@ export class OrchestrationService {
         recommendations.push('negative_sentiment_despite_fundamentals');
       }
     }
-    
+
     return recommendations;
+  }
+
+  /**
+   * T1.3.4: Cache management methods
+   */
+
+  /**
+   * Warm cache for popular projects
+   */
+  async warmCacheForPopularProjects(): Promise<void> {
+    const popularProjects = this.configService.get<string[]>('cache.warming.popularTokens', [
+      'bitcoin', 'ethereum', 'binancecoin', 'cardano', 'solana',
+    ]);
+
+    await this.orchestrationCacheService.warmCache(popularProjects, ['full', 'onchain']);
+  }
+
+  /**
+   * Get cache statistics
+   */
+  async getCacheStatistics() {
+    return this.orchestrationCacheService.getCacheStatistics();
+  }
+
+  /**
+   * Invalidate cache for a project
+   */
+  async invalidateProjectCache(projectId: string, reason: string = 'manual') {
+    await this.orchestrationCacheService.invalidateProjectCache(projectId, reason);
+  }
+
+  /**
+   * Get cache health status
+   */
+  async getCacheHealth() {
+    return this.orchestrationCacheService.healthCheck();
+  }
+
+  /**
+   * Get cache performance report
+   */
+  getCachePerformanceReport() {
+    return this.orchestrationCacheService.getPerformanceReport();
   }
 }
