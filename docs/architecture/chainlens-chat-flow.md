@@ -6,8 +6,11 @@ Biểu đồ luồng xử lý request-to-response của hệ thống ChainLens t
 
 Sơ đồ này mô tả chi tiết quá trình xử lý từ khi user gửi message đến khi nhận được response, bao gồm:
 - Frontend UI components và model selection
-- Backend API routing và agent run management  
-- Smart model routing với "auto" detection
+- Backend API routing và agent run management
+- **🤖 Auto Model Selection** với intelligent query analysis
+- **🧠 Context Optimization** với multi-stage compression
+- **🏢 v98store Integration** với 9 premium models
+- **🔧 Smart Tool Management** với provider compatibility
 - Tool execution và response processing
 - Error handling và fallback mechanisms
 
