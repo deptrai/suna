@@ -179,7 +179,16 @@ class ToolRegistry:
         # Start with essential tools
         relevant_tools = essential_tools.copy()
 
-        # Add query-specific tools based on keywords
+        # Add query-specific tools based on keywords (order matters - more specific first)
+
+        # Check for spreadsheet operations first (most specific)
+        if any(phrase in query_lower for phrase in ['spreadsheet', 'excel file', 'csv file', 'sheet data']):
+            relevant_tools.extend(query_specific_categories['sheet_ops'])
+        # Only add data_ops if NOT a spreadsheet query and has specific data provider keywords
+        elif any(phrase in query_lower for phrase in ['data provider', 'api call', 'endpoint']):
+            relevant_tools.extend(query_specific_categories['data_ops'])
+
+        # Other categories
         if any(word in query_lower for word in ['file', 'code', 'edit', 'create', 'read', 'write', 'programming']):
             relevant_tools.extend(query_specific_categories['file_ops'])
         if any(word in query_lower for word in ['git', 'commit', 'branch', 'repository', 'version']):
@@ -192,14 +201,10 @@ class ToolRegistry:
             relevant_tools.extend(query_specific_categories['memory_ops'])
         if any(word in query_lower for word in ['diagram', 'chart', 'visualization', 'design']):
             relevant_tools.extend(query_specific_categories['advanced_ops'])
-        if any(word in query_lower for word in ['data', 'api', 'provider', 'endpoint']):
-            relevant_tools.extend(query_specific_categories['data_ops'])
-        if any(word in query_lower for word in ['presentation', 'slide', 'present']):
+        if any(word in query_lower for word in ['presentation', 'slide', 'present', 'powerpoint']):
             relevant_tools.extend(query_specific_categories['presentation_ops'])
-        if any(word in query_lower for word in ['document', 'doc', 'text']):
+        if any(word in query_lower for word in ['document', 'doc creation', 'text document']):
             relevant_tools.extend(query_specific_categories['document_ops'])
-        if any(word in query_lower for word in ['sheet', 'spreadsheet', 'table', 'excel']):
-            relevant_tools.extend(query_specific_categories['sheet_ops'])
 
         # Filter schemas - use exact matching for essential tools, partial for others
         filtered = []

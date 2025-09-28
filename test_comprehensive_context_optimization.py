@@ -228,10 +228,14 @@ async def test_end_to_end_optimization():
         # Register tools
         tool_manager.register_all_tools()
         
-        # Create test thread
+        # Create test thread with proper UUID format
+        import uuid
+        test_account_id = str(uuid.uuid4())
+        test_project_id = str(uuid.uuid4())
+
         thread_id = await thread_manager.create_thread(
-            account_id="test-account",
-            project_id="test-project"
+            account_id=test_account_id,
+            project_id=test_project_id
         )
         
         print(f"📊 Created test thread: {thread_id}")
