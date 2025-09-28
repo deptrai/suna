@@ -14,7 +14,6 @@ import {
 
 @Entity('onchain_analysis_cache')
 @Index(['projectId', 'analysisType'])
-@Index(['expiresAt'])
 @Index(['createdAt'])
 export class AnalysisCacheEntity {
   @PrimaryColumn({ type: 'varchar', length: 255 })

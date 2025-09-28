@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: onchain-analysis-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: chainlens_microservices
+      POSTGRES_USER: chainlens
+      POSTGRES_PASSWORD: chainlens_dev_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    networks:
+      - onchain-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chainlens -d chainlens_microservices"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: onchain-analysis-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ""
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - onchain-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  adminer:
+    image: adminer:latest
+    container_name: onchain-analysis-adminer
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    networks:
+      - onchain-network
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  onchain-network:
+    driver: bridge

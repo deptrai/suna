@@ -8,6 +8,7 @@ import { HttpModule } from '@nestjs/axios';
 import { MoralisService } from './moralis.service';
 import { DeFiLlamaService } from './defillama.service';
 import { YieldFarmingService } from './yield-farming.service';
+import { DexScreenerService } from './dexscreener.service';
 import { CacheModule } from '../cache/cache.module';
 import { MetricsModule } from '../metrics/metrics.module';
 
@@ -20,7 +21,7 @@ import { MetricsModule } from '../metrics/metrics.module';
     CacheModule,
     MetricsModule,
   ],
-  providers: [MoralisService, DeFiLlamaService, YieldFarmingService],
-  exports: [MoralisService, DeFiLlamaService, YieldFarmingService],
+  providers: [MoralisService, DeFiLlamaService, YieldFarmingService, DexScreenerService],
+  exports: [MoralisService, DeFiLlamaService, YieldFarmingService, DexScreenerService],
 })
 export class ExternalApisModule {}

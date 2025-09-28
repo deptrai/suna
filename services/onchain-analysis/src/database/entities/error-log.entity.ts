@@ -32,8 +32,6 @@ export enum ErrorCategory {
 @Entity('onchain_error_logs')
 @Index(['errorCategory', 'createdAt'])
 @Index(['severity', 'createdAt'])
-@Index(['correlationId'])
-@Index(['userId'])
 export class ErrorLogEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
