@@ -20,6 +20,7 @@ import { LoggerModule } from './common/logger/logger.module';
 import { DatabaseModule } from './database/database.module';
 import { CommonModule } from './common/common.module';
 import { RateLimitTestModule } from './common/rate-limit-test.module';
+import { HealthController } from './common/controllers/health.controller';
 
 // Configuration
 import databaseConfig from './config/database.config';
@@ -146,7 +147,7 @@ import servicesConfig from './config/services.config';
     AnalysisModule,
     OrchestrationModule,
   ],
-  controllers: [],
+  controllers: [HealthController],
   providers: [],
 })
 export class AppModule {

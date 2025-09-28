@@ -4,6 +4,8 @@
 __pycache__/
 *.py[cod]
 *$py.class
+services/onchain-anlysis/node_modules/
+services/node_modules/
 
 # C extensions
 *.so

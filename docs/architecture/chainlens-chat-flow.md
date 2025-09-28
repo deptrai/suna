@@ -49,16 +49,18 @@ flowchart TD
     end
 
     %% Model Management with Auto Detection
-    AUTO{"🤔 Auto Model?<br/>model == 'auto'"}
-    HEURISTIC["🎯 Smart Analysis<br/>Query complexity<br/>User tier"]
+    AUTO{"� Auto Model?<br/>model == 'auto'"}
+    HEURISTIC["🎯 Smart Analysis<br/>Query complexity<br/>Keyword detection<br/>Length analysis"]
     RESOLVE["⚙️ Model Resolution<br/>model_manager"]
 
     %% LLM Service Layer
     subgraph LLM ["🧠 LLM Service"]
         PREP["🔧 Prepare Params<br/>prepare_params()"]
         ROUTER["🔄 LiteLLM Router<br/>acompletion()"]
-        PROVIDERS["🏢 Providers<br/>OpenAI | Anthropic<br/>xAI | Groq"]
-        PREP --> ROUTER
+        PROVIDERS["🏢 Providers<br/>OpenAI | Anthropic<br/>xAI | Groq | v98store"]
+        TOOL_FILTER["🔧 Tool Filter<br/>Provider compatibility"]
+        PREP --> TOOL_FILTER
+        TOOL_FILTER --> ROUTER
         ROUTER --> PROVIDERS
     end
 
@@ -87,12 +89,14 @@ flowchart TD
     end
 
     %% Context Management
-    subgraph CONTEXT ["🧠 Context Mgmt"]
-        TOKEN["🔢 Token Count"]
-        COMPRESS["📦 Compression"]
-        CACHE["💾 Caching"]
+    subgraph CONTEXT ["🧠 Context Optimization"]
+        TOKEN["🔢 Token Count<br/>litellm.token_counter"]
+        COMPRESS["📦 Multi-stage Compression<br/>Tool results | User msgs | Assistant msgs"]
+        LIMIT["📏 Message Limiting<br/>Recent messages priority"]
+        CACHE["💾 Caching<br/>Anthropic cache control"]
         TOKEN --> COMPRESS
-        COMPRESS --> CACHE
+        COMPRESS --> LIMIT
+        LIMIT --> CACHE
     end
 
     %% Main Flow Connections
@@ -104,7 +108,7 @@ flowchart TD
     HEURISTIC --> RESOLVE
     RESOLVE --> PREP
     
-    %% LLM to Tools
+    %% LLM to Tools (conditional based on provider compatibility)
     PROVIDERS --> TOOLS
     EXEC --> STREAM
     
@@ -155,7 +159,7 @@ flowchart TD
 ### 🌐 **Frontend Layer**
 - **ThreadComponent.tsx**: Main chat interface quản lý conversation state
 - **chat-input.tsx**: Input component xử lý user message submission
-- **_use-model-selection.ts**: Hook quản lý model selection với "auto" option
+- **use-model-selection.ts**: Hook quản lý model selection với "auto" option và v98store models
 
 ### 🔗 **FastAPI Backend**
 - **api.py**: Main application với CORS, middleware setup
@@ -167,19 +171,33 @@ flowchart TD
 - **Redis State Management**: Locks, TTLs, pub/sub cho distributed coordination
 - **Core Agent Run**: Main execution logic trong `core/run.py`
 
-### 🤖 **Smart Model Routing**
-- **Auto Detection**: Phân tích query complexity để chọn optimal model
-- **Heuristics**: User tier consideration, cost optimization
-- **Model Resolution**: `model_manager.resolve_model_id()` mapping
+### 🤖 **Auto Model Selection** *(NEW)*
+- **Intelligent Query Analysis**: Keyword detection cho complex tasks (code, implement, analyze, etc.)
+- **Length-based Detection**: Queries > 8 words được classify as complex
+- **Smart Model Mapping**:
+  - Complex queries → `openai-compatible/gpt-4o` (premium model)
+  - Simple queries → `openai-compatible/gpt-4o-mini` (efficient model)
+- **Environment Control**: `AUTO_MODEL_ENABLED=true` để enable feature
+- **Model Resolution**: `model_manager.resolve_model_id()` với auto selection logic
 
-### 🧠 **LLM Service Layer**  
+### 🧠 **LLM Service Layer**
 - **Parameter Preparation**: Provider-specific configurations
+- **Tool Schema Filtering**: Smart detection cho provider compatibility
 - **LiteLLM Router**: Unified interface cho multiple providers
-- **Provider Support**: OpenAI, Anthropic, xAI, Groq, OpenRouter, Bedrock
+- **Provider Support**: OpenAI, Anthropic, xAI, Groq, OpenRouter, Bedrock, **v98store**
 
-### 🔧 **Tool System**
+### 🏢 **v98store Integration** *(NEW)*
+- **9 Premium Models**: GPT-4o, GPT-5, Qwen 3 32B/235B, Claude 3.7 Sonnet, Grok 4, Kimi K2
+- **OpenAI-Compatible API**: Seamless integration thông qua LiteLLM Router
+- **Tool Schema Compatibility**: Automatic tool filtering cho v98store models
+- **Model Aliases**: Support multiple naming conventions (gpt-4o, v98store/gpt-4o, etc.)
+- **Cost Optimization**: Premium models accessible với competitive pricing
+
+### 🔧 **Smart Tool Management** *(ENHANCED)*
 - **Tool Manager**: Register various agent capabilities
 - **Tool Registry**: OpenAPI schemas cho native tool calling
+- **Provider Compatibility Detection**: Automatic tool filtering based on model provider
+- **v98store Compatibility**: Tools disabled cho v98store models (không support tool schemas)
 - **Tool Execution**: Function calls với error handling
 
 ### 📤 **Response Processing**
@@ -192,9 +210,15 @@ flowchart TD
 - **Retry Logic**: Exponential backoff cho transient errors
 - **Comprehensive Logging**: Structured logs với Langfuse tracing
 
-### 🧠 **Context Management**
-- **Token Counting**: Monitor context length limits
-- **Message Compression**: Automatic summarization khi over threshold
+### 🧠 **Context Optimization** *(ENHANCED)*
+- **Accurate Token Counting**: `litellm.token_counter` cho precise measurements
+- **Multi-stage Compression**:
+  - Tool result messages compression (except most recent)
+  - User message compression (except most recent)
+  - Assistant message compression (except most recent)
+- **Message Limiting**: Keep recent messages với priority system
+- **Context Window Utilization (CWU)**: Monitor và optimize usage (target 60-70%)
+- **Balanced Threshold**: 25,000 tokens cho better tool availability
 - **Caching**: Anthropic cache control cho cost optimization
 
 ---
@@ -213,10 +237,14 @@ flowchart TD
 9. Tools được executed nếu needed
 10. Results được persisted và returned to frontend
 
-### 🔄 **Auto Model Selection Flow**
-1. Check if model === "auto"
-2. Analyze query complexity và user tier
-3. Apply heuristics để determine optimal model
+### 🤖 **Auto Model Selection Flow** *(ENHANCED)*
+1. Check if model === "auto" và `AUTO_MODEL_ENABLED=true`
+2. **Query Analysis**:
+   - Keyword detection: ['code', 'implement', 'create', 'analyze', 'design', 'strategy', 'build', 'develop', 'function', 'class', 'algorithm', 'optimize', 'debug', 'refactor']
+   - Length analysis: > 8 words = complex
+3. **Model Selection Logic**:
+   - Complex queries → `openai-compatible/gpt-4o` (premium v98store model)
+   - Simple queries → `openai-compatible/gpt-4o-mini` (efficient v98store model)
 4. Resolve model ID thông qua model manager
 5. Use resolved model cho LLM API call
 
@@ -229,16 +257,45 @@ flowchart TD
 
 ---
 
+### 🧠 **Context Optimization Flow** *(NEW)*
+1. **Token Counting**: Use `litellm.token_counter` cho accurate measurement
+2. **Message Limiting**: Keep recent messages (max 8) + system message
+3. **Multi-stage Compression**:
+   - Compress tool results (except most recent)
+   - Compress user messages (except most recent)
+   - Compress assistant messages (except most recent)
+4. **CWU Monitoring**: Calculate Context Window Utilization ratio
+5. **Iterative Optimization**: Repeat until under threshold hoặc max iterations
+
 ## Technical Notes
 
 - **Redis Keys**: `active_run:{instance_id}:{agent_run_id}` format
 - **Control Channels**: `agent_run:{agent_run_id}:control` cho stop signals
 - **Response Lists**: `agent_run:{agent_run_id}:responses` cho streaming data
-- **Tool Calling**: Native support thông qua OpenAPI schemas
-- **Context Limits**: Automatic compression khi token threshold exceeded
+- **Tool Calling**: Native support thông qua OpenAPI schemas với provider compatibility
+- **Context Limits**: Automatic compression khi token threshold exceeded (25,000 tokens)
 - **Provider Fallbacks**: Mapped cho high availability
+- **v98store API**: `https://v98store.com/v1` với OpenAI-compatible interface
+- **Tool Schema Filtering**: Automatic detection và skip cho incompatible providers
+- **Auto Model Environment**: `AUTO_MODEL_ENABLED=true` để enable intelligent selection
 
 ---
 
-*Diagram generated: 2025-01-18*  
-*Source: ChainLens codebase analysis*
+## Recent Updates (v3.1)
+
+### ✨ **New Features Added:**
+- **🤖 Auto Model Selection**: Intelligent model selection based on query complexity
+- **🧠 Context Optimization**: Multi-stage compression với CWU monitoring
+- **🏢 v98store Integration**: 9 premium models với competitive pricing
+- **🔧 Smart Tool Management**: Provider compatibility detection
+
+### 🔧 **Technical Improvements:**
+- **Token Counting**: Accurate measurement với `litellm.token_counter`
+- **Message Compression**: Multi-stage approach cho optimal context usage
+- **Tool Schema Filtering**: Automatic compatibility detection
+- **Model Registry**: Enhanced với v98store models và aliases
+
+---
+
+*Diagram updated: 2025-09-28*
+*Source: ChainLens codebase analysis - Version 3.1*

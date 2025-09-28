@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { BullModule } from '@nestjs/bull';
 import { AnalysisController } from './analysis.controller';
+import { OrchestrationController } from './controllers/orchestration.controller';
 import { AnalysisService } from './analysis.service';
 import { AnalysisProcessor } from './analysis.processor';
 import { AuthModule } from '../auth/auth.module';
@@ -29,7 +30,7 @@ import { OrchestrationModule } from '../orchestration/orchestration.module';
       },
     }),
   ],
-  controllers: [AnalysisController],
+  controllers: [AnalysisController, OrchestrationController],
   providers: [AnalysisService, AnalysisProcessor],
   exports: [AnalysisService],
 })
