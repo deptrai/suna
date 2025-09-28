@@ -121,6 +121,20 @@ export class UserService {
   }
 
   /**
+   * Find user by ID (alias for getUserById)
+   */
+  async findById(userId: string): Promise<UserProfile | null> {
+    try {
+      return await this.getUserById(userId);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  /**
    * Get user profile by email
    */
   async getUserByEmail(email: string): Promise<UserProfile | null> {

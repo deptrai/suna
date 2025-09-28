@@ -6,10 +6,12 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { AuthTestController } from './controllers/auth-test.controller';
 import { UserController } from './controllers/user.controller';
+import { ApiKeyController } from './controllers/api-key.controller';
 import { UserService } from './services/user.service';
+import { ApiKeyService } from './services/api-key.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 // import { SupabaseStrategy } from './strategies/supabase.strategy';
-// import { ApiKeyStrategy } from './strategies/api-key.strategy';
+import { ApiKeyStrategy } from './strategies/api-key.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { ApiKeyAuthGuard } from './guards/api-key-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
@@ -36,14 +38,15 @@ import supabaseConfig from '../config/supabase.config';
       inject: [ConfigService],
     }),
   ],
-  controllers: [AuthController, AuthTestController, UserController],
+  controllers: [AuthController, AuthTestController, UserController, ApiKeyController],
   providers: [
     AuthService,
     UserService,
+    ApiKeyService,
     SupabaseService,
     JwtStrategy,
     // SupabaseStrategy,
-    // ApiKeyStrategy,
+    ApiKeyStrategy,
     JwtAuthGuard,
     ApiKeyAuthGuard,
     RolesGuard,
