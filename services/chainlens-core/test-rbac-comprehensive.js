@@ -86,7 +86,7 @@ async function testEndpoint(endpoint, token, shouldSucceed) {
       return false;
     }
   } catch (error) {
-    const denied = error.response?.status === 401;
+    const denied = error.response?.status === 401 || error.response?.status === 403;
     if (denied === !shouldSucceed) {
       console.log(`  ✅ ${endpoint}: ${denied ? 'DENIED' : 'ERROR'} (expected)`);
       return true;

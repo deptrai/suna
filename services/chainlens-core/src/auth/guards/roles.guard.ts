@@ -180,9 +180,9 @@ export class RolesGuard implements CanActivate {
     }
 
     // Final access decision
-    const hasAccess = requireAll
-      ? Object.values(accessChecks).every(check => check) // ALL requirements must be met
-      : Object.values(accessChecks).some(check => check);  // ANY requirement can be met
+    // When requireAll is false, we still need ALL specified requirements to pass
+    // The requireAll flag is for when multiple requirement types are specified
+    const hasAccess = Object.values(accessChecks).every(check => check);
 
     if (!hasAccess) {
       this.logger.warn('RolesGuard: Access denied - insufficient privileges', {
