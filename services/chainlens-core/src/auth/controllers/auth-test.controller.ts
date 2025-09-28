@@ -6,6 +6,7 @@ import { RolesGuard } from '../guards/roles.guard';
 import { ApiKeyAuthGuard } from '../guards/api-key-auth.guard';
 import { Public } from '../decorators/public.decorator';
 import { Roles } from '../decorators/roles.decorator';
+import { RequireAccess } from '../decorators/require-permissions.decorator';
 import { User } from '../decorators/user.decorator';
 import { CurrentUser } from '../decorators/current-user.decorator';
 import { UserContext, JWT_CONSTANTS } from '../constants/jwt.constants';
@@ -69,8 +70,8 @@ export class AuthTestController {
     };
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Roles(JWT_CONSTANTS.ROLES.PRO, JWT_CONSTANTS.ROLES.ENTERPRISE)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequireAccess({ minimumTier: 'pro' })
   @Get('premium')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Premium endpoint (Pro/Enterprise only)' })
@@ -142,7 +143,7 @@ export class AuthTestController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('enterprise', 'admin')
+  @RequireAccess({ minimumTier: 'enterprise' })
   @Get('enterprise-only')
   @ApiOperation({ summary: 'Enterprise tier and above only' })
   @ApiResponse({ status: 200, description: 'Enterprise content accessed' })
