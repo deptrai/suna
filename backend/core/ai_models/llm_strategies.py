@@ -135,10 +135,13 @@ class LLMStrategyFactory:
     @staticmethod
     def get_strategy_for_provider(provider: str, router: Router = None) -> LLMStrategy:
         """Get strategy based on provider type."""
-        if provider == "openai_compatible":
-            return DirectLiteLLMStrategy()
-        else:
-            return RouterStrategy(router)
+        # Use Router strategy for all providers including openai-compatible
+        logger.debug(
+            "Selected Router strategy for provider",
+            provider=provider,
+            reason="router works better for all providers including openai-compatible"
+        )
+        return RouterStrategy(router)
 
 
 class LLMCallContext:

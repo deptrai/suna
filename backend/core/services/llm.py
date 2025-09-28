@@ -143,7 +143,7 @@ def _configure_openrouter(params: Dict[str, Any], model_name: str) -> None:
     """Configure OpenRouter-specific parameters."""
     if not model_name.startswith("openrouter/"):
         return
-    
+
     # logger.debug(f"Preparing OpenRouter parameters for model: {model_name}")
 
     # Add optional site URL and app name from config
@@ -157,6 +157,17 @@ def _configure_openrouter(params: Dict[str, Any], model_name: str) -> None:
             extra_headers["X-Title"] = app_name
         params["extra_headers"] = extra_headers
         # logger.debug(f"Added OpenRouter site URL and app name to headers")
+
+def _configure_openai_compatible(params: Dict[str, Any], model_name: str) -> None:
+    """Configure OpenAI-compatible (v98store) specific parameters."""
+    if not model_name.startswith("openai-compatible/"):
+        return
+
+    # Add required Cookie header for v98store
+    extra_headers = params.get("extra_headers", {})
+    extra_headers["Cookie"] = "SITE_TOTAL_ID=fc4a4a76caa66f85123d41903b1876ed"
+    params["extra_headers"] = extra_headers
+    logger.debug(f"Added v98store Cookie header for openai-compatible model: {model_name}")
 
 def _configure_bedrock(params: Dict[str, Any], model_name: str, model_id: Optional[str]) -> None:
     """Configure Bedrock-specific parameters."""
@@ -222,21 +233,17 @@ def _configure_thinking(params: Dict[str, Any], model_name: str, enable_thinking
 def _add_tools_config(params: Dict[str, Any], tools: Optional[List[Dict[str, Any]]], tool_choice: str) -> None:
     """Add tools configuration to parameters."""
     if tools is None:
+        logger.debug("🔍 TOOLS DEBUG: No tools provided")
         return
 
-    # Check if this is a v98store model - they don't support tool schemas
     model_name = params.get("model", "")
-    api_base = params.get("api_base", "")
-
-    if "v98store.com" in api_base or "openai-compatible" in model_name:
-        logger.info(f"🚫 SKIPPING TOOLS for v98store model: {model_name} (v98store doesn't support tool schemas)")
-        return
+    logger.info(f"🔍 TOOLS DEBUG: Adding {len(tools)} tools for model: {model_name}")
 
     params.update({
         "tools": tools,
         "tool_choice": tool_choice
     })
-    logger.debug(f"✅ Added {len(tools)} tools to API parameters for model: {model_name}")
+    logger.info(f"✅ Added {len(tools)} tools to API parameters for model: {model_name}")
 
 def prepare_params(
     messages: List[Dict[str, Any]],
@@ -319,6 +326,8 @@ def prepare_params(
     _configure_anthropic(params, resolved_model_name, params["messages"])
     # Add OpenRouter-specific parameters
     _configure_openrouter(params, resolved_model_name)
+    # Add OpenAI-compatible (v98store) specific parameters
+    _configure_openai_compatible(params, resolved_model_name)
     # Add Bedrock-specific parameters
     _configure_bedrock(params, resolved_model_name, model_id)
 
@@ -405,8 +414,10 @@ async def make_llm_api_call(
     try:
         logger.info(f"🔍 MAKE_LLM_API_CALL: model_name='{model_name}', params['model']='{params.get('model')}'")
 
-        # Use strategy pattern for LLM calls
+        # Use strategy pattern for LLM calls - ALL models should use Router strategy for tool calling
+        logger.info(f"🔧 STRATEGY FIX: Using Router strategy for model: {model_name} (provider: {provider})")
         call_context = LLMCallContext(model_name, provider_router)
+
         logger.info(f"🚀 Using strategy: {call_context.get_strategy_info()}")
 
         response = await call_context.execute_call(**params)
