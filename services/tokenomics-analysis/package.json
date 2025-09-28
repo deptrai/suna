@@ -100,5 +100,6 @@
     "analysis",
     "yield",
     "nestjs"
-  ]
+  ],
+  "main": "index.js"
 }
