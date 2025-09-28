@@ -134,25 +134,46 @@ class ToolRegistry:
 
         query_lower = query.lower()
 
-        # Essential tools that should ALWAYS be available (using actual tool names)
+        # Essential tools that should ALWAYS be available (using ACTUAL registered tool names)
         essential_tools = [
-            'interactive_feedback_MCP_Feedback_Enhanced',
+            # Core communication & feedback
+            'ask', 'complete',  # User communication
+
+            # Web research (CONFIRMED available)
             'web_search', 'scrape_webpage',  # Web research
+
+            # Task management (CONFIRMED available)
             'create_tasks', 'update_tasks', 'view_tasks',  # Task management
-            'remember', 'create_entities_memory',  # Memory
+
+            # File operations (CONFIRMED available)
             'str_replace', 'create_file', 'edit_file',  # File operations
-            'codebase-retrieval', 'git-commit-retrieval',  # Context retrieval
-            'sequentialthinking_Sequential_thinking'  # Advanced reasoning
+            'search_files', 'full_file_rewrite',  # Extended file ops
+
+            # Browser operations
+            'browser_navigate_to', 'browser_act', 'browser_extract_content',
+
+            # Command execution
+            'execute_command', 'check_command_output', 'terminate_command',
+
+            # Image and media
+            'load_image', 'image_search',
+
+            # Utility
+            'expand_message', 'wait'
         ]
 
-        # Query-specific tool categories (using actual tool names)
+        # Query-specific tool categories (using ACTUAL registered tool names)
         query_specific_categories = {
-            'file_ops': ['delete_file', 'full_file_rewrite', 'search_files'],
-            'git_ops': ['git_status_git', 'git_add_git', 'git_commit_git', 'git_diff_git'],
-            'browser_ops': ['browser_navigate_to', 'browser_extract_content', 'browser_act', 'browser_screenshot'],
-            'process_ops': ['execute_command', 'check_command_output', 'terminate_command'],
-            'memory_ops': ['add_observations_memory', 'search_nodes_memory', 'open_nodes_memory'],
-            'advanced_ops': ['render-mermaid', 'open-browser', 'designer_create_or_edit']
+            'file_ops': ['delete_file', 'upload_file'],
+            'git_ops': [],  # No git tools currently registered
+            'browser_ops': ['browser_screenshot', 'web_browser_takeover'],
+            'process_ops': ['list_commands'],
+            'memory_ops': ['global_kb_create_folder', 'global_kb_list_contents', 'global_kb_upload_file'],
+            'advanced_ops': ['designer_create_or_edit', 'image_edit_or_generate'],
+            'data_ops': ['execute_data_provider_call', 'get_data_provider_endpoints'],
+            'presentation_ops': ['create_presentation_outline', 'create_slide', 'present_presentation'],
+            'document_ops': ['create_document', 'read_document', 'delete_document'],
+            'sheet_ops': ['create_sheet', 'analyze_sheet', 'format_sheet', 'update_sheet', 'view_sheet']
         }
 
         # Start with essential tools
@@ -167,10 +188,18 @@ class ToolRegistry:
             relevant_tools.extend(query_specific_categories['browser_ops'])
         if any(word in query_lower for word in ['run', 'execute', 'command', 'process', 'terminal']):
             relevant_tools.extend(query_specific_categories['process_ops'])
-        if any(word in query_lower for word in ['memory', 'remember', 'knowledge', 'entity']):
+        if any(word in query_lower for word in ['memory', 'remember', 'knowledge', 'entity', 'kb']):
             relevant_tools.extend(query_specific_categories['memory_ops'])
-        if any(word in query_lower for word in ['diagram', 'chart', 'visualization', 'mermaid']):
+        if any(word in query_lower for word in ['diagram', 'chart', 'visualization', 'design']):
             relevant_tools.extend(query_specific_categories['advanced_ops'])
+        if any(word in query_lower for word in ['data', 'api', 'provider', 'endpoint']):
+            relevant_tools.extend(query_specific_categories['data_ops'])
+        if any(word in query_lower for word in ['presentation', 'slide', 'present']):
+            relevant_tools.extend(query_specific_categories['presentation_ops'])
+        if any(word in query_lower for word in ['document', 'doc', 'text']):
+            relevant_tools.extend(query_specific_categories['document_ops'])
+        if any(word in query_lower for word in ['sheet', 'spreadsheet', 'table', 'excel']):
+            relevant_tools.extend(query_specific_categories['sheet_ops'])
 
         # Filter schemas - use exact matching for essential tools, partial for others
         filtered = []
