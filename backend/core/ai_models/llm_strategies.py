@@ -41,6 +41,15 @@ class DirectLiteLLMStrategy(LLMStrategy):
         )
         
         try:
+            # DEBUG: Log actual request parameters
+            logger.info(f"🔍 LITELLM REQUEST DEBUG: params keys: {list(params.keys())}")
+            logger.info(f"🔍 LITELLM REQUEST DEBUG: model={params.get('model')}")
+            logger.info(f"🔍 LITELLM REQUEST DEBUG: messages count={len(params.get('messages', []))}")
+            if 'messages' in params:
+                for i, msg in enumerate(params['messages'][:2]):  # Log first 2 messages
+                    logger.info(f"🔍 LITELLM REQUEST DEBUG: message[{i}] role={msg.get('role')}, content_len={len(str(msg.get('content', '')))}")
+            logger.info(f"🔍 LITELLM REQUEST DEBUG: tools count={len(params.get('tools', []))}")
+
             response = await litellm.acompletion(**params)
             logger.debug(
                 "Direct LiteLLM call successful",
@@ -80,6 +89,15 @@ class RouterStrategy(LLMStrategy):
             raise ValueError("Router is not initialized")
         
         try:
+            # DEBUG: Log actual router request parameters
+            logger.info(f"🔍 ROUTER REQUEST DEBUG: params keys: {list(params.keys())}")
+            logger.info(f"🔍 ROUTER REQUEST DEBUG: model={params.get('model')}")
+            logger.info(f"🔍 ROUTER REQUEST DEBUG: messages count={len(params.get('messages', []))}")
+            if 'messages' in params:
+                for i, msg in enumerate(params['messages'][:2]):  # Log first 2 messages
+                    logger.info(f"🔍 ROUTER REQUEST DEBUG: message[{i}] role={msg.get('role')}, content_len={len(str(msg.get('content', '')))}")
+            logger.info(f"🔍 ROUTER REQUEST DEBUG: tools count={len(params.get('tools', []))}")
+
             response = await self.router.acompletion(**params)
             logger.debug(
                 "Router-based LLM call successful",

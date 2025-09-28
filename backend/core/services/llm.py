@@ -223,12 +223,20 @@ def _add_tools_config(params: Dict[str, Any], tools: Optional[List[Dict[str, Any
     """Add tools configuration to parameters."""
     if tools is None:
         return
-    
+
+    # Check if this is a v98store model - they don't support tool schemas
+    model_name = params.get("model", "")
+    api_base = params.get("api_base", "")
+
+    if "v98store.com" in api_base or "openai-compatible" in model_name:
+        logger.info(f"🚫 SKIPPING TOOLS for v98store model: {model_name} (v98store doesn't support tool schemas)")
+        return
+
     params.update({
         "tools": tools,
         "tool_choice": tool_choice
     })
-    # logger.debug(f"Added {len(tools)} tools to API parameters")
+    logger.debug(f"✅ Added {len(tools)} tools to API parameters for model: {model_name}")
 
 def prepare_params(
     messages: List[Dict[str, Any]],

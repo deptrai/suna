@@ -10,7 +10,7 @@ import { Permission, Role, UserTier } from '../constants/permissions.constants';
  * @Get('/advanced-analysis')
  * async getAdvancedAnalysis() { ... }
  */
-export const RequirePermissions = (...permissions: Permission[]) => 
+export const RequirePermissions = (...permissions: string[]) =>
   SetMetadata('permissions', permissions);
 
 /**
@@ -22,7 +22,7 @@ export const RequirePermissions = (...permissions: Permission[]) =>
  * @Post('/premium-feature')
  * async premiumFeature() { ... }
  */
-export const RequireRoles = (...roles: Role[]) => 
+export const RequireRoles = (...roles: string[]) =>
   SetMetadata('roles', roles);
 
 /**
@@ -34,19 +34,19 @@ export const RequireRoles = (...roles: Role[]) =>
  * @Get('/enterprise-only')
  * async enterpriseOnlyFeature() { ... }
  */
-export const RequireTier = (tier: UserTier) => 
+export const RequireTier = (tier: string) =>
   SetMetadata('tier', tier);
 
 /**
  * Decorator to require a minimum tier for accessing an endpoint
  * @param minimumTier - Minimum required tier
- * 
+ *
  * @example
- * @RequireMinimumTier(USER_TIERS.PRO)
+ * @RequireMinimumTier('pro')
  * @Get('/pro-and-above')
  * async proAndAboveFeature() { ... }
  */
-export const RequireMinimumTier = (minimumTier: UserTier) => 
+export const RequireMinimumTier = (minimumTier: string) =>
   SetMetadata('minimumTier', minimumTier);
 
 /**
@@ -91,26 +91,26 @@ export const RequirePro = () =>
  */
 export const RequireAnalysisRead = () =>
   RequirePermissions(
-    'analysis:onchain:read' as Permission,
-    'analysis:sentiment:read' as Permission,
-    'analysis:tokenomics:read' as Permission,
-    'analysis:team:read' as Permission
+    'analysis:onchain:read',
+    'analysis:sentiment:read',
+    'analysis:tokenomics:read',
+    'analysis:team:read'
   );
 
 export const RequireAnalysisCreate = () =>
   RequirePermissions(
-    'analysis:onchain:create' as Permission,
-    'analysis:sentiment:create' as Permission,
-    'analysis:tokenomics:create' as Permission,
-    'analysis:team:create' as Permission
+    'analysis:onchain:create',
+    'analysis:sentiment:create',
+    'analysis:tokenomics:create',
+    'analysis:team:create'
   );
 
 export const RequireAnalysisAdvanced = () =>
   RequirePermissions(
-    'analysis:onchain:advanced' as Permission,
-    'analysis:sentiment:advanced' as Permission,
-    'analysis:tokenomics:advanced' as Permission,
-    'analysis:team:advanced' as Permission
+    'analysis:onchain:advanced',
+    'analysis:sentiment:advanced',
+    'analysis:tokenomics:advanced',
+    'analysis:team:advanced'
   );
 
 /**
@@ -118,23 +118,23 @@ export const RequireAnalysisAdvanced = () =>
  */
 export const RequireUserManagement = () =>
   RequirePermissions(
-    'admin:users:read' as Permission,
-    'admin:users:create' as Permission,
-    'admin:users:update' as Permission
+    'admin:users:read',
+    'admin:users:create',
+    'admin:users:update'
   );
 
 export const RequireUserDelete = () =>
-  RequirePermissions('admin:users:delete' as Permission);
+  RequirePermissions('admin:users:delete');
 
 /**
  * Decorator for system administration permissions
  */
 export const RequireSystemAdmin = () =>
   RequirePermissions(
-    'admin:system:health' as Permission,
-    'admin:system:metrics' as Permission,
-    'admin:system:logs' as Permission,
-    'admin:system:config' as Permission
+    'admin:system:health',
+    'admin:system:metrics',
+    'admin:system:logs',
+    'admin:system:config'
   );
 
 /**
@@ -142,9 +142,9 @@ export const RequireSystemAdmin = () =>
  */
 export const RequireApiManagement = () =>
   RequirePermissions(
-    'user:api:keys:read' as Permission,
-    'user:api:keys:create' as Permission,
-    'user:api:keys:delete' as Permission
+    'user:api:keys:read',
+    'user:api:keys:create',
+    'user:api:keys:delete'
   );
 
 /**
@@ -161,10 +161,10 @@ export const RequireApiManagement = () =>
  * async premiumAdvancedAnalysis() { ... }
  */
 export const RequireAccess = (options: {
-  roles?: Role[];
-  permissions?: Permission[];
-  tier?: UserTier;
-  minimumTier?: UserTier;
+  roles?: string[];
+  permissions?: string[];
+  tier?: string;
+  minimumTier?: string;
 }) => {
   return (target: any, propertyKey: string, descriptor: PropertyDescriptor) => {
     if (options.roles) {

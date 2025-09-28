@@ -73,6 +73,7 @@ export const PERMISSIONS = {
     SERVICES_RESTART: 'admin:services:restart',
     SERVICES_DEPLOY: 'admin:services:deploy',
     SERVICES_MONITOR: 'admin:services:monitor',
+    SYSTEM_MAINTENANCE: 'admin:system:maintenance',
   },
 
   // === API ACCESS PERMISSIONS ===

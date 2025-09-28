@@ -186,7 +186,7 @@ class ModelRegistry:
             id="openai-compatible/gpt-4o",
             name="GPT-4o (v98store)",
             provider=ModelProvider.OPENAI_COMPATIBLE,
-            aliases=["gpt-4o-v98", "v98store/gpt-4o"],
+            aliases=["gpt-4o-v98", "v98store/gpt-4o", "gpt-4o"],
             context_window=128_000,
             capabilities=[
                 ModelCapability.CHAT,
