@@ -106,66 +106,104 @@ class ToolManager:
     def _register_default_mcp_tools(self, disabled_tools: List[str]):
         """Register default MCP tools for testing/development environments.
 
-        This method registers commonly used MCP tools that would normally be
-        configured through agent_config. Useful for testing and development.
+        Note: This is a placeholder method. MCP tools require async registration
+        and agent_config setup. For full MCP functionality, use the production
+        setup with proper agent_config containing MCP configurations.
+
+        This method logs what MCP tools would be registered if available.
         """
         try:
-            # Create default MCP configurations for common tools
-            default_mcp_configs = [
-                {
-                    'name': 'Interactive Feedback Enhanced',
-                    'qualifiedName': 'interactive_feedback_MCP_Feedback_Enhanced',
-                    'config': {},
-                    'enabledTools': ['interactive_feedback_MCP_Feedback_Enhanced'],
-                    'instructions': 'Tool for collecting user feedback',
-                    'isCustom': True,
-                    'customType': 'sse'
-                },
-                {
-                    'name': 'Memory Tools',
-                    'qualifiedName': 'memory_tools',
-                    'config': {},
-                    'enabledTools': ['remember', 'create_entities_memory', 'add_observations_memory', 'search_nodes_memory'],
-                    'instructions': 'Tools for memory and knowledge management',
-                    'isCustom': True,
-                    'customType': 'sse'
-                },
-                {
-                    'name': 'Codebase Tools',
-                    'qualifiedName': 'codebase_tools',
-                    'config': {},
-                    'enabledTools': ['codebase-retrieval', 'git-commit-retrieval'],
-                    'instructions': 'Tools for codebase analysis and git operations',
-                    'isCustom': True,
-                    'customType': 'sse'
-                },
-                {
-                    'name': 'Sequential Thinking',
-                    'qualifiedName': 'sequential_thinking',
-                    'config': {},
-                    'enabledTools': ['sequentialthinking_Sequential_thinking'],
-                    'instructions': 'Advanced reasoning and thinking tools',
-                    'isCustom': True,
-                    'customType': 'sse'
-                }
+            # List of MCP tools that would be available in production
+            available_mcp_tools = [
+                'interactive_feedback_MCP_Feedback_Enhanced',  # User feedback collection
+                'remember',                                    # Memory persistence
+                'create_entities_memory',                      # Knowledge graph management
+                'add_observations_memory',                     # Memory observations
+                'search_nodes_memory',                         # Memory search
+                'codebase-retrieval',                         # Advanced codebase analysis
+                'git-commit-retrieval',                       # Git history analysis
+                'sequentialthinking_Sequential_thinking'       # Advanced reasoning
             ]
 
             # Filter out disabled tools
-            filtered_configs = []
-            for config in default_mcp_configs:
-                enabled_tools = [tool for tool in config['enabledTools'] if tool not in disabled_tools]
-                if enabled_tools:
-                    config['enabledTools'] = enabled_tools
-                    filtered_configs.append(config)
+            enabled_mcp_tools = [tool for tool in available_mcp_tools if tool not in disabled_tools]
 
-            if filtered_configs:
-                logger.info(f"🔧 Registering {len(filtered_configs)} default MCP tool groups for development")
-                # Note: This is a synchronous method, so we can't actually register MCP tools here
-                # This is just a placeholder for the structure. In practice, MCP tools need async registration
-                logger.debug(f"Default MCP configs prepared: {[c['name'] for c in filtered_configs]}")
+            if enabled_mcp_tools:
+                logger.info(f"🔧 MCP Tools available in production: {len(enabled_mcp_tools)} tools")
+                logger.debug(f"Available MCP tools: {enabled_mcp_tools}")
+                logger.info(f"💡 To enable MCP tools, configure agent_config with MCP configurations")
+            else:
+                logger.debug(f"All MCP tools disabled by configuration")
 
         except Exception as e:
-            logger.warning(f"Failed to register default MCP tools: {e}")
+            logger.warning(f"Failed to list default MCP tools: {e}")
+
+    async def register_development_mcp_tools(self, disabled_tools: Optional[List[str]] = None) -> bool:
+        """Register MCP tools for development/testing environments.
+
+        This method actually registers MCP tools using mock configurations
+        suitable for development and testing.
+
+        Args:
+            disabled_tools: List of tool names to exclude from registration
+
+        Returns:
+            bool: True if MCP tools were successfully registered, False otherwise
+        """
+        disabled_tools = disabled_tools or []
+
+        try:
+            # Create mock agent config for development MCP tools
+            mock_agent_config = {
+                'custom_mcps': [
+                    {
+                        'name': 'Development MCP Tools',
+                        'customType': 'sse',
+                        'config': {
+                            'url': 'mock://development-mcp-server'
+                        },
+                        'enabledTools': [
+                            'interactive_feedback_MCP_Feedback_Enhanced',
+                            'remember',
+                            'create_entities_memory',
+                            'codebase-retrieval',
+                            'git-commit-retrieval',
+                            'sequentialthinking_Sequential_thinking'
+                        ]
+                    }
+                ]
+            }
+
+            # Filter out disabled tools
+            enabled_tools = [
+                tool for tool in mock_agent_config['custom_mcps'][0]['enabledTools']
+                if tool not in disabled_tools
+            ]
+
+            if not enabled_tools:
+                logger.info("🔧 All MCP tools disabled, skipping registration")
+                return False
+
+            mock_agent_config['custom_mcps'][0]['enabledTools'] = enabled_tools
+
+            # Use MCPManager to register tools
+            if hasattr(self, 'account_id'):
+                mcp_manager = MCPManager(self.thread_manager, getattr(self, 'account_id', 'dev-account'))
+                mcp_wrapper = await mcp_manager.register_mcp_tools(mock_agent_config)
+
+                if mcp_wrapper:
+                    logger.info(f"✅ Successfully registered {len(enabled_tools)} development MCP tools")
+                    return True
+                else:
+                    logger.warning("❌ Failed to register development MCP tools")
+                    return False
+            else:
+                logger.warning("❌ Cannot register MCP tools: account_id not available")
+                return False
+
+        except Exception as e:
+            logger.error(f"❌ Error registering development MCP tools: {e}")
+            return False
 
     def _register_core_tools(self):
         """Register core tools that are always available."""
