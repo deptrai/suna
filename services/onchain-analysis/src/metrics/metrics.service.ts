@@ -14,6 +14,7 @@ export class MetricsService {
   private readonly activeRequestsGauge: Gauge<string>;
   private readonly externalApiCounter: Counter<string>;
   private readonly externalApiDuration: Histogram<string>;
+  private readonly cacheCounter: Counter<string>;
 
   constructor() {
     // Request metrics
@@ -55,12 +56,19 @@ export class MetricsService {
       buckets: [0.1, 0.5, 1, 2, 5, 10, 30],
     });
 
+    this.cacheCounter = new Counter({
+      name: 'onchain_cache_operations_total',
+      help: 'Total number of cache operations',
+      labelNames: ['operation', 'type'],
+    });
+
     register.registerMetric(this.requestCounter);
     register.registerMetric(this.responseTimeHistogram);
     register.registerMetric(this.errorCounter);
     register.registerMetric(this.activeRequestsGauge);
     register.registerMetric(this.externalApiCounter);
     register.registerMetric(this.externalApiDuration);
+    register.registerMetric(this.cacheCounter);
   }
 
   incrementRequest(method: string, endpoint: string, statusCode: number) {
@@ -105,6 +113,14 @@ export class MetricsService {
       { service, endpoint },
       duration / 1000, // Convert to seconds
     );
+  }
+
+  incrementCacheHits(type: string) {
+    this.cacheCounter.inc({ operation: 'hit', type });
+  }
+
+  incrementCacheMisses(type: string) {
+    this.cacheCounter.inc({ operation: 'miss', type });
   }
 
   async getPrometheusMetrics(): Promise<string> {

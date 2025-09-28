@@ -21,6 +21,7 @@ import { AnalysisModule } from './analysis/analysis.module';
 import { DatabaseModule } from './database/database.module';
 import { CacheModule } from './cache/cache.module';
 import { LoggerModule } from './common/logger/logger.module';
+import { ExternalApisModule } from './external-apis/external-apis.module';
 
 // Controllers
 import { AppController } from './app.controller';
@@ -61,6 +62,7 @@ import { AppService } from './app.service';
     HealthModule,
     MetricsModule,
     AnalysisModule,
+    ExternalApisModule,
   ],
   controllers: [AppController],
   providers: [AppService],

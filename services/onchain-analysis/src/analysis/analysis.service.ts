@@ -6,12 +6,14 @@
 import { Injectable } from '@nestjs/common';
 import { CacheService } from '../cache/cache.service';
 import { MetricsService } from '../metrics/metrics.service';
+import { MoralisService } from '../external-apis/moralis.service';
 
 @Injectable()
 export class AnalysisService {
   constructor(
     private readonly cacheService: CacheService,
     private readonly metricsService: MetricsService,
+    private readonly moralisService: MoralisService,
   ) {}
 
   async analyzeToken(analysisRequest: any) {
