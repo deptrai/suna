@@ -23,7 +23,7 @@ from core.utils.retry import retry
 import sentry_sdk
 from typing import Dict, Any
 
-redis_host = os.getenv('REDIS_HOST', 'redis')
+redis_host = os.getenv('REDIS_HOST', 'localhost')  # Changed from 'redis' to 'localhost' for local development
 redis_port = int(os.getenv('REDIS_PORT', 6379))
 redis_broker = RedisBroker(host=redis_host, port=redis_port, middleware=[dramatiq.middleware.AsyncIO()])
 

@@ -1,6 +1,16 @@
 from dotenv import load_dotenv
 load_dotenv()
 
+# Setup Dramatiq broker BEFORE importing run_agent_background
+import dramatiq
+from dramatiq.brokers.redis import RedisBroker
+import os
+
+redis_host = os.getenv('REDIS_HOST', 'localhost')
+redis_port = int(os.getenv('REDIS_PORT', 6379))
+redis_broker = RedisBroker(host=redis_host, port=redis_port, middleware=[dramatiq.middleware.AsyncIO()])
+dramatiq.set_broker(redis_broker)
+
 from fastapi import FastAPI, Request, HTTPException, Response, Depends, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse

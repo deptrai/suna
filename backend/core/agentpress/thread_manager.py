@@ -354,16 +354,21 @@ class ThreadManager:
             # Get tool schemas if needed with query-based filtering
             openapi_tool_schemas = None
             if config.native_tool_calling:
-                # Get user query for tool filtering
-                user_query = ""
-                if messages:
-                    for msg in reversed(messages):
-                        if isinstance(msg, dict) and msg.get('role') == 'user':
-                            user_query = str(msg.get('content', ''))[:200]  # First 200 chars
-                            break
+                # Disable tools for v98store models (openai-compatible/*) due to API compatibility issues
+                if llm_model.startswith("openai-compatible/"):
+                    logger.info(f"🔧 Disabling tools for v98store model: {llm_model}")
+                    openapi_tool_schemas = None
+                else:
+                    # Get user query for tool filtering
+                    user_query = ""
+                    if messages:
+                        for msg in reversed(messages):
+                            if isinstance(msg, dict) and msg.get('role') == 'user':
+                                user_query = str(msg.get('content', ''))[:200]  # First 200 chars
+                                break
 
-                # Use balanced schemas (essential + query-specific tools)
-                openapi_tool_schemas = self.tool_registry.get_filtered_schemas(user_query)
+                    # Use balanced schemas (essential + query-specific tools)
+                    openapi_tool_schemas = self.tool_registry.get_filtered_schemas(user_query)
 
             # Update generation tracking
             if generation:
