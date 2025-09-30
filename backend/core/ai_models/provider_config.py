@@ -49,7 +49,9 @@ class OpenAICompatibleConfig(ProviderConfig):
         )
     
     @classmethod
-    def from_params(cls, api_key: str = None, api_base: str = None) -> 'OpenAICompatibleConfig':
+    def from_params(
+        cls, api_key: Optional[str] = None, api_base: Optional[str] = None
+    ) -> 'OpenAICompatibleConfig':
         """Create configuration from parameters with env fallback."""
         return cls(
             api_key=api_key or config.OPENAI_COMPATIBLE_API_KEY,

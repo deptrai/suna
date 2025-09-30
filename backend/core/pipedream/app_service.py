@@ -138,7 +138,9 @@ class AppService:
                 raise RateLimitError()
             raise AuthenticationError(f"Failed to obtain access token: {e}")
     
-    async def _make_request(self, url: str, headers: Dict[str, str] = None, params: Dict[str, Any] = None) -> Dict[str, Any]:
+    async def _make_request(
+        self, url: str, headers: Optional[Dict[str, str]] = None, params: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         session = await self._get_session()
         access_token = await self._ensure_access_token()
         

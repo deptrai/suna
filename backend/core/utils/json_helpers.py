@@ -9,7 +9,9 @@ import json
 from typing import Any, Union, Dict, List
 
 
-def ensure_dict(value: Union[str, Dict[str, Any], None], default: Dict[str, Any] = None) -> Dict[str, Any]:
+def ensure_dict(
+    value: Union[str, Dict[str, Any], None], default: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
     """
     Ensure a value is a dictionary.
     
@@ -47,7 +49,7 @@ def ensure_dict(value: Union[str, Dict[str, Any], None], default: Dict[str, Any]
     return default
 
 
-def ensure_list(value: Union[str, List[Any], None], default: List[Any] = None) -> List[Any]:
+def ensure_list(value: Union[str, List[Any], None], default: Optional[List[Any]] = None) -> List[Any]:
     """
     Ensure a value is a list.
     
