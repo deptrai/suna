@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 class ChainlensDefaultAgentService:
     """Simplified Chainlens agent management service."""
     
-    def __init__(self, db: DBConnection = None):
+    def __init__(self, db: Optional[DBConnection] = None):
         self._db = db or DBConnection()
         logger.debug("🔄 ChainlensDefaultAgentService initialized (simplified)")
     

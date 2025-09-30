@@ -12,7 +12,9 @@ class ModelManager:
     def get_model(self, model_id: str) -> Optional[Model]:
         return self.registry.get(model_id)
     
-    def resolve_model_id(self, model_id: str, query: str = None, user_context: dict = None) -> str:
+    def resolve_model_id(
+        self, model_id: str, query: Optional[str] = None, user_context: Optional[dict] = None
+    ) -> str:
         """Enhanced resolve with auto selection support - backward compatible"""
         query_preview = query[:50] if query else "None"
         logger.debug(f"🔍 MODEL MANAGER: resolve_model_id called with: '{model_id}', query: {query_preview}...")
@@ -234,7 +236,7 @@ class ModelManager:
             logger.warning(f"Failed to determine user tier for {user_id}: {e}")
             return DEFAULT_FREE_MODEL
 
-    def _auto_select_model(self, query: str, user_context: dict = None) -> str:
+    def _auto_select_model(self, query: str, user_context: Optional[dict] = None) -> str:
         """Ultra-fast auto selection with simplified 2-model approach"""
         # Handle None or empty query
         if not query:
