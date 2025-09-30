@@ -31,7 +31,7 @@ class LLMCallMetrics:
     response_time_ms: Optional[float] = None
     stream: bool = False
     
-    def mark_success(self, token_usage: Dict[str, int] = None):
+    def mark_success(self, token_usage: Optional[Dict[str, int]] = None):
         """Mark the call as successful and record metrics."""
         self.end_time = time.time()
         self.success = True
@@ -146,7 +146,7 @@ class LLMMetricsCollector:
         else:
             model_stat['failed_calls'] += 1
     
-    def get_provider_stats(self, provider: str = None) -> Dict:
+    def get_provider_stats(self, provider: Optional[str] = None) -> Dict:
         """Get statistics for a specific provider or all providers."""
         if provider:
             stats = dict(self.provider_stats[provider])
@@ -155,14 +155,14 @@ class LLMMetricsCollector:
             if total > 0:
                 stats['success_rate'] = stats['successful_calls'] / total
                 stats['avg_response_time'] = (
-                    stats['total_response_time'] / stats['successful_calls'] 
+                    stats['total_response_time'] / stats['successful_calls']
                     if stats['successful_calls'] > 0 else 0
                 )
             return stats
         else:
             return {p: self.get_provider_stats(p) for p in self.provider_stats.keys()}
-    
-    def get_model_stats(self, model: str = None) -> Dict:
+
+    def get_model_stats(self, model: Optional[str] = None) -> Dict:
         """Get statistics for a specific model or all models."""
         if model:
             stats = dict(self.model_stats[model])

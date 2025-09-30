@@ -95,7 +95,9 @@ class CredentialValidator:
     """Centralized credential validation for all providers."""
     
     @staticmethod
-    def validate_openai_compatible(api_key: str = None, api_base: str = None) -> bool:
+    def validate_openai_compatible(
+        api_key: Optional[str] = None, api_base: Optional[str] = None
+    ) -> bool:
         """Validate OpenAI-compatible credentials."""
         config_obj = OpenAICompatibleConfig.from_params(api_key, api_base)
         return config_obj.validate()
@@ -111,8 +113,8 @@ class ProviderConfigFactory:
     
     @staticmethod
     def create_openai_compatible_config(
-        api_key: str = None, 
-        api_base: str = None
+        api_key: Optional[str] = None,
+        api_base: Optional[str] = None
     ) -> OpenAICompatibleConfig:
         """Create OpenAI-compatible configuration."""
         return OpenAICompatibleConfig.from_params(api_key, api_base)

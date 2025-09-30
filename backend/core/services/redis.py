@@ -122,13 +122,13 @@ async def get_client():
 
 
 # Basic Redis operations
-async def set(key: str, value: str, ex: int = None, nx: bool = False):
+async def set(key: str, value: str, ex: Optional[int] = None, nx: bool = False):
     """Set a Redis key."""
     redis_client = await get_client()
     return await redis_client.set(key, value, ex=ex, nx=nx)
 
 
-async def get(key: str, default: str = None):
+async def get(key: str, default: Optional[str] = None):
     """Get a Redis key."""
     redis_client = await get_client()
     result = await redis_client.get(key)

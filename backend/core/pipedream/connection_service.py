@@ -137,9 +137,15 @@ class ConnectionService:
                 raise RateLimitError("Rate limit exceeded")
             raise AuthenticationError(f"Failed to obtain access token: {e}")
 
-    async def _make_request(self, method: str, url: str, headers: Dict[str, str] = None, 
-                           params: Dict[str, Any] = None, json: Dict[str, Any] = None, 
-                           retry_count: int = 0) -> Dict[str, Any]:
+    async def _make_request(
+        self,
+        method: str,
+        url: str,
+        headers: Optional[Dict[str, str]] = None,
+        params: Optional[Dict[str, Any]] = None,
+        json: Optional[Dict[str, Any]] = None,
+        retry_count: int = 0
+    ) -> Dict[str, Any]:
         session = await self._get_session()
         access_token = await self._ensure_access_token()
 

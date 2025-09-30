@@ -240,8 +240,8 @@ class WorkflowParser:
 def format_workflow_for_llm(
     workflow_config: Dict[str, Any],
     steps: List[Dict[str, Any]],
-    input_data: Dict[str, Any] = None,
-    available_tools: List[str] = None
+    input_data: Optional[Dict[str, Any]] = None,
+    available_tools: Optional[List[str]] = None
 ) -> str:
     # If this is a playbook, format with the simplified playbook prompt
     if is_playbook(steps):

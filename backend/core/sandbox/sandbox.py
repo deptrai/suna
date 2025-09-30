@@ -78,9 +78,9 @@ async def start_supervisord_session(sandbox: AsyncSandbox):
         logger.error(f"Error starting supervisord session: {str(e)}")
         raise e
 
-async def create_sandbox(password: str, project_id: str = None) -> AsyncSandbox:
+async def create_sandbox(password: str, project_id: Optional[str] = None) -> AsyncSandbox:
     """Create a new sandbox with all required services configured and running."""
-    
+
     logger.info("Creating new Daytona sandbox environment")
     # logger.debug("Configuring sandbox with snapshot and environment variables")
     
