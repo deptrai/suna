@@ -128,7 +128,9 @@ class ValidationError(HTTPException):
     def __init__(self, message: str):
         super().__init__(status_code=400, detail=message)
 
-async def validate_folder_name_unique(name: str, account_id: str, exclude_folder_id: str = None) -> None:
+async def validate_folder_name_unique(
+    name: str, account_id: str, exclude_folder_id: Optional[str] = None
+) -> None:
     """Check if folder name is unique for the account."""
     from core.services.supabase import DBConnection
     
@@ -145,7 +147,9 @@ async def validate_folder_name_unique(name: str, account_id: str, exclude_folder
     if result.data:
         raise ValidationError(f"A folder with the name '{name}' already exists")
 
-async def validate_file_name_unique_in_folder(filename: str, folder_id: str, exclude_entry_id: str = None) -> str:
+async def validate_file_name_unique_in_folder(
+    filename: str, folder_id: str, exclude_entry_id: Optional[str] = None
+) -> str:
     """
     Check if filename is unique in folder. If not, generate a unique name.
     Returns the final filename to use.

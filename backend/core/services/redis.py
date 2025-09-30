@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 import asyncio
 from core.utils.logger import logger
-from typing import List, Any
+from typing import List, Any, Optional
 from core.utils.retry import retry
 
 # Redis client and connection pool

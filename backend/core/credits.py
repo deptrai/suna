@@ -119,7 +119,14 @@ class CreditService:
         
         return balance
     
-    async def deduct_credits(self, user_id: str, amount: Decimal, description: str = None, reference_id: str = None, reference_type: str = None) -> Dict:
+    async def deduct_credits(
+        self,
+        user_id: str,
+        amount: Decimal,
+        description: Optional[str] = None,
+        reference_id: Optional[str] = None,
+        reference_type: Optional[str] = None
+    ) -> Dict:
         try:
             client = await self._get_client()
             result = await client.rpc('deduct_credits', {
@@ -166,12 +173,12 @@ class CreditService:
             }
     
     async def add_credits(
-        self, 
-        user_id: str, 
-        amount: Decimal, 
+        self,
+        user_id: str,
+        amount: Decimal,
         type: str = 'admin_grant',
-        description: str = None,
-        metadata: Dict = None
+        description: Optional[str] = None,
+        metadata: Optional[Dict] = None
     ) -> Decimal:
         try:
             client = await self._get_client()
@@ -198,7 +205,7 @@ class CreditService:
     
     async def grant_tier_credits(self, user_id: str, price_id: str, tier_name: str) -> bool:
         try:
-            from billing.config import get_tier_by_price_id
+            from billing.config import get_tier_by_price_id  # noqa: E402
             tier = get_tier_by_price_id(price_id)
             
             if not tier:
@@ -227,7 +234,9 @@ class CreditService:
             if self.cache:
                 await self.cache.invalidate(f"credit_balance:{user_id}")
             
-            logger.info(f"Granted {amount} {tier_name} credits to user {user_id}")
+            logger.info(
+                f"Granted {amount} {tier_name} credits to user {user_id}"
+            )
             return bool(result.data)
             
         except Exception as e:
@@ -241,22 +250,26 @@ class CreditService:
         offset: int = 0
     ) -> List[Dict[str, Any]]:
         client = await self._get_client()
-        result = await client.from_('credit_ledger')\
-            .select('*')\
-            .eq('account_id', user_id)\
-            .order('created_at', desc=True)\
-            .limit(limit)\
-            .offset(offset)\
+        result = await (
+            client.from_('credit_ledger')
+            .select('*')
+            .eq('account_id', user_id)
+            .order('created_at', desc=True)
+            .limit(limit)
+            .offset(offset)
             .execute()
+        )
         
         return result.data or []
     
     async def get_account_summary(self, user_id: str) -> Dict[str, Any]:
         client = await self._get_client()
-        account_result = await client.from_('credit_accounts')\
-            .select('*')\
-            .eq('account_id', user_id)\
+        account_result = await (
+            client.from_('credit_accounts')
+            .select('*')
+            .eq('account_id', user_id)
             .execute()
+        )
         
         if not account_result.data or len(account_result.data) == 0:
             await self.get_balance(user_id)
@@ -266,13 +279,17 @@ class CreditService:
                 'lifetime_granted': float(FREE_TIER_INITIAL_CREDITS),
                 'lifetime_purchased': 0,
                 'lifetime_used': 0,
-                'last_grant_date': datetime.now(timezone.utc).isoformat()
+                'last_grant_date': (
+                    datetime.now(timezone.utc).isoformat()
+                )
             }
         
-        ledger_result = await client.from_('credit_ledger')\
-            .select('type, amount, description')\
-            .eq('account_id', user_id)\
+        ledger_result = await (
+            client.from_('credit_ledger')
+            .select('type, amount, description')
+            .eq('account_id', user_id)
             .execute()
+        )
         
         lifetime_granted = Decimal('0')
         lifetime_purchased = Decimal('0')
@@ -280,7 +297,9 @@ class CreditService:
         
         for entry in (ledger_result.data or []):
             amount = Decimal(str(entry['amount']))
-            if entry['type'] in ['tier_grant', 'admin_grant', 'tier_upgrade']:
+            if entry['type'] in [
+                'tier_grant', 'admin_grant', 'tier_upgrade'
+            ]:
                 lifetime_granted += amount
             elif entry['type'] == 'purchase':
                 lifetime_purchased += amount
@@ -297,4 +316,5 @@ class CreditService:
             'last_grant_date': account.get('last_grant_date')
         }
 
-credit_service = CreditService() 
+
+credit_service = CreditService()

@@ -6,7 +6,7 @@ them as proper JSONB objects in the database.
 """
 
 import json
-from typing import Any, Union, Dict, List
+from typing import Any, Union, Dict, List, Optional
 
 
 def ensure_dict(

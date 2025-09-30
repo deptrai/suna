@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from core.utils.logger import logger
 from core.utils.config import config
 from core.utils.config import Configuration
+from typing import Optional
 
 load_dotenv()
 
