@@ -264,6 +264,49 @@ class ThreadManager:
         except Exception as e:
             logger.warning(f"Failed to log request to GlitchTip: {e}")
 
+        # Phase 3 Task 3.1.2: Dynamic Prompt Routing
+        # Use modular prompt builder with dynamic routing
+        use_dynamic_routing = True  # Feature flag
+
+        if use_dynamic_routing:
+            try:
+                from core.prompts.router import get_router
+                from core.prompts.module_manager import get_prompt_builder
+
+                # Get user query for routing
+                user_query = ""
+                if temporary_message:
+                    user_query = temporary_message.get('content', '')
+                else:
+                    # Get last user message from thread
+                    messages_for_routing = await self.get_messages(thread_id)
+                    for msg in reversed(messages_for_routing):
+                        if isinstance(msg, dict) and msg.get('role') == 'user':
+                            user_query = str(msg.get('content', ''))
+                            break
+
+                if user_query:
+                    # Route to appropriate modules
+                    router = get_router()
+                    modules_needed = router.route(user_query)
+
+                    # Build modular prompt
+                    builder = get_prompt_builder()
+                    modular_prompt_content = builder.build_prompt(modules_needed)
+
+                    # Replace system prompt with modular version
+                    system_prompt = {
+                        "role": "system",
+                        "content": modular_prompt_content
+                    }
+
+                    logger.info(f"🧭 Dynamic routing applied: {len(modules_needed)} modules, {len(modular_prompt_content)} chars")
+                else:
+                    logger.debug("🧭 No user query found, using original system prompt")
+
+            except Exception as e:
+                logger.warning(f"Dynamic routing failed, using original prompt: {e}")
+
         # Determine if context manager should be used (default to True)
         use_context_manager = enable_context_manager if enable_context_manager is not None else True
         logger.info(f"🔧 THREAD MANAGER DEBUG: enable_context_manager={enable_context_manager}, use_context_manager={use_context_manager}")
