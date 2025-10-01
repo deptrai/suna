@@ -238,6 +238,32 @@ class ThreadManager:
         """Run a conversation thread with LLM integration and tool execution."""
         logger.debug(f"🚀 Starting thread execution for {thread_id} with model {llm_model}")
 
+        # Phase 1 Task 1.1.2: Log comprehensive request metrics to GlitchTip
+        try:
+            import sentry_sdk
+            from datetime import datetime
+
+            prompt_size = len(system_prompt.get('content', '')) if isinstance(system_prompt, dict) else 0
+            tool_count = len(processor_config.tools) if processor_config and hasattr(processor_config, 'tools') and processor_config.tools else 0
+
+            sentry_sdk.set_context("prompt_request", {
+                "thread_id": thread_id,
+                "model": llm_model,
+                "prompt_size": prompt_size,
+                "cache_enabled": enable_prompt_caching,
+                "tool_count": tool_count,
+                "temperature": llm_temperature,
+                "max_tokens": llm_max_tokens,
+                "timestamp": datetime.now().isoformat()
+            })
+            sentry_sdk.capture_message(
+                f"Prompt Request: {llm_model}, {prompt_size} chars, {tool_count} tools",
+                level="info"
+            )
+            logger.debug(f"📊 Request logged to GlitchTip: {prompt_size} chars, {tool_count} tools")
+        except Exception as e:
+            logger.warning(f"Failed to log request to GlitchTip: {e}")
+
         # Determine if context manager should be used (default to True)
         use_context_manager = enable_context_manager if enable_context_manager is not None else True
         logger.info(f"🔧 THREAD MANAGER DEBUG: enable_context_manager={enable_context_manager}, use_context_manager={use_context_manager}")
@@ -301,11 +327,40 @@ class ThreadManager:
         try:
             # Get and prepare messages
             messages = await self.get_llm_messages(thread_id)
-            
+
             # Handle auto-continue context
             if auto_continue_state['count'] > 0 and auto_continue_state['continuous_state'].get('accumulated_content'):
                 partial_content = auto_continue_state['continuous_state']['accumulated_content']
                 messages.append({"role": "assistant", "content": partial_content})
+
+            # 📊 LOG STAGE 1: Original context from DB
+            from litellm import token_counter
+            original_token_count = token_counter(model=llm_model, messages=messages)
+            logger.info(f"📊 CONTEXT STAGE 1 - Original from DB: {len(messages)} messages, {original_token_count} tokens")
+
+            # Log to GlitchTip for analysis
+            try:
+                import sentry_sdk
+                sentry_sdk.capture_message(
+                    f"Context Optimization - Stage 1: Original",
+                    level="info",
+                    extras={
+                        "stage": "1_original",
+                        "thread_id": thread_id,
+                        "message_count": len(messages),
+                        "token_count": original_token_count,
+                        "messages_preview": [
+                            {
+                                "role": msg.get("role"),
+                                "content_length": len(str(msg.get("content", ""))),
+                                "content_preview": str(msg.get("content", ""))[:200]
+                            }
+                            for msg in messages[:5]  # First 5 messages
+                        ]
+                    }
+                )
+            except Exception as e:
+                logger.warning(f"Failed to log to GlitchTip: {e}")
 
             # Apply context compression if enabled
             if use_context_manager:
@@ -316,33 +371,77 @@ class ThreadManager:
                 )
                 logger.debug(f"Context compression completed: {len(messages)} -> {len(compressed_messages)} messages")
                 messages = compressed_messages
+
+                # 📊 LOG STAGE 2: After context manager compression
+                compressed_token_count = token_counter(model=llm_model, messages=messages)
+                reduction_ratio = ((original_token_count - compressed_token_count) / original_token_count * 100) if original_token_count > 0 else 0
+                logger.info(f"📊 CONTEXT STAGE 2 - After compression: {len(messages)} messages, {compressed_token_count} tokens ({reduction_ratio:.1f}% reduction)")
+
+                # Log to GlitchTip
+                try:
+                    import sentry_sdk
+                    sentry_sdk.capture_message(
+                        f"Context Optimization - Stage 2: After Compression",
+                        level="info",
+                        extras={
+                            "stage": "2_compressed",
+                            "thread_id": thread_id,
+                            "message_count": len(messages),
+                            "token_count": compressed_token_count,
+                            "original_token_count": original_token_count,
+                            "reduction_ratio": f"{reduction_ratio:.1f}%",
+                            "messages_preview": [
+                                {
+                                    "role": msg.get("role"),
+                                    "content_length": len(str(msg.get("content", ""))),
+                                    "content_preview": str(msg.get("content", ""))[:200]
+                                }
+                                for msg in messages[:5]
+                            ]
+                        }
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to log to GlitchTip: {e}")
             else:
                 logger.debug("Context manager disabled, using raw messages")
 
-            # Always apply system prompt optimization
+            # Phase 1 Task 1.2.1: DISABLE aggressive optimization (broke tool calling)
+            # TEMPORARY FIX: Use original system prompt without optimization
             logger.info(f"🔧 OPTIMIZATION DEBUG: use_context_manager={use_context_manager}")
             optimized_system_prompt = system_prompt
+            original_system_prompt_length = len(system_prompt.get('content', '')) if isinstance(system_prompt, dict) else 0
+
+            logger.info(f"📝 Using original system prompt (optimization disabled): {original_system_prompt_length} chars")
+
+            # Log to GlitchTip
             try:
-                ctx_optimizer = ContextManager()
-
-                # Get user query for optimization
-                user_query = ""
-                if messages:
-                    for msg in reversed(messages):
-                        if isinstance(msg, dict) and msg.get('role') == 'user':
-                            user_query = str(msg.get('content', ''))[:200]  # First 200 chars
-                            break
-
-                logger.info(f"🔍 User query extracted for optimization: {user_query[:100]}...")
-                if user_query and system_prompt and isinstance(system_prompt, dict):
-                    original_content = system_prompt.get('content', '')
-                    optimized_content = ctx_optimizer.get_optimized_system_prompt(user_query, original_content)
-                    optimized_system_prompt = system_prompt.copy()
-                    optimized_system_prompt['content'] = optimized_content
-                    logger.info(f"📝 System prompt optimized: {len(original_content)} -> {len(optimized_content)} chars")
+                import sentry_sdk
+                sentry_sdk.capture_message(
+                    "Optimization disabled - using original prompt",
+                    level="info",
+                    extras={"prompt_size": original_system_prompt_length}
+                )
             except Exception as e:
-                logger.warning(f"System prompt optimization failed: {e}")
-                optimized_system_prompt = system_prompt
+                logger.warning(f"Failed to log optimization status to GlitchTip: {e}")
+
+            # COMMENTED OUT: Aggressive optimization (99.8% reduction broke tool calling)
+            # try:
+            #     ctx_optimizer = ContextManager()
+            #     user_query = ""
+            #     if messages:
+            #         for msg in reversed(messages):
+            #             if isinstance(msg, dict) and msg.get('role') == 'user':
+            #                 user_query = str(msg.get('content', ''))[:200]
+            #                 break
+            #
+            #     if user_query and system_prompt and isinstance(system_prompt, dict):
+            #         original_content = system_prompt.get('content', '')
+            #         optimized_content = ctx_optimizer.get_optimized_system_prompt(user_query, original_content)
+            #         optimized_system_prompt = system_prompt.copy()
+            #         optimized_system_prompt['content'] = optimized_content
+            # except Exception as e:
+            #     logger.warning(f"System prompt optimization failed: {e}")
+            #     optimized_system_prompt = system_prompt
 
             # Apply caching if enabled
             if enable_prompt_caching:
@@ -353,22 +452,83 @@ class ThreadManager:
 
             # Get tool schemas if needed with query-based filtering
             openapi_tool_schemas = None
+            original_tool_count = 0
             if config.native_tool_calling:
-                # Disable tools for v98store models (openai-compatible/*) due to API compatibility issues
-                if llm_model.startswith("openai-compatible/"):
-                    logger.info(f"🔧 Disabling tools for v98store model: {llm_model}")
-                    openapi_tool_schemas = None
-                else:
-                    # Get user query for tool filtering
-                    user_query = ""
-                    if messages:
-                        for msg in reversed(messages):
-                            if isinstance(msg, dict) and msg.get('role') == 'user':
-                                user_query = str(msg.get('content', ''))[:200]  # First 200 chars
-                                break
+                # Get user query for tool filtering
+                user_query = ""
+                if messages:
+                    for msg in reversed(messages):
+                        if isinstance(msg, dict) and msg.get('role') == 'user':
+                            user_query = str(msg.get('content', ''))[:200]  # First 200 chars
+                            break
 
-                    # Use balanced schemas (essential + query-specific tools)
-                    openapi_tool_schemas = self.tool_registry.get_filtered_schemas(user_query)
+                # Get original tool count before filtering
+                original_tool_count = len(self.tool_registry.get_openapi_schemas())
+
+                # Use balanced schemas (essential + query-specific tools)
+                openapi_tool_schemas = self.tool_registry.get_filtered_schemas(user_query)
+
+                # For v98store models, limit to ONLY 1 tool to test serialization
+                if llm_model.startswith("openai-compatible/") and openapi_tool_schemas:
+                    logger.info(f"🔧 DEBUG: Limiting tools for v98store model {llm_model}: {len(openapi_tool_schemas)} → 1 tool")
+                    openapi_tool_schemas = openapi_tool_schemas[:1]  # Only first tool
+
+                logger.info(f"🔧 Tools enabled for model {llm_model}: {len(openapi_tool_schemas) if openapi_tool_schemas else 0} tools")
+
+            # 📊 LOG STAGE 3: Final optimized context (with system prompt + tools)
+            from litellm import token_counter
+            final_token_count = token_counter(model=llm_model, messages=prepared_messages)
+            tool_count = len(openapi_tool_schemas) if openapi_tool_schemas else 0
+
+            # Calculate tool reduction ratio
+            tool_reduction_ratio = ((original_tool_count - tool_count) / original_tool_count * 100) if original_tool_count > 0 else 0
+
+            # Calculate overall reduction from original
+            overall_reduction = ((original_token_count - final_token_count) / original_token_count * 100) if original_token_count > 0 else 0
+
+            logger.info(f"📊 CONTEXT STAGE 3 - Final optimized: {len(prepared_messages)} messages, {final_token_count} tokens, {tool_count} tools")
+            logger.info(f"📊 OVERALL OPTIMIZATION: {original_token_count} → {final_token_count} tokens ({overall_reduction:.1f}% reduction)")
+            logger.info(f"📊 TOOL FILTERING: {original_tool_count} → {tool_count} tools ({tool_reduction_ratio:.1f}% reduction)")
+
+            # Log to GlitchTip
+            try:
+                import sentry_sdk
+                sentry_sdk.capture_message(
+                    f"Context Optimization - Stage 3: Final Optimized",
+                    level="info",
+                    extras={
+                        "stage": "3_final_optimized",
+                        "thread_id": thread_id,
+                        "message_count": len(prepared_messages),
+                        "token_count": final_token_count,
+                        "original_token_count": original_token_count,
+                        "overall_reduction_ratio": f"{overall_reduction:.1f}%",
+                        "tool_count": tool_count,
+                        "original_tool_count": original_tool_count,
+                        "tool_reduction_ratio": f"{tool_reduction_ratio:.1f}%",
+                        "system_prompt_original_length": original_system_prompt_length,
+                        "system_prompt_optimized_length": len(optimized_system_prompt.get('content', '')) if isinstance(optimized_system_prompt, dict) else 0,
+                        "prompt_caching_enabled": enable_prompt_caching,
+                        "context_manager_enabled": use_context_manager,
+                        "optimization_features": {
+                            "context_compression": use_context_manager,
+                            "system_prompt_optimization": True,
+                            "tool_filtering": config.native_tool_calling,
+                            "prompt_caching": enable_prompt_caching
+                        },
+                        "messages_preview": [
+                            {
+                                "role": msg.get("role"),
+                                "content_length": len(str(msg.get("content", ""))),
+                                "content_preview": str(msg.get("content", ""))[:200],
+                                "has_cache_control": "cache_control" in msg if isinstance(msg, dict) else False
+                            }
+                            for msg in prepared_messages[:5]
+                        ]
+                    }
+                )
+            except Exception as e:
+                logger.warning(f"Failed to log to GlitchTip: {e}")
 
             # Update generation tracking
             if generation:

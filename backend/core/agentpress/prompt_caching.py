@@ -336,6 +336,33 @@ def apply_anthropic_caching_strategy(
                      'cache_control' in msg['content'][0])
     
     logger.info(f"✅ Final structure: {cache_count} cache breakpoints, {len(prepared_messages)} total blocks")
+
+    # Phase 1 Task 1.1.3: Log cache performance metrics to GlitchTip
+    try:
+        import sentry_sdk
+
+        # Calculate metrics
+        total_tokens = system_tokens + total_conversation_tokens
+        cache_hit_rate = (cache_count / len(prepared_messages) * 100) if len(prepared_messages) > 0 else 0
+
+        sentry_sdk.set_context("cache_performance", {
+            "blocks_used": blocks_used,
+            "max_blocks": 4,
+            "system_tokens": system_tokens,
+            "conversation_tokens": total_conversation_tokens,
+            "total_tokens": total_tokens,
+            "cache_breakpoints": cache_count,
+            "cache_hit_rate": round(cache_hit_rate, 2),
+            "model": model_name
+        })
+        sentry_sdk.capture_message(
+            f"Cache Performance: {blocks_used}/4 blocks, {cache_hit_rate:.1f}% hit rate",
+            level="info"
+        )
+        logger.debug(f"📊 Cache performance logged to GlitchTip: {blocks_used} blocks, {cache_hit_rate:.1f}% hit rate")
+    except Exception as e:
+        logger.warning(f"Failed to log cache performance to GlitchTip: {e}")
+
     return prepared_messages
 
 def create_conversation_chunks(
