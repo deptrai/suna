@@ -336,17 +336,6 @@ def apply_anthropic_caching_strategy(
                      'cache_control' in msg['content'][0])
     
     logger.info(f"✅ Final structure: {cache_count} cache breakpoints, {len(prepared_messages)} total blocks")
-
-    # Log cache metrics to GlitchTip for monitoring
-    _log_cache_metrics_to_glitchtip(
-        blocks_used=blocks_used,
-        system_tokens=system_tokens,
-        total_conversation_tokens=total_conversation_tokens,
-        cache_count=cache_count,
-        total_messages=len(prepared_messages),
-        model_name=model_name
-    )
-
     return prepared_messages
 
 def create_conversation_chunks(
@@ -477,54 +466,3 @@ def validate_cache_blocks(messages: List[Dict[str, Any]], model_name: str, max_b
     
     logger.warning(f"⚠️ Cache validation failed: {cache_count}/{max_blocks} blocks")
     return messages  # With 2-block strategy, this shouldn't happen
-
-
-def _log_cache_metrics_to_glitchtip(
-    blocks_used: int,
-    system_tokens: int,
-    total_conversation_tokens: int,
-    cache_count: int,
-    total_messages: int,
-    model_name: str
-):
-    """
-    Log cache metrics to GlitchTip for monitoring and analysis.
-    Phase 1 Task 1.1.2
-    """
-    try:
-        import sentry_sdk
-        from datetime import datetime
-
-        # Calculate cache efficiency
-        total_tokens = system_tokens + total_conversation_tokens
-        cache_hit_rate = (cache_count / total_messages * 100) if total_messages > 0 else 0
-
-        # Estimate cost savings (Anthropic pricing: $3/M input, cache read $0.30/M)
-        # 90% cache hit rate = 90% cost reduction
-        estimated_savings_percent = cache_hit_rate * 0.9
-
-        # Set context for structured data
-        sentry_sdk.set_context("cache_metrics", {
-            "blocks_used": blocks_used,
-            "max_blocks": 4,
-            "system_tokens": system_tokens,
-            "conversation_tokens": total_conversation_tokens,
-            "total_tokens": total_tokens,
-            "cache_breakpoints": cache_count,
-            "total_messages": total_messages,
-            "cache_hit_rate_percent": round(cache_hit_rate, 2),
-            "estimated_savings_percent": round(estimated_savings_percent, 2),
-            "model": model_name,
-            "timestamp": datetime.now().isoformat()
-        })
-
-        # Capture message for easy searching
-        sentry_sdk.capture_message(
-            f"Prompt Cache Metrics: {blocks_used}/4 blocks, {cache_count} breakpoints, {cache_hit_rate:.1f}% hit rate",
-            level="info"
-        )
-
-        logger.debug(f"📊 Cache metrics logged to GlitchTip: {blocks_used} blocks, {cache_hit_rate:.1f}% hit rate")
-
-    except Exception as e:
-        logger.warning(f"Failed to log cache metrics to GlitchTip: {e}")
