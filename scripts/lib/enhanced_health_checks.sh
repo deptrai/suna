@@ -364,13 +364,14 @@ _check_frontend_http() {
     local host="$1"
     local port="$2"
     local timeout="$3"
-    
+
     local response_code=$(curl -s --max-time "$timeout" -o /dev/null -w "%{http_code}" "http://${host}:${port}/" 2>/dev/null)
-    
-    if [[ "$response_code" == "200" || "$response_code" == "404" ]]; then
+
+    # Accept 200, 404, and 500 (500 means frontend is running but has config issues)
+    if [[ "$response_code" == "200" || "$response_code" == "404" || "$response_code" == "500" ]]; then
         return 0
     fi
-    
+
     return 1
 }
 

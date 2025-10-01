@@ -22,7 +22,7 @@ def test_v98store_models():
     test_models = [
         "gpt-4o",
         "gpt-4o-mini", 
-        "openai-compatible/gpt-4o",
+        "openai-compatible/gemini-2.5-flash-thinking",
         "openai-compatible/gpt-4o-mini"
     ]
     

@@ -215,11 +215,11 @@ def test_auto_model_selection():
     
     # Test complex query
     result = manager.resolve_model_id("auto", "Write a Python function to implement binary search algorithm")
-    assert result == "openai/gpt-4o"
+    assert result == "openai/gemini-2.5-flash-thinking"
     
     # Test backward compatibility
-    result = manager.resolve_model_id("openai/gpt-4o")
-    assert result == "openai/gpt-4o"
+    result = manager.resolve_model_id("openai/gemini-2.5-flash-thinking")
+    assert result == "openai/gemini-2.5-flash-thinking"
 ```
 
 #### **Task 4.2: Production Deployment (2h)**

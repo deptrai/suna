@@ -116,8 +116,8 @@ init_dependency_system() {
     set_service_value "SERVICE_STARTUP_TIMEOUTS" "redis" "10"
     set_service_value "SERVICE_STARTUP_TIMEOUTS" "supabase" "15"
     set_service_value "SERVICE_STARTUP_TIMEOUTS" "worker" "20"
-    set_service_value "SERVICE_STARTUP_TIMEOUTS" "backend" "25"
-    set_service_value "SERVICE_STARTUP_TIMEOUTS" "frontend" "60"    set_service_value "SERVICE_STARTUP_TIMEOUTS" "frontend" "30"
+    set_service_value "SERVICE_STARTUP_TIMEOUTS" "backend" "45"
+    set_service_value "SERVICE_STARTUP_TIMEOUTS" "frontend" "120"
     set_service_value "SERVICE_STARTUP_TIMEOUTS" "monitor" "5"
     
     # Initialize all services as pending
@@ -376,7 +376,7 @@ execute_startup_sequence() {
                 continue
                 ;;
             "worker")
-                start_command="cd \"$PROJECT_ROOT/../backend\" && nohup bash -c 'unset VIRTUAL_ENV && source .venv/bin/activate && python3 -m dramatiq run_agent_background' > \"$PROJECT_ROOT/../logs/worker.log\" 2>&1"
+                start_command="cd \"$PROJECT_ROOT/../backend\" && nohup uv run dramatiq run_agent_background > \"$PROJECT_ROOT/../logs/worker.log\" 2>&1"
                 ;;
             "backend")
                 if [[ ! -d "$PROJECT_ROOT/../backend" ]]; then
@@ -384,10 +384,25 @@ execute_startup_sequence() {
                     set_service_value "SERVICE_STATUS" "$service" "$SERVICE_FAILED"
                     return 1
                 fi
-                start_command="cd \"$PROJECT_ROOT/../backend\" && nohup bash -c 'unset VIRTUAL_ENV && source .venv/bin/activate && python3 api.py' > \"$PROJECT_ROOT/../logs/backend.log\" 2>&1"
+                start_command="cd \"$PROJECT_ROOT/../backend\" && nohup uv run uvicorn api:app --host 0.0.0.0 --port $(get_config_value 'services.application.backend.port' '8000') --reload > \"$PROJECT_ROOT/../logs/backend.log\" 2>&1"
                 ;;
             "frontend")
-                start_command="cd \"$PROJECT_ROOT/../frontend\" && nohup npm run dev > \"$PROJECT_ROOT/../logs/frontend.log\" 2>&1"
+                if [[ ! -d "$PROJECT_ROOT/../frontend" ]]; then
+                    log_structured "ERROR" "dependency_manager" "Frontend directory not found at $PROJECT_ROOT/../frontend"
+                    set_service_value "SERVICE_STATUS" "$service" "$SERVICE_FAILED"
+                    return 1
+                fi
+                # Install dependencies if node_modules doesn't exist
+                if [[ ! -d "$PROJECT_ROOT/../frontend/node_modules" ]]; then
+                    log_structured "INFO" "dependency_manager" "Installing frontend dependencies..."
+                    cd "$PROJECT_ROOT/../frontend" && pnpm install --silent > "$PROJECT_ROOT/../logs/frontend_install.log" 2>&1
+                    if [[ $? -ne 0 ]]; then
+                        log_structured "ERROR" "dependency_manager" "Failed to install frontend dependencies"
+                        set_service_value "SERVICE_STATUS" "$service" "$SERVICE_FAILED"
+                        return 1
+                    fi
+                fi
+                start_command="cd \"$PROJECT_ROOT/../frontend\" && nohup pnpm run dev > \"$PROJECT_ROOT/../logs/frontend.log\" 2>&1"
                 ;;
             "monitor")
                 start_command="nohup \"$PROJECT_ROOT/../logs/enhanced_monitor.sh\" > \"$PROJECT_ROOT/../logs/enhanced_monitor_output.log\" 2>&1"

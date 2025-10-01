@@ -192,7 +192,7 @@ async def main():
             "message": "What is artificial intelligence? Keep it brief."
         },
         {
-            "model": "openai-compatible/gpt-4o",
+            "model": "openai-compatible/gemini-2.5-flash-thinking",
             "message": "Explain quantum computing in simple terms."
         }
     ]

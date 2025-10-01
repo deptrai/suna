@@ -279,7 +279,7 @@ class ThreadManager:
                     user_query = temporary_message.get('content', '')
                 else:
                     # Get last user message from thread
-                    messages_for_routing = await self.get_messages(thread_id)
+                    messages_for_routing = await self.get_llm_messages(thread_id)
                     for msg in reversed(messages_for_routing):
                         if isinstance(msg, dict) and msg.get('role') == 'user':
                             user_query = str(msg.get('content', ''))

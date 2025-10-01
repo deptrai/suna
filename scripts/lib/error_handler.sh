@@ -542,7 +542,7 @@ attempt_service_restart() {
         # Restart service
         case "$service" in
             "worker")
-                cd "$PROJECT_ROOT/backend" && nohup bash -c 'unset VIRTUAL_ENV && source .venv/bin/activate && python3 -m dramatiq run_agent_background' > "$PROJECT_ROOT/logs/worker.log" 2>&1 &
+                cd "$PROJECT_ROOT/backend" && nohup uv run dramatiq run_agent_background > "$PROJECT_ROOT/logs/worker.log" 2>&1 &
                 ;;
             "backend")
                 cd "$PROJECT_ROOT/backend" && nohup uv run uvicorn api:app --host 0.0.0.0 --port 8000 --reload > "$PROJECT_ROOT/logs/backend.log" 2>&1 &

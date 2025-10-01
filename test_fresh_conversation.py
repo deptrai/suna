@@ -17,7 +17,7 @@ def test_fresh_conversation():
     data = {
         "message": test_message,
         "prompt": test_message,  # Add prompt field
-        "model_name": "openai-compatible/gpt-4o",
+        "model_name": "openai-compatible/gemini-2.5-flash-thinking",
         "enable_context_manager": "true",
         "stream": "false"
     }

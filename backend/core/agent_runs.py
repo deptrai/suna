@@ -274,7 +274,14 @@ async def start_agent(
 
     request_id = structlog.contextvars.get_contextvars().get('request_id')
 
+    # DEBUG: Check agent_config size before enqueue
+    import json
+    import sys
+    agent_config_json = json.dumps(agent_config)
+    agent_config_size = sys.getsizeof(agent_config_json)
     logger.debug(f"🚀 About to enqueue agent task: {agent_run_id} with model: {model_name}")
+    logger.debug(f"📦 Agent config size: {agent_config_size:,} bytes ({agent_config_size / 1024:.2f} KB)")
+
     try:
         run_agent_background.send(
             agent_run_id=agent_run_id, thread_id=thread_id, instance_id=utils.instance_id,

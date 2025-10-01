@@ -47,7 +47,7 @@ mkdir -p logs
 # Start backend
 echo "🚀 Starting Backend..."
 cd backend
-nohup uvicorn main:app --reload --host 127.0.0.1 --port 8000 > "../logs/backend.log" 2>&1 &
+nohup uv run uvicorn api:app --reload --host 127.0.0.1 --port 8000 > "../logs/backend.log" 2>&1 &
 BACKEND_PID=$!
 cd ..
 
@@ -68,7 +68,7 @@ done
 # Start worker
 echo "🚀 Starting Worker..."
 cd backend
-nohup bash -c 'source .venv/bin/activate && python3 -m dramatiq run_agent_background' > "../logs/worker.log" 2>&1 &
+nohup uv run dramatiq run_agent_background > "../logs/worker.log" 2>&1 &
 WORKER_PID=$!
 cd ..
 
