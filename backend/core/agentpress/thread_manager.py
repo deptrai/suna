@@ -500,65 +500,20 @@ class ThreadManager:
             else:
                 prepared_messages = [optimized_system_prompt] + messages
 
-            # Get tool schemas if needed with query-based filtering
+            # REVERTED TO ORIGINAL: Get tool schemas if needed (no filtering)
+            # Root cause: Tool filtering and 3-tool limit was breaking tool calling
+            # The complex filtering logic was causing v98store API to reject requests
             openapi_tool_schemas = None
             original_tool_count = 0
             if config.native_tool_calling:
-                # Get user query for tool filtering
-                user_query = ""
-                if messages:
-                    for msg in reversed(messages):
-                        if isinstance(msg, dict) and msg.get('role') == 'user':
-                            user_query = str(msg.get('content', ''))[:200]  # First 200 chars
-                            break
+                # Use original simple logic: get ALL registered tools
+                openapi_tool_schemas = self.tool_registry.get_openapi_schemas()
+                original_tool_count = len(openapi_tool_schemas) if openapi_tool_schemas else 0
 
-                # Get original tool count before filtering
-                original_tool_count = len(self.tool_registry.get_openapi_schemas())
-
-                # Use balanced schemas (essential + query-specific tools)
-                openapi_tool_schemas = self.tool_registry.get_filtered_schemas(user_query)
-
-                # For v98store models, limit to 3 tools with smart selection
-                # v98store gpt-4o supports native tool calling with up to 3 tools
-                if llm_model.startswith("openai-compatible/") and openapi_tool_schemas and len(openapi_tool_schemas) > 3:
-                    logger.info(f"🔧 Limiting tools for v98store model {llm_model}: {len(openapi_tool_schemas)} → 3 tools")
-
-                    # Smart tool selection based on query keywords
-                    query_lower = user_query.lower() if user_query else ""
-                    priority_tools = []
-
-                    # Priority 1: Search-related queries
-                    if any(keyword in query_lower for keyword in ['search', 'tìm kiếm', 'find', 'research', 'look up', 'tra cứu']):
-                        web_search = next((t for t in openapi_tool_schemas if t.get("function", {}).get("name") == "web_search"), None)
-                        if web_search and web_search not in priority_tools:
-                            priority_tools.append(web_search)
-                            logger.debug(f"🎯 Priority tool added: web_search (search query detected)")
-
-                    # Priority 2: Task management queries
-                    if any(keyword in query_lower for keyword in ['task', 'todo', 'create', 'tạo', 'add', 'thêm']):
-                        create_tasks = next((t for t in openapi_tool_schemas if t.get("function", {}).get("name") == "create_tasks"), None)
-                        if create_tasks and create_tasks not in priority_tools:
-                            priority_tools.append(create_tasks)
-                            logger.debug(f"🎯 Priority tool added: create_tasks (task query detected)")
-
-                    # Priority 3: Command execution queries
-                    if any(keyword in query_lower for keyword in ['run', 'execute', 'command', 'chạy', 'thực thi']):
-                        execute_command = next((t for t in openapi_tool_schemas if t.get("function", {}).get("name") == "execute_command"), None)
-                        if execute_command and execute_command not in priority_tools:
-                            priority_tools.append(execute_command)
-                            logger.debug(f"🎯 Priority tool added: execute_command (command query detected)")
-
-                    # Fill remaining slots with top filtered tools
-                    for tool in openapi_tool_schemas:
-                        if tool not in priority_tools and len(priority_tools) < 3:
-                            priority_tools.append(tool)
-
-                    openapi_tool_schemas = priority_tools[:3]
-
-                # Log which tools were selected
+                # Log which tools are enabled
                 if openapi_tool_schemas:
                     tool_names = [t.get("function", {}).get("name", "unknown") for t in openapi_tool_schemas]
-                    logger.info(f"🔧 Tools enabled for model {llm_model}: {len(openapi_tool_schemas)} tools - {tool_names}")
+                    logger.info(f"🔧 Tools enabled for model {llm_model}: {len(openapi_tool_schemas)} tools - {tool_names[:10]}")  # Show first 10
                 else:
                     logger.info(f"🔧 Tools enabled for model {llm_model}: 0 tools")
 
