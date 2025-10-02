@@ -422,34 +422,51 @@ Frontend (Next.js 3000) → Backend (FastAPI 8000) → ChainLens-Core (3006) →
 
 **Technical Tasks:**
 - [ ] **T6.2.1** Create `crypto_services_tool.py` in backend/core/tools (2h) ❌ NOT STARTED
-  - Implement SandboxCryptoServicesTool class
-  - Add analyze_crypto_project method
-  - Add get_onchain_analysis method
-  - Add get_sentiment_analysis method
-  - Add get_tokenomics_analysis method
-  - Add verify_team method
-  - HTTP client to call ChainLens-Core (port 3006)
+  - Implement SandboxCryptoServicesTool class extending SandboxToolsBase
+  - Add 6 main methods with @openapi_schema and @usage_example decorators:
+    * `analyze_crypto_project(project_id, analysis_type)` - Full analysis
+    * `get_onchain_analysis(token_address, chain)` - OnChain metrics
+    * `get_sentiment_analysis(project_id, timeframe)` - Social sentiment
+    * `get_tokenomics_analysis(project_id, analysis_type)` - Token economics
+    * `verify_team(project_id, github_org)` - Team verification
+    * `get_advanced_analytics(project_id, metrics)` - Advanced metrics
+  - Add 3 helper methods:
+    * `_call_chainlens_core(method, endpoint, data, params)` - HTTP client
+    * `_get_jwt_token()` - Get Supabase JWT from thread_manager
+    * `_format_analysis_response(response, analysis_type)` - Format for LLM
+  - HTTP client using httpx to call ChainLens-Core (port 3006)
   - Handle JWT authentication from Supabase
-  - Parse and format responses
+  - Parse and format responses for LLM consumption
+  - Comprehensive error handling with retry logic
 
-- [ ] **T6.2.2** Register tool in tool registry (30min) ❌ NOT STARTED
-  - Add tool to `backend/core/tools/__init__.py`
-  - Configure tool permissions
-  - Add tool to agent tool list
+- [ ] **T6.2.2** Register tool in backend (30min) ❌ NOT STARTED
+  - Add import to `backend/core/run.py`
+  - Register in `_register_sandbox_tools` method
+  - Add configuration to `backend/core/utils/config.py`:
+    * CHAINLENS_CORE_URL (default: http://localhost:3006)
+    * CHAINLENS_CORE_API_KEY
+  - Add environment variables to `backend/.env`
 
-- [ ] **T6.2.3** Add tool usage examples and documentation (30min) ❌ NOT STARTED
-  - Add @openapi_schema decorator
-  - Add @usage_example decorator
-  - Document all parameters
+- [ ] **T6.2.3** Add documentation (30min) ❌ NOT STARTED
+  - Update `backend/core/prompts/agent_builder_prompt.py`:
+    * Add crypto_services_tool to tool list
+    * Add cryptocurrency analysis use case
+  - Add @openapi_schema decorators with detailed descriptions
+  - Add @usage_example decorators with XML examples
+  - Document all parameters and return types
   - Add error handling examples
 
 - [ ] **T6.2.4** Test end-to-end integration (1h) ❌ NOT STARTED
-  - Test crypto query detection
-  - Test tool calling from LLM
-  - Test ChainLens-Core API calls
-  - Test response formatting
-  - Test error handling
-  - Test with different user tiers
+  - Test crypto query detection by LLM
+  - Test tool calling from LLM with various queries
+  - Test ChainLens-Core API calls (all 6 methods)
+  - Test response formatting for LLM
+  - Test error handling (invalid project, network errors, timeouts)
+  - Test with different user tiers (Free/Pro/Enterprise)
+  - Test end-to-end flow: Frontend → Backend → ChainLens-Core → Microservices
+  - Performance testing (response times, concurrent requests)
+
+**Detailed Implementation Plan:** `docs/project-management/story-6.2-detailed-implementation-plan.md`
 
 **Story Points:** 5  
 **Priority:** P1 (Important)  
