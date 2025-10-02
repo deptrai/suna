@@ -357,29 +357,37 @@
 ## 🔌 **EPIC 6: Integration với ChainLens-Automation**
 *Connect crypto services to existing ChainLens platform*
 
+**Architecture Flow:**
+```
+Frontend (Next.js 3000) → Backend (FastAPI 8000) → ChainLens-Core (3006) → Microservices
+```
+
 ### **User Stories**
 
-#### **Story 6.1: Backend API Integration** ✅ COMPLETED
-**As a** ChainLens user
-**I want** seamless access to crypto analysis
-**So that** I can use new features within existing platform
+#### **Story 6.1: ChainLens-Core Microservices Setup** ✅ COMPLETED
+**As a** system architect
+**I want** all microservices running and integrated
+**So that** ChainLens-Core can orchestrate crypto analysis
 
 **Acceptance Criteria:**
-- ✅ ChainLens-Automation can call ChainLens-Core APIs
-- ✅ Authentication flow works between systems
-- ✅ User tier and permissions sync properly
-- ✅ Rate limiting respects existing user quotas
-- ✅ Error handling and fallbacks implemented
+- ✅ ChainLens-Core API Gateway running (port 3006)
+- ✅ All 4 microservices running and healthy
+- ✅ Service discovery working correctly
+- ✅ Circuit breaker pattern implemented
+- ✅ Parallel execution for multiple service calls
+- ✅ Redis caching layer reduces duplicate calls
+- ✅ JWT authentication flow validated
+- ✅ Rate limiting respects user tiers
 
 **Story Points:** 8
 **Priority:** P0 (Critical)
-**Sprint:** 4-5
+**Sprint:** 4
 
 **Technical Tasks:**
-- [x] **T6.1.1** Create API client in ChainLens-Automation (2h) ✅ COMPLETED
-- [x] **T6.1.2** Implement authentication bridge (2h) ✅ COMPLETED
-- [x] **T6.1.3** Add user tier synchronization (2h) ✅ COMPLETED
-- [x] **T6.1.4** Implement error handling and fallbacks (1h) ✅ COMPLETED
+- [x] **T6.1.1** Setup ChainLens-Core API Gateway (2h) ✅ COMPLETED
+- [x] **T6.1.2** Implement service discovery (2h) ✅ COMPLETED
+- [x] **T6.1.3** Add circuit breaker pattern (1h) ✅ COMPLETED
+- [x] **T6.1.4** Implement parallel execution (2h) ✅ COMPLETED
 - [x] **T6.1.5** Add comprehensive logging and monitoring (1h) ✅ COMPLETED
 
 **Implementation Notes:**
@@ -394,17 +402,54 @@
 - Rate limiting respects user tiers (Free/Pro/Enterprise/Admin)
 - Integration test report: `docs/project-management/integration-test-report.md`
 
-#### **Story 6.2: Frontend Integration**
-**As a** ChainLens user  
-**I want** crypto analysis features in the web interface  
-**So that** I can access all functionality in one place
+#### **Story 6.2: Backend Tool Integration**
+**As a** ChainLens user
+**I want** to analyze crypto projects through chat interface
+**So that** I can get comprehensive analysis via natural language
 
 **Acceptance Criteria:**
-- ✅ New crypto analysis page in Next.js frontend
-- ✅ Real-time analysis status updates
-- ✅ Results visualization and charts
-- ✅ Analysis history and saved reports
-- ✅ Mobile-responsive design
+- ❌ Crypto services tool created in FastAPI backend
+- ❌ Tool registered in tool registry
+- ❌ LLM can detect crypto queries and call tool
+- ❌ Tool calls ChainLens-Core API Gateway
+- ❌ Results formatted and returned to frontend
+- ❌ Error handling and fallbacks implemented
+- ❌ End-to-end flow tested: Frontend → Backend → ChainLens-Core → Microservices
+
+**Story Points:** 5
+**Priority:** P0 (Critical)
+**Sprint:** 5
+
+**Technical Tasks:**
+- [ ] **T6.2.1** Create `crypto_services_tool.py` in backend/core/tools (2h) ❌ NOT STARTED
+  - Implement SandboxCryptoServicesTool class
+  - Add analyze_crypto_project method
+  - Add get_onchain_analysis method
+  - Add get_sentiment_analysis method
+  - Add get_tokenomics_analysis method
+  - Add verify_team method
+  - HTTP client to call ChainLens-Core (port 3006)
+  - Handle JWT authentication from Supabase
+  - Parse and format responses
+
+- [ ] **T6.2.2** Register tool in tool registry (30min) ❌ NOT STARTED
+  - Add tool to `backend/core/tools/__init__.py`
+  - Configure tool permissions
+  - Add tool to agent tool list
+
+- [ ] **T6.2.3** Add tool usage examples and documentation (30min) ❌ NOT STARTED
+  - Add @openapi_schema decorator
+  - Add @usage_example decorator
+  - Document all parameters
+  - Add error handling examples
+
+- [ ] **T6.2.4** Test end-to-end integration (1h) ❌ NOT STARTED
+  - Test crypto query detection
+  - Test tool calling from LLM
+  - Test ChainLens-Core API calls
+  - Test response formatting
+  - Test error handling
+  - Test with different user tiers
 
 **Story Points:** 5  
 **Priority:** P1 (Important)  
