@@ -30,130 +30,15 @@
       "role": "user",
       "content": "FINAL TEST: t\u1ea1o 3 tasks v\u1ec1 research token cake",
       "message_id": "b56b48dd-fb99-44aa-96b0-c8facf5f46cc"
-    }
-  ],
-  "tools": [
-    {
-      "type": "function",
-      "function": {
-        "name": "web_search",
-        "description": "Search the web for up-to-date information on a specific topic using the Tavily API. This tool allows you to gather real-time information from the internet to answer user queries, research topics, validate facts, and find recent developments. Results include titles, URLs, and publication dates. Use this tool for discovering relevant web pages before potentially crawling them for complete content.",
-        "parameters": {
-          "type": "object",
-          "properties": {
-            "query": {
-              "type": "string",
-              "description": "The search query to find relevant web pages. Be specific and include key terms to improve search accuracy. For best results, use natural language questions or keyword combinations that precisely describe what you're looking for."
-            },
-            "num_results": {
-              "type": "integer",
-              "description": "The number of search results to return. Increase for more comprehensive research or decrease for focused, high-relevance results.",
-              "default": 20
-            }
-          },
-          "required": [
-            "query"
-          ]
-        }
-      }
     },
     {
-      "type": "function",
-      "function": {
-        "name": "create_tasks",
-        "description": "Create tasks organized by sections. Supports both single section and multi-section batch creation. Creates sections automatically if they don't exist. IMPORTANT: Create tasks in the exact order they will be executed. Each task should represent a single, specific operation that can be completed independently. Break down complex operations into individual, sequential tasks to maintain the one-task-at-a-time execution principle. You MUST specify either 'sections' array OR both 'task_contents' and ('section_title' OR 'section_id').",
-        "parameters": {
-          "type": "object",
-          "properties": {
-            "sections": {
-              "type": "array",
-              "description": "List of sections with their tasks for batch creation",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "title": {
-                    "type": "string",
-                    "description": "Section title (creates if doesn't exist)"
-                  },
-                  "tasks": {
-                    "type": "array",
-                    "description": "Task contents for this section",
-                    "items": {
-                      "type": "string"
-                    },
-                    "minItems": 1
-                  }
-                },
-                "required": [
-                  "title",
-                  "tasks"
-                ]
-              }
-            },
-            "section_title": {
-              "type": "string",
-              "description": "Single section title (creates if doesn't exist - use this OR sections array)"
-            },
-            "section_id": {
-              "type": "string",
-              "description": "Existing section ID (use this OR sections array OR section_title)"
-            },
-            "task_contents": {
-              "type": "array",
-              "description": "Task contents for single section creation (use with section_title or section_id)",
-              "items": {
-                "type": "string"
-              }
-            }
-          },
-          "anyOf": [
-            {
-              "required": [
-                "sections"
-              ]
-            },
-            {
-              "required": [
-                "task_contents"
-              ],
-              "anyOf": [
-                {
-                  "required": [
-                    "section_title"
-                  ]
-                },
-                {
-                  "required": [
-                    "section_id"
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-      }
-    },
-    {
-      "type": "function",
-      "function": {
-        "name": "expand_message",
-        "description": "Expand a message from the previous conversation with the user. Use this tool to expand a message that was truncated in the earlier conversation.",
-        "parameters": {
-          "type": "object",
-          "properties": {
-            "message_id": {
-              "type": "string",
-              "description": "The ID of the message to expand. Must be a UUID."
-            }
-          },
-          "required": [
-            "message_id"
-          ]
-        }
-      }
+      "role": "user",
+      "content": "TEST WITHOUT TOOLS: xin ch\u00e0o, b\u1ea1n c\u00f3 kh\u1ecfe kh\u00f4ng?",
+      "message_id": "3b632ce7-c3fa-4d6c-9c2c-a111214de0f5"
     }
   ],
-  "tool_choice": "auto",
+  "tools": [],
+  "tool_choice": null,
   "temperature": 0,
   "api_base": "https://v98store.com/v1",
   "custom_llm_provider": "openai",
