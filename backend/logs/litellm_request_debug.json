@@ -9,9 +9,120 @@
       "role": "user",
       "content": "xin ch\u00e0o, b\u1ea1n c\u00f3 kh\u1ecfe kh\u00f4ng?",
       "message_id": "933d8aea-00b4-4620-be0d-29d8232fd54e"
+    },
+    {
+      "role": "assistant",
+      "content": "Xin ch\u00e0o! M\u00ecnh r\u1ea5t kh\u1ecfe, c\u1ea3m \u01a1n b\u1ea1n \u0111\u00e3 h\u1ecfi. B\u1ea1n c\u00f3 c\u1ea7n gi\u00fap g\u00ec kh\u00f4ng?",
+      "tool_calls": null,
+      "message_id": "09c2823c-8e21-43c2-b0c3-7b8a7195bf9f"
+    },
+    {
+      "role": "user",
+      "content": "call tool create_tasks \u0111\u1ec3 t\u1ea1o 3 tasks v\u1ec1 search token cake",
+      "message_id": "d8b92a25-0ee7-455d-8254-f8952fc477ec"
     }
   ],
   "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "web_search",
+        "description": "Search the web for up-to-date information on a specific topic using the Tavily API. This tool allows you to gather real-time information from the internet to answer user queries, research topics, validate facts, and find recent developments. Results include titles, URLs, and publication dates. Use this tool for discovering relevant web pages before potentially crawling them for complete content.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "description": "The search query to find relevant web pages. Be specific and include key terms to improve search accuracy. For best results, use natural language questions or keyword combinations that precisely describe what you're looking for."
+            },
+            "num_results": {
+              "type": "integer",
+              "description": "The number of search results to return. Increase for more comprehensive research or decrease for focused, high-relevance results.",
+              "default": 20
+            }
+          },
+          "required": [
+            "query"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "create_tasks",
+        "description": "Create tasks organized by sections. Supports both single section and multi-section batch creation. Creates sections automatically if they don't exist. IMPORTANT: Create tasks in the exact order they will be executed. Each task should represent a single, specific operation that can be completed independently. Break down complex operations into individual, sequential tasks to maintain the one-task-at-a-time execution principle. You MUST specify either 'sections' array OR both 'task_contents' and ('section_title' OR 'section_id').",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "sections": {
+              "type": "array",
+              "description": "List of sections with their tasks for batch creation",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "description": "Section title (creates if doesn't exist)"
+                  },
+                  "tasks": {
+                    "type": "array",
+                    "description": "Task contents for this section",
+                    "items": {
+                      "type": "string"
+                    },
+                    "minItems": 1
+                  }
+                },
+                "required": [
+                  "title",
+                  "tasks"
+                ]
+              }
+            },
+            "section_title": {
+              "type": "string",
+              "description": "Single section title (creates if doesn't exist - use this OR sections array)"
+            },
+            "section_id": {
+              "type": "string",
+              "description": "Existing section ID (use this OR sections array OR section_title)"
+            },
+            "task_contents": {
+              "type": "array",
+              "description": "Task contents for single section creation (use with section_title or section_id)",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "anyOf": [
+            {
+              "required": [
+                "sections"
+              ]
+            },
+            {
+              "required": [
+                "task_contents"
+              ],
+              "anyOf": [
+                {
+                  "required": [
+                    "section_title"
+                  ]
+                },
+                {
+                  "required": [
+                    "section_id"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
     {
       "type": "function",
       "function": {
@@ -28,70 +139,6 @@
           "required": [
             "message_id"
           ]
-        }
-      }
-    },
-    {
-      "type": "function",
-      "function": {
-        "name": "ask",
-        "description": "Ask user a question and wait for response. Use for: 1) Requesting clarification on ambiguous requirements, 2) Seeking confirmation before proceeding with high-impact changes, 3) Gathering additional information needed to complete a task, 4) Offering options and requesting user preference, 5) Validating assumptions when critical to task success, 6) When encountering unclear or ambiguous results during task execution, 7) When tool results don't match expectations, 8) For natural conversation and follow-up questions, 9) When research reveals multiple entities with the same name, 10) When user requirements are unclear or could be interpreted differently. IMPORTANT: Use this tool when user input is essential to proceed. Always provide clear context and options when applicable. Use natural, conversational language that feels like talking with a helpful friend. Include relevant attachments when the question relates to specific files or resources. CRITICAL: When you discover ambiguity (like multiple people with the same name), immediately stop and ask for clarification rather than making assumptions.",
-        "parameters": {
-          "type": "object",
-          "properties": {
-            "text": {
-              "type": "string",
-              "description": "Question text to present to user - should be specific and clearly indicate what information you need. Use natural, conversational language. Include: 1) Clear question or request, 2) Context about why the input is needed, 3) Available options if applicable, 4) Impact of different choices, 5) Any relevant constraints or considerations."
-            },
-            "attachments": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "items": {
-                    "type": "string"
-                  },
-                  "type": "array"
-                }
-              ],
-              "description": "(Optional) List of files or URLs to attach to the question. Include when: 1) Question relates to specific files or configurations, 2) User needs to review content before answering, 3) Options or choices are documented in files, 4) Supporting evidence or context is needed. Always use relative paths to /workspace directory."
-            }
-          },
-          "required": [
-            "text"
-          ]
-        }
-      }
-    },
-    {
-      "type": "function",
-      "function": {
-        "name": "complete",
-        "description": "A special tool to indicate you have completed all tasks and are about to enter complete state. Use ONLY when: 1) All tasks in todo.md are marked complete [x], 2) The user's original request has been fully addressed, 3) There are no pending actions or follow-ups required, 4) You've delivered all final outputs and results to the user. IMPORTANT: This is the ONLY way to properly terminate execution. Never use this tool unless ALL tasks are complete and verified. Always ensure you've provided all necessary outputs and references before using this tool. Include relevant attachments when the completion relates to specific files or resources.",
-        "parameters": {
-          "type": "object",
-          "properties": {
-            "text": {
-              "type": "string",
-              "description": "Completion message or summary to present to user - should provide clear indication of what was accomplished. Include: 1) Summary of completed tasks, 2) Key deliverables or outputs, 3) Any important notes or next steps, 4) Impact or benefits achieved."
-            },
-            "attachments": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "items": {
-                    "type": "string"
-                  },
-                  "type": "array"
-                }
-              ],
-              "description": "(Optional) List of files or URLs to attach to the completion message. Include when: 1) Completion relates to specific files or configurations, 2) User needs to review final outputs, 3) Deliverables are documented in files, 4) Supporting evidence or context is needed. Always use relative paths to /workspace directory."
-            }
-          },
-          "required": []
         }
       }
     }
