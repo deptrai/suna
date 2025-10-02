@@ -10,6 +10,7 @@ import { HttpModule } from '@nestjs/axios';
 
 import { TeamVerificationController } from './team-verification.controller';
 import { TeamVerificationService } from './team-verification.service';
+import { AdvancedTeamAnalyticsService } from './advanced-team-analytics.service';
 import { TeamData } from '../entities/team-data.entity';
 import { TeamMember } from '../entities/team-member.entity';
 import { GitHubService } from '../external-apis/github.service';
@@ -30,13 +31,14 @@ import { MetricsService } from '../metrics/metrics.service';
   controllers: [TeamVerificationController],
   providers: [
     TeamVerificationService,
+    AdvancedTeamAnalyticsService,
     GitHubService,
     LinkedInService,
     WebScrapingService,
     CacheService,
     MetricsService,
   ],
-  exports: [TeamVerificationService],
+  exports: [TeamVerificationService, AdvancedTeamAnalyticsService],
 })
 export class TeamVerificationModule {}
 

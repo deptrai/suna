@@ -6,6 +6,7 @@
 import { Controller, Post, Body, Get, Param, Logger, HttpStatus, HttpException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { TeamVerificationService } from './team-verification.service';
+import { AdvancedTeamAnalyticsService } from './advanced-team-analytics.service';
 import { TeamVerificationRequestDto } from './dto/team-verification-request.dto';
 import { TeamVerificationResponseDto } from './dto/team-verification-response.dto';
 
@@ -16,6 +17,7 @@ export class TeamVerificationController {
 
   constructor(
     private readonly teamVerificationService: TeamVerificationService,
+    private readonly advancedTeamAnalyticsService: AdvancedTeamAnalyticsService,
   ) {}
 
   @Post('verify')
@@ -145,6 +147,43 @@ export class TeamVerificationController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+  }
+
+  // Story 5.2: Advanced Team Analytics
+
+  @Get('analytics/network/:projectId')
+  @ApiOperation({ summary: 'Get team network analysis' })
+  @ApiResponse({ status: 200, description: 'Network analysis retrieved successfully' })
+  async getNetworkAnalysis(@Param('projectId') projectId: string) {
+    return this.advancedTeamAnalyticsService.analyzeNetwork(projectId);
+  }
+
+  @Get('analytics/history/:projectId')
+  @ApiOperation({ summary: 'Get project history tracking' })
+  @ApiResponse({ status: 200, description: 'Project history retrieved successfully' })
+  async getProjectHistory(@Param('projectId') projectId: string) {
+    return this.advancedTeamAnalyticsService.trackProjectHistory(projectId);
+  }
+
+  @Get('analytics/red-flags/:projectId')
+  @ApiOperation({ summary: 'Detect red flags in team' })
+  @ApiResponse({ status: 200, description: 'Red flag detection completed successfully' })
+  async detectRedFlags(@Param('projectId') projectId: string) {
+    return this.advancedTeamAnalyticsService.detectRedFlags(projectId);
+  }
+
+  @Get('analytics/experience/:projectId')
+  @ApiOperation({ summary: 'Assess industry experience' })
+  @ApiResponse({ status: 200, description: 'Experience assessment completed successfully' })
+  async assessExperience(@Param('projectId') projectId: string) {
+    return this.advancedTeamAnalyticsService.assessIndustryExperience(projectId);
+  }
+
+  @Get('analytics/stability/:projectId')
+  @ApiOperation({ summary: 'Analyze team stability' })
+  @ApiResponse({ status: 200, description: 'Stability analysis completed successfully' })
+  async analyzeStability(@Param('projectId') projectId: string) {
+    return this.advancedTeamAnalyticsService.analyzeTeamStability(projectId);
   }
 }
 
