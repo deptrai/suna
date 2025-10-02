@@ -33,6 +33,14 @@ export const externalApiConfig = registerAs('externalApi', () => ({
       window: 24 * 60 * 60 * 1000, // 24 hours in ms
     },
   },
+  cryptoNewsApi: {
+    apiKey: process.env.CRYPTO_NEWS_API_KEY,
+    baseUrl: 'https://cryptonews-api.com/api/v1',
+    rateLimit: {
+      requests: 1000, // requests per day
+      window: 24 * 60 * 60 * 1000, // 24 hours in ms
+    },
+  },
   coinDesk: {
     baseUrl: 'https://api.coindesk.com/v1',
     rateLimit: {

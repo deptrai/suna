@@ -31,6 +31,7 @@ import { externalApiConfig } from './config/external-api.config';
       load: [databaseConfig, redisConfig, externalApiConfig],
       envFilePath: ['.env.local', '.env'],
       cache: true,
+      expandVariables: true,
     }),
 
     // Winston Logger
@@ -107,11 +108,20 @@ export class AppModule {
   constructor(private configService: ConfigService) {
     const environment = this.configService.get<string>('NODE_ENV', 'development');
     const port = this.configService.get<number>('PORT', 3002);
-    
+
     console.log(`🔧 Sentiment Analysis Service Configuration:`);
     console.log(`   Environment: ${environment}`);
     console.log(`   Port: ${port}`);
     console.log(`   Database: ${this.configService.get<string>('database.host')}:${this.configService.get<number>('database.port')}`);
     console.log(`   Redis: ${this.configService.get<string>('redis.host')}:${this.configService.get<number>('redis.port')}`);
+
+    // Debug: Check if external API configs are loaded
+    const twitterToken = this.configService.get<string>('externalApi.twitter.bearerToken');
+    const redditId = this.configService.get<string>('externalApi.reddit.clientId');
+    const newsKey = this.configService.get<string>('externalApi.newsApi.apiKey');
+    console.log(`🔑 API Keys Status:`);
+    console.log(`   Twitter: ${twitterToken ? '✅ Loaded' : '❌ Missing'}`);
+    console.log(`   Reddit: ${redditId ? '✅ Loaded' : '❌ Missing'}`);
+    console.log(`   NewsAPI: ${newsKey ? '✅ Loaded' : '❌ Missing'}`);
   }
 }

@@ -8,6 +8,10 @@ export class HealthService extends HealthIndicator {
   private readonly logger = new Logger(HealthService.name);
   private redis: Redis;
 
+  // Cache for external API health checks to avoid rate limiting
+  private twitterHealthCache: { status: string; responseTime?: string; error?: string; timestamp: number } | null = null;
+  private readonly TWITTER_CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
+
   constructor(private configService: ConfigService) {
     super();
     this.initializeRedis();
@@ -68,6 +72,14 @@ export class HealthService extends HealthIndicator {
         return { status: 'not_configured' };
       }
 
+      // Check cache first to avoid rate limiting (Twitter Free: 50 req/15min)
+      const now = Date.now();
+      if (this.twitterHealthCache && (now - this.twitterHealthCache.timestamp) < this.TWITTER_CACHE_TTL) {
+        this.logger.debug('Using cached Twitter health status');
+        const { timestamp, ...cachedResult } = this.twitterHealthCache;
+        return cachedResult;
+      }
+
       const start = Date.now();
       // Simple API call to check Twitter API availability
       const response = await fetch('https://api.twitter.com/2/tweets/search/recent?query=test&max_results=10', {
@@ -78,13 +90,21 @@ export class HealthService extends HealthIndicator {
 
       const responseTime = Date.now() - start;
 
+      let result: { status: string; responseTime?: string; error?: string };
       if (response.ok) {
-        return { status: 'up', responseTime: `${responseTime}ms` };
+        result = { status: 'up', responseTime: `${responseTime}ms` };
       } else {
-        return { status: 'down', error: `HTTP ${response.status}` };
+        result = { status: 'down', error: `HTTP ${response.status}` };
       }
+
+      // Cache the result
+      this.twitterHealthCache = { ...result, timestamp: now };
+      return result;
     } catch (error) {
-      return { status: 'down', error: error.message };
+      const result = { status: 'down', error: error.message };
+      // Cache error result too to avoid hammering the API
+      this.twitterHealthCache = { ...result, timestamp: Date.now() };
+      return result;
     }
   }
 
@@ -113,20 +133,41 @@ export class HealthService extends HealthIndicator {
   private async checkNewsApi(): Promise<{ status: string; responseTime?: string; error?: string }> {
     try {
       const apiKey = this.configService.get<string>('externalApi.newsApi.apiKey');
-      if (!apiKey) {
+      const cryptoNewsApiKey = this.configService.get<string>('externalApi.cryptoNewsApi.apiKey');
+
+      if (!apiKey && !cryptoNewsApiKey) {
         return { status: 'not_configured' };
       }
 
       const start = Date.now();
-      // Simple API call to check News API availability
-      const response = await fetch(`https://newsapi.org/v2/everything?q=bitcoin&pageSize=1&apiKey=${apiKey}`);
-      const responseTime = Date.now() - start;
 
-      if (response.ok) {
-        return { status: 'up', responseTime: `${responseTime}ms` };
-      } else {
-        return { status: 'down', error: `HTTP ${response.status}` };
+      // Try CryptoNews API first (if configured)
+      if (cryptoNewsApiKey) {
+        try {
+          const response = await fetch(`https://cryptonews-api.com/api/v1/category?section=general&items=1&token=${cryptoNewsApiKey}`);
+          const responseTime = Date.now() - start;
+
+          if (response.ok) {
+            return { status: 'up', responseTime: `${responseTime}ms` };
+          }
+        } catch (error) {
+          this.logger.warn('CryptoNews API check failed, trying NewsAPI:', error.message);
+        }
       }
+
+      // Fallback to NewsAPI (if configured)
+      if (apiKey) {
+        const response = await fetch(`https://newsapi.org/v2/everything?q=bitcoin&pageSize=1&apiKey=${apiKey}`);
+        const responseTime = Date.now() - start;
+
+        if (response.ok) {
+          return { status: 'up', responseTime: `${responseTime}ms` };
+        } else {
+          return { status: 'down', error: `HTTP ${response.status}` };
+        }
+      }
+
+      return { status: 'down', error: 'No valid API key' };
     } catch (error) {
       return { status: 'down', error: error.message };
     }

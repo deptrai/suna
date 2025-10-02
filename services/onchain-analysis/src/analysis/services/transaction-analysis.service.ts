@@ -105,42 +105,74 @@ export class TransactionAnalysisService {
       }
 
       // Fetch transaction data
+      // Moralis free tier limit: 100 transactions max
+      const maxTxLimit = Math.min(request.maxTransactions || 100, 100);
+
       const [transactionsData, priceData] = await Promise.allSettled([
-        this.moralisService.getTokenTransactions(tokenAddress, chainId, request.maxTransactions || 500),
+        this.moralisService.getTokenTransactions(tokenAddress, chainId, maxTxLimit),
         this.moralisService.getTokenPrice(tokenAddress, chainId),
       ]);
 
       const transactions = this.extractSettledValue(transactionsData);
       const price = this.extractSettledValue(priceData);
 
+      // Graceful error handling - return partial data with warnings
+      const warnings: string[] = [];
+
       if (!transactions) {
-        throw new Error('Failed to fetch transaction data');
+        this.logger.warn(`Failed to fetch transaction data for ${tokenAddress}`, {
+          tokenAddress,
+          chainId,
+          error: transactionsData.status === 'rejected' ? transactionsData.reason?.message : 'Unknown error',
+        });
+        warnings.push('transaction_data_unavailable');
       }
 
-      // Build response
+      if (!price) {
+        this.logger.warn(`Failed to fetch price data for ${tokenAddress}`, {
+          tokenAddress,
+          chainId,
+          error: priceData.status === 'rejected' ? priceData.reason?.message : 'Unknown error',
+        });
+        warnings.push('price_data_unavailable');
+      }
+
+      // Build response with warnings
       const response: TransactionAnalysisResponse = {
         tokenAddress,
         chainId,
         timeframe,
-        riskFactors: [],
+        riskFactors: warnings,
         confidence: 0,
         analyzedAt: new Date(),
         processingTime: Date.now() - startTime,
       };
 
-      // Analyze volume if requested
-      if (request.includeVolumeAnalysis !== false) {
-        response.volumeAnalysis = this.analyzeVolume(transactions, price, timeframe);
-      }
+      // Only analyze if we have transaction data
+      if (transactions && transactions.length > 0) {
+        // Analyze volume if requested
+        if (request.includeVolumeAnalysis !== false) {
+          response.volumeAnalysis = this.analyzeVolume(transactions, price, timeframe);
+        }
 
-      // Analyze whale activity if requested
-      if (request.includeWhaleActivity !== false) {
-        response.whaleActivity = this.analyzeWhaleActivity(transactions, price);
-      }
+        // Analyze whale activity if requested
+        if (request.includeWhaleActivity !== false) {
+          response.whaleActivity = this.analyzeWhaleActivity(transactions, price);
+        }
 
-      // Calculate risk factors and confidence
-      response.riskFactors = this.calculateRiskFactors(response);
-      response.confidence = this.calculateConfidence(response);
+        // Calculate risk factors and confidence
+        const additionalRisks = this.calculateRiskFactors(response);
+        response.riskFactors = [...warnings, ...additionalRisks];
+        response.confidence = this.calculateConfidence(response);
+      } else {
+        // No transaction data - return minimal response
+        response.confidence = 0.1;
+        response.riskFactors = [...warnings, 'insufficient_data'];
+        this.logger.warn(`Returning minimal response due to missing transaction data`, {
+          tokenAddress,
+          warnings,
+        });
+      }
 
       // Cache the result
       const cacheTTL = this.getCacheTTL(timeframe);
