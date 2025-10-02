@@ -3,7 +3,7 @@
  * Request structure for token data fetching
  */
 
-import { IsString, IsOptional, IsNumber, IsEnum, Min, Max } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsEnum, Min, Max, Matches } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export enum SupportedChain {
@@ -28,6 +28,9 @@ export class TokenAnalysisRequestDto {
     example: '0xA0b86a33E6441e6e80A0c4C7596C5C0B6b8b8b8b',
   })
   @IsString()
+  @Matches(/^0x[a-fA-F0-9]{40}$/, {
+    message: 'tokenAddress must be a valid Ethereum address (0x followed by 40 hexadecimal characters)',
+  })
   tokenAddress: string;
 
   @ApiPropertyOptional({

@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsNumber, IsBoolean, IsEnum, Min, Max } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsBoolean, IsEnum, Min, Max, Matches } from 'class-validator';
 
 export enum SupportedChain {
   ETHEREUM = 'ethereum',
@@ -22,6 +22,9 @@ export class RiskScoringRequestDto {
     example: '0xA0b86a33E6441e6e80A0c4C7596C5C0B6b8b8b8b',
   })
   @IsString()
+  @Matches(/^0x[a-fA-F0-9]{40}$/, {
+    message: 'tokenAddress must be a valid Ethereum address (0x followed by 40 hexadecimal characters)',
+  })
   tokenAddress: string;
 
   @ApiProperty({
@@ -67,6 +70,9 @@ export class TokenDataInputDto {
     example: '0xA0b86a33E6441e6e80A0c4C7596C5C0B6b8b8b8b',
   })
   @IsString()
+  @Matches(/^0x[a-fA-F0-9]{40}$/, {
+    message: 'tokenAddress must be a valid Ethereum address (0x followed by 40 hexadecimal characters)',
+  })
   tokenAddress: string;
 
   @ApiProperty({
