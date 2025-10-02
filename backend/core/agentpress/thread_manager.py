@@ -495,11 +495,42 @@ class ThreadManager:
                 # Use balanced schemas (essential + query-specific tools)
                 openapi_tool_schemas = self.tool_registry.get_filtered_schemas(user_query)
 
-                # For v98store models, limit to 3 tools (API supports 1-3 tools)
+                # For v98store models, limit to 3 tools with smart selection
                 # v98store gpt-4o supports native tool calling with up to 3 tools
                 if llm_model.startswith("openai-compatible/") and openapi_tool_schemas and len(openapi_tool_schemas) > 3:
                     logger.info(f"🔧 Limiting tools for v98store model {llm_model}: {len(openapi_tool_schemas)} → 3 tools")
-                    openapi_tool_schemas = openapi_tool_schemas[:3]  # Top 3 most relevant tools
+
+                    # Smart tool selection based on query keywords
+                    query_lower = user_query.lower() if user_query else ""
+                    priority_tools = []
+
+                    # Priority 1: Search-related queries
+                    if any(keyword in query_lower for keyword in ['search', 'tìm kiếm', 'find', 'research', 'look up', 'tra cứu']):
+                        web_search = next((t for t in openapi_tool_schemas if t.get("function", {}).get("name") == "web_search"), None)
+                        if web_search and web_search not in priority_tools:
+                            priority_tools.append(web_search)
+                            logger.debug(f"🎯 Priority tool added: web_search (search query detected)")
+
+                    # Priority 2: Task management queries
+                    if any(keyword in query_lower for keyword in ['task', 'todo', 'create', 'tạo', 'add', 'thêm']):
+                        create_task = next((t for t in openapi_tool_schemas if t.get("function", {}).get("name") == "create_task"), None)
+                        if create_task and create_task not in priority_tools:
+                            priority_tools.append(create_task)
+                            logger.debug(f"🎯 Priority tool added: create_task (task query detected)")
+
+                    # Priority 3: Command execution queries
+                    if any(keyword in query_lower for keyword in ['run', 'execute', 'command', 'chạy', 'thực thi']):
+                        execute_command = next((t for t in openapi_tool_schemas if t.get("function", {}).get("name") == "execute_command"), None)
+                        if execute_command and execute_command not in priority_tools:
+                            priority_tools.append(execute_command)
+                            logger.debug(f"🎯 Priority tool added: execute_command (command query detected)")
+
+                    # Fill remaining slots with top filtered tools
+                    for tool in openapi_tool_schemas:
+                        if tool not in priority_tools and len(priority_tools) < 3:
+                            priority_tools.append(tool)
+
+                    openapi_tool_schemas = priority_tools[:3]
 
                 # Log which tools were selected
                 if openapi_tool_schemas:

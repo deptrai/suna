@@ -24,33 +24,35 @@ echo ""
 # Phase 1: Kill all worker processes
 echo -e "${YELLOW}🛑 Stopping all worker processes...${NC}"
 
-# Kill dramatiq workers
-echo -e "   Killing dramatiq processes..."
-pkill -f "dramatiq.*run_agent_background" 2>/dev/null || true
-pkill -9 -f "dramatiq.*run_agent_background" 2>/dev/null || true
+# Get PIDs of worker processes
+WORKER_PIDS=$(pgrep -f "dramatiq run_agent_background" 2>/dev/null || true)
 
-# Kill spawn_main processes (worker spawns)
-echo -e "   Killing spawn_main processes..."
-pkill -f "spawn_main" 2>/dev/null || true
-pkill -9 -f "spawn_main" 2>/dev/null || true
-
-# Additional cleanup for orphaned processes
-echo -e "   Cleaning up orphaned processes..."
-pkill -f "run_agent_background" 2>/dev/null || true
-pkill -9 -f "run_agent_background" 2>/dev/null || true
-
-# Wait for processes to die
-sleep 2
-
-# Verify all workers are stopped
-worker_count=$(pgrep -f "dramatiq.*run_agent_background|spawn_main|run_agent_background" 2>/dev/null | wc -l)
-if [[ $worker_count -eq 0 ]]; then
-    echo -e "${GREEN}✅ All worker processes stopped${NC}"
+if [[ -z "$WORKER_PIDS" ]]; then
+    echo -e "${GREEN}✅ No worker processes found${NC}"
 else
-    echo -e "${YELLOW}⚠️ Warning: $worker_count worker processes still running${NC}"
-    echo -e "   Attempting force kill..."
-    pkill -9 -f "dramatiq" 2>/dev/null || true
-    sleep 1
+    echo -e "   Found worker PIDs: $WORKER_PIDS"
+
+    # Kill workers gracefully first (SIGTERM)
+    echo -e "   Sending SIGTERM to workers..."
+    for pid in $WORKER_PIDS; do
+        kill $pid 2>/dev/null || true
+    done
+
+    # Wait for graceful shutdown
+    sleep 3
+
+    # Check if any workers are still running
+    REMAINING_PIDS=$(pgrep -f "dramatiq run_agent_background" 2>/dev/null || true)
+
+    if [[ -n "$REMAINING_PIDS" ]]; then
+        echo -e "${YELLOW}⚠️ Some workers still running, force killing...${NC}"
+        for pid in $REMAINING_PIDS; do
+            kill -9 $pid 2>/dev/null || true
+        done
+        sleep 1
+    fi
+
+    echo -e "${GREEN}✅ All worker processes stopped${NC}"
 fi
 
 echo ""
