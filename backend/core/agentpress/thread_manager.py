@@ -238,31 +238,17 @@ class ThreadManager:
         """Run a conversation thread with LLM integration and tool execution."""
         logger.debug(f"🚀 Starting thread execution for {thread_id} with model {llm_model}")
 
-        # Phase 1 Task 1.1.2: Log comprehensive request metrics to GlitchTip
-        try:
-            import sentry_sdk
-            from datetime import datetime
+        # NOTE: Moved GlitchTip logging to AFTER optimization (line ~575)
+        # to log the FINAL context sent to LLM, not the initial context
 
-            prompt_size = len(system_prompt.get('content', '')) if isinstance(system_prompt, dict) else 0
-            tool_count = len(processor_config.tools) if processor_config and hasattr(processor_config, 'tools') and processor_config.tools else 0
-
-            sentry_sdk.set_context("prompt_request", {
-                "thread_id": thread_id,
-                "model": llm_model,
-                "prompt_size": prompt_size,
-                "cache_enabled": enable_prompt_caching,
-                "tool_count": tool_count,
-                "temperature": llm_temperature,
-                "max_tokens": llm_max_tokens,
-                "timestamp": datetime.now().isoformat()
-            })
-            sentry_sdk.capture_message(
-                f"Prompt Request: {llm_model}, {prompt_size} chars, {tool_count} tools",
-                level="info"
-            )
-            logger.debug(f"📊 Request logged to GlitchTip: {prompt_size} chars, {tool_count} tools")
-        except Exception as e:
-            logger.warning(f"Failed to log request to GlitchTip: {e}")
+        # Ensure we have a valid ProcessorConfig object FIRST (before dynamic routing)
+        if processor_config is None:
+            config = ProcessorConfig()
+        elif isinstance(processor_config, ProcessorConfig):
+            config = processor_config
+        else:
+            logger.error(f"Invalid processor_config type: {type(processor_config)}, creating default")
+            config = ProcessorConfig()
 
         # Phase 3 Task 3.1.2: Dynamic Prompt Routing
         # Use modular prompt builder with dynamic routing
@@ -290,9 +276,16 @@ class ThreadManager:
                     router = get_router()
                     modules_needed = router.route(user_query)
 
-                    # Build modular prompt
+                    # Build modular prompt with context
                     builder = get_prompt_builder()
-                    modular_prompt_content = builder.build_prompt(modules_needed)
+
+                    # Create context with tool calling mode
+                    context = {
+                        'native_tool_calling': config.native_tool_calling,
+                        'user_query': user_query
+                    }
+
+                    modular_prompt_content = builder.build_prompt(modules_needed, context=context)
 
                     # Replace system prompt with modular version
                     system_prompt = {
@@ -300,7 +293,7 @@ class ThreadManager:
                         "content": modular_prompt_content
                     }
 
-                    logger.info(f"🧭 Dynamic routing applied: {len(modules_needed)} modules, {len(modular_prompt_content)} chars")
+                    logger.info(f"🧭 Dynamic routing applied: {len(modules_needed)} modules, {len(modular_prompt_content)} chars, native_tool_calling={config.native_tool_calling}")
                 else:
                     logger.debug("🧭 No user query found, using original system prompt")
 
@@ -310,15 +303,6 @@ class ThreadManager:
         # Determine if context manager should be used (default to True)
         use_context_manager = enable_context_manager if enable_context_manager is not None else True
         logger.info(f"🔧 THREAD MANAGER DEBUG: enable_context_manager={enable_context_manager}, use_context_manager={use_context_manager}")
-
-        # Ensure we have a valid ProcessorConfig object
-        if processor_config is None:
-            config = ProcessorConfig()
-        elif isinstance(processor_config, ProcessorConfig):
-            config = processor_config
-        else:
-            logger.error(f"Invalid processor_config type: {type(processor_config)}, creating default")
-            config = ProcessorConfig()
             
         if max_xml_tool_calls > 0 and not config.max_xml_tool_calls:
             config.max_xml_tool_calls = max_xml_tool_calls
@@ -511,12 +495,18 @@ class ThreadManager:
                 # Use balanced schemas (essential + query-specific tools)
                 openapi_tool_schemas = self.tool_registry.get_filtered_schemas(user_query)
 
-                # For v98store models, limit to ONLY 1 tool to test serialization
-                if llm_model.startswith("openai-compatible/") and openapi_tool_schemas:
-                    logger.info(f"🔧 DEBUG: Limiting tools for v98store model {llm_model}: {len(openapi_tool_schemas)} → 1 tool")
-                    openapi_tool_schemas = openapi_tool_schemas[:1]  # Only first tool
+                # For v98store models, limit to 3 tools (API supports 1-3 tools)
+                # v98store gpt-4o supports native tool calling with up to 3 tools
+                if llm_model.startswith("openai-compatible/") and openapi_tool_schemas and len(openapi_tool_schemas) > 3:
+                    logger.info(f"🔧 Limiting tools for v98store model {llm_model}: {len(openapi_tool_schemas)} → 3 tools")
+                    openapi_tool_schemas = openapi_tool_schemas[:3]  # Top 3 most relevant tools
 
-                logger.info(f"🔧 Tools enabled for model {llm_model}: {len(openapi_tool_schemas) if openapi_tool_schemas else 0} tools")
+                # Log which tools were selected
+                if openapi_tool_schemas:
+                    tool_names = [t.get("function", {}).get("name", "unknown") for t in openapi_tool_schemas]
+                    logger.info(f"🔧 Tools enabled for model {llm_model}: {len(openapi_tool_schemas)} tools - {tool_names}")
+                else:
+                    logger.info(f"🔧 Tools enabled for model {llm_model}: 0 tools")
 
             # 📊 LOG STAGE 3: Final optimized context (with system prompt + tools)
             from litellm import token_counter
@@ -591,6 +581,36 @@ class ThreadManager:
                     )
                 except Exception as e:
                     logger.warning(f"Failed to update Langfuse generation: {e}")
+
+            # Phase 1 Task 1.1.2: Log FINAL request metrics to GlitchTip (AFTER optimization)
+            try:
+                import sentry_sdk
+                from datetime import datetime
+                from litellm import token_counter
+
+                # Calculate FINAL token count (what's actually sent to LLM)
+                final_token_count = token_counter(model=llm_model, messages=prepared_messages)
+                final_tool_count = len(openapi_tool_schemas) if openapi_tool_schemas else 0
+
+                sentry_sdk.set_context("prompt_request", {
+                    "thread_id": thread_id,
+                    "model": llm_model,
+                    "prompt_size": final_token_count,  # Use token count, not char count
+                    "cache_enabled": enable_prompt_caching,
+                    "tool_count": final_tool_count,
+                    "temperature": llm_temperature,
+                    "max_tokens": llm_max_tokens,
+                    "timestamp": datetime.now().isoformat(),
+                    "message_count": len(prepared_messages),
+                    "native_tool_calling": config.native_tool_calling
+                })
+                sentry_sdk.capture_message(
+                    f"Prompt Request: {llm_model}, {final_token_count} tokens, {final_tool_count} tools",
+                    level="info"
+                )
+                logger.debug(f"📊 FINAL Request logged to GlitchTip: {final_token_count} tokens, {final_tool_count} tools")
+            except Exception as e:
+                logger.warning(f"Failed to log final request to GlitchTip: {e}")
 
             # Make LLM call
             try:

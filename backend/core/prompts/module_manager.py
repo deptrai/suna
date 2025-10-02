@@ -105,47 +105,68 @@ class ModularPromptBuilder:
                 logger.error(f"❌ Failed to load module {module.value}: {e}")
     
     def build_prompt(
-        self, 
+        self,
         modules_needed: Optional[List[PromptModule]] = None,
         context: Optional[dict] = None
     ) -> str:
         """
-        Build prompt from modules.
-        
+        Build prompt from modules with context-aware modifications.
+
         Args:
             modules_needed: List of modules to include (None = all modules)
             context: Optional context for dynamic content
-        
+                - native_tool_calling: bool - Whether using native tool calling
+                - user_query: str - Current user query
+
         Returns:
             Combined prompt string
         """
         parts = []
         modules_used = []
-        
+
         # Always load core and response modules
         for module in PromptModule:
             if module in self.modules and self.modules[module].always_load:
-                parts.append(self.modules[module].content)
+                content = self.modules[module].content
+
+                # Apply context-aware modifications
+                if context:
+                    content = self._apply_context_modifications(module, content, context)
+
+                parts.append(content)
                 modules_used.append(module.value)
-        
+
         # Load conditional modules if specified
         if modules_needed:
             for module in modules_needed:
                 if module in self.modules and not self.modules[module].always_load:
-                    parts.append(self.modules[module].content)
+                    content = self.modules[module].content
+
+                    # Apply context-aware modifications
+                    if context:
+                        content = self._apply_context_modifications(module, content, context)
+
+                    parts.append(content)
                     modules_used.append(module.value)
         else:
             # If no modules specified, load all
             for module in PromptModule:
                 if module in self.modules and not self.modules[module].always_load:
-                    parts.append(self.modules[module].content)
+                    content = self.modules[module].content
+
+                    # Apply context-aware modifications
+                    if context:
+                        content = self._apply_context_modifications(module, content, context)
+
+                    parts.append(content)
                     modules_used.append(module.value)
-        
+
         # Combine parts
         combined = "\n\n".join(parts)
-        
+
         # Log module usage
-        logger.info(f"📦 Built prompt: {len(modules_used)} modules, {len(combined)} chars")
+        native_mode = context.get('native_tool_calling', True) if context else True
+        logger.info(f"📦 Built prompt: {len(modules_used)} modules, {len(combined)} chars, native_tool_calling={native_mode}")
         logger.debug(f"   Modules: {', '.join(modules_used)}")
         
         # Log to GlitchTip
@@ -166,6 +187,94 @@ class ModularPromptBuilder:
         
         return combined
     
+    def _apply_context_modifications(
+        self,
+        module: PromptModule,
+        content: str,
+        context: dict
+    ) -> str:
+        """
+        Apply context-aware modifications to module content.
+
+        Args:
+            module: The module being processed
+            content: Original module content
+            context: Context dictionary
+
+        Returns:
+            Modified content
+        """
+        # Remove XML examples from ALL modules when using native tool calling
+        native_tool_calling = context.get('native_tool_calling', True)
+
+        if native_tool_calling and "<function_calls>" in content:
+            # Remove XML examples for native tool calling
+            original_len = len(content)
+            content = self._remove_xml_examples(content)
+            removed_chars = original_len - len(content)
+
+            if removed_chars > 0:
+                logger.info(f"🔧 Context Modification: module={module.value}, native_tool_calling=True, removed={removed_chars} chars")
+        elif not native_tool_calling:
+            logger.debug(f"🔧 Context Modification: module={module.value}, native_tool_calling=False, kept XML examples")
+
+        return content
+
+    def _remove_xml_examples(self, content: str) -> str:
+        """
+        Remove XML tool calling examples from content.
+
+        This removes:
+        1. <function_calls>...</function_calls> blocks
+        2. Example sections with XML syntax
+        3. XML-specific instructions
+
+        Args:
+            content: Original content
+
+        Returns:
+            Content with XML examples removed
+        """
+        import re
+
+        original_len = len(content)
+
+        # Pattern 1: Remove complete <function_calls> blocks
+        # Matches: <function_calls>...(any content including newlines)...</function_calls>
+        pattern1 = r'<function_calls>.*?</function_calls>'
+        content = re.sub(pattern1, '', content, flags=re.DOTALL)
+
+        # Pattern 2: Remove "Example:" sections that contain XML
+        # Matches: "Example:" followed by XML content until next section or end
+        pattern2 = r'Example:\s*\n\s*<function_calls>.*?(?=\n\n|\n-|\Z)'
+        content = re.sub(pattern2, '', content, flags=re.DOTALL)
+
+        # Pattern 3: Remove lines that only contain XML tags or parameters
+        # Matches: Lines like "<invoke name=..." or "<parameter name=..."
+        pattern3 = r'^\s*<(invoke|parameter).*?>\s*$'
+        content = re.sub(pattern3, '', content, flags=re.MULTILINE)
+
+        # Pattern 4: Remove lines that only contain closing XML tags
+        # Matches: Lines like "</invoke>" or "</function_calls>"
+        pattern4 = r'^\s*</(invoke|parameter|function_calls)>\s*$'
+        content = re.sub(pattern4, '', content, flags=re.MULTILINE)
+
+        # Pattern 5: Remove empty lines created by removal (max 2 consecutive)
+        pattern5 = r'\n{3,}'
+        content = re.sub(pattern5, '\n\n', content)
+
+        # Log the transformation
+        new_len = len(content)
+        removed = original_len - new_len
+
+        if original_len > 0:
+            percentage = removed/original_len*100
+            logger.info(f"🔧 XML Removal: Removed {removed} chars ({percentage:.1f}%) of XML examples")
+        else:
+            logger.debug(f"🔧 XML Removal: Empty content, nothing to remove")
+
+        return content.strip()
+
     def get_module_info(self, module: PromptModule) -> Optional[ModuleConfig]:
         """Get information about a specific module"""
         return self.modules.get(module)
