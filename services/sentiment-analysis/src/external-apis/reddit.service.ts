@@ -45,11 +45,11 @@ export class RedditService implements OnModuleInit {
 
   private async initializeRedditClient() {
     try {
-      const clientId = this.configService.get<string>('externalApis.reddit.clientId');
-      const clientSecret = this.configService.get<string>('externalApis.reddit.clientSecret');
-      const username = this.configService.get<string>('externalApis.reddit.username');
-      const password = this.configService.get<string>('externalApis.reddit.password');
-      const userAgent = this.configService.get<string>('externalApis.reddit.userAgent');
+      const clientId = this.configService.get<string>('externalApi.reddit.clientId');
+      const clientSecret = this.configService.get<string>('externalApi.reddit.clientSecret');
+      const username = this.configService.get<string>('externalApi.reddit.username');
+      const password = this.configService.get<string>('externalApi.reddit.password');
+      const userAgent = this.configService.get<string>('externalApi.reddit.userAgent');
 
       if (!clientId || !clientSecret || !username || !password) {
         this.logger.warn('Reddit credentials not configured. Reddit API will not be available.');
