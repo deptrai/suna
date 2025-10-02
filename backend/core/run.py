@@ -53,14 +53,14 @@ class AgentConfig:
     project_id: str
     stream: bool
     native_max_auto_continues: int = 25
-    max_iterations: int = 100
+    max_iterations: int = 10  # Reduced from 100 to prevent tool calling loops
     model_name: str = "openai/gpt-5-mini"
     enable_thinking: Optional[bool] = False
     reasoning_effort: Optional[str] = 'low'
-    enable_context_manager: bool = True
+    enable_context_manager: bool = True  # ✅ RE-ENABLED
     agent_config: Optional[dict] = None
     trace: Optional[StatefulTraceClient] = None
-    enable_prompt_caching: bool = True
+    enable_prompt_caching: bool = True  # ✅ RE-ENABLED
 
 
 class ToolManager:
@@ -396,8 +396,9 @@ class PromptManager:
                                   xml_tool_calling: bool = True) -> dict:
         
         default_system_content = get_system_prompt()
-        
-        if "anthropic" not in model_name.lower():
+
+        # Check if model_name is provided and not None
+        if model_name and "anthropic" not in model_name.lower():
             sample_response_path = os.path.join(os.path.dirname(__file__), 'prompts/samples/1.txt')
             with open(sample_response_path, 'r') as file:
                 sample_response = file.read()
@@ -641,18 +642,24 @@ class AgentRunner:
     
     async def setup_tools(self):
         tool_manager = ToolManager(self.thread_manager, self.config.project_id, self.config.thread_id)
-        
+
         agent_id = None
         if self.config.agent_config:
             agent_id = self.config.agent_config.get('agent_id')
-        
+
         disabled_tools = self._get_disabled_tools_from_config()
-        
+
         tool_manager.register_all_tools(agent_id=agent_id, disabled_tools=disabled_tools)
-        
+
+        # Log tool registration for debugging
+        tool_count = len(self.thread_manager.tool_registry.tools)
+        logger.info(f"🔧 Tool registration complete: {tool_count} tools registered")
+        if tool_count == 0:
+            logger.error("❌ NO TOOLS REGISTERED! This will cause tool calling to fail!")
+
         is_chainlens_agent = (self.config.agent_config and self.config.agent_config.get('is_chainlens_default', False)) or (self.config.agent_config is None)
         logger.debug(f"Agent config check: agent_config={self.config.agent_config is not None}, is_chainlens_default={is_chainlens_agent}")
-        
+
         if is_chainlens_agent:
             logger.debug("Registering Chainlens-specific tools...")
             self._register_chainlens_specific_tools(disabled_tools)
@@ -747,7 +754,9 @@ class AgentRunner:
             if isinstance(data, str):
                 data = json.loads(data)
             if self.config.trace:
-                self.config.trace.update(input=data['content'])
+                # Handle different message content structures
+                input_text = data.get('content') or data.get('text') or str(data)
+                self.config.trace.update(input=input_text)
 
         while continue_execution and iteration_count < self.config.max_iterations:
             iteration_count += 1
@@ -788,7 +797,7 @@ class AgentRunner:
                     temporary_message=temporary_message,
                     processor_config=ProcessorConfig(
                         xml_tool_calling=True,
-                        native_tool_calling=True,  # ENABLE for balanced optimization
+                        native_tool_calling=True,  # ✅ RE-ENABLED - v98store supports it with ≤5 tools
                         execute_tools=True,
                         execute_on_stream=True,
                         tool_execution_strategy="parallel",
@@ -921,7 +930,7 @@ async def run_agent(
     stream: bool,
     thread_manager: Optional[ThreadManager] = None,
     native_max_auto_continues: int = 25,
-    max_iterations: int = 100,
+    max_iterations: int = 10,  # Reduced from 100 to prevent tool calling loops
     model_name: str = "openai/gpt-5-mini",
     enable_thinking: Optional[bool] = False,
     reasoning_effort: Optional[str] = 'low',

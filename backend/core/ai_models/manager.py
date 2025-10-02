@@ -16,6 +16,15 @@ class ModelManager:
         self, model_id: str, query: Optional[str] = None, user_context: Optional[dict] = None
     ) -> str:
         """Enhanced resolve with auto selection support - backward compatible"""
+        # Handle None or empty model_id - use auto selection if enabled, otherwise default
+        if not model_id:
+            if os.getenv('AUTO_MODEL_ENABLED', 'false').lower() == 'true':
+                logger.debug(f"🔍 MODEL MANAGER: model_id is None/empty, using auto selection")
+                model_id = "auto"
+            else:
+                logger.debug(f"🔍 MODEL MANAGER: model_id is None/empty, using default model")
+                model_id = "openai/gpt-5-mini"
+
         query_preview = query[:50] if query else "None"
         logger.debug(f"🔍 MODEL MANAGER: resolve_model_id called with: '{model_id}', query: {query_preview}...")
 

@@ -402,6 +402,13 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
       options?: { model_name?: string; enable_thinking?: boolean },
     ) => {
       if (!message.trim()) return;
+
+      // Prevent multiple submissions
+      if (isSending) {
+        console.log('[handleSubmitMessage] Already sending, ignoring duplicate submission');
+        return;
+      }
+
       setIsSending(true);
 
       const optimisticUserMessage: UnifiedMessage = {
@@ -542,6 +549,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
       setBillingData,
       setShowBillingAlert,
       setAgentRunId,
+      isSending,
     ],
   );
 

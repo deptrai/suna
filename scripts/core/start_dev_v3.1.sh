@@ -48,8 +48,8 @@ set -euo pipefail
 
 # Configuration
 readonly CONFIG_FILE="$PROJECT_ROOT/.env"
-readonly LOG_DIR="$PROJECT_ROOT/logs"
-readonly PID_DIR="$PROJECT_ROOT/pids"
+LOG_DIR="$PROJECT_ROOT/logs"
+PID_DIR="$PROJECT_ROOT/pids"
 
 # Parallel operation settings
 readonly ENABLE_PARALLEL_OPERATIONS=true

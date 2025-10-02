@@ -1,0 +1,7 @@
+packages:
+  - 'chainlens-core'
+  - 'onchain-analysis'
+  - 'sentiment-analysis'
+  - 'tokenomics-analysis'
+  - 'team-verification'
+

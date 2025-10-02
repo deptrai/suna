@@ -490,3 +490,19 @@ unhealthy","memory_mb":0},"redis":{"status":"healthy","memory_mb":10.3281},"supa
 {"timestamp":"2025-09-27T18:55:52.3NZ","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Creating necessary directories","extra":{}}
 {"timestamp":"2025-09-27T20:27:06.3NZ","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"ChainLens Development Environment v3.1 starting","extra":{}}
 {"timestamp":"2025-09-27T20:27:06.3NZ","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Creating necessary directories","extra":{}}
+{"timestamp":"2025-10-02T03:45:02.737Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"ChainLens Development Environment v3.1 starting","extra":{}}
+{"timestamp":"2025-10-02T03:45:02.746Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Creating necessary directories","extra":{}}
+{"timestamp":"2025-10-02T03:45:02.773Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Directories created successfully","extra":{}}
+{"timestamp":"2025-10-02T03:45:02.780Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Checking system requirements","extra":{}}
+{"timestamp":"2025-10-02T03:45:02.940Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"System requirements check passed","extra":{}}
+{"timestamp":"2025-10-02T03:45:02.948Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Validating environment configuration","extra":{}}
+{"timestamp":"2025-10-02T03:45:02.956Z","level":"ERROR","component":"startup_v3.1","category":"system","severity":"low","message":"Configuration file not found","extra":{}}
+{"timestamp":"2025-10-02T03:45:02.967Z","level":"ERROR","component":"startup_v3.1","category":"system","severity":"low","message":"Environment validation failed","extra":{}}
+{"timestamp":"2025-10-02T03:45:11.326Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"ChainLens Development Environment v3.1 starting","extra":{}}
+{"timestamp":"2025-10-02T03:45:11.333Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Creating necessary directories","extra":{}}
+{"timestamp":"2025-10-02T03:45:11.365Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Directories created successfully","extra":{}}
+{"timestamp":"2025-10-02T03:45:11.373Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Checking system requirements","extra":{}}
+{"timestamp":"2025-10-02T03:45:11.558Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"System requirements check passed","extra":{}}
+{"timestamp":"2025-10-02T03:45:11.565Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Validating environment configuration","extra":{}}
+{"timestamp":"2025-10-02T03:45:11.597Z","level":"ERROR","component":"startup_v3.1","category":"system","severity":"low","message":"Configuration file not found","extra":{}}
+{"timestamp":"2025-10-02T03:45:11.612Z","level":"ERROR","component":"startup_v3.1","category":"system","severity":"low","message":"Environment validation failed","extra":{}}

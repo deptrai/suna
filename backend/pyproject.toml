@@ -84,6 +84,8 @@ dependencies = [
   "google-auth-oauthlib>=1.2.0",
   "google-auth-httplib2>=0.2.0",
   "typing-extensions==4.15.0",
+  "scikit-learn>=1.7.2",
+  "sentence-transformers>=5.1.1",
 ]
 
 [project.urls]

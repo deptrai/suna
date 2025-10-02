@@ -238,6 +238,25 @@ class ThreadManager:
         """Run a conversation thread with LLM integration and tool execution."""
         logger.debug(f"🚀 Starting thread execution for {thread_id} with model {llm_model}")
 
+        # Phase 1 Task 1.1.2: Add Comprehensive Request Logging
+        try:
+            import sentry_sdk
+            from datetime import datetime
+            sentry_sdk.set_context("prompt_request", {
+                "thread_id": thread_id,
+                "model": llm_model,
+                "prompt_size": len(system_prompt.get('content', '')),
+                "cache_enabled": enable_prompt_caching,
+                "tool_count": len(processor_config.tools) if processor_config and processor_config.tools else 0,
+                "timestamp": datetime.now().isoformat()
+            })
+            sentry_sdk.capture_message(
+                f"Prompt Request: {llm_model}, {len(system_prompt.get('content', ''))} chars",
+                level="info"
+            )
+        except Exception as e:
+            logger.warning(f"Failed to log request to GlitchTip: {e}")
+
         # NOTE: Moved GlitchTip logging to AFTER optimization (line ~575)
         # to log the FINAL context sent to LLM, not the initial context
 
@@ -768,14 +787,31 @@ class ThreadManager:
             }
 
     def _check_auto_continue_trigger(
-        self, chunk: Dict[str, Any], auto_continue_state: Dict[str, Any], 
+        self, chunk: Dict[str, Any], auto_continue_state: Dict[str, Any],
         native_max_auto_continues: int
     ) -> bool:
         """Check if a response chunk should trigger auto-continue."""
+        # Initialize tool_call_count if not present
+        if 'tool_call_count' not in auto_continue_state:
+            auto_continue_state['tool_call_count'] = 0
+
+        # Maximum tool calls per query (to prevent infinite loops)
+        MAX_TOOL_CALLS_PER_QUERY = 5
+
         if chunk.get('type') == 'finish':
             if chunk.get('finish_reason') == 'tool_calls':
+                # Increment tool call counter
+                auto_continue_state['tool_call_count'] += 1
+                tool_call_count = auto_continue_state['tool_call_count']
+
+                # Check if max tool calls reached
+                if tool_call_count >= MAX_TOOL_CALLS_PER_QUERY:
+                    logger.warning(f"⚠️ Max tool calls ({MAX_TOOL_CALLS_PER_QUERY}) reached. Stopping auto-continue to force final response.")
+                    auto_continue_state['active'] = False
+                    return False
+
                 if native_max_auto_continues > 0:
-                    logger.debug(f"Auto-continuing for tool_calls ({auto_continue_state['count'] + 1}/{native_max_auto_continues})")
+                    logger.debug(f"Auto-continuing for tool_calls (tool call {tool_call_count}/{MAX_TOOL_CALLS_PER_QUERY}, iteration {auto_continue_state['count'] + 1}/{native_max_auto_continues})")
                     auto_continue_state['active'] = True
                     auto_continue_state['count'] += 1
                     return True
