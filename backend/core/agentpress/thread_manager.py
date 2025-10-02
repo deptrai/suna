@@ -532,10 +532,10 @@ class ThreadManager:
 
                     # Priority 2: Task management queries
                     if any(keyword in query_lower for keyword in ['task', 'todo', 'create', 'tạo', 'add', 'thêm']):
-                        create_task = next((t for t in openapi_tool_schemas if t.get("function", {}).get("name") == "create_task"), None)
-                        if create_task and create_task not in priority_tools:
-                            priority_tools.append(create_task)
-                            logger.debug(f"🎯 Priority tool added: create_task (task query detected)")
+                        create_tasks = next((t for t in openapi_tool_schemas if t.get("function", {}).get("name") == "create_tasks"), None)
+                        if create_tasks and create_tasks not in priority_tools:
+                            priority_tools.append(create_tasks)
+                            logger.debug(f"🎯 Priority tool added: create_tasks (task query detected)")
 
                     # Priority 3: Command execution queries
                     if any(keyword in query_lower for keyword in ['run', 'execute', 'command', 'chạy', 'thực thi']):

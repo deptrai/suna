@@ -64,10 +64,10 @@ export class HealthController {
       () => this.db.pingCheck('database'),
       
       // Check if critical microservices are accessible
-      () => this.http.pingCheck('onchain-service', 'http://localhost:3001/health'),
-      () => this.http.pingCheck('sentiment-service', 'http://localhost:3002/health'),
-      () => this.http.pingCheck('tokenomics-service', 'http://localhost:3003/health'),
-      () => this.http.pingCheck('team-service', 'http://localhost:3004/health'),
+      () => this.http.pingCheck('onchain-service', 'http://localhost:3001/api/v1/health'),
+      () => this.http.pingCheck('sentiment-service', 'http://localhost:3002/api/v1/health'),
+      () => this.http.pingCheck('tokenomics-service', 'http://localhost:3003/api/v1/health'),
+      () => this.http.pingCheck('team-service', 'http://localhost:3004/api/v1/health'),
     ]);
   }
 

@@ -102,7 +102,7 @@ export class ServiceDiscoveryService implements OnModuleInit, OnModuleDestroy {
 
   private loadServiceEndpoints(serviceName: string): ServiceEndpoint[] {
     const baseUrl = this.configService.get<string>(`services.${serviceName}.url`);
-    const healthPath = this.configService.get<string>(`services.${serviceName}.healthPath`, '/health');
+    const healthPath = this.configService.get<string>(`services.${serviceName}.healthPath`, '/api/v1/health');
     const weight = this.configService.get<number>(`services.${serviceName}.weight`, 1);
     const priority = this.configService.get<number>(`services.${serviceName}.priority`, 1);
 

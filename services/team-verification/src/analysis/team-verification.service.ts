@@ -269,6 +269,7 @@ export class TeamVerificationService {
 
     // Initialize result
     const result: TeamVerificationResponseDto = {
+      success: true,
       projectId,
       totalMembers: teamMembers.length,
       verifiedMembers: 0,
@@ -294,8 +295,9 @@ export class TeamVerificationService {
       result.githubActivity = {
         organization: githubData.organization?.login || githubOrg,
         totalRepositories: githubData.repositories?.length || 0,
-        totalContributors: githubData.contributors?.length || 0,
-        recentActivity: this.calculateGitHubActivity(githubData.repositories),
+        activeRepos: 0,
+        totalCommits: 0,
+        contributors: githubData.contributors?.length || 0,
       };
     }
 

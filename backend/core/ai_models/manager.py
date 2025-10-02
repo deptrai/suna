@@ -255,21 +255,26 @@ class ModelManager:
         q = query.lower()
         logger.debug(f"🤖 AUTO SELECTION: Analyzing query: '{query[:100]}...' (length: {len(query.split())} words)")
 
-        # Complex task detection - relaxed criteria
-        complex_patterns = ['code', 'implement', 'create', 'analyze', 'design', 'strategy', 'build', 'develop', 'function', 'class', 'algorithm', 'optimize', 'debug', 'refactor']
-        has_complex_keyword = any(kw in q for kw in complex_patterns)
-        is_long_query = len(query.split()) > 8  # Reduced from 15 to 8 words
-
-        is_complex = has_complex_keyword or is_long_query
-
-        if is_complex:
-            # Use premium model for complex tasks
-            logger.debug(f"🤖 AUTO SELECTION: Complex query detected (keyword: {has_complex_keyword}, long: {is_long_query}), using premium model")
-            return 'openai-compatible/gpt-4o'  # v98store model with correct prefix
-
-        # Default to efficient model for simple queries
-        logger.debug(f"🤖 AUTO SELECTION: Simple query detected, using efficient model")
+        # TEMPORARY FIX: Always use gpt-4o-mini because gpt-4o is currently failing
+        # TODO: Re-enable gpt-4o when v98store API is stable
+        logger.debug(f"🤖 AUTO SELECTION: Using gpt-4o-mini (gpt-4o temporarily disabled due to API issues)")
         return 'openai-compatible/gpt-4o-mini'  # v98store model with correct prefix
+
+        # Complex task detection - relaxed criteria (DISABLED)
+        # complex_patterns = ['code', 'implement', 'create', 'analyze', 'design', 'strategy', 'build', 'develop', 'function', 'class', 'algorithm', 'optimize', 'debug', 'refactor']
+        # has_complex_keyword = any(kw in q for kw in complex_patterns)
+        # is_long_query = len(query.split()) > 8  # Reduced from 15 to 8 words
+
+        # is_complex = has_complex_keyword or is_long_query
+
+        # if is_complex:
+        #     # Use premium model for complex tasks
+        #     logger.debug(f"🤖 AUTO SELECTION: Complex query detected (keyword: {has_complex_keyword}, long: {is_long_query}), using premium model")
+        #     return 'openai-compatible/gpt-4o'  # v98store model with correct prefix
+
+        # # Default to efficient model for simple queries
+        # logger.debug(f"🤖 AUTO SELECTION: Simple query detected, using efficient model")
+        # return 'openai-compatible/gpt-4o-mini'  # v98store model with correct prefix
 
 
 model_manager = ModelManager()

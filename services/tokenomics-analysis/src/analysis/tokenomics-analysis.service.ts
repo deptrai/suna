@@ -178,6 +178,7 @@ export class TokenomicsAnalysisService {
 
     // Initialize result
     const result: TokenomicsAnalysisResponseDto = {
+      success: true,
       projectId,
       tokenAddress,
       protocolName,
@@ -450,7 +451,6 @@ export class TokenomicsAnalysisService {
         inflationRate: result.inflationRate,
         confidence: result.confidence,
         riskFlags: result.riskFlags,
-        rawData: result,
       });
 
       await this.tokenomicsDataRepository.save(tokenomicsData);
@@ -462,10 +462,8 @@ export class TokenomicsAnalysisService {
             projectId: result.projectId,
             beneficiary: schedule.beneficiary,
             totalAmount: schedule.totalAmount,
-            vestedAmount: schedule.vestedAmount,
-            vestingStart: schedule.vestingStart,
-            vestingEnd: schedule.vestingEnd,
-            cliffPeriod: schedule.cliffPeriod,
+            vestingPeriod: schedule.vestingPeriod,
+            amount: schedule.amount,
           });
 
           await this.vestingScheduleRepository.save(vestingSchedule);

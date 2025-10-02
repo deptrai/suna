@@ -3,8 +3,8 @@ import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import helmet from 'helmet';
-import compression from 'compression';
+import * as helmet from 'helmet';
+import * as compression from 'compression';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -17,13 +17,12 @@ async function bootstrap() {
   const port = configService.get<number>('PORT', 3003);
   const environment = configService.get<string>('NODE_ENV', 'development');
 
-  // Use Winston logger
-  app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
+  // Use Winston logger (disabled for now - LoggerModule not configured)
+  // app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
 
   // Security middleware
-  app.use(helmet({
-    contentSecurityPolicy: environment === 'production',
-    crossOriginEmbedderPolicy: environment === 'production',
+  app.use(helmet.default({
+    contentSecurityPolicy: environment === 'production' ? undefined : false,
   }));
 
   // Compression middleware

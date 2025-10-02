@@ -35,7 +35,8 @@
     "start:tokenomics": "cd tokenomics-analysis && npm run start",
     "start:team": "cd team-verification && npm run start",
     
-    "dev:all": "concurrently \"npm run dev:core\" \"npm run dev:onchain\" \"npm run dev:sentiment\" \"npm run dev:tokenomics\" \"npm run dev:team\"",
+    "kill:ports": "bash scripts/kill-ports.sh",
+    "dev:all": "npm run kill:ports && concurrently \"npm run dev:core\" \"npm run dev:onchain\" \"npm run dev:sentiment\" \"npm run dev:tokenomics\" \"npm run dev:team\"",
     "dev:core": "cd chainlens-core && npm run start:dev",
     "dev:onchain": "cd onchain-analysis && npm run start:dev",
     "dev:sentiment": "cd sentiment-analysis && npm run start:dev",

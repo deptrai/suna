@@ -19,7 +19,8 @@ from core.ai_models.llm_strategies import LLMCallContext, LLMStrategyFactory
 from core.ai_models.llm_metrics import track_llm_call, record_llm_call
 
 # Configure LiteLLM
-os.environ['LITELLM_LOG'] = 'INFO'  # Reduced verbosity
+os.environ['LITELLM_LOG'] = 'DEBUG'  # Enable debug logging to see exact requests
+litellm.set_verbose = True  # Enable verbose logging
 litellm.modify_params = True
 litellm.drop_params = True
 

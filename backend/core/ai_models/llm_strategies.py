@@ -49,7 +49,89 @@ class DirectLiteLLMStrategy(LLMStrategy):
                 for i, msg in enumerate(params['messages'][:2]):  # Log first 2 messages
                     logger.info(f"🔍 LITELLM REQUEST DEBUG: message[{i}] role={msg.get('role')}, content_len={len(str(msg.get('content', '')))}")
             logger.info(f"🔍 LITELLM REQUEST DEBUG: tools count={len(params.get('tools', []))}")
+            logger.info(f"🔍 LITELLM REQUEST DEBUG: extra_headers={params.get('extra_headers')}")
+            logger.info(f"🔍 LITELLM REQUEST DEBUG: api_base={params.get('api_base')}")
+            logger.info(f"🔍 LITELLM REQUEST DEBUG: custom_llm_provider={params.get('custom_llm_provider')}")
 
+            # Save full request to file for debugging
+            import json
+            import os
+            debug_dir = os.path.join(os.path.dirname(__file__), '../../logs')
+            os.makedirs(debug_dir, exist_ok=True)
+            debug_file = os.path.join(debug_dir, 'litellm_request_debug.json')
+
+            # Create a copy without sensitive data for logging
+            debug_params = {
+                'model': params.get('model'),
+                'messages': params.get('messages', []),
+                'tools': params.get('tools', []),
+                'tool_choice': params.get('tool_choice'),
+                'temperature': params.get('temperature'),
+                'api_base': params.get('api_base'),
+                'custom_llm_provider': params.get('custom_llm_provider'),
+                'extra_headers': params.get('extra_headers')
+            }
+
+            with open(debug_file, 'w') as f:
+                json.dump(debug_params, f, indent=2, default=str)
+
+            logger.info(f"🔍 LITELLM REQUEST DEBUG: Full request saved to {debug_file}")
+
+            # For openai-compatible models, use OpenAI client directly to avoid LiteLLM transformation issues
+            model = params.get('model', '')
+            if model.startswith('openai-compatible/'):
+                logger.info(f"🔄 BYPASSING LITELLM: Using OpenAI client directly for {model}")
+
+                # Import OpenAI client
+                from openai import AsyncOpenAI
+
+                # Extract actual model name (remove openai-compatible/ prefix)
+                actual_model = model.replace('openai-compatible/', '')
+
+                # Get API configuration
+                api_key = params.get('api_key')
+                api_base = params.get('api_base')
+                extra_headers = params.get('extra_headers', {})
+
+                # Create OpenAI client with custom base URL
+                client = AsyncOpenAI(
+                    api_key=api_key,
+                    base_url=api_base,
+                    default_headers=extra_headers
+                )
+
+                # Prepare request parameters for OpenAI client
+                openai_params = {
+                    'model': actual_model,
+                    'messages': params.get('messages', []),
+                    'temperature': params.get('temperature', 0),
+                    'stream': params.get('stream', False),
+                }
+
+                # Add optional parameters
+                if 'tools' in params and params['tools']:
+                    openai_params['tools'] = params['tools']
+                if 'tool_choice' in params:
+                    openai_params['tool_choice'] = params['tool_choice']
+                if 'max_tokens' in params:
+                    openai_params['max_tokens'] = params['max_tokens']
+                if 'top_p' in params:
+                    openai_params['top_p'] = params['top_p']
+                if 'response_format' in params:
+                    openai_params['response_format'] = params['response_format']
+                if 'stream_options' in params:
+                    openai_params['stream_options'] = params['stream_options']
+
+                logger.info(f"🔍 OPENAI CLIENT REQUEST: model={actual_model}, messages={len(openai_params['messages'])}, tools={len(openai_params.get('tools', []))}")
+
+                # Call OpenAI client directly
+                response = await client.chat.completions.create(**openai_params)
+
+                logger.info(f"✅ OPENAI CLIENT SUCCESS: Got response from {actual_model}")
+                return response
+
+            # For non-openai-compatible models, use LiteLLM as before
+            logger.info(f"🔍 USING LITELLM: model={model}")
             response = await litellm.acompletion(**params)
             logger.debug(
                 "Direct LiteLLM call successful",
@@ -124,14 +206,14 @@ class LLMStrategyFactory:
     @staticmethod
     def get_strategy(model_name: str, router: Router = None) -> LLMStrategy:
         """Get the appropriate strategy for the given model."""
-        # Use Router for openai-compatible models to transform model names correctly
+        # Use DirectLiteLLM for openai-compatible models to avoid Router issues with tools
         if model_name.startswith("openai-compatible/"):
             logger.debug(
-                "Selected Router strategy for openai-compatible model",
+                "Selected DirectLiteLLM strategy for openai-compatible model",
                 model=model_name,
-                reason="router transforms model names correctly for v98store API"
+                reason="router hangs with tools for openai-compatible models, using direct LiteLLM instead"
             )
-            return RouterStrategy(router)
+            return DirectLiteLLMStrategy()
 
         # Use Router for all other models
         logger.debug(

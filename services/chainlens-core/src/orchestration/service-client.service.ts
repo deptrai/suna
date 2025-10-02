@@ -121,7 +121,7 @@ export class ServiceClientService {
       };
     }
 
-    const url = `${serviceConfig.url}/health`;
+    const url = `${serviceConfig.url}/api/v1/health`;
     const startTime = Date.now();
 
     try {
