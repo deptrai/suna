@@ -500,20 +500,41 @@ class ThreadManager:
             else:
                 prepared_messages = [optimized_system_prompt] + messages
 
-            # REVERTED TO ORIGINAL: Get tool schemas if needed (no filtering)
-            # Root cause: Tool filtering and 3-tool limit was breaking tool calling
-            # The complex filtering logic was causing v98store API to reject requests
+            # Get tool schemas if needed
+            # CRITICAL FIX: Limit to 3 tools for v98store models
+            # Root cause: v98store API rejects requests with too many tools (87 tools caused 500 error)
             openapi_tool_schemas = None
             original_tool_count = 0
             if config.native_tool_calling:
-                # Use original simple logic: get ALL registered tools
+                # Get ALL registered tools first
                 openapi_tool_schemas = self.tool_registry.get_openapi_schemas()
                 original_tool_count = len(openapi_tool_schemas) if openapi_tool_schemas else 0
+
+                # For v98store models, limit to 3 essential tools
+                if llm_model.startswith("openai-compatible/") and openapi_tool_schemas and len(openapi_tool_schemas) > 3:
+                    logger.info(f"🔧 TOOL LIMIT: Reducing from {len(openapi_tool_schemas)} to 3 tools for v98store")
+
+                    # Select 3 most essential tools
+                    essential_tool_names = ['web_search', 'create_tasks', 'expand_message']
+                    limited_tools = []
+
+                    for tool_name in essential_tool_names:
+                        tool = next((t for t in openapi_tool_schemas if t.get("function", {}).get("name") == tool_name), None)
+                        if tool:
+                            limited_tools.append(tool)
+
+                    # If we don't have 3 essential tools, fill with first available tools
+                    if len(limited_tools) < 3:
+                        for tool in openapi_tool_schemas:
+                            if tool not in limited_tools and len(limited_tools) < 3:
+                                limited_tools.append(tool)
+
+                    openapi_tool_schemas = limited_tools[:3]
 
                 # Log which tools are enabled
                 if openapi_tool_schemas:
                     tool_names = [t.get("function", {}).get("name", "unknown") for t in openapi_tool_schemas]
-                    logger.info(f"🔧 Tools enabled for model {llm_model}: {len(openapi_tool_schemas)} tools - {tool_names[:10]}")  # Show first 10
+                    logger.info(f"🔧 Tools enabled for model {llm_model}: {len(openapi_tool_schemas)} tools - {tool_names}")
                 else:
                     logger.info(f"🔧 Tools enabled for model {llm_model}: 0 tools")
 
