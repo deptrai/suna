@@ -735,13 +735,19 @@ class AgentRunner:
         await self.setup_tools()
         mcp_wrapper_instance = await self.setup_mcp_tools()
         
+        # CRITICAL FIX: Disable XML tool examples for models with native tool calling
+        # Root cause: XML tool schemas (121KB+) were being appended to system prompt,
+        # causing v98store API to timeout/fail with 500 error
+        # v98store models support native tool calling, so XML examples are not needed
+        use_xml_examples = "anthropic" in self.config.model_name.lower()
+
         system_message = await PromptManager.build_system_prompt(
-            self.config.model_name, self.config.agent_config, 
-            self.config.thread_id, 
+            self.config.model_name, self.config.agent_config,
+            self.config.thread_id,
             mcp_wrapper_instance, self.client,
             tool_registry=self.thread_manager.tool_registry,
-            include_xml_examples=True,
-            xml_tool_calling=True
+            include_xml_examples=use_xml_examples,  # Only for Anthropic models
+            xml_tool_calling=use_xml_examples  # Only for Anthropic models
         )
         logger.info(f"📝 System message built once: {len(str(system_message.get('content', '')))} chars")
         logger.debug(f"model_name received: {self.config.model_name}")

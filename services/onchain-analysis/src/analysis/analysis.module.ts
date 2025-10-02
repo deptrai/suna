@@ -7,6 +7,7 @@ import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { AnalysisController } from './analysis.controller';
 import { AnalysisService } from './analysis.service';
+import { AdvancedAnalyticsService } from './advanced-analytics.service';
 import { TokenAnalysisService } from './services/token-analysis.service';
 import { TransactionAnalysisService } from './services/transaction-analysis.service';
 import { RiskAssessmentService } from './services/risk-assessment.service';
@@ -20,7 +21,23 @@ import { ExternalApisModule } from '../external-apis/external-apis.module';
 @Module({
   imports: [HttpModule, DatabaseModule, CacheModule, MetricsModule, ExternalApisModule],
   controllers: [AnalysisController],
-  providers: [AnalysisService, TokenAnalysisService, TransactionAnalysisService, RiskAssessmentService, RiskScoringService, DexScreenerService],
-  exports: [AnalysisService, TokenAnalysisService, TransactionAnalysisService, RiskAssessmentService, RiskScoringService, DexScreenerService],
+  providers: [
+    AnalysisService,
+    AdvancedAnalyticsService,
+    TokenAnalysisService,
+    TransactionAnalysisService,
+    RiskAssessmentService,
+    RiskScoringService,
+    DexScreenerService,
+  ],
+  exports: [
+    AnalysisService,
+    AdvancedAnalyticsService,
+    TokenAnalysisService,
+    TransactionAnalysisService,
+    RiskAssessmentService,
+    RiskScoringService,
+    DexScreenerService,
+  ],
 })
 export class AnalysisModule {}

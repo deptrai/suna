@@ -78,16 +78,91 @@ export class AnalysisController {
   }
 
   @Get('history/:projectId')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get analysis history',
     description: 'Returns historical analysis data for a project'
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Analysis history retrieved successfully'
   })
   async getHistory(@Param('projectId') projectId: string) {
     return this.analysisService.getAnalysisHistory(projectId);
+  }
+
+  // Story 2.2: Advanced OnChain Analytics
+  @Post('analyze/advanced')
+  @ApiOperation({
+    summary: 'Advanced on-chain analytics',
+    description: 'Comprehensive advanced analysis including liquidity, holder distribution, transaction patterns, whale activity, and contract security'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Advanced analysis completed successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        tokenAddress: { type: 'string' },
+        chain: { type: 'string' },
+        liquidity: {
+          type: 'object',
+          properties: {
+            totalLiquidity: { type: 'number' },
+            liquidityPools: { type: 'array' },
+            liquidityScore: { type: 'number' },
+            poolHealthScore: { type: 'number' },
+            warnings: { type: 'array', items: { type: 'string' } }
+          }
+        },
+        holders: {
+          type: 'object',
+          properties: {
+            totalHolders: { type: 'number' },
+            top10Percentage: { type: 'number' },
+            distributionScore: { type: 'number' },
+            giniCoefficient: { type: 'number' },
+            warnings: { type: 'array', items: { type: 'string' } }
+          }
+        },
+        transactions: {
+          type: 'object',
+          properties: {
+            totalTransactions24h: { type: 'number' },
+            buyTransactions: { type: 'number' },
+            sellTransactions: { type: 'number' },
+            suspiciousPatterns: { type: 'array', items: { type: 'string' } },
+            patternScore: { type: 'number' }
+          }
+        },
+        whales: {
+          type: 'object',
+          properties: {
+            whaleCount: { type: 'number' },
+            whaleHoldingsPercentage: { type: 'number' },
+            whaleActivityLevel: { type: 'string', enum: ['low', 'moderate', 'high', 'extreme'] },
+            riskLevel: { type: 'string', enum: ['low', 'medium', 'high'] }
+          }
+        },
+        security: {
+          type: 'object',
+          properties: {
+            isVerified: { type: 'boolean' },
+            securityScore: { type: 'number' },
+            vulnerabilities: { type: 'array', items: { type: 'string' } },
+            warnings: { type: 'array', items: { type: 'string' } }
+          }
+        },
+        overallRiskScore: { type: 'number' },
+        processingTime: { type: 'number' },
+        timestamp: { type: 'string' }
+      }
+    }
+  })
+  @ApiResponse({ status: 400, description: 'Invalid request parameters' })
+  @ApiResponse({ status: 429, description: 'Rate limit exceeded' })
+  async analyzeAdvanced(@Body() request: { tokenAddress: string; chain?: string }) {
+    return this.analysisService.analyzeAdvanced(request.tokenAddress, request.chain);
   }
 
   @Post('transactions/analyze')

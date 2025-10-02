@@ -271,7 +271,9 @@ class ThreadManager:
 
         # Phase 3 Task 3.1.2: Dynamic Prompt Routing
         # Use modular prompt builder with dynamic routing
-        use_dynamic_routing = True  # Feature flag
+        # TEMPORARY FIX: Disable dynamic routing for v98store models with tools
+        # Root cause: Large modular prompts (82k chars) + tools cause v98store API 500 errors
+        use_dynamic_routing = False  # Feature flag - DISABLED for debugging
 
         if use_dynamic_routing:
             try:
@@ -320,8 +322,10 @@ class ThreadManager:
                 logger.warning(f"Dynamic routing failed, using original prompt: {e}")
 
         # Determine if context manager should be used (default to True)
-        use_context_manager = enable_context_manager if enable_context_manager is not None else True
-        logger.info(f"🔧 THREAD MANAGER DEBUG: enable_context_manager={enable_context_manager}, use_context_manager={use_context_manager}")
+        # TEMPORARY FIX: Disable context manager to test tool calling
+        # Root cause: Context optimization might be breaking tool calling with v98store API
+        use_context_manager = False  # DISABLED for debugging
+        logger.info(f"🔧 THREAD MANAGER DEBUG: enable_context_manager={enable_context_manager}, use_context_manager={use_context_manager} (FORCED TO FALSE)")
             
         if max_xml_tool_calls > 0 and not config.max_xml_tool_calls:
             config.max_xml_tool_calls = max_xml_tool_calls

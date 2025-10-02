@@ -123,12 +123,24 @@ class DirectLiteLLMStrategy(LLMStrategy):
                     openai_params['stream_options'] = params['stream_options']
 
                 logger.info(f"🔍 OPENAI CLIENT REQUEST: model={actual_model}, messages={len(openai_params['messages'])}, tools={len(openai_params.get('tools', []))}")
+                logger.info(f"🔍 OPENAI CLIENT REQUEST: stream={openai_params.get('stream')}, temperature={openai_params.get('temperature')}")
+
+                # Log tool names if present
+                if 'tools' in openai_params and openai_params['tools']:
+                    tool_names = [t.get('function', {}).get('name', 'unknown') for t in openai_params['tools']]
+                    logger.info(f"🔍 OPENAI CLIENT REQUEST: tool_names={tool_names}")
 
                 # Call OpenAI client directly
-                response = await client.chat.completions.create(**openai_params)
-
-                logger.info(f"✅ OPENAI CLIENT SUCCESS: Got response from {actual_model}")
-                return response
+                try:
+                    response = await client.chat.completions.create(**openai_params)
+                    logger.info(f"✅ OPENAI CLIENT SUCCESS: Got response from {actual_model}")
+                    return response
+                except Exception as e:
+                    logger.error(f"❌ OPENAI CLIENT ERROR: {type(e).__name__}: {str(e)}")
+                    # Log more details about the error
+                    if hasattr(e, 'response'):
+                        logger.error(f"❌ OPENAI CLIENT ERROR RESPONSE: {e.response}")
+                    raise
 
             # For non-openai-compatible models, use LiteLLM as before
             logger.info(f"🔍 USING LITELLM: model={model}")
