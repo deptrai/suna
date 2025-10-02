@@ -60,9 +60,21 @@ export class HealthService extends HealthIndicator {
       newsApi: await this.checkNewsApi(),
     };
 
-    const allHealthy = Object.values(services).every(service => service.status === 'up');
+    // Count how many services are working
+    const workingServices = Object.values(services).filter(
+      service => service.status === 'up' || service.status === 'not_configured'
+    ).length;
+    const totalServices = Object.keys(services).length;
 
-    return this.getStatus(key, allHealthy, services);
+    // Service is healthy if at least one external API is working
+    // This allows the service to continue functioning even if some APIs are down
+    const isHealthy = workingServices > 0;
+
+    return this.getStatus(key, isHealthy, {
+      ...services,
+      workingServices: `${workingServices}/${totalServices}`,
+      status: workingServices === totalServices ? 'healthy' : 'degraded',
+    });
   }
 
   private async checkTwitterApi(): Promise<{ status: string; responseTime?: string; error?: string }> {
