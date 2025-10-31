@@ -3,11 +3,15 @@
 import Image from 'next/image';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
+import { isLocalMode, isStagingMode } from '@/lib/config';
+import { cn } from '@/lib/utils';
 
-interface EpsilonLogoProps {
+interface KortixLogoProps {
   size?: number;
+  variant?: 'symbol' | 'logomark';
+  className?: string;
 }
-export function EpsilonLogo({ size = 24 }: EpsilonLogoProps) {
+export function KortixLogo({ size = 24, variant = 'symbol', className }: KortixLogoProps) {
   const { theme, systemTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -20,16 +24,30 @@ export function EpsilonLogo({ size = 24 }: EpsilonLogoProps) {
     theme === 'dark' || (theme === 'system' && systemTheme === 'dark')
   );
 
-  const logoSrc = shouldInvert ? '/chainlens-logo-white.svg' : '/chainlens-logo.svg';
+  // For logomark variant, use logomark-white.svg which is already white
+  // and invert it for light mode instead
+  if (variant === 'logomark') {
+    return (
+      <Image
+        src="/logomark-white.svg"
+        alt="Kortix"
+        width={size}
+        height={size}
+        className={cn(`${shouldInvert ? '' : 'invert'} flex-shrink-0`, className)}
+        style={{ height: size, width: 'auto' }}
+      />
+    );
+  }
 
+  // Default symbol variant behavior (unchanged)
   return (
     <Image
-        src={logoSrc}
-        alt="Chainlens"
-        width={size * 2.5}
-        height={size}
-        className="flex-shrink-0"
-        style={{ width: size * 2.5, height: size, minWidth: size * 2.5, minHeight: size }}
-      />
+      src="/kortix-symbol.svg"
+      alt="Kortix"
+      width={size}
+      height={size}
+      className={cn(`${shouldInvert ? 'invert' : ''} flex-shrink-0`, className)}
+      style={{ width: size, height: size, minWidth: size, minHeight: size }}
+    />
   );
 }

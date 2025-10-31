@@ -17,10 +17,10 @@ interface ExpandableMarkdownEditorProps {
   disabled?: boolean;
 }
 
-export const ExpandableMarkdownEditor: React.FC<ExpandableMarkdownEditorProps> = ({ 
-  value, 
-  onSave, 
-  className = '', 
+export const ExpandableMarkdownEditor: React.FC<ExpandableMarkdownEditorProps> = ({
+  value,
+  onSave,
+  className = '',
   placeholder = 'Click to edit...',
   title = 'Edit Instructions',
   disabled = false
@@ -53,19 +53,21 @@ export const ExpandableMarkdownEditor: React.FC<ExpandableMarkdownEditorProps> =
   };
 
   const openDialog = () => {
+    if (disabled) return;
     setIsDialogOpen(true);
     setIsEditing(false);
   };
 
   const startEditing = () => {
+    if (disabled) return;
     setIsEditing(true);
   };
 
   const renderMarkdown = (content: string, isPreview = false) => (
-    <ReactMarkdown 
+    <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       components={{
-        h1: ({ children }) => <h1 className="text-2xl font-bold mb-4 text-foreground">{children}</h1>,
+        h1: ({ children }) => <h1 className="text-2xl font-medium mb-4 text-foreground">{children}</h1>,
         h2: ({ children }) => <h2 className="text-xl font-semibold mb-3 text-foreground">{children}</h2>,
         h3: ({ children }) => <h3 className="text-lg font-semibold mb-2 text-foreground">{children}</h3>,
         h4: ({ children }) => <h4 className="text-base font-semibold mb-2 text-foreground">{children}</h4>,
@@ -116,8 +118,13 @@ export const ExpandableMarkdownEditor: React.FC<ExpandableMarkdownEditorProps> =
   return (
     <>
       <div className={cn('relative', className)}>
-        <div 
-          className="group h-full relative pb-4 border rounded-2xl bg-muted/30 hover:opacity-80 transition-colors cursor-pointer overflow-hidden"
+        <div
+          className={cn(
+            "group h-full relative pb-4 border rounded-2xl bg-muted/30 transition-colors overflow-hidden",
+            disabled
+              ? "cursor-not-allowed opacity-60"
+              : "hover:opacity-80 cursor-pointer"
+          )}
           onClick={openDialog}
         >
           <div className="p-4 h-full overflow-hidden">
@@ -136,18 +143,20 @@ export const ExpandableMarkdownEditor: React.FC<ExpandableMarkdownEditorProps> =
               .........
             </div>
           )}
-          <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-            <Button
-              size="sm"
-              className="h-6 w-6 p-0 shadow-sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                openDialog();
-              }}
-            >
-              <Expand className="h-3 w-3" />
-            </Button>
-          </div>
+          {!disabled && (
+            <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+              <Button
+                size="sm"
+                className="h-6 w-6 p-0 shadow-sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openDialog();
+                }}
+              >
+                <Expand className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -156,7 +165,7 @@ export const ExpandableMarkdownEditor: React.FC<ExpandableMarkdownEditorProps> =
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">
               <span className="text-lg font-semibold">{title}</span>
-              {!isEditing && (
+              {!isEditing && !disabled && (
                 <Button
                   size="sm"
                   variant="outline"
@@ -169,7 +178,7 @@ export const ExpandableMarkdownEditor: React.FC<ExpandableMarkdownEditorProps> =
               )}
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="flex-1 overflow-hidden min-h-0">
             {isEditing ? (
               <div className="h-full flex flex-col gap-3">

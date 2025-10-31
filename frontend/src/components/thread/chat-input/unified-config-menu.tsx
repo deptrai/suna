@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback, memo } from 'react';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -14,10 +14,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Cpu, Search, Check, ChevronDown, Plus, ExternalLink, Loader2 } from 'lucide-react';
+import { Cpu, Search, Check, ChevronDown, Plus, ExternalLink, Loader2, Plug, Brain, LibraryBig, Zap, Workflow } from 'lucide-react';
 import { useAgents } from '@/hooks/react-query/agents/use-agents';
-import { EpsilonLogo } from '@/components/sidebar/epsilon-logo';
+import { KortixLogo } from '@/components/sidebar/kortix-logo';
 import type { ModelOption } from '@/hooks/use-model-selection';
+import { ModelProviderIcon } from '@/lib/model-provider-icons';
+import { SpotlightCard } from '@/components/ui/spotlight-card';
 
 export type SubscriptionStatus = 'no_subscription' | 'active';
 
@@ -27,8 +29,6 @@ import { IntegrationsRegistry } from '@/components/agents/integrations-registry'
 import { useComposioToolkitIcon } from '@/hooks/react-query/composio/use-composio';
 import { Skeleton } from '@/components/ui/skeleton';
 import { NewAgentDialog } from '@/components/agents/new-agent-dialog';
-import { useAgentWorkflows } from '@/hooks/react-query/agents/use-agent-workflows';
-import { PlaybookExecuteDialog } from '@/components/playbooks/playbook-execute-dialog';
 import { AgentAvatar } from '@/components/thread/content/agent-avatar';
 import { AgentModelSelector } from '@/components/agents/config/model-selector';
 import { AgentConfigurationDialog } from '@/components/agents/agent-configuration-dialog';
@@ -48,10 +48,9 @@ type UnifiedConfigMenuProps = {
     canAccessModel: (modelId: string) => boolean;
     refreshCustomModels?: () => void;
     onUpgradeRequest?: () => void;
-    hideModelSelection?: boolean;
 };
 
-const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = ({
+const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMenu({
     isLoggedIn = true,
     selectedAgentId,
     onAgentSelect,
@@ -61,8 +60,7 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = ({
     canAccessModel,
     subscriptionStatus,
     onUpgradeRequest,
-    hideModelSelection = false,
-}) => {
+}) {
     const [isOpen, setIsOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
@@ -72,8 +70,7 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = ({
     const [integrationsOpen, setIntegrationsOpen] = useState(false);
     const [showNewAgentDialog, setShowNewAgentDialog] = useState(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
-    const [execDialog, setExecDialog] = useState<{ open: boolean; playbook: any | null; agentId: string | null }>({ open: false, playbook: null, agentId: null });
-    const [agentConfigDialog, setAgentConfigDialog] = useState<{ open: boolean; tab: 'general' | 'instructions' | 'knowledge' | 'triggers' | 'playbooks' | 'tools' | 'integrations' }>({ open: false, tab: 'general' });
+    const [agentConfigDialog, setAgentConfigDialog] = useState<{ open: boolean; tab: 'instructions' | 'knowledge' | 'triggers' | 'tools' | 'integrations' }>({ open: false, tab: 'instructions' });
 
     // Debounce search query
     useEffect(() => {
@@ -165,38 +162,30 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = ({
 
 
 
-    const handleAgentClick = (agentId: string | undefined) => {
+    const handleAgentClick = useCallback((agentId: string | undefined) => {
         onAgentSelect?.(agentId);
         setIsOpen(false);
-    };
-
-    const handleQuickAction = (action: 'instructions' | 'knowledge' | 'triggers' | 'playbooks') => {
-        if (!selectedAgentId && !displayAgent?.agent_id) {
-            return;
-        }
-        setAgentConfigDialog({ open: true, tab: action });
-        setIsOpen(false);
-    };
-
-
-
-    const renderAgentIcon = (agent: any) => {
-        return <AgentAvatar agentId={agent?.agent_id} size={20} className="flex-shrink-0" fallbackName={agent?.name} />;
-    };
+    }, [onAgentSelect]);
 
     const displayAgent = useMemo(() => {
         const found = agents.find(a => a.agent_id === selectedAgentId) || agents[0];
         return found;
     }, [agents, selectedAgentId]);
 
-    const currentAgentIdForPlaybooks = isLoggedIn ? displayAgent?.agent_id || '' : '';
-    const { data: playbooks = [], isLoading: playbooksLoading } = useAgentWorkflows(currentAgentIdForPlaybooks);
-    const [playbooksExpanded, setPlaybooksExpanded] = useState(true);
+    const handleQuickAction = useCallback((action: 'instructions' | 'knowledge' | 'triggers' | 'tools') => {
+        if (!selectedAgentId && !displayAgent?.agent_id) {
+            return;
+        }
+        setAgentConfigDialog({ open: true, tab: action });
+        setIsOpen(false);
+    }, [selectedAgentId, displayAgent?.agent_id]);
+
+    const renderAgentIcon = useCallback((agent: any) => {
+        return <AgentAvatar agent={agent} agentId={agent?.agent_id} size={32} className="flex-shrink-0 !border-0" />;
+    }, []);
 
     return (
         <>
-            {/* Reusable list of workflows to avoid re-fetch storms; each instance fetches scoped to agentId */}
-
             <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
                 <DropdownMenuTrigger asChild>
                     <Button
@@ -209,7 +198,7 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = ({
                             <div className="flex items-center gap-2 min-w-0 max-w-[180px]">
                                 {renderAgentIcon(displayAgent)}
                                 <span className="truncate text-sm font-medium">
-                                    {displayAgent?.name || 'Chainlens'}
+                                    {displayAgent?.name || 'Super Worker'}
                                 </span>
                                 <ChevronDown size={12} className="opacity-60 flex-shrink-0" />
                             </div>
@@ -222,166 +211,204 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = ({
                     </Button>
                 </DropdownMenuTrigger>
 
-                <DropdownMenuContent align="end" className="w-80 p-0" sideOffset={6}>
-                    <div className="p-2" ref={searchContainerRef}>
-                        <div className="relative">
-                            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                            <input
-                                ref={searchInputRef}
-                                type="text"
-                                placeholder="Search..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                onKeyDown={handleSearchInputKeyDown}
-                                className="w-full h-8 pl-8 pr-2 rounded-lg text-sm bg-muted focus:outline-none"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Agents */}
+                <DropdownMenuContent align="end" className="w-[320px] px-0 py-3 border-[1.5px] border-border rounded-2xl" sideOffset={6}>
+                    {/* Agents Submenu */}
                     {onAgentSelect && (
-                        <div className="px-1.5">
-                            <div className="px-3 py-1 text-[11px] font-medium text-muted-foreground flex items-center justify-between">
-                                <span>Agents</span>
-                                <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                                    onClick={() => { setIsOpen(false); setShowNewAgentDialog(true); }}
-                                >
-                                    <Plus className="h-3.5 w-3.5" />
-                                </Button>
-                            </div>
-                            {isLoading && orderedAgents.length === 0 ? (
-                                <div className="px-3 py-2 text-xs text-muted-foreground">Loading agents...</div>
-                            ) : orderedAgents.length === 0 ? (
-                                <div className="px-3 py-2 text-xs text-muted-foreground">
-                                    {debouncedSearchQuery ? 'No agents found' : 'No agents'}
-                                </div>
-                            ) : (
-                                <>
-                                    <div className="max-h-[200px] overflow-y-auto">
-                                        {orderedAgents.map((agent) => (
-                                            <DropdownMenuItem
-                                                key={agent.agent_id}
-                                                className="text-sm px-3 py-2 mx-0 my-0.5 flex items-center justify-between cursor-pointer rounded-lg"
-                                                onClick={() => handleAgentClick(agent.agent_id)}
-                                            >
-                                                <div className="flex items-center gap-3 min-w-0 flex-1">
-                                                    {renderAgentIcon(agent)}
-                                                    <span className="truncate font-medium">{agent.name}</span>
-                                                </div>
-                                                {selectedAgentId === agent.agent_id && (
-                                                    <Check className="h-4 w-4 text-blue-500 flex-shrink-0" />
-                                                )}
-                                            </DropdownMenuItem>
-                                        ))}
-                                    </div>
-                                    {canLoadMore && (
-                                        <div className="px-1.5 pb-1">
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                className="w-full h-8 text-xs text-muted-foreground hover:text-foreground"
-                                                onClick={handleLoadMore}
-                                                disabled={isFetching}
-                                            >
-                                                {isFetching ? (
-                                                    <>
-                                                        <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                                                        Loading...
-                                                    </>
-                                                ) : (
-                                                    'Load More'
-                                                )}
-                                            </Button>
-                                        </div>
-                                    )}
-                                </>
-                            )}
-
-                            {/* Agents "see all" removed; scroll container shows all */}
-                            {/* Playbooks moved below (as hover submenu) */}
-                        </div>
-                    )}
-
-                    {onAgentSelect && <DropdownMenuSeparator className="!mt-0" />}
-
-                    {/* Models */}
-                    {!hideModelSelection && (
                         <>
-                            <div className="px-1.5">
-                                <div className="px-3 py-1 text-[11px] font-medium text-muted-foreground">Models</div>
-                                <AgentModelSelector
-                                    value={selectedModel}
-                                    onChange={onModelChange}
-                                    disabled={false}
-                                    variant="menu-item"
-                                />
+                            <div className="px-3">
+                                <div className="mb-3">
+                                    <span className="text-xs font-medium text-muted-foreground">Agents</span>
+                                </div>
                             </div>
-                            <DropdownMenuSeparator />
+                            <div className="px-2">
+                                <SpotlightCard className="transition-colors cursor-pointer bg-transparent">
+                                    <DropdownMenuSub>
+                                        <DropdownMenuSubTrigger className="flex items-center gap-3 text-sm cursor-pointer px-1 py-1 hover:bg-transparent focus:bg-transparent data-[state=open]:bg-transparent w-full">
+                                            <div className="flex items-center justify-center w-8 h-8 bg-card border-[1.5px] border-border flex-shrink-0" style={{ borderRadius: '10.4px' }}>
+                                                {renderAgentIcon(displayAgent)}
+                                            </div>
+                                            <span className="flex-1 truncate font-medium text-left">{displayAgent?.name || 'Super Worker'}</span>
+                                        </DropdownMenuSubTrigger>
+                                        <DropdownMenuPortal>
+                                            <DropdownMenuSubContent className="w-[320px] px-0 py-3 border-[1.5px] border-border rounded-2xl max-h-[500px] overflow-hidden" sideOffset={8}>
+                                                <div className="mb-3 px-3">
+                                                    <div className="relative">
+                                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-[18px] w-[18px] text-muted-foreground pointer-events-none" />
+                                                        <input
+                                                            ref={searchInputRef}
+                                                            type="text"
+                                                            placeholder="Search workers..."
+                                                            value={searchQuery}
+                                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                                            onKeyDown={handleSearchInputKeyDown}
+                                                            className="w-full h-11 pl-10 pr-4 rounded-2xl text-sm font-medium bg-border focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center justify-between mb-3 px-3">
+                                                    <span className="text-xs font-medium text-muted-foreground">My Workers</span>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        className="h-5 w-5 p-0 text-muted-foreground cursor-pointer hover:text-foreground hover:bg-card rounded-2xl"
+                                                        onClick={() => { setIsOpen(false); setShowNewAgentDialog(true); }}
+                                                    >
+                                                        <Plus className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                                {isLoading && orderedAgents.length === 0 ? (
+                                                    <div className="space-y-2 px-2">
+                                                        {Array.from({ length: 3 }).map((_, i) => (
+                                                            <div key={i} className="flex items-center gap-3 p-3 rounded-2xl">
+                                                                <div className="h-8 w-8 bg-muted/60 border-[1.5px] border-border rounded-2xl animate-pulse"></div>
+                                                                <div className="h-4 bg-muted rounded flex-1 animate-pulse"></div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : orderedAgents.length === 0 ? (
+                                                    <div className="p-6 text-center text-sm text-muted-foreground">
+                                                        {debouncedSearchQuery ? 'No agents found' : 'No agents yet'}
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <div className="max-h-[340px] overflow-y-auto space-y-0.5 px-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+                                                            {orderedAgents.map((agent) => {
+                                                                const isActive = selectedAgentId === agent.agent_id;
+                                                                return (
+                                                                    <SpotlightCard
+                                                                        key={agent.agent_id}
+                                                                        className="transition-colors cursor-pointer bg-transparent"
+                                                                    >
+                                                                        <div
+                                                                            className="flex items-center gap-3 text-sm cursor-pointer px-1 py-1"
+                                                                            onClick={() => handleAgentClick(agent.agent_id)}
+                                                                        >
+                                                                            <div className="flex items-center justify-center w-8 h-8 bg-card border-[1.5px] border-border flex-shrink-0" style={{ borderRadius: '10.4px' }}>
+                                                                                {renderAgentIcon(agent)}
+                                                                            </div>
+                                                                            <span className="flex-1 truncate font-medium">{agent.name}</span>
+                                                                            {isActive && (
+                                                                                <Check className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                                                                            )}
+                                                                        </div>
+                                                                    </SpotlightCard>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                        {canLoadMore && (
+                                                            <div className="pt-2 px-2">
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="ghost"
+                                                                    className="w-full h-8 text-sm text-muted-foreground hover:text-foreground rounded-2xl hover:bg-muted/60"
+                                                                    onClick={handleLoadMore}
+                                                                    disabled={isFetching}
+                                                                >
+                                                                    {isFetching ? (
+                                                                        <>
+                                                                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                                                            Loading...
+                                                                        </>
+                                                                    ) : (
+                                                                        `Load more`
+                                                                    )}
+                                                                </Button>
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </DropdownMenuSubContent>
+                                        </DropdownMenuPortal>
+                                    </DropdownMenuSub>
+                                </SpotlightCard>
+                            </div>
+                            <div className="h-px bg-border/50 -mx-3 my-3" />
                         </>
                     )}
+
+                    {/* Models Submenu */}
+                    <div className="px-3">
+                        <div className="mb-3">
+                            <span className="text-xs font-medium text-muted-foreground">Models</span>
+                        </div>
+                    </div>
+                    <div className="px-2">
+                        <SpotlightCard className="transition-colors cursor-pointer bg-transparent">
+                            <DropdownMenuSub>
+                                <DropdownMenuSubTrigger className="flex items-center gap-3 text-sm cursor-pointer px-1 py-1 hover:bg-transparent focus:bg-transparent data-[state=open]:bg-transparent w-full">
+                                    <ModelProviderIcon
+                                        modelId={selectedModel}
+                                        size={32}
+                                        className="flex-shrink-0"
+                                    />
+                                    <span className="flex-1 truncate font-medium text-left">
+                                        {modelOptions.find(m => m.id === selectedModel)?.label || 'Select Model'}
+                                    </span>
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuPortal>
+                                    <DropdownMenuSubContent className="w-[320px] p-3 border-[1.5px] border-border rounded-2xl max-h-[500px] overflow-y-auto" sideOffset={8}>
+                                        <div className="mb-3">
+                                            <span className="text-xs font-medium text-muted-foreground pl-1">Available Models</span>
+                                        </div>
+                                        <div className="space-y-0.5">
+                                            {modelOptions.map((model) => {
+                                                const isActive = selectedModel === model.id;
+                                                return (
+                                                    <SpotlightCard
+                                                        key={model.id}
+                                                        className="transition-colors cursor-pointer bg-transparent"
+                                                    >
+                                                        <div
+                                                            className="flex items-center gap-3 text-sm cursor-pointer px-1 py-1"
+                                                            onClick={() => {
+                                                                onModelChange(model.id);
+                                                                setIsOpen(false);
+                                                            }}
+                                                        >
+                                                            <ModelProviderIcon
+                                                                modelId={model.id}
+                                                                size={32}
+                                                                className="flex-shrink-0"
+                                                            />
+                                                            <span className="flex-1 truncate font-medium">{model.label}</span>
+                                                            {isActive && (
+                                                                <Check className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                                                            )}
+                                                        </div>
+                                                    </SpotlightCard>
+                                                );
+                                            })}
+                                        </div>
+                                    </DropdownMenuSubContent>
+                                </DropdownMenuPortal>
+                            </DropdownMenuSub>
+                        </SpotlightCard>
+                    </div>
+                    <div className="h-px bg-border/50 -mx-3 my-3" />
                     {onAgentSelect && (selectedAgentId || displayAgent?.agent_id) && (
-                        <div className="px-1.5">
-                            <DropdownMenuItem
-                                className="text-sm px-3 py-2 mx-0 my-0.5 flex items-center gap-2 cursor-pointer rounded-lg"
-                                onClick={() => handleQuickAction('instructions')}
-                            >
-                                <span className="font-medium">Instructions</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                className="text-sm px-3 py-2 mx-0 my-0.5 flex items-center gap-2 cursor-pointer rounded-lg"
-                                onClick={() => handleQuickAction('knowledge')}
-                            >
-                                <span className="font-medium">Knowledge</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                className="text-sm px-3 py-2 mx-0 my-0.5 flex items-center gap-2 cursor-pointer rounded-lg"
-                                onClick={() => handleQuickAction('triggers')}
-                            >
-                                <span className="font-medium">Triggers</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                className="text-sm px-3 py-2 mx-0 my-0.5 flex items-center gap-2 cursor-pointer rounded-lg"
-                                onClick={() => handleQuickAction('playbooks')}
-                            >
-                                <span className="font-medium">Playbooks</span>
-                            </DropdownMenuItem>
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <DropdownMenuItem
-                                            className="text-sm px-3 py-2 mx-0 my-0.5 flex items-center justify-between cursor-pointer rounded-lg"
-                                            onClick={() => setIntegrationsOpen(true)}
-                                        >
-                                            <span className="font-medium">Integrations</span>
-                                            <div className="flex items-center gap-1.5">
-                                                {googleDriveIcon?.icon_url && slackIcon?.icon_url && notionIcon?.icon_url ? (
-                                                    <>
-                                                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                        <img src={googleDriveIcon.icon_url} className="w-4 h-4" alt="Google Drive" />
-                                                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                        <img src={slackIcon.icon_url} className="w-3.5 h-3.5" alt="Slack" />
-                                                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                        <img src={notionIcon.icon_url} className="w-3.5 h-3.5" alt="Notion" />
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Skeleton className="w-4 h-4 rounded" />
-                                                        <Skeleton className="w-3.5 h-3.5 rounded" />
-                                                        <Skeleton className="w-3.5 h-3.5 rounded" />
-                                                    </>
-                                                )}
-                                                <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
-                                            </div>
-                                        </DropdownMenuItem>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="left" className="text-xs max-w-xs">
-                                        <p>Open integrations</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
+                        <div className="px-3">
+                            <div className="mb-3">
+                                <span className="text-xs font-medium text-muted-foreground">Worker Settings</span>
+                            </div>
+                            <div className="flex justify-between items-center gap-2">
+                                {[
+                                    { action: 'instructions' as const, icon: Plug },
+                                    { action: 'knowledge' as const, icon: Brain },
+                                    { action: 'integrations' as const, icon: LibraryBig },
+                                    { action: 'triggers' as const, icon: Zap },
+                                    { action: 'playbooks' as const, icon: Workflow },
+                                ].map(({ action, icon: Icon }) => (
+                                    <Button
+                                        key={action}
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 flex-1 p-0 cursor-pointer hover:bg-muted/60 border-[1.5px] border-border rounded-2xl"
+                                        onClick={() => action === 'integrations' ? setIntegrationsOpen(true) : handleQuickAction(action as any)}
+                                    >
+                                        <Icon className="h-4 w-4" />
+                                    </Button>
+                                ))}
+                            </div>
                         </div>
                     )}
                 </DropdownMenuContent>
@@ -399,34 +426,29 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = ({
                     />
                 </DialogContent>
             </Dialog>
-            <NewAgentDialog 
-                open={showNewAgentDialog} 
+            <NewAgentDialog
+                open={showNewAgentDialog}
                 onOpenChange={setShowNewAgentDialog}
                 onSuccess={(agentId) => {
                     setShowNewAgentDialog(false);
                     onAgentSelect?.(agentId);
                 }}
             />
-            <PlaybookExecuteDialog
-                open={execDialog.open}
-                onOpenChange={(open) => setExecDialog((s) => ({ ...s, open }))}
-                playbook={execDialog.playbook as any}
-                agentId={execDialog.agentId || ''}
-            />
-            {(selectedAgentId || displayAgent?.agent_id) && (
+            {(selectedAgentId || displayAgent?.agent_id) && agentConfigDialog.open && (
                 <AgentConfigurationDialog
                     open={agentConfigDialog.open}
                     onOpenChange={(open) => setAgentConfigDialog({ ...agentConfigDialog, open })}
                     agentId={selectedAgentId || displayAgent?.agent_id}
                     initialTab={agentConfigDialog.tab}
+                    onAgentChange={onAgentSelect}
                 />
             )}
 
         </>
     );
-};
+});
 
-const GuestMenu: React.FC<UnifiedConfigMenuProps> = () => {
+const GuestMenu: React.FC<UnifiedConfigMenuProps> = memo(function GuestMenu() {
     return (
         <TooltipProvider>
             <Tooltip>
@@ -435,14 +457,14 @@ const GuestMenu: React.FC<UnifiedConfigMenuProps> = () => {
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="h-8 px-2 bg-transparent border-0 rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent/50 flex items-center gap-1.5 cursor-not-allowed opacity-80 pointer-events-none"
+                            className="h-8 px-2 bg-border border-0 rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent/50 flex items-center gap-1.5 cursor-not-allowed opacity-80 pointer-events-none"
                             disabled
                         >
                             <div className="flex items-center gap-2 min-w-0 max-w-[180px]">
                                 <div className="flex-shrink-0">
-                                    <EpsilonLogo size={20} />
+                                    <KortixLogo size={20} />
                                 </div>
-                                <span className="truncate text-sm font-medium">Chainlens</span>
+                                <span className="truncate text-sm font-medium">Suna</span>
                                 <ChevronDown size={12} className="opacity-60 flex-shrink-0" />
                             </div>
                         </Button>
@@ -454,7 +476,7 @@ const GuestMenu: React.FC<UnifiedConfigMenuProps> = () => {
             </Tooltip>
         </TooltipProvider>
     );
-};
+});
 
 export const UnifiedConfigMenu: React.FC<UnifiedConfigMenuProps> = (props) => {
     if (props.isLoggedIn) {

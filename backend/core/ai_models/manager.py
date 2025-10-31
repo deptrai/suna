@@ -2,8 +2,7 @@ from typing import Optional, List, Dict, Any, Tuple
 from .registry import registry
 from .ai_models import Model, ModelCapability
 from core.utils.logger import logger
-from .registry import DEFAULT_PREMIUM_MODEL, DEFAULT_FREE_MODEL
-import os
+from .registry import PREMIUM_MODEL_ID, FREE_MODEL_ID
 
 class ModelManager:
     def __init__(self):
@@ -12,38 +11,13 @@ class ModelManager:
     def get_model(self, model_id: str) -> Optional[Model]:
         return self.registry.get(model_id)
     
-    def resolve_model_id(
-        self, model_id: str, query: Optional[str] = None, user_context: Optional[dict] = None
-    ) -> str:
-        """Enhanced resolve with auto selection support - backward compatible"""
-        # Handle None or empty model_id - use auto selection if enabled, otherwise default
-        if not model_id:
-            if os.getenv('AUTO_MODEL_ENABLED', 'false').lower() == 'true':
-                logger.debug(f"🔍 MODEL MANAGER: model_id is None/empty, using auto selection")
-                model_id = "auto"
-            else:
-                logger.debug(f"🔍 MODEL MANAGER: model_id is None/empty, using default model")
-                model_id = "openai/gpt-5-mini"
-
-        query_preview = query[:50] if query else "None"
-        logger.debug(f"🔍 MODEL MANAGER: resolve_model_id called with: '{model_id}', query: {query_preview}...")
-
-        # First resolve the model_id to get the actual ID
+    def resolve_model_id(self, model_id: str) -> str:
+        # logger.debug(f"resolve_model_id called with: '{model_id}' (type: {type(model_id)})")
+        
         resolved = self.registry.resolve_model_id(model_id)
-        logger.debug(f"🔍 MODEL MANAGER: registry.resolve_model_id returned: '{resolved}'")
-
-        # Auto selection logic - check if resolved ID is "auto"
-        if resolved == "auto" and os.getenv('AUTO_MODEL_ENABLED', 'false').lower() == 'true':
-            selected = self._auto_select_model(query, user_context)
-            logger.info(f"🤖 AUTO SELECTION: {selected} for query: {query_preview}...")
-            return selected
-
-        # Return resolved ID or original if no resolution found
         if resolved:
-            logger.debug(f"🔍 MODEL MANAGER: returning resolved model: '{resolved}'")
             return resolved
-
-        logger.debug(f"🔍 MODEL MANAGER: no resolution found, returning original: '{model_id}'")
+            
         return model_id
     
     def validate_model(self, model_id: str) -> Tuple[bool, str]:
@@ -83,6 +57,23 @@ class ModelManager:
     
     def get_models_for_tier(self, tier: str) -> List[Model]:
         return self.registry.get_by_tier(tier, enabled_only=True)
+    
+    def get_litellm_params(self, model_id: str, **override_params) -> Dict[str, Any]:
+        """Get complete LiteLLM parameters for a model from the registry."""
+        model = self.get_model(model_id)
+        if not model:
+            logger.warning(f"Model '{model_id}' not found in registry, using basic params")
+            return {
+                "model": model_id,
+                "num_retries": 5,
+                **override_params
+            }
+        
+        # Get the complete configuration from the model
+        params = model.get_litellm_params(**override_params)
+        # logger.debug(f"Generated LiteLLM params for {model.name}: {list(params.keys())}")
+        
+        return params
     
     def get_models_with_capability(self, capability: ModelCapability) -> List[Model]:
         return self.registry.get_by_capability(capability, enabled_only=True)
@@ -214,7 +205,7 @@ class ModelManager:
         try:
             from core.utils.config import config, EnvMode
             if config.ENV_MODE == EnvMode.LOCAL:
-                return DEFAULT_PREMIUM_MODEL
+                return PREMIUM_MODEL_ID
                 
             from core.billing.subscription_service import subscription_service
             
@@ -236,45 +227,14 @@ class ModelManager:
             
             if is_paid_tier:
                 # logger.debug(f"Setting Default Premium Model for paid user {user_id}")
-                return DEFAULT_PREMIUM_MODEL
+                return PREMIUM_MODEL_ID
             else:
                 # logger.debug(f"Setting Default Free Model for free user {user_id}")
-                return DEFAULT_FREE_MODEL
+                return FREE_MODEL_ID
                 
         except Exception as e:
             logger.warning(f"Failed to determine user tier for {user_id}: {e}")
-            return DEFAULT_FREE_MODEL
-
-    def _auto_select_model(self, query: str, user_context: Optional[dict] = None) -> str:
-        """Ultra-fast auto selection with simplified 2-model approach"""
-        # Handle None or empty query
-        if not query:
-            logger.debug(f"🤖 AUTO SELECTION: No query provided, using efficient model as default")
-            return 'openai-compatible/gpt-4o-mini'  # v98store model with correct prefix
-
-        q = query.lower()
-        logger.debug(f"🤖 AUTO SELECTION: Analyzing query: '{query[:100]}...' (length: {len(query.split())} words)")
-
-        # TEMPORARY FIX: Always use gpt-4o-mini because gpt-4o is currently failing
-        # TODO: Re-enable gpt-4o when v98store API is stable
-        logger.debug(f"🤖 AUTO SELECTION: Using gpt-4o-mini (gpt-4o temporarily disabled due to API issues)")
-        return 'openai-compatible/gpt-4o-mini'  # v98store model with correct prefix
-
-        # Complex task detection - relaxed criteria (DISABLED)
-        # complex_patterns = ['code', 'implement', 'create', 'analyze', 'design', 'strategy', 'build', 'develop', 'function', 'class', 'algorithm', 'optimize', 'debug', 'refactor']
-        # has_complex_keyword = any(kw in q for kw in complex_patterns)
-        # is_long_query = len(query.split()) > 8  # Reduced from 15 to 8 words
-
-        # is_complex = has_complex_keyword or is_long_query
-
-        # if is_complex:
-        #     # Use premium model for complex tasks
-        #     logger.debug(f"🤖 AUTO SELECTION: Complex query detected (keyword: {has_complex_keyword}, long: {is_long_query}), using premium model")
-        #     return 'openai-compatible/gpt-4o'  # v98store model with correct prefix
-
-        # # Default to efficient model for simple queries
-        # logger.debug(f"🤖 AUTO SELECTION: Simple query detected, using efficient model")
-        # return 'openai-compatible/gpt-4o-mini'  # v98store model with correct prefix
+            return FREE_MODEL_ID
 
 
-model_manager = ModelManager()
+model_manager = ModelManager() 

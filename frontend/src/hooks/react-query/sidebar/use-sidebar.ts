@@ -113,11 +113,6 @@ export const processThreadsWithProjects = (
     // Use dedicated icon_name field from backend
     let displayName = project.name || 'Unnamed Project';
     const iconName = project.icon_name; // Get icon from dedicated database field
-    
-    // Override display name for workflow threads
-    if (thread.metadata?.is_workflow_execution && thread.metadata?.workflow_run_name) {
-      displayName = thread.metadata.workflow_run_name;
-    }
 
     threadsWithProjects.push({
       threadId: thread.thread_id,
@@ -153,10 +148,19 @@ export const groupThreadsByDate = (
   const grouped: GroupedThreads = {};
   const now = new Date();
   
+  // Get start of today (midnight)
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+  
   sortedThreads.forEach(thread => {
     const threadDate = new Date(thread.updatedAt);
-    const diffInMs = now.getTime() - threadDate.getTime();
-    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+    
+    // Get start of thread date (midnight)
+    const startOfThreadDate = new Date(threadDate);
+    startOfThreadDate.setHours(0, 0, 0, 0);
+    
+    // Calculate difference in calendar days, not 24-hour periods
+    const diffInDays = Math.floor((startOfToday.getTime() - startOfThreadDate.getTime()) / (1000 * 60 * 60 * 24));
     
     let dateGroup: string;
     

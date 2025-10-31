@@ -10,7 +10,6 @@ import React, {
 import { createClient } from '@/lib/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { checkAndInstallChainlensAgent } from '@/lib/utils/install-chainlens-agent';
 import { clearUserLocalStorage } from '@/lib/utils/clear-local-storage';
 
 type AuthContextType = {
@@ -35,18 +34,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const {
           data: { session: currentSession },
         } = await supabase.auth.getSession();
-
-        console.log('🔍 AuthProvider - Initial session check:', {
-          hasSession: !!currentSession,
-          hasUser: !!currentSession?.user,
-          userId: currentSession?.user?.id,
-          sessionExpiry: currentSession?.expires_at
-        });
-
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
       } catch (error) {
-        console.error('❌ AuthProvider - Error getting session:', error);
       } finally {
         setIsLoading(false);
       }
@@ -62,12 +52,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (isLoading) setIsLoading(false);
         switch (event) {
           case 'SIGNED_IN':
-            if (newSession?.user) {
-              await checkAndInstallChainlensAgent(newSession.user.id, newSession.user.created_at);
-            }
             break;
           case 'SIGNED_OUT':
-            // Clear local storage when user is signed out (handles all logout scenarios)
             clearUserLocalStorage();
             break;
           case 'TOKEN_REFRESHED':

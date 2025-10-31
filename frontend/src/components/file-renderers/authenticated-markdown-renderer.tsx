@@ -14,8 +14,32 @@ import { isMermaidCode } from '@/lib/mermaid-utils';
 import type { FileRendererProject } from './index';
 
 // Process Unicode escape sequences in content
-export const processUnicodeContent = (content: string): string => {
-  if (!content) return '';
+export const processUnicodeContent = (content: any, forCodeBlock: boolean = false): string => {
+  // Handle different content types
+  if (!content) {
+    return '';
+  }
+
+  // If it's an object (like JSON), stringify it
+  if (typeof content === 'object') {
+    try {
+      const jsonString = JSON.stringify(content, null, 2);
+      // Only wrap in markdown if not for code block (to avoid double-wrapping)
+      if (forCodeBlock) {
+        return jsonString;
+      } else {
+        return '```json\n' + jsonString + '\n```';
+      }
+    } catch (error) {
+      console.warn('Failed to stringify object:', error);
+      return String(content);
+    }
+  }
+
+  // If it's not a string, convert to string
+  if (typeof content !== 'string') {
+    return String(content);
+  }
 
   // Process \uXXXX Unicode escape sequences (BMP characters)
   const bmpProcessed = content.replace(
@@ -110,8 +134,8 @@ function resolveImagePath(src: string, basePath?: string): string {
 
 function AuthenticatedImage({ src, alt, className, project, basePath }: AuthenticatedImageProps) {
   // For sandbox files, use the existing useImageContent hook
-  const sandboxId = typeof project?.sandbox === 'string' 
-    ? project.sandbox 
+  const sandboxId = typeof project?.sandbox === 'string'
+    ? project.sandbox
     : project?.sandbox?.id;
 
   const resolvedSrc = resolveImagePath(src, basePath);
@@ -202,13 +226,13 @@ export const MarkdownRenderer = forwardRef<
             },
             // Style other elements as needed
             h1: ({ node, ...props }) => (
-              <h1 className="text-2xl font-bold my-4" {...props} />
+              <h1 className="text-2xl font-medium my-4" {...props} />
             ),
             h2: ({ node, ...props }) => (
-              <h2 className="text-xl font-bold my-3" {...props} />
+              <h2 className="text-xl font-medium my-3" {...props} />
             ),
             h3: ({ node, ...props }) => (
-              <h3 className="text-lg font-bold my-2" {...props} />
+              <h3 className="text-lg font-medium my-2" {...props} />
             ),
             a: ({ node, ...props }) => (
               <a className="text-primary hover:underline" {...props} />

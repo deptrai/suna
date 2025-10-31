@@ -25,26 +25,32 @@ from typing import Dict, Any
 
 redis_host = os.getenv('REDIS_HOST', 'localhost')  # Changed from 'redis' to 'localhost' for local development
 redis_port = int(os.getenv('REDIS_PORT', 6379))
+
+logger.info(f"🔧 Configuring Dramatiq broker with Redis at {redis_host}:{redis_port}")
 redis_broker = RedisBroker(host=redis_host, port=redis_port, middleware=[dramatiq.middleware.AsyncIO()])
 
 dramatiq.set_broker(redis_broker)
 
-
 _initialized = False
 db = DBConnection()
-instance_id = "single"
+instance_id = ""
 
 async def initialize():
     """Initialize the agent API with resources from the main API."""
     global db, instance_id, _initialized
 
+    if _initialized:
+        return  # Already initialized
+    
     if not instance_id:
         instance_id = str(uuid.uuid4())[:8]
+    
+    logger.info(f"Initializing worker with Redis at {redis_host}:{redis_port}")
     await retry(lambda: redis.initialize_async())
     await db.initialize()
 
     _initialized = True
-    logger.debug(f"Initialized agent API with instance ID: {instance_id}")
+    logger.info(f"✅ Worker initialized successfully with instance ID: {instance_id}")
 
 @dramatiq.actor
 async def check_health(key: str):
@@ -59,11 +65,6 @@ async def run_agent_background(
     instance_id: str,
     project_id: str,
     model_name: str = "openai/gpt-5-mini",
-    enable_thinking: Optional[bool] = False,
-    reasoning_effort: Optional[str] = 'low',
-    stream: bool = True,
-    enable_context_manager: bool = True,
-    enable_prompt_caching: bool = True,
     agent_config: Optional[dict] = None,
     request_id: Optional[str] = None
 ):
@@ -108,7 +109,7 @@ async def run_agent_background(
 
     effective_model = model_manager.resolve_model_id(model_name)
     
-    logger.info(f"🚀 Using model: {effective_model} (thinking: {enable_thinking}, reasoning_effort: {reasoning_effort})")
+    logger.info(f"🚀 Using model: {effective_model}")
     
     client = await db.client
     start_time = datetime.now(timezone.utc)
@@ -168,11 +169,8 @@ async def run_agent_background(
         # Initialize agent generator
         logger.info(f"🔧 OPTIMIZATION DEBUG: enable_context_manager={enable_context_manager}")
         agent_gen = run_agent(
-            thread_id=thread_id, project_id=project_id, stream=stream,
+            thread_id=thread_id, project_id=project_id,
             model_name=effective_model,
-            enable_thinking=enable_thinking, reasoning_effort=reasoning_effort,
-            enable_context_manager=enable_context_manager,
-            enable_prompt_caching=enable_prompt_caching,
             agent_config=agent_config,
             trace=trace,
         )
@@ -347,8 +345,6 @@ async def update_agent_run_status(
 
         if error:
             update_data["error"] = error
-
-
 
         # Retry up to 3 times
         for retry in range(3):

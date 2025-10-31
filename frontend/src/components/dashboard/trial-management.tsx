@@ -61,7 +61,7 @@ export function TrialManagement() {
             </div>
           </div>
           <CardDescription>
-            You're currently on a 7-day free trial with $20 in credits
+            You're currently on a 7-day free trial with $5 in credits
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -114,7 +114,7 @@ export function TrialManagement() {
                 </li>
               </ul>
               <p className="text-muted-foreground text-sm pt-2">
-                To continue using Chainlens after cancelling, you'll need to purchase a subscription.
+                To continue using Kortix after cancelling, you'll need to purchase a subscription.
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>

@@ -17,6 +17,7 @@ from langfuse.client import StatefulGenerationClient, StatefulTraceClient
 from core.services.langfuse import langfuse
 from datetime import datetime, timezone
 from core.billing.billing_integration import billing_integration
+from litellm.utils import token_counter
 
 ToolChoice = Literal["auto", "required", "none"]
 
@@ -101,13 +102,11 @@ class ThreadManager:
 
         try:
             result = await client.table('messages').insert(data_to_insert).execute()
-            # logger.debug(f"Successfully added message to thread {thread_id}")
 
             if result.data and len(result.data) > 0 and 'message_id' in result.data[0]:
                 saved_message = result.data[0]
                 
-                # Handle billing for assistant response end messages
-                if type == "assistant_response_end" and isinstance(content, dict):
+                if type == "llm_response_end" and isinstance(content, dict):
                     await self._handle_billing(thread_id, content, saved_message)
                 
                 return saved_message
@@ -119,27 +118,27 @@ class ThreadManager:
             raise
 
     async def _handle_billing(self, thread_id: str, content: dict, saved_message: dict):
-        """Handle billing for LLM usage."""
         try:
-            usage = content.get("usage", {})
+            llm_response_id = content.get("llm_response_id", "unknown")
+            logger.info(f"💰 Processing billing for LLM response: {llm_response_id}")
             
-            # DEBUG: Log the complete usage object to see what data we have
-            logger.info(f"🔍 THREAD MANAGER USAGE: {usage}")
-            logger.info(f"🔍 THREAD MANAGER CONTENT: {content}")
+            usage = content.get("usage", {})
             
             prompt_tokens = int(usage.get("prompt_tokens", 0) or 0)
             completion_tokens = int(usage.get("completion_tokens", 0) or 0)
+            is_estimated = usage.get("estimated", False)
+            is_fallback = usage.get("fallback", False)
             
-            # Try cache_read_input_tokens first (Anthropic standard), then fallback to prompt_tokens_details.cached_tokens
             cache_read_tokens = int(usage.get("cache_read_input_tokens", 0) or 0)
             if cache_read_tokens == 0:
-                cache_read_tokens = int(usage.get("prompt_tokens_details", {}).get("cached_tokens", 0) or 0)
+                # safely handle prompt_tokens_details that might be None
+                cache_read_tokens = int((usage.get("prompt_tokens_details") or {}).get("cached_tokens", 0) or 0)
             
             cache_creation_tokens = int(usage.get("cache_creation_input_tokens", 0) or 0)
             model = content.get("model")
             
-            # DEBUG: Log what we detected
-            logger.info(f"🔍 CACHE DETECTION: cache_read={cache_read_tokens}, cache_creation={cache_creation_tokens}, prompt={prompt_tokens}")
+            usage_type = "FALLBACK ESTIMATE" if is_fallback else ("ESTIMATED" if is_estimated else "EXACT")
+            logger.info(f"💰 Usage type: {usage_type} - prompt={prompt_tokens}, completion={completion_tokens}, cache_read={cache_read_tokens}, cache_creation={cache_creation_tokens}")
             
             client = await self.db.client
             thread_row = await client.table('threads').select('account_id').eq('thread_id', thread_id).limit(1).execute()
@@ -183,7 +182,7 @@ class ThreadManager:
             offset = 0
             
             while True:
-                result = await client.table('messages').select('message_id, type, content').eq('thread_id', thread_id).eq('is_llm_message', True).order('created_at').range(offset, offset + batch_size - 1).execute()
+                result = await client.table('messages').select('message_id, type, content, metadata').eq('thread_id', thread_id).eq('is_llm_message', True).order('created_at').range(offset, offset + batch_size - 1).execute()
                 
                 if not result.data:
                     break
@@ -198,15 +197,36 @@ class ThreadManager:
 
             messages = []
             for item in all_messages:
-                if isinstance(item['content'], str):
+                # Check if this message has a compressed version in metadata
+                content = item['content']
+                metadata = item.get('metadata', {})
+                is_compressed = False
+                
+                # If compressed, use compressed_content for LLM instead of full content
+                if isinstance(metadata, dict) and metadata.get('compressed'):
+                    compressed_content = metadata.get('compressed_content')
+                    if compressed_content:
+                        content = compressed_content
+                        is_compressed = True
+                        # logger.debug(f"Using compressed content for message {item['message_id']}")
+                
+                # Parse content and add message_id
+                if isinstance(content, str):
                     try:
-                        parsed_item = json.loads(item['content'])
+                        parsed_item = json.loads(content)
                         parsed_item['message_id'] = item['message_id']
                         messages.append(parsed_item)
                     except json.JSONDecodeError:
-                        logger.error(f"Failed to parse message: {item['content']}")
+                        # If compressed, content is a plain string (not JSON) - this is expected
+                        if is_compressed:
+                            messages.append({
+                                'role': 'user',
+                                'content': content,
+                                'message_id': item['message_id']
+                            })
+                        else:
+                            logger.error(f"Failed to parse message: {content[:100]}")
                 else:
-                    content = item['content']
                     content['message_id'] = item['message_id']
                     messages.append(content)
 
@@ -229,38 +249,13 @@ class ThreadManager:
         tool_choice: ToolChoice = "auto",
         native_max_auto_continues: int = 25,
         max_xml_tool_calls: int = 0,
-        enable_thinking: Optional[bool] = False,
-        reasoning_effort: Optional[str] = 'low',
         generation: Optional[StatefulGenerationClient] = None,
-        enable_prompt_caching: bool = True,
-        enable_context_manager: Optional[bool] = None,
+        latest_user_message_content: Optional[str] = None,
     ) -> Union[Dict[str, Any], AsyncGenerator]:
         """Run a conversation thread with LLM integration and tool execution."""
         logger.debug(f"🚀 Starting thread execution for {thread_id} with model {llm_model}")
 
-        # Phase 1 Task 1.1.2: Add Comprehensive Request Logging
-        try:
-            import sentry_sdk
-            from datetime import datetime
-            sentry_sdk.set_context("prompt_request", {
-                "thread_id": thread_id,
-                "model": llm_model,
-                "prompt_size": len(system_prompt.get('content', '')),
-                "cache_enabled": enable_prompt_caching,
-                "tool_count": len(processor_config.tools) if processor_config and processor_config.tools else 0,
-                "timestamp": datetime.now().isoformat()
-            })
-            sentry_sdk.capture_message(
-                f"Prompt Request: {llm_model}, {len(system_prompt.get('content', ''))} chars",
-                level="info"
-            )
-        except Exception as e:
-            logger.warning(f"Failed to log request to GlitchTip: {e}")
-
-        # NOTE: Moved GlitchTip logging to AFTER optimization (line ~575)
-        # to log the FINAL context sent to LLM, not the initial context
-
-        # Ensure we have a valid ProcessorConfig object FIRST (before dynamic routing)
+        # Ensure we have a valid ProcessorConfig object
         if processor_config is None:
             config = ProcessorConfig()
         elif isinstance(processor_config, ProcessorConfig):
@@ -268,64 +263,6 @@ class ThreadManager:
         else:
             logger.error(f"Invalid processor_config type: {type(processor_config)}, creating default")
             config = ProcessorConfig()
-
-        # Phase 3 Task 3.1.2: Dynamic Prompt Routing
-        # Use modular prompt builder with dynamic routing
-        # TEMPORARY FIX: Disable dynamic routing for v98store models with tools
-        # Root cause: Large modular prompts (82k chars) + tools cause v98store API 500 errors
-        use_dynamic_routing = False  # Feature flag - DISABLED for debugging
-
-        if use_dynamic_routing:
-            try:
-                from core.prompts.router import get_router
-                from core.prompts.module_manager import get_prompt_builder
-
-                # Get user query for routing
-                user_query = ""
-                if temporary_message:
-                    user_query = temporary_message.get('content', '')
-                else:
-                    # Get last user message from thread
-                    messages_for_routing = await self.get_llm_messages(thread_id)
-                    for msg in reversed(messages_for_routing):
-                        if isinstance(msg, dict) and msg.get('role') == 'user':
-                            user_query = str(msg.get('content', ''))
-                            break
-
-                if user_query:
-                    # Route to appropriate modules
-                    router = get_router()
-                    modules_needed = router.route(user_query)
-
-                    # Build modular prompt with context
-                    builder = get_prompt_builder()
-
-                    # Create context with tool calling mode
-                    context = {
-                        'native_tool_calling': config.native_tool_calling,
-                        'user_query': user_query
-                    }
-
-                    modular_prompt_content = builder.build_prompt(modules_needed, context=context)
-
-                    # Replace system prompt with modular version
-                    system_prompt = {
-                        "role": "system",
-                        "content": modular_prompt_content
-                    }
-
-                    logger.info(f"🧭 Dynamic routing applied: {len(modules_needed)} modules, {len(modular_prompt_content)} chars, native_tool_calling={config.native_tool_calling}")
-                else:
-                    logger.debug("🧭 No user query found, using original system prompt")
-
-            except Exception as e:
-                logger.warning(f"Dynamic routing failed, using original prompt: {e}")
-
-        # Determine if context manager should be used (default to True)
-        # TEMPORARY FIX: Disable context manager to test tool calling
-        # Root cause: Context optimization might be breaking tool calling with v98store API
-        use_context_manager = False  # DISABLED for debugging
-        logger.info(f"🔧 THREAD MANAGER DEBUG: enable_context_manager={enable_context_manager}, use_context_manager={use_context_manager} (FORCED TO FALSE)")
             
         if max_xml_tool_calls > 0 and not config.max_xml_tool_calls:
             config.max_xml_tool_calls = max_xml_tool_calls
@@ -340,9 +277,8 @@ class ThreadManager:
         if native_max_auto_continues == 0:
             result = await self._execute_run(
                 thread_id, system_prompt, llm_model, llm_temperature, llm_max_tokens,
-                tool_choice, config, stream, enable_thinking, reasoning_effort,
-                generation, auto_continue_state, temporary_message, enable_prompt_caching,
-                use_context_manager
+                tool_choice, config, stream,
+                generation, auto_continue_state, temporary_message, latest_user_message_content
             )
             
             # If result is an error dict, convert it to a generator that yields the error
@@ -354,18 +290,17 @@ class ThreadManager:
         # Auto-continue execution
         return self._auto_continue_generator(
             thread_id, system_prompt, llm_model, llm_temperature, llm_max_tokens,
-            tool_choice, config, stream, enable_thinking, reasoning_effort,
+            tool_choice, config, stream,
             generation, auto_continue_state, temporary_message,
-            native_max_auto_continues, enable_prompt_caching, use_context_manager
+            native_max_auto_continues, latest_user_message_content
         )
 
     async def _execute_run(
         self, thread_id: str, system_prompt: Dict[str, Any], llm_model: str,
         llm_temperature: float, llm_max_tokens: Optional[int], tool_choice: ToolChoice,
-        config: ProcessorConfig, stream: bool, enable_thinking: Optional[bool],
-        reasoning_effort: Optional[str], generation: Optional[StatefulGenerationClient],
+        config: ProcessorConfig, stream: bool, generation: Optional[StatefulGenerationClient],
         auto_continue_state: Dict[str, Any], temporary_message: Optional[Dict[str, Any]] = None,
-        enable_prompt_caching: bool = False, use_context_manager: bool = True
+        latest_user_message_content: Optional[str] = None
     ) -> Union[Dict[str, Any], AsyncGenerator]:
         """Execute a single LLM run."""
         
@@ -375,191 +310,196 @@ class ThreadManager:
             config = ProcessorConfig()  # Create new instance as fallback
             
         try:
-            # Get and prepare messages
+            # ===== CENTRAL CONFIGURATION =====
+            ENABLE_CONTEXT_MANAGER = True   # Set to False to disable context compression
+            ENABLE_PROMPT_CACHING = True    # Set to False to disable prompt caching
+            # ==================================
+            
+            # Fast path: Check stored token count + new message tokens
+            skip_fetch = False
+            need_compression = False
+            estimated_total_tokens = None  # Will be passed to response processor to avoid recalculation
+            
+            # CRITICAL: Check if this is an auto-continue iteration FIRST (before any token counting)
+            is_auto_continue = auto_continue_state.get('count', 0) > 0
+            
+            if ENABLE_PROMPT_CACHING:
+                try:
+                    from core.ai_models import model_manager
+                    from litellm.utils import token_counter
+                    client = await self.db.client
+                    
+                    # Query last llm_response_end message from messages table (already stored there!)
+                    last_usage_result = await client.table('messages')\
+                        .select('content')\
+                        .eq('thread_id', thread_id)\
+                        .eq('type', 'llm_response_end')\
+                        .order('created_at', desc=True)\
+                        .limit(1)\
+                        .maybe_single()\
+                        .execute()
+                    
+                    if last_usage_result.data:
+                        llm_end_content = last_usage_result.data.get('content', {})
+                        if isinstance(llm_end_content, str):
+                            import json
+                            llm_end_content = json.loads(llm_end_content)
+                        
+                        usage = llm_end_content.get('usage', {})
+                        stored_model = llm_end_content.get('model', '')
+                        
+                        # Normalize model names for comparison (strip any provider prefix like anthropic/, openai/, google/, etc.)
+                        def normalize_model_name(model: str) -> str:
+                            """Strip provider prefix (e.g., 'anthropic/claude-3' -> 'claude-3')"""
+                            return model.split('/')[-1] if '/' in model else model
+                        
+                        normalized_stored = normalize_model_name(stored_model)
+                        normalized_current = normalize_model_name(llm_model)
+                        
+                        logger.debug(f"Fast check data - stored: {stored_model}, current: {llm_model}, match: {normalized_stored == normalized_current}")
+                        
+                        # Only use fast path if model matches and we have stored tokens
+                        if usage and normalized_stored == normalized_current:
+                            # Use total_tokens (includes prev completion) for better accuracy
+                            last_total_tokens = int(usage.get('total_tokens', 0))
+                            
+                            # Count tokens in new message (only for first turn, not auto-continue)
+                            new_msg_tokens = 0
+                            
+                            if is_auto_continue:
+                                # Auto-continue: No new user message, last_total already includes everything
+                                new_msg_tokens = 0
+                                logger.debug(f"✅ Auto-continue detected (count={auto_continue_state['count']}), skipping new message token count")
+                            elif latest_user_message_content:
+                                # First turn: Use passed content (avoids DB query)
+                                new_msg_tokens = token_counter(
+                                    model=llm_model, 
+                                    messages=[{"role": "user", "content": latest_user_message_content}]
+                                )
+                                logger.debug(f"First turn: counting {new_msg_tokens} tokens from latest_user_message_content")
+                            else:
+                                # First turn fallback: Query DB if content not provided
+                                latest_msg_result = await client.table('messages')\
+                                    .select('content')\
+                                    .eq('thread_id', thread_id)\
+                                    .eq('type', 'user')\
+                                    .order('created_at', desc=True)\
+                                    .limit(1)\
+                                    .single()\
+                                    .execute()
+                                
+                                if latest_msg_result.data:
+                                    new_msg_content = latest_msg_result.data.get('content', '')
+                                    if new_msg_content:
+                                        new_msg_tokens = token_counter(
+                                            model=llm_model, 
+                                            messages=[{"role": "user", "content": new_msg_content}]
+                                        )
+                                        logger.debug(f"First turn (DB fallback): counting {new_msg_tokens} tokens from DB query")
+                            
+                            estimated_total = last_total_tokens + new_msg_tokens
+                            estimated_total_tokens = estimated_total  # Store for response processor
+                            
+                            # Calculate threshold (same logic as context_manager.py)
+                            context_window = model_manager.get_context_window(llm_model)
+                            
+                            if context_window >= 1_000_000:
+                                max_tokens = context_window - 300_000
+                            elif context_window >= 400_000:
+                                max_tokens = context_window - 64_000
+                            elif context_window >= 200_000:
+                                max_tokens = context_window - 32_000
+                            elif context_window >= 100_000:
+                                max_tokens = context_window - 16_000
+                            else:
+                                max_tokens = int(context_window * 0.84)
+                            
+                            logger.info(f"⚡ Fast check: {last_total_tokens} + {new_msg_tokens} = {estimated_total} tokens (threshold: {max_tokens})")
+                            
+                            if estimated_total < max_tokens:
+                                logger.info(f"✅ Under threshold, skipping compression")
+                                skip_fetch = True
+                            else:
+                                logger.info(f"📊 Over threshold ({estimated_total} >= {max_tokens}), triggering compression")
+                                need_compression = True
+                                # Will fetch and compress below
+                        else:
+                            logger.debug(f"Fast check skipped - usage: {bool(usage)}, model_match: {normalized_stored == normalized_current}")
+                    else:
+                        logger.debug(f"Fast check skipped - no last llm_response_end message found")
+                except Exception as e:
+                    logger.debug(f"Fast path check failed, falling back to full fetch: {e}")
+            
+            # Always fetch messages (needed for LLM call)
+            # Fast path just skips compression, not fetching!
             messages = await self.get_llm_messages(thread_id)
-
+            
             # Handle auto-continue context
             if auto_continue_state['count'] > 0 and auto_continue_state['continuous_state'].get('accumulated_content'):
                 partial_content = auto_continue_state['continuous_state']['accumulated_content']
                 messages.append({"role": "assistant", "content": partial_content})
 
-            # 📊 LOG STAGE 1: Original context from DB
-            from litellm import token_counter
-            original_token_count = token_counter(model=llm_model, messages=messages)
-            logger.info(f"📊 CONTEXT STAGE 1 - Original from DB: {len(messages)} messages, {original_token_count} tokens")
-
-            # Log to GlitchTip for analysis
-            try:
-                import sentry_sdk
-                sentry_sdk.capture_message(
-                    f"Context Optimization - Stage 1: Original",
-                    level="info",
-                    extras={
-                        "stage": "1_original",
-                        "thread_id": thread_id,
-                        "message_count": len(messages),
-                        "token_count": original_token_count,
-                        "messages_preview": [
-                            {
-                                "role": msg.get("role"),
-                                "content_length": len(str(msg.get("content", ""))),
-                                "content_preview": str(msg.get("content", ""))[:200]
-                            }
-                            for msg in messages[:5]  # First 5 messages
-                        ]
-                    }
-                )
-            except Exception as e:
-                logger.warning(f"Failed to log to GlitchTip: {e}")
-
-            # Apply context compression if enabled
-            if use_context_manager:
-                logger.debug(f"Context manager enabled, compressing {len(messages)} messages")
-                ctx_mgr = ContextManager()
-                compressed_messages = ctx_mgr.compress_messages(
-                    messages, llm_model, max_tokens=llm_max_tokens
-                )
-                logger.debug(f"Context compression completed: {len(messages)} -> {len(compressed_messages)} messages")
-                messages = compressed_messages
-
-                # 📊 LOG STAGE 2: After context manager compression
-                compressed_token_count = token_counter(model=llm_model, messages=messages)
-                reduction_ratio = ((original_token_count - compressed_token_count) / original_token_count * 100) if original_token_count > 0 else 0
-                logger.info(f"📊 CONTEXT STAGE 2 - After compression: {len(messages)} messages, {compressed_token_count} tokens ({reduction_ratio:.1f}% reduction)")
-
-                # Log to GlitchTip
-                try:
-                    import sentry_sdk
-                    sentry_sdk.capture_message(
-                        f"Context Optimization - Stage 2: After Compression",
-                        level="info",
-                        extras={
-                            "stage": "2_compressed",
-                            "thread_id": thread_id,
-                            "message_count": len(messages),
-                            "token_count": compressed_token_count,
-                            "original_token_count": original_token_count,
-                            "reduction_ratio": f"{reduction_ratio:.1f}%",
-                            "messages_preview": [
-                                {
-                                    "role": msg.get("role"),
-                                    "content_length": len(str(msg.get("content", ""))),
-                                    "content_preview": str(msg.get("content", ""))[:200]
-                                }
-                                for msg in messages[:5]
-                            ]
-                        }
+            # Apply context compression (only if needed based on fast path check)
+            if ENABLE_CONTEXT_MANAGER:
+                if skip_fetch:
+                    # Fast path: We know we're under threshold, skip compression entirely
+                    logger.debug(f"Fast path: Skipping compression check (under threshold)")
+                elif need_compression:
+                    # We know we're over threshold, compress now
+                    logger.info(f"Applying context compression on {len(messages)} messages")
+                    context_manager = ContextManager()
+                    compressed_messages = await context_manager.compress_messages(
+                        messages, llm_model, max_tokens=llm_max_tokens, 
+                        actual_total_tokens=estimated_total_tokens,  # Use estimated from fast check!
+                        system_prompt=system_prompt,
+                        thread_id=thread_id
                     )
+                    logger.debug(f"Context compression completed: {len(messages)} -> {len(compressed_messages)} messages")
+                    messages = compressed_messages
+                else:
+                    # First turn or no fast path data: Run compression check
+                    logger.debug(f"Running compression check on {len(messages)} messages")
+                    context_manager = ContextManager()
+                    compressed_messages = await context_manager.compress_messages(
+                        messages, llm_model, max_tokens=llm_max_tokens, 
+                        actual_total_tokens=None,
+                        system_prompt=system_prompt,
+                        thread_id=thread_id
+                    )
+                    messages = compressed_messages
+
+            # Check if cache needs rebuild due to compression
+            force_rebuild = False
+            if ENABLE_PROMPT_CACHING:
+                try:
+                    client = await self.db.client
+                    result = await client.table('threads').select('metadata').eq('thread_id', thread_id).single().execute()
+                    if result.data:
+                        metadata = result.data.get('metadata', {})
+                        if metadata.get('cache_needs_rebuild'):
+                            force_rebuild = True
+                            logger.info("🔄 Rebuilding cache due to compression/model change")
+                            # Clear the flag
+                            metadata['cache_needs_rebuild'] = False
+                            await client.table('threads').update({'metadata': metadata}).eq('thread_id', thread_id).execute()
                 except Exception as e:
-                    logger.warning(f"Failed to log to GlitchTip: {e}")
-            else:
-                logger.debug("Context manager disabled, using raw messages")
-
-            # Phase 1 Task 1.2.1: DISABLE aggressive optimization (broke tool calling)
-            # TEMPORARY FIX: Use original system prompt without optimization
-            logger.info(f"🔧 OPTIMIZATION DEBUG: use_context_manager={use_context_manager}")
-            optimized_system_prompt = system_prompt
-            original_system_prompt_length = len(system_prompt.get('content', '')) if isinstance(system_prompt, dict) else 0
-
-            logger.info(f"📝 Using original system prompt (optimization disabled): {original_system_prompt_length} chars")
-
-            # Log to GlitchTip
-            try:
-                import sentry_sdk
-                sentry_sdk.capture_message(
-                    "Optimization disabled - using original prompt",
-                    level="info",
-                    extras={"prompt_size": original_system_prompt_length}
+                    logger.debug(f"Failed to check cache_needs_rebuild flag: {e}")
+            
+            # Apply caching
+            if ENABLE_PROMPT_CACHING:
+                prepared_messages = await apply_anthropic_caching_strategy(
+                    system_prompt, 
+                    messages, 
+                    llm_model,
+                    thread_id=thread_id,
+                    force_recalc=force_rebuild
                 )
-            except Exception as e:
-                logger.warning(f"Failed to log optimization status to GlitchTip: {e}")
-
-            # COMMENTED OUT: Aggressive optimization (99.8% reduction broke tool calling)
-            # try:
-            #     ctx_optimizer = ContextManager()
-            #     user_query = ""
-            #     if messages:
-            #         for msg in reversed(messages):
-            #             if isinstance(msg, dict) and msg.get('role') == 'user':
-            #                 user_query = str(msg.get('content', ''))[:200]
-            #                 break
-            #
-            #     if user_query and system_prompt and isinstance(system_prompt, dict):
-            #         original_content = system_prompt.get('content', '')
-            #         optimized_content = ctx_optimizer.get_optimized_system_prompt(user_query, original_content)
-            #         optimized_system_prompt = system_prompt.copy()
-            #         optimized_system_prompt['content'] = optimized_content
-            # except Exception as e:
-            #     logger.warning(f"System prompt optimization failed: {e}")
-            #     optimized_system_prompt = system_prompt
-
-            # Apply caching if enabled
-            if enable_prompt_caching:
-                prepared_messages = apply_anthropic_caching_strategy(optimized_system_prompt, messages, llm_model)
                 prepared_messages = validate_cache_blocks(prepared_messages, llm_model)
             else:
-                prepared_messages = [optimized_system_prompt] + messages
+                prepared_messages = [system_prompt] + messages
 
-            # TEMPORARY TEST: Disable tool calling to isolate issue
-            # Testing if v98store API works WITHOUT tools
-            openapi_tool_schemas = None
-            original_tool_count = 0
-            logger.info(f"🧪 TEST MODE: Tool calling DISABLED to test if v98store works without tools")
-
-            # 📊 LOG STAGE 3: Final optimized context (with system prompt + tools)
-            from litellm import token_counter
-            final_token_count = token_counter(model=llm_model, messages=prepared_messages)
-            tool_count = len(openapi_tool_schemas) if openapi_tool_schemas else 0
-
-            # Calculate tool reduction ratio
-            tool_reduction_ratio = ((original_tool_count - tool_count) / original_tool_count * 100) if original_tool_count > 0 else 0
-
-            # Calculate overall reduction from original
-            overall_reduction = ((original_token_count - final_token_count) / original_token_count * 100) if original_token_count > 0 else 0
-
-            logger.info(f"📊 CONTEXT STAGE 3 - Final optimized: {len(prepared_messages)} messages, {final_token_count} tokens, {tool_count} tools")
-            logger.info(f"📊 OVERALL OPTIMIZATION: {original_token_count} → {final_token_count} tokens ({overall_reduction:.1f}% reduction)")
-            logger.info(f"📊 TOOL FILTERING: {original_tool_count} → {tool_count} tools ({tool_reduction_ratio:.1f}% reduction)")
-
-            # Log to GlitchTip
-            try:
-                import sentry_sdk
-                sentry_sdk.capture_message(
-                    f"Context Optimization - Stage 3: Final Optimized",
-                    level="info",
-                    extras={
-                        "stage": "3_final_optimized",
-                        "thread_id": thread_id,
-                        "message_count": len(prepared_messages),
-                        "token_count": final_token_count,
-                        "original_token_count": original_token_count,
-                        "overall_reduction_ratio": f"{overall_reduction:.1f}%",
-                        "tool_count": tool_count,
-                        "original_tool_count": original_tool_count,
-                        "tool_reduction_ratio": f"{tool_reduction_ratio:.1f}%",
-                        "system_prompt_original_length": original_system_prompt_length,
-                        "system_prompt_optimized_length": len(optimized_system_prompt.get('content', '')) if isinstance(optimized_system_prompt, dict) else 0,
-                        "prompt_caching_enabled": enable_prompt_caching,
-                        "context_manager_enabled": use_context_manager,
-                        "optimization_features": {
-                            "context_compression": use_context_manager,
-                            "system_prompt_optimization": True,
-                            "tool_filtering": config.native_tool_calling,
-                            "prompt_caching": enable_prompt_caching
-                        },
-                        "messages_preview": [
-                            {
-                                "role": msg.get("role"),
-                                "content_length": len(str(msg.get("content", ""))),
-                                "content_preview": str(msg.get("content", ""))[:200],
-                                "has_cache_control": "cache_control" in msg if isinstance(msg, dict) else False
-                            }
-                            for msg in prepared_messages[:5]
-                        ]
-                    }
-                )
-            except Exception as e:
-                logger.warning(f"Failed to log to GlitchTip: {e}")
+            # Get tool schemas for LLM API call (after compression)
+            openapi_tool_schemas = self.tool_registry.get_openapi_schemas() if config.native_tool_calling else None
 
             # Update generation tracking
             if generation:
@@ -571,8 +511,6 @@ class ThreadManager:
                         model_parameters={
                             "max_tokens": llm_max_tokens,
                             "temperature": llm_temperature,
-                            "enable_thinking": enable_thinking,
-                            "reasoning_effort": reasoning_effort,
                             "tool_choice": tool_choice,
                             "tools": openapi_tool_schemas,
                         }
@@ -580,35 +518,9 @@ class ThreadManager:
                 except Exception as e:
                     logger.warning(f"Failed to update Langfuse generation: {e}")
 
-            # Phase 1 Task 1.1.2: Log FINAL request metrics to GlitchTip (AFTER optimization)
-            try:
-                import sentry_sdk
-                from datetime import datetime
-                from litellm import token_counter
-
-                # Calculate FINAL token count (what's actually sent to LLM)
-                final_token_count = token_counter(model=llm_model, messages=prepared_messages)
-                final_tool_count = len(openapi_tool_schemas) if openapi_tool_schemas else 0
-
-                sentry_sdk.set_context("prompt_request", {
-                    "thread_id": thread_id,
-                    "model": llm_model,
-                    "prompt_size": final_token_count,  # Use token count, not char count
-                    "cache_enabled": enable_prompt_caching,
-                    "tool_count": final_tool_count,
-                    "temperature": llm_temperature,
-                    "max_tokens": llm_max_tokens,
-                    "timestamp": datetime.now().isoformat(),
-                    "message_count": len(prepared_messages),
-                    "native_tool_calling": config.native_tool_calling
-                })
-                sentry_sdk.capture_message(
-                    f"Prompt Request: {llm_model}, {final_token_count} tokens, {final_tool_count} tools",
-                    level="info"
-                )
-                logger.debug(f"📊 FINAL Request logged to GlitchTip: {final_token_count} tokens, {final_tool_count} tools")
-            except Exception as e:
-                logger.warning(f"Failed to log final request to GlitchTip: {e}")
+            # Note: We don't log token count here because cached blocks give inaccurate counts
+            # The LLM's usage.prompt_tokens (reported after the call) is the accurate source of truth
+            logger.info(f"📤 Sending {len(prepared_messages)} prepared messages to LLM")
 
             # Make LLM call
             try:
@@ -618,9 +530,7 @@ class ThreadManager:
                     max_tokens=llm_max_tokens,
                     tools=openapi_tool_schemas,
                     tool_choice=tool_choice if config.native_tool_calling else "none",
-                    stream=stream,
-                    enable_thinking=enable_thinking,
-                    reasoning_effort=reasoning_effort
+                    stream=stream
                 )
             except LLMError as e:
                 return {"type": "status", "status": "error", "message": str(e)}
@@ -640,11 +550,11 @@ class ThreadManager:
                     cast(AsyncGenerator, llm_response), thread_id, prepared_messages,
                     llm_model, config, True,
                     auto_continue_state['count'], auto_continue_state['continuous_state'],
-                    generation
+                    generation, estimated_total_tokens
                 )
             else:
                 return self.response_processor.process_non_streaming_response(
-                    llm_response, thread_id, prepared_messages, llm_model, config, generation
+                    llm_response, thread_id, prepared_messages, llm_model, config, generation, estimated_total_tokens
                 )
 
         except Exception as e:
@@ -655,11 +565,9 @@ class ThreadManager:
     async def _auto_continue_generator(
         self, thread_id: str, system_prompt: Dict[str, Any], llm_model: str,
         llm_temperature: float, llm_max_tokens: Optional[int], tool_choice: ToolChoice,
-        config: ProcessorConfig, stream: bool, enable_thinking: Optional[bool],
-        reasoning_effort: Optional[str], generation: Optional[StatefulGenerationClient],
+        config: ProcessorConfig, stream: bool, generation: Optional[StatefulGenerationClient],
         auto_continue_state: Dict[str, Any], temporary_message: Optional[Dict[str, Any]],
-        native_max_auto_continues: int, enable_prompt_caching: bool = False,
-        use_context_manager: bool = True
+        native_max_auto_continues: int, latest_user_message_content: Optional[str] = None
     ) -> AsyncGenerator:
         """Generator that handles auto-continue logic."""
         logger.debug(f"Starting auto-continue generator, max: {native_max_auto_continues}")
@@ -676,10 +584,10 @@ class ThreadManager:
             try:
                 response_gen = await self._execute_run(
                     thread_id, system_prompt, llm_model, llm_temperature, llm_max_tokens,
-                    tool_choice, config, stream, enable_thinking, reasoning_effort,
+                    tool_choice, config, stream,
                     generation, auto_continue_state,
                     temporary_message if auto_continue_state['count'] == 0 else None,
-                    enable_prompt_caching, use_context_manager
+                    latest_user_message_content if auto_continue_state['count'] == 0 else None
                 )
 
                 # Handle error responses
@@ -695,13 +603,12 @@ class ThreadManager:
                             chunk, auto_continue_state, native_max_auto_continues
                         )
                         
-                        # Skip finish chunks that trigger auto-continue
+                        # Skip finish chunks that trigger auto-continue (but NOT tool execution, FE needs those)
                         if should_continue:
-                            if chunk.get('type') == 'finish' and chunk.get('finish_reason') == 'tool_calls':
-                                continue
-                            elif chunk.get('type') == 'status':
+                            if chunk.get('type') == 'status':
                                 try:
                                     content = json.loads(chunk.get('content', '{}'))
+                                    # Only skip length limit finish statuses (frontend needs tool execution finish)
                                     if content.get('finish_reason') == 'length':
                                         continue
                                 except (json.JSONDecodeError, TypeError):
@@ -735,46 +642,31 @@ class ThreadManager:
             }
 
     def _check_auto_continue_trigger(
-        self, chunk: Dict[str, Any], auto_continue_state: Dict[str, Any],
+        self, chunk: Dict[str, Any], auto_continue_state: Dict[str, Any], 
         native_max_auto_continues: int
     ) -> bool:
         """Check if a response chunk should trigger auto-continue."""
-        # Initialize tool_call_count if not present
-        if 'tool_call_count' not in auto_continue_state:
-            auto_continue_state['tool_call_count'] = 0
-
-        # Maximum tool calls per query (to prevent infinite loops)
-        MAX_TOOL_CALLS_PER_QUERY = 5
-
-        if chunk.get('type') == 'finish':
-            if chunk.get('finish_reason') == 'tool_calls':
-                # Increment tool call counter
-                auto_continue_state['tool_call_count'] += 1
-                tool_call_count = auto_continue_state['tool_call_count']
-
-                # Check if max tool calls reached
-                if tool_call_count >= MAX_TOOL_CALLS_PER_QUERY:
-                    logger.warning(f"⚠️ Max tool calls ({MAX_TOOL_CALLS_PER_QUERY}) reached. Stopping auto-continue to force final response.")
-                    auto_continue_state['active'] = False
-                    return False
-
-                if native_max_auto_continues > 0:
-                    logger.debug(f"Auto-continuing for tool_calls (tool call {tool_call_count}/{MAX_TOOL_CALLS_PER_QUERY}, iteration {auto_continue_state['count'] + 1}/{native_max_auto_continues})")
-                    auto_continue_state['active'] = True
-                    auto_continue_state['count'] += 1
-                    return True
-            elif chunk.get('finish_reason') == 'xml_tool_limit_reached':
-                logger.debug("Stopping auto-continue due to XML tool limit")
-                auto_continue_state['active'] = False
-
-        elif chunk.get('type') == 'status':
+        if chunk.get('type') == 'status':
             try:
-                content = json.loads(chunk.get('content', '{}'))
-                if content.get('finish_reason') == 'length':
+                content = json.loads(chunk.get('content', '{}')) if isinstance(chunk.get('content'), str) else chunk.get('content', {})
+                finish_reason = content.get('finish_reason')
+                tools_executed = content.get('tools_executed', False)
+                
+                # Trigger auto-continue for: native tool calls, length limit, or XML tools executed
+                if finish_reason == 'tool_calls' or tools_executed:
+                    if native_max_auto_continues > 0:
+                        logger.debug(f"Auto-continuing for tool execution ({auto_continue_state['count'] + 1}/{native_max_auto_continues})")
+                        auto_continue_state['active'] = True
+                        auto_continue_state['count'] += 1
+                        return True
+                elif finish_reason == 'length':
                     logger.debug(f"Auto-continuing for length limit ({auto_continue_state['count'] + 1}/{native_max_auto_continues})")
                     auto_continue_state['active'] = True
                     auto_continue_state['count'] += 1
                     return True
+                elif finish_reason == 'xml_tool_limit_reached':
+                    logger.debug("Stopping auto-continue due to XML tool limit")
+                    auto_continue_state['active'] = False
             except (json.JSONDecodeError, TypeError):
                 pass
                 

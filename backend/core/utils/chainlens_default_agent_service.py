@@ -141,8 +141,8 @@ class ChainlensDefaultAgentService:
             "description": CHAINLENS_CONFIG["description"],
             "is_default": True,
             "icon_name": "sun",
-            "icon_color": "#F59E0B",
-            "icon_background": "#FFF3CD",
+            "icon_color": "#FFFFFF",
+            "icon_background": "#000000",
             "metadata": {
                 "is_chainlens_default": True,
                 "centrally_managed": True,

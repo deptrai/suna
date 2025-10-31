@@ -4,46 +4,45 @@ import os
 
 
 def extract_agent_config(agent_data: Dict[str, Any], version_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    """Extract agent configuration with simplified logic for Chainlens vs custom agents."""
+    """Extract agent configuration with simplified logic for Suna vs custom agents."""
     agent_id = agent_data.get('agent_id', 'Unknown')
     metadata = agent_data.get('metadata', {})
-    is_chainlens_default = metadata.get('is_chainlens_default', False)
+    is_suna_default = metadata.get('is_suna_default', False)
     
     # Debug logging
     if os.getenv("ENV_MODE", "").upper() == "STAGING":
-        print(f"[DEBUG] extract_agent_config: Called for agent {agent_id}, is_chainlens_default={is_chainlens_default}")
+        print(f"[DEBUG] extract_agent_config: Called for agent {agent_id}, is_suna_default={is_suna_default}")
         print(f"[DEBUG] extract_agent_config: Input agent_data has icon_name={agent_data.get('icon_name')}, icon_color={agent_data.get('icon_color')}, icon_background={agent_data.get('icon_background')}")
     
-    # Handle Chainlens agents with special logic
-    if is_chainlens_default:
-        return _extract_chainlens_agent_config(agent_data, version_data)
+    # Handle Suna agents with special logic
+    if is_suna_default:
+        return _extract_suna_agent_config(agent_data, version_data)
     
     # Handle custom agents with versioning
     return _extract_custom_agent_config(agent_data, version_data)
 
 
-def _extract_chainlens_agent_config(agent_data: Dict[str, Any], version_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    """Extract config for Chainlens agents - always use central config with user customizations."""
-    from core.chainlens_config import CHAINLENS_CONFIG
+def _extract_suna_agent_config(agent_data: Dict[str, Any], version_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Extract config for Suna agents - always use central config with user customizations."""
+    from core.suna_config import SUNA_CONFIG
     
     agent_id = agent_data.get('agent_id', 'Unknown')
-    logger.debug(f"Using Chainlens central config for agent {agent_id}")
+    logger.debug(f"Using Suna central config for agent {agent_id}")
     
-    # Start with central Chainlens config
+    # Start with central Suna config
     config = {
         'agent_id': agent_data['agent_id'],
-        'name': CHAINLENS_CONFIG['name'],
-        'description': CHAINLENS_CONFIG['description'],
-        'system_prompt': CHAINLENS_CONFIG['system_prompt'],
-        'model': CHAINLENS_CONFIG['model'],
-        'agentpress_tools': _extract_agentpress_tools_for_run(CHAINLENS_CONFIG['agentpress_tools']),
+        'name': SUNA_CONFIG['name'],
+        'description': SUNA_CONFIG['description'],
+        'system_prompt': SUNA_CONFIG['system_prompt'],
+        'model': SUNA_CONFIG['model'],
+        'agentpress_tools': _extract_agentpress_tools_for_run(SUNA_CONFIG['agentpress_tools']),
         'is_default': True,
-        'is_chainlens_default': True,
+        'is_suna_default': True,
         'centrally_managed': True,
         'account_id': agent_data.get('account_id'),
         'current_version_id': agent_data.get('current_version_id'),
         'version_name': version_data.get('version_name', 'v1') if version_data else 'v1',
-        'profile_image_url': agent_data.get('profile_image_url'),
         'restrictions': {
             'system_prompt_editable': False,
             'tools_editable': False,
@@ -59,23 +58,28 @@ def _extract_chainlens_agent_config(agent_data: Dict[str, Any], version_data: Op
             tools = version_config.get('tools', {})
             config['configured_mcps'] = tools.get('mcp', [])
             config['custom_mcps'] = tools.get('custom_mcp', [])
-            config['workflows'] = version_config.get('workflows', [])
             config['triggers'] = version_config.get('triggers', [])
         else:
             config['configured_mcps'] = version_data.get('configured_mcps', [])
             config['custom_mcps'] = version_data.get('custom_mcps', [])
-            config['workflows'] = []
             config['triggers'] = []
     else:
         config['configured_mcps'] = agent_data.get('configured_mcps', [])
         config['custom_mcps'] = agent_data.get('custom_mcps', [])
-        config['workflows'] = []
         config['triggers'] = []
     
     return config
 
 
 def _extract_custom_agent_config(agent_data: Dict[str, Any], version_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """
+    Extract configuration for custom agents.
+    
+    Args:
+        agent_data: Agent metadata from agents table
+        version_data: Optional version configuration. When None, uses safe fallback config.
+                      This is expected during list operations for performance.
+    """
     agent_id = agent_data.get('agent_id', 'Unknown')
     
     # Debug logging for icon fields
@@ -83,6 +87,7 @@ def _extract_custom_agent_config(agent_data: Dict[str, Any], version_data: Optio
         print(f"[DEBUG] _extract_custom_agent_config: Input agent_data has icon_name={agent_data.get('icon_name')}, icon_color={agent_data.get('icon_color')}, icon_background={agent_data.get('icon_background')}")
     
     if version_data:
+        # Use version configuration when available
         logger.debug(f"Using version data for custom agent {agent_id} (version: {version_data.get('version_name', 'unknown')})")
         
         if version_data.get('config'):
@@ -93,7 +98,6 @@ def _extract_custom_agent_config(agent_data: Dict[str, Any], version_data: Optio
             configured_mcps = tools.get('mcp', [])
             custom_mcps = tools.get('custom_mcp', [])
             agentpress_tools = tools.get('agentpress', {})
-            workflows = config.get('workflows', [])
             triggers = config.get('triggers', [])
         else:
             system_prompt = version_data.get('system_prompt', '')
@@ -101,7 +105,6 @@ def _extract_custom_agent_config(agent_data: Dict[str, Any], version_data: Optio
             configured_mcps = version_data.get('configured_mcps', [])
             custom_mcps = version_data.get('custom_mcps', [])
             agentpress_tools = version_data.get('agentpress_tools', {})
-            workflows = []
             triggers = []
         
         config = {
@@ -113,14 +116,12 @@ def _extract_custom_agent_config(agent_data: Dict[str, Any], version_data: Optio
             'agentpress_tools': _extract_agentpress_tools_for_run(agentpress_tools),
             'configured_mcps': configured_mcps,
             'custom_mcps': custom_mcps,
-            'workflows': workflows,
             'triggers': triggers,
-            'profile_image_url': agent_data.get('profile_image_url'),
             'icon_name': agent_data.get('icon_name'),
             'icon_color': agent_data.get('icon_color'),
             'icon_background': agent_data.get('icon_background'),
             'is_default': agent_data.get('is_default', False),
-            'is_chainlens_default': False,
+            'is_suna_default': False,
             'centrally_managed': False,
             'account_id': agent_data.get('account_id'),
             'current_version_id': agent_data.get('current_version_id'),
@@ -134,10 +135,8 @@ def _extract_custom_agent_config(agent_data: Dict[str, Any], version_data: Optio
         
         return config
     
-    logger.warning(f"No version data found for custom agent {agent_id}, creating default configuration")
-    logger.debug(f"Agent data keys: {list(agent_data.keys())}")
-    logger.debug(f"Agent current_version_id: {agent_data.get('current_version_id')}")
-    
+    # No version data provided - use fallback config
+    # This is expected during list operations where we don't load full configs for performance
     fallback_config = {
         'agent_id': agent_data['agent_id'],
         'name': agent_data.get('name', 'Unnamed Agent'),
@@ -147,14 +146,12 @@ def _extract_custom_agent_config(agent_data: Dict[str, Any], version_data: Optio
         'agentpress_tools': _extract_agentpress_tools_for_run(_get_default_agentpress_tools()),
         'configured_mcps': [],
         'custom_mcps': [],
-        'workflows': [],
         'triggers': [],
-        'profile_image_url': agent_data.get('profile_image_url'),
         'icon_name': agent_data.get('icon_name'),
         'icon_color': agent_data.get('icon_color'),
         'icon_background': agent_data.get('icon_background'),
         'is_default': agent_data.get('is_default', False),
-        'is_chainlens_default': False,
+        'is_suna_default': False,
         'centrally_managed': False,
         'account_id': agent_data.get('account_id'),
         'current_version_id': agent_data.get('current_version_id'),
@@ -174,8 +171,7 @@ def build_unified_config(
     agentpress_tools: Dict[str, Any],
     configured_mcps: List[Dict[str, Any]],
     custom_mcps: Optional[List[Dict[str, Any]]] = None,
-    chainlens_metadata: Optional[Dict[str, Any]] = None,
-    workflows: Optional[List[Dict[str, Any]]] = None,
+    suna_metadata: Optional[Dict[str, Any]] = None,
     triggers: Optional[List[Dict[str, Any]]] = None
 ) -> Dict[str, Any]:
     simplified_tools = {}
@@ -192,13 +188,12 @@ def build_unified_config(
             'mcp': configured_mcps or [],
             'custom_mcp': custom_mcps or []
         },
-        'workflows': workflows or [],
         'triggers': triggers or [],
         'metadata': {}
     }
     
-    if chainlens_metadata:
-        config['chainlens_metadata'] = chainlens_metadata
+    if suna_metadata:
+        config['suna_metadata'] = suna_metadata
     
     return config
 
@@ -207,24 +202,19 @@ def _get_default_agentpress_tools() -> Dict[str, bool]:
     return {
         "sb_shell_tool": True,
         "sb_files_tool": True,
-        "sb_deploy_tool": True,
         "sb_expose_tool": True,
         "web_search_tool": True,
         "image_search_tool": True,
         "sb_vision_tool": True,
         "sb_image_edit_tool": True,
-        "sb_presentation_outline_tool": True,
         "sb_presentation_tool": True,
-
-        "sb_sheets_tool": False,
-        # "sb_web_dev_tool": True,
         "browser_tool": True,
         "data_providers_tool": True,
+        "people_search_tool": False,
         "agent_config_tool": True,
         "mcp_search_tool": True,
         "credential_profile_tool": True,
         "agent_creation_tool": True,
-        "workflow_tool": True,
         "trigger_tool": True
     }
 

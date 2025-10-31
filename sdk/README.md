@@ -1,38 +1,43 @@
-# Epsilon SDK
+# Kortix SDK
 
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://python.org)
 
-A Python SDK that enables you to create, manage, and interact with AI Workers on [Chainlens](https://chainlens.net).
+> [!WARNING]
+> **This SDK is currently in early development and is NOT ready for production use.**
+> 
+> The API is subject to breaking changes, features may be incomplete, and documentation may be outdated. Use at your own risk.
+
+A Python SDK that enables you to create, manage, and interact with AI Workers on [Suna](https://suna.so).
 
 ## 📦 Installation
 
 Install directly from the GitHub repository:
 
 ```bash
-pip install "epsilon @ git+https://github.com/deptrai/chainlens.git@main#subdirectory=sdk"
+pip install "kortix @ git+https://github.com/kortix-ai/suna.git@main#subdirectory=sdk"
 ```
 
 Or using uv:
 
 ```bash
-uv add "epsilon @ git+https://github.com/deptrai/chainlens.git@main#subdirectory=sdk"
+uv add "kortix @ git+https://github.com/kortix-ai/suna.git@main#subdirectory=sdk"
 ```
 
 ## 🔧 Quick Start
 
 ```python
 import asyncio
-from epsilon import epsilon
+from kortix import kortix
 
 async def main():
-    mcp_tools = epsilon.MCPTools(
+    mcp_tools = kortix.MCPTools(
         "http://localhost:4000/mcp/",  # Point to any HTTP MCP server
-        "Epsilon",
+        "Kortix",
     )
     await mcp_tools.initialize()
 
     # Initialize the client
-    client = epsilon.Epsilon(api_key="your-api-key")
+    client = kortix.Kortix(api_key="your-api-key")
 
     # Create an agent
     agent = await client.Agent.create(
@@ -59,7 +64,7 @@ if __name__ == "__main__":
 
 ## 🔑 Environment Setup
 
-Get your API key from [https://chainlens.net/settings/api-keys](https://chainlens.net/settings/api-keys)
+Get your API key from [https://suna.so/settings/api-keys](https://suna.so/settings/api-keys)
 
 ## 🧪 Running Examples
 

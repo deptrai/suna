@@ -175,9 +175,10 @@ class ErrorProcessor:
     
     @staticmethod
     def safe_error_to_string(error: Exception) -> str:
-        """Safely convert an exception to a string with fallbacks."""
+        """Safely convert an exception to a string with fallback"""
         try:
             return str(error)
+            
         except Exception:
             try:
                 # Handle case where error.args[0] might be a list or other non-string type

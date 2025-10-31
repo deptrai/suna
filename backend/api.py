@@ -1,19 +1,9 @@
 from dotenv import load_dotenv
 load_dotenv()
 
-# Setup Dramatiq broker BEFORE importing run_agent_background
-import dramatiq
-from dramatiq.brokers.redis import RedisBroker
-import os
-
-redis_host = os.getenv('REDIS_HOST', 'localhost')
-redis_port = int(os.getenv('REDIS_PORT', 6379))
-redis_broker = RedisBroker(host=redis_host, port=redis_port, middleware=[dramatiq.middleware.AsyncIO()])
-dramatiq.set_broker(redis_broker)
-
 from fastapi import FastAPI, Request, HTTPException, Response, Depends, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse, FileResponse
 from core.services import redis
 import sentry
 from contextlib import asynccontextmanager
@@ -25,6 +15,7 @@ import asyncio
 from core.utils.logger import logger, structlog
 import time
 from collections import OrderedDict
+import os
 
 from pydantic import BaseModel
 import uuid
@@ -33,8 +24,9 @@ from core import api as core_api
 
 from core.sandbox import api as sandbox_api
 from core.billing.api import router as billing_router
-from core.billing.admin import router as billing_admin_router
-from core.admin.users_admin import router as users_admin_router
+from core.admin.admin_api import router as admin_router
+from core.admin.billing_admin_api import router as billing_admin_router
+from core.admin.master_password_api import router as master_password_router
 from core.services import transcription as transcription_api
 import sys
 from core.services import email_api
@@ -79,7 +71,6 @@ async def lifespan(app: FastAPI):
         # asyncio.create_task(core_api.restore_running_agent_runs())
         
         triggers_api.initialize(db)
-        pipedream_api.initialize(db)
         credentials_api.initialize(db)
         template_api.initialize(db)
         composio_api.initialize(db)
@@ -133,23 +124,33 @@ async def log_requests_middleware(request: Request, call_next):
         return response
     except Exception as e:
         process_time = time.time() - start_time
-        logger.error(f"Request failed: {method} {path} | Error: {str(e)} | Time: {process_time:.2f}s")
+        try:
+            error_str = str(e)
+        except Exception:
+            error_str = f"Error of type {type(e).__name__}"
+        logger.error(f"Request failed: {method} {path} | Error: {error_str} | Time: {process_time:.2f}s")
         raise
 
 # Define allowed origins based on environment
-allowed_origins = ["https://www.chainlens.net", "https://chainlens.net"]
+allowed_origins = ["https://www.kortix.com", "https://kortix.com", "https://www.suna.so", "https://suna.so"]
 allow_origin_regex = None
 
 # Add staging-specific origins
 if config.ENV_MODE == EnvMode.LOCAL:
     allowed_origins.append("http://localhost:3000")
+    allowed_origins.append("http://127.0.0.1:3000")
 
 # Add staging-specific origins
 if config.ENV_MODE == EnvMode.STAGING:
-    allowed_origins.append("https://staging.chainlens.net")
+    allowed_origins.append("https://staging.suna.so")
     allowed_origins.append("http://localhost:3000")
-    allowed_origins.append("http://localhost:3001")  # Add port 3001 for development
-    allow_origin_regex = r"https://chainlens-.*-prjcts\.vercel\.app"
+    # Allow Vercel preview deployments for both legacy and new project names
+    allow_origin_regex = r"https://(suna|kortixcom)-.*-prjcts\.vercel\.app"
+
+# Add localhost for production mode local testing (for master password login)
+if config.ENV_MODE == EnvMode.PRODUCTION:
+    allowed_origins.append("http://localhost:3000")
+    allowed_origins.append("http://127.0.0.1:3000")
 
 app.add_middleware(
     CORSMiddleware,
@@ -169,7 +170,8 @@ api_router.include_router(sandbox_api.router)
 api_router.include_router(billing_router)
 api_router.include_router(api_keys_api.router)
 api_router.include_router(billing_admin_router)
-api_router.include_router(users_admin_router)
+api_router.include_router(admin_router)
+api_router.include_router(master_password_router)
 
 from core.mcp_module import api as mcp_api
 from core.credentials import api as credentials_api
@@ -182,19 +184,10 @@ api_router.include_router(template_api.router, prefix="/templates")
 api_router.include_router(transcription_api.router)
 api_router.include_router(email_api.router)
 
-from knowledge_base import api as knowledge_base_api
+from core.knowledge_base import api as knowledge_base_api
 api_router.include_router(knowledge_base_api.router)
 
-from core.knowledge_base import api as core_knowledge_base_api
-api_router.include_router(core_knowledge_base_api.router)
-
 api_router.include_router(triggers_api.router)
-
-from core.pipedream import api as pipedream_api
-api_router.include_router(pipedream_api.router)
-
-from core.admin import api as admin_api
-api_router.include_router(admin_api.router)
 
 from core.composio_integration import api as composio_api
 api_router.include_router(composio_api.router)
@@ -205,7 +198,86 @@ api_router.include_router(google_slides_router)
 from core.google.google_docs_api import router as google_docs_router
 api_router.include_router(google_docs_router)
 
-@api_router.get("/health")
+@api_router.get("/presentation-templates/{template_name}/image.png", summary="Get Presentation Template Image", tags=["presentations"])
+async def get_presentation_template_image(template_name: str):
+    """Serve presentation template preview images"""
+    try:
+        # Construct path to template image
+        image_path = os.path.join(
+            os.path.dirname(__file__),
+            "core",
+            "templates",
+            "presentations",
+            template_name,
+            "image.png"
+        )
+        
+        # Verify file exists and is within templates directory (security check)
+        image_path = os.path.abspath(image_path)
+        templates_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "core", "templates", "presentations"))
+        
+        if not image_path.startswith(templates_dir):
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        if not os.path.exists(image_path):
+            raise HTTPException(status_code=404, detail="Template image not found")
+        
+        return FileResponse(image_path, media_type="image/png")
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error serving template image: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@api_router.get("/presentation-templates/{template_name}/pdf", summary="Get Presentation Template PDF", tags=["presentations"])
+async def get_presentation_template_pdf(template_name: str):
+    """Serve presentation template PDF files"""
+    try:
+        # Construct path to template pdf folder
+        pdf_folder = os.path.join(
+            os.path.dirname(__file__),
+            "core",
+            "templates",
+            "presentations",
+            template_name,
+            "pdf"
+        )
+        
+        # Verify folder exists and is within templates directory (security check)
+        pdf_folder = os.path.abspath(pdf_folder)
+        templates_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "core", "templates", "presentations"))
+        
+        if not pdf_folder.startswith(templates_dir):
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        if not os.path.exists(pdf_folder):
+            raise HTTPException(status_code=404, detail="Template PDF folder not found")
+        
+        # Find the first PDF file in the folder
+        pdf_files = [f for f in os.listdir(pdf_folder) if f.lower().endswith('.pdf')]
+        
+        if not pdf_files:
+            raise HTTPException(status_code=404, detail="No PDF file found in template")
+        
+        # Use the first PDF file found
+        pdf_path = os.path.join(pdf_folder, pdf_files[0])
+        
+        return FileResponse(
+            pdf_path, 
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"inline; filename={template_name}.pdf"
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error serving template PDF: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@api_router.get("/health", summary="Health Check", operation_id="health_check", tags=["system"])
 async def health_check():
     logger.debug("Health check endpoint called")
     return {
@@ -214,8 +286,8 @@ async def health_check():
         "instance_id": instance_id
     }
 
-@api_router.get("/health-docker")
-async def health_check():
+@api_router.get("/health-docker", summary="Docker Health Check", operation_id="health_check_docker", tags=["system"])
+async def health_check_docker():
     logger.debug("Health docker check endpoint called")
     try:
         client = await redis.get_client()
@@ -236,8 +308,6 @@ async def health_check():
 
 
 app.include_router(api_router, prefix="/api")
-app.include_router(billing_router)
-app.include_router(transcription_api.router)
 
 
 if __name__ == "__main__":
@@ -246,9 +316,12 @@ if __name__ == "__main__":
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
     
-    workers = 4
+    # Enable reload mode for local and staging environments
+    is_dev_env = config.ENV_MODE in [EnvMode.LOCAL, EnvMode.STAGING]
+    workers = 1 if is_dev_env else 4
+    reload = is_dev_env
     
-    logger.debug(f"Starting server on 0.0.0.0:8000 with {workers} workers")
+    logger.debug(f"Starting server on 0.0.0.0:8000 with {workers} workers (reload={reload})")
     uvicorn.run(
         "api:app", 
         host="0.0.0.0", 

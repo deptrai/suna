@@ -1,13 +1,19 @@
 from typing import Dict, List, Optional, Set
-from .ai_models import Model, ModelProvider, ModelCapability, ModelPricing
-from .provider_config import ProviderConfigFactory
-import structlog
-import os
+from .ai_models import Model, ModelProvider, ModelCapability, ModelPricing, ModelConfig
+from core.utils.config import config, EnvMode
 
-logger = structlog.get_logger(__name__)
+# SHOULD_USE_ANTHROPIC = False
+SHOULD_USE_ANTHROPIC = config.ENV_MODE == EnvMode.LOCAL and bool(config.ANTHROPIC_API_KEY)
 
-DEFAULT_FREE_MODEL = "Kimi K2"
-DEFAULT_PREMIUM_MODEL = "Claude Sonnet 4"
+# Set premium model ID based on environment - using MAP-tagged application inference profiles with global routing
+if SHOULD_USE_ANTHROPIC:
+    FREE_MODEL_ID = "anthropic/claude-haiku-4-5"
+    PREMIUM_MODEL_ID = "anthropic/claude-haiku-4-5"
+else:  
+    FREE_MODEL_ID = "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48"
+    PREMIUM_MODEL_ID = "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48"
+
+is_local = config.ENV_MODE == EnvMode.LOCAL
 
 class ModelRegistry:
     def __init__(self):
@@ -17,10 +23,59 @@ class ModelRegistry:
     
     def _initialize_models(self):
         self.register(Model(
-            id="anthropic/claude-sonnet-4-20250514",
-            name="Claude Sonnet 4",
+            id="anthropic/claude-haiku-4-5" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48",
+            name="Haiku 4.5",
             provider=ModelProvider.ANTHROPIC,
-            aliases=["claude-sonnet-4", "anthropic/claude-sonnet-4", "Claude Sonnet 4", "claude-sonnet-4-20250514"],
+            aliases=["claude-haiku-4.5", "anthropic/claude-haiku-4.5", "Claude Haiku 4.5", "global.anthropic.claude-haiku-4-5-20251001-v1:0", "bedrock/global.anthropic.claude-haiku-4-5-20251001-v1:0", "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48"],
+            context_window=200_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.VISION,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=1.00,
+                output_cost_per_million_tokens=5.00
+            ),
+            tier_availability=["paid"],
+            priority=102,
+            recommended=True,
+            enabled=True,
+            config=ModelConfig()
+        ))
+        
+        self.register(Model(
+            id="anthropic/claude-sonnet-4-5-20250929" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh",
+            name="Sonnet 4.5",
+            provider=ModelProvider.ANTHROPIC,
+            aliases=["claude-sonnet-4.5", "anthropic/claude-sonnet-4.5", "Claude Sonnet 4.5", "claude-sonnet-4-5-20250929", "global.anthropic.claude-sonnet-4-5-20250929-v1:0", "arn:aws:bedrock:us-west-2:935064898258:inference-profile/global.anthropic.claude-sonnet-4-5-20250929-v1:0", "bedrock/global.anthropic.claude-sonnet-4-5-20250929-v1:0", "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh"],
+            context_window=1_000_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.VISION,
+                ModelCapability.THINKING,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=3.00,
+                output_cost_per_million_tokens=15.00
+            ),
+            tier_availability=["paid"],
+            priority=101,
+            recommended=True,
+            enabled=True,
+            config=ModelConfig(
+                extra_headers={
+                    "anthropic-beta": "context-1m-2025-08-07" 
+                },
+            )
+        ))
+        
+        self.register(Model(
+            id="anthropic/claude-sonnet-4-20250514" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf",
+            name="Sonnet 4",
+            provider=ModelProvider.ANTHROPIC,
+            aliases=["claude-sonnet-4", "Claude Sonnet 4", "claude-sonnet-4-20250514", "global.anthropic.claude-sonnet-4-20250514-v1:0", "arn:aws:bedrock:us-west-2:935064898258:inference-profile/global.anthropic.claude-sonnet-4-20250514-v1:0", "bedrock/global.anthropic.claude-sonnet-4-20250514-v1:0", "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf"],
             context_window=1_000_000,
             capabilities=[
                 ModelCapability.CHAT,
@@ -35,47 +90,59 @@ class ModelRegistry:
             tier_availability=["paid"],
             priority=100,
             recommended=True,
-            enabled=True
+            enabled=True,
+            config=ModelConfig(
+                extra_headers={
+                    "anthropic-beta": "context-1m-2025-08-07" 
+                },
+            )
         ))
         
-        self.register(Model(
-            id="anthropic/claude-3-7-sonnet-latest",
-            name="Claude Sonnet 3.7",
-            provider=ModelProvider.ANTHROPIC,
-            aliases=["sonnet-3.7", "claude-3.7", "Claude 3.7 Sonnet", "claude-3-7-sonnet-latest", "Claude 3.7 Sonnet"],
-            context_window=200_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.VISION,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=3.00,
-                output_cost_per_million_tokens=15.00
-            ),
-            tier_availability=["paid"],
-            priority=99,
-            enabled=True
-        ))
+        # Sonnet 3.7 - No global inference profile available yet
+        # self.register(Model(
+        #     id="anthropic/claude-3-7-sonnet-latest" if SHOULD_USE_ANTHROPIC else "global.anthropic.claude-3-7-sonnet-20250219-v1:0",
+        #     name="Sonnet 3.7",
+        #     provider=ModelProvider.ANTHROPIC,
+        #     aliases=["claude-3.7", "Claude 3.7 Sonnet", "claude-3-7-sonnet-latest", "global.anthropic.claude-3-7-sonnet-20250219-v1:0", "arn:aws:bedrock:us-west-2:935064898258:inference-profile/global.anthropic.claude-3-7-sonnet-20250219-v1:0", "bedrock/global.anthropic.claude-3-7-sonnet-20250219-v1:0"],
+        #     context_window=200_000,
+        #     capabilities=[
+        #         ModelCapability.CHAT,
+        #         ModelCapability.FUNCTION_CALLING,
+        #         ModelCapability.VISION,
+        #     ],
+        #     pricing=ModelPricing(
+        #         input_cost_per_million_tokens=3.00,
+        #         output_cost_per_million_tokens=15.00
+        #     ),
+        #     tier_availability=["paid"],
+        #     priority=99,
+        #     enabled=True,
+        #     config=ModelConfig(
+        #         # extra_headers={
+        #         #     "anthropic-beta": "prompt-caching-2024-07-31"
+        #         # },
+        #     )
+        # ))
 
-        self.register(Model(
-            id="xai/grok-4-fast-non-reasoning",
-            name="Grok 4 Fast",
-            provider=ModelProvider.XAI,
-            aliases=["grok-4-fast-non-reasoning", "x-ai/grok-4-fast-non-reasoning", "openrouter/x-ai/grok-4-fast-non-reasoning", "Grok 4 Fast"],
-            context_window=2_000_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=0.20,
-                output_cost_per_million_tokens=0.50
-            ),
-            tier_availability=["paid"],
-            priority=98,
-            enabled=True
-        ))        
+        # Commented out non-Anthropic models as requested
+        # self.register(Model(
+        #     id="xai/grok-4-fast-non-reasoning",
+        #     name="Grok 4 Fast",
+        #     provider=ModelProvider.XAI,
+        #     aliases=["grok-4-fast-non-reasoning", "Grok 4 Fast"],
+        #     context_window=2_000_000,
+        #     capabilities=[
+        #         ModelCapability.CHAT,
+        #         ModelCapability.FUNCTION_CALLING,
+        #     ],
+        #     pricing=ModelPricing(
+        #         input_cost_per_million_tokens=0.20,
+        #         output_cost_per_million_tokens=0.50
+        #     ),
+        #     tier_availability=["paid"],
+        #     priority=98,
+        #     enabled=True
+        # ))        
         
         # self.register(Model(
         #     id="anthropic/claude-3-5-sonnet-latest",
@@ -97,388 +164,154 @@ class ModelRegistry:
         #     enabled=True
         # ))
         
-        self.register(Model(
-            id="openai/gpt-5",
-            name="GPT-5",
-            provider=ModelProvider.OPENAI,
-            aliases=["gpt-5", "GPT-5"],
-            context_window=400_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.VISION,
-                ModelCapability.STRUCTURED_OUTPUT,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=1.25,
-                output_cost_per_million_tokens=10.00
-            ),
-            tier_availability=["paid"],
-            priority=97,
-            enabled=True
-        ))
+        # Commented out OpenAI models as requested
+        # self.register(Model(
+        #     id="openai/gpt-5",
+        #     name="GPT-5",
+        #     provider=ModelProvider.OPENAI,
+        #     aliases=["gpt-5", "GPT-5"],
+        #     context_window=400_000,
+        #     capabilities=[
+        #         ModelCapability.CHAT,
+        #         ModelCapability.FUNCTION_CALLING,
+        #         ModelCapability.VISION,
+        #         ModelCapability.STRUCTURED_OUTPUT,
+        #     ],
+        #     pricing=ModelPricing(
+        #         input_cost_per_million_tokens=1.25,
+        #         output_cost_per_million_tokens=10.00
+        #     ),
+        #     tier_availability=["paid"],
+        #     priority=97,
+        #     enabled=True
+        # ))
         
-        self.register(Model(
-            id="openai/gpt-5-mini",
-            name="GPT-5 Mini",
-            provider=ModelProvider.OPENAI,
-            aliases=["gpt-5-mini", "GPT-5 Mini"],
-            context_window=400_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.STRUCTURED_OUTPUT,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=0.25,
-                output_cost_per_million_tokens=2.00
-            ),
-            tier_availability=["free", "paid"],
-            priority=96,
-            enabled=True
-        ))
-
-        # Add GPT-4o-mini for OpenAI compatible usage
-        self.register(Model(
-            id="openai/gpt-4o-mini",
-            name="GPT-4o Mini",
-            provider=ModelProvider.OPENAI,
-            aliases=["gpt-4o-mini", "GPT-4o Mini", "openai/gpt-4o-mini"],
-            context_window=128_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.STRUCTURED_OUTPUT,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=0.15,
-                output_cost_per_million_tokens=0.60
-            ),
-            tier_availability=["free", "paid"],
-            priority=95,  # Higher priority to appear in list
-            enabled=True
-        ))
-
-        # Add v98store models via OpenAI-compatible API
-
-        # OpenAI Models via v98store
-        self.register(Model(
-            id="openai-compatible/gpt-4o-mini",
-            name="GPT-4o Mini (v98store)",
-            provider=ModelProvider.OPENAI_COMPATIBLE,
-            aliases=["gpt-4o-mini-v98", "v98store/gpt-4o-mini"],
-            context_window=128_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.STRUCTURED_OUTPUT,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=0.15,
-                output_cost_per_million_tokens=0.60
-            ),
-            tier_availability=["free", "paid"],
-            priority=94,
-            enabled=True
-        ))
-
-        self.register(Model(
-            id="openai-compatible/gpt-4o",
-            name="GPT-4o (v98store)",
-            provider=ModelProvider.OPENAI_COMPATIBLE,
-            aliases=["gpt-4o-v98", "v98store/gpt-4o", "gpt-4o"],
-            context_window=128_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.VISION,
-                ModelCapability.STRUCTURED_OUTPUT,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=5.0,
-                output_cost_per_million_tokens=15.0
-            ),
-            tier_availability=["paid"],
-            priority=93,
-            enabled=True
-        ))
-
-        self.register(Model(
-            id="openai-compatible/gpt-5-2025-08-07",
-            name="GPT-5 (v98store)",
-            provider=ModelProvider.OPENAI_COMPATIBLE,
-            aliases=["gpt-5-v98", "v98store/gpt-5"],
-            context_window=200_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.VISION,
-                ModelCapability.THINKING,
-                ModelCapability.STRUCTURED_OUTPUT,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=10.0,
-                output_cost_per_million_tokens=30.0
-            ),
-            tier_availability=["paid"],
-            priority=92,
-            enabled=True
-        ))
-
-        self.register(Model(
-            id="openai-compatible/gpt-5-nano-2025-08-07",
-            name="GPT-5 Nano (v98store)",
-            provider=ModelProvider.OPENAI_COMPATIBLE,
-            aliases=["gpt-5-nano-v98", "v98store/gpt-5-nano"],
-            context_window=32_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.STRUCTURED_OUTPUT,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=1.0,
-                output_cost_per_million_tokens=3.0
-            ),
-            tier_availability=["free", "paid"],
-            priority=91,
-            enabled=True
-        ))
-
-        # Qwen Models via v98store
-        self.register(Model(
-            id="openai-compatible/qwen3-32b",
-            name="Qwen 3 32B (v98store)",
-            provider=ModelProvider.OPENAI_COMPATIBLE,
-            aliases=["qwen3-32b-v98", "v98store/qwen3-32b"],
-            context_window=32_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.STRUCTURED_OUTPUT,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=2.0,
-                output_cost_per_million_tokens=6.0
-            ),
-            tier_availability=["paid"],
-            priority=90,
-            enabled=True
-        ))
-
-        self.register(Model(
-            id="openai-compatible/qwen3-235b-a22b",
-            name="Qwen 3 235B A22B (v98store)",
-            provider=ModelProvider.OPENAI_COMPATIBLE,
-            aliases=["qwen3-235b-a22b-v98", "v98store/qwen3-235b-a22b"],
-            context_window=128_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.THINKING,
-                ModelCapability.STRUCTURED_OUTPUT,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=8.0,
-                output_cost_per_million_tokens=24.0
-            ),
-            tier_availability=["paid"],
-            priority=89,
-            enabled=True
-        ))
-
-        # Claude Models via v98store
-        self.register(Model(
-            id="openai-compatible/claude-3-7-sonnet-20250219",
-            name="Claude 3.7 Sonnet (v98store)",
-            provider=ModelProvider.OPENAI_COMPATIBLE,
-            aliases=["claude-3-7-sonnet-v98", "v98store/claude-3-7-sonnet"],
-            context_window=200_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.THINKING,
-                ModelCapability.STRUCTURED_OUTPUT,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=3.0,
-                output_cost_per_million_tokens=15.0
-            ),
-            tier_availability=["paid"],
-            priority=88,
-            enabled=True
-        ))
-
-        # Grok Models via v98store
-        self.register(Model(
-            id="openai-compatible/grok-4",
-            name="Grok 4 (v98store)",
-            provider=ModelProvider.OPENAI_COMPATIBLE,
-            aliases=["grok-4-v98", "v98store/grok-4"],
-            context_window=128_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.THINKING,
-                ModelCapability.STRUCTURED_OUTPUT,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=5.0,
-                output_cost_per_million_tokens=15.0
-            ),
-            tier_availability=["paid"],
-            priority=87,
-            enabled=True
-        ))
-
-        # Kimi Models via v98store
-        self.register(Model(
-            id="openai-compatible/kimi-k2-0711-preview",
-            name="Kimi K2 Preview (v98store)",
-            provider=ModelProvider.OPENAI_COMPATIBLE,
-            aliases=["kimi-k2-v98", "v98store/kimi-k2", "kimi-k2-0711-preview-v98"],
-            context_window=200_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.THINKING,
-                ModelCapability.STRUCTURED_OUTPUT,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=3.0,
-                output_cost_per_million_tokens=9.0
-            ),
-            tier_availability=["paid"],
-            priority=86,
-            enabled=True
-        ))
+        # self.register(Model(
+        #     id="openai/gpt-5-mini",
+        #     name="GPT-5 Mini",
+        #     provider=ModelProvider.OPENAI,
+        #     aliases=["gpt-5-mini", "GPT-5 Mini"],
+        #     context_window=400_000,
+        #     capabilities=[
+        #         ModelCapability.CHAT,
+        #         ModelCapability.FUNCTION_CALLING,
+        #         ModelCapability.STRUCTURED_OUTPUT,
+        #     ],
+        #     pricing=ModelPricing(
+        #         input_cost_per_million_tokens=0.25,
+        #         output_cost_per_million_tokens=2.00
+        #     ),
+        #     tier_availability=["free", "paid"],
+        #     priority=96,
+        #     enabled=True
+        # ))
         
-        self.register(Model(
-            id="gemini/gemini-2.5-pro",
-            name="Gemini 2.5 Pro",
-            provider=ModelProvider.GOOGLE,
-            aliases=["google/gemini-2.5-pro", "gemini-2.5-pro", "Gemini 2.5 Pro"],
-            context_window=2_000_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.VISION,
-                ModelCapability.STRUCTURED_OUTPUT,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=1.25,
-                output_cost_per_million_tokens=10.00
-            ),
-            tier_availability=["paid"],
-            priority=95,
-            enabled=True
-        ))
+        # Commented out Google models as requested
+        # self.register(Model(
+        #     id="gemini/gemini-2.5-pro",
+        #     name="Gemini 2.5 Pro",
+        #     provider=ModelProvider.GOOGLE,
+        #     aliases=["gemini-2.5-pro", "Gemini 2.5 Pro"],
+        #     context_window=2_000_000,
+        #     capabilities=[
+        #         ModelCapability.CHAT,
+        #         ModelCapability.FUNCTION_CALLING,
+        #         ModelCapability.VISION,
+        #         ModelCapability.STRUCTURED_OUTPUT,
+        #     ],
+        #     pricing=ModelPricing(
+        #         input_cost_per_million_tokens=1.25,
+        #         output_cost_per_million_tokens=10.00
+        #     ),
+        #     tier_availability=["paid"],
+        #     priority=95,
+        #     enabled=True
+        # ))
         
         
-        self.register(Model(
-            id="openrouter/moonshotai/kimi-k2",
-            name="Kimi K2",
-            provider=ModelProvider.MOONSHOTAI,
-            aliases=["moonshotai/kimi-k2", "kimi-k2", "Kimi K2"],
-            context_window=200_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=1.00,
-                output_cost_per_million_tokens=3.00
-            ),
-            tier_availability=["free", "paid"],
-            priority=94,
-            enabled=True
-        ))
-
-        """
-        # DeepSeek Models
-        self.register(Model(
-            id="openrouter/deepseek/deepseek-chat",
-            name="DeepSeek Chat",
-            provider=ModelProvider.OPENROUTER,
-            aliases=["deepseek", "deepseek-chat"],
-            context_window=128_000,
-            capabilities=[
-                ModelCapability.CHAT, 
-                ModelCapability.FUNCTION_CALLING
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=0.38,
-                output_cost_per_million_tokens=0.89
-            ),
-            tier_availability=["free", "paid"],
-            priority=95,
-            enabled=False  # Currently disabled
-        ))
+        # self.register(Model(
+        #     id="openrouter/moonshotai/kimi-k2",
+        #     name="Kimi K2",
+        #     provider=ModelProvider.MOONSHOTAI,
+        #     aliases=["kimi-k2", "Kimi K2", "moonshotai/kimi-k2"],
+        #     context_window=200_000,
+        #     capabilities=[
+        #         ModelCapability.CHAT,
+        #         ModelCapability.FUNCTION_CALLING,
+        #     ],
+        #     pricing=ModelPricing(
+        #         input_cost_per_million_tokens=1.00,
+        #         output_cost_per_million_tokens=3.00
+        #     ),
+        #     tier_availability=["free", "paid"],
+        #     priority=94,
+        #     enabled=True,
+        #     config=ModelConfig(
+        #         extra_headers={
+        #             "HTTP-Referer": config.OR_SITE_URL if hasattr(config, 'OR_SITE_URL') and config.OR_SITE_URL else "",
+        #             "X-Title": config.OR_APP_NAME if hasattr(config, 'OR_APP_NAME') and config.OR_APP_NAME else ""
+        #         }
+        #     )
+        # ))
         
-        # Qwen Models
-        self.register(Model(
-            id="openrouter/qwen/qwen3-235b-a22b",
-            name="Qwen3 235B",
-            provider=ModelProvider.OPENROUTER,
-            aliases=["qwen3", "qwen-3"],
-            context_window=128_000,
-            capabilities=[
-                ModelCapability.CHAT, 
-                ModelCapability.FUNCTION_CALLING
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=0.13,
-                output_cost_per_million_tokens=0.60
-            ),
-            tier_availability=["free", "paid"],
-            priority=90,
-            enabled=False  # Currently disabled
-        ))
-        """
-
-        # Auto model registration (conditional on feature flag)
-        if os.getenv('AUTO_MODEL_ENABLED', 'false').lower() == 'true':
-            logger.info("🤖 AUTO MODEL: Registering auto model (feature flag enabled)")
-            self.register(Model(
-                id="auto",
-                name="🤖 Auto (Smart Selection)",
-                provider=ModelProvider.CHAINLENS,
-                aliases=["smart", "intelligent", "auto-select"],
-                context_window=128_000,
-                capabilities=[
-                    ModelCapability.CHAT,
-                    ModelCapability.AUTO_SELECTION,
-                    ModelCapability.FUNCTION_CALLING,
-                    ModelCapability.STRUCTURED_OUTPUT,
-                ],
-                pricing=None,  # Dynamic pricing based on selected model
-                enabled=True,
-                tier_availability=["free", "paid"],
-                metadata={"virtual": True, "auto_selection": True},
-                priority=1000,  # Highest priority to appear first
-                recommended=True
-            ))
-        else:
-            logger.debug("🤖 AUTO MODEL: Feature flag disabled, skipping auto model registration")
-
+        # # DeepSeek Models
+        # self.register(Model(
+        #     id="openrouter/deepseek/deepseek-chat",
+        #     name="DeepSeek Chat",
+        #     provider=ModelProvider.OPENROUTER,
+        #     aliases=["deepseek", "deepseek-chat"],
+        #     context_window=128_000,
+        #     capabilities=[
+        #         ModelCapability.CHAT, 
+        #         ModelCapability.FUNCTION_CALLING
+        #     ],
+        #     pricing=ModelPricing(
+        #         input_cost_per_million_tokens=0.38,
+        #         output_cost_per_million_tokens=0.89
+        #     ),
+        #     tier_availability=["free", "paid"],
+        #     priority=95,
+        #     enabled=False  # Currently disabled
+        # ))
+        
+        # # Qwen Models
+        # self.register(Model(
+        #     id="openrouter/qwen/qwen3-235b-a22b",
+        #     name="Qwen3 235B",
+        #     provider=ModelProvider.OPENROUTER,
+        #     aliases=["qwen3", "qwen-3"],
+        #     context_window=128_000,
+        #     capabilities=[
+        #         ModelCapability.CHAT, 
+        #         ModelCapability.FUNCTION_CALLING
+        #     ],
+        #     pricing=ModelPricing(
+        #         input_cost_per_million_tokens=0.13,
+        #         output_cost_per_million_tokens=0.60
+        #     ),
+        #     tier_availability=["free", "paid"],
+        #     priority=90,
+        #     enabled=False  # Currently disabled
+        # ))
+        
+    
     def register(self, model: Model) -> None:
         self._models[model.id] = model
         for alias in model.aliases:
             self._aliases[alias] = model.id
     
     def get(self, model_id: str) -> Optional[Model]:
+        # Handle None or empty model_id
+        if not model_id:
+            return None
+            
         if model_id in self._models:
             return self._models[model_id]
-
+        
         if model_id in self._aliases:
             actual_id = self._aliases[model_id]
             return self._models.get(actual_id)
-
-        # Try to find by name if not found by ID or alias
-        for model in self._models.values():
-            if model.name == model_id:
-                return model
-
+        
         return None
     
     def get_all(self, enabled_only: bool = True) -> List[Model]:
@@ -500,18 +333,9 @@ class ModelRegistry:
         return [m for m in models if capability in m.capabilities]
     
     def resolve_model_id(self, model_id: str) -> Optional[str]:
-        logger.debug(f"🔍 REGISTRY: resolve_model_id called with: '{model_id}'")
         model = self.get(model_id)
-        logger.debug(f"🔍 REGISTRY: get() returned model: {model.id if model else None}")
         return model.id if model else None
-
-    def transform_model_name(self, model_id: str) -> str:
-        """Transform model name according to provider requirements."""
-        # Get provider config for transformation
-        provider_config = ProviderConfigFactory.get_config_for_model(model_id)
-        if provider_config and hasattr(provider_config, 'transform_model_name'):
-            return provider_config.transform_model_name(model_id)
-        return model_id
+    
     
     def get_aliases(self, model_id: str) -> List[str]:
         model = self.get(model_id)
@@ -541,13 +365,11 @@ class ModelRegistry:
     
     def to_legacy_format(self) -> Dict:
         models_dict = {}
-        aliases_dict = {}
         pricing_dict = {}
         context_windows_dict = {}
         
         for model in self.get_all(enabled_only=True):
             models_dict[model.id] = {
-                "aliases": model.aliases,
                 "pricing": {
                     "input_cost_per_million_tokens": model.pricing.input_cost_per_million_tokens,
                     "output_cost_per_million_tokens": model.pricing.output_cost_per_million_tokens,
@@ -555,9 +377,6 @@ class ModelRegistry:
                 "context_window": model.context_window,
                 "tier_availability": model.tier_availability,
             }
-            
-            for alias in model.aliases:
-                aliases_dict[alias] = model.id
             
             if model.pricing:
                 pricing_dict[model.id] = {
@@ -571,13 +390,13 @@ class ModelRegistry:
         paid_models = [m.id for m in self.get_by_tier("paid")]
         
         # Debug logging
+        from core.utils.logger import logger
         logger.debug(f"Legacy format generation: {len(free_models)} free models, {len(paid_models)} paid models")
         logger.debug(f"Free models: {free_models}")
         logger.debug(f"Paid models: {paid_models}")
         
         return {
             "MODELS": models_dict,
-            "MODEL_NAME_ALIASES": aliases_dict,
             "HARDCODED_MODEL_PRICES": pricing_dict,
             "MODEL_CONTEXT_WINDOWS": context_windows_dict,
             "FREE_TIER_MODELS": free_models,
