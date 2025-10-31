@@ -250,7 +250,7 @@ export const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
                 value={selectedModel}
                 onChange={onModelChange}
                 disabled={loading || (disabled && !isAgentRunning)}
-                variant="compact"
+                variant="default"
                 className="w-auto min-w-[120px]"
               />
             )}

@@ -423,7 +423,8 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
                   selectedAgentId={selectedAgentId}
                   onAgentSelect={onAgentSelect}
                   hideAgentSelection={hideAgentSelection}
-                  hideModelSelection={false}
+                  hideModelSelection={hideModelSelection}
+                  isChainlensAgent={isChainlensAgent}
                 />
               </CardContent>
             </div>
