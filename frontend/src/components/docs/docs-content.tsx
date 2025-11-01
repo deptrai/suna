@@ -18,7 +18,7 @@ const contentSections = [
   {
     id: 'introduction',
     title: 'Introduction',
-    description: 'Learn about Kortix AI Worker and how it can transform your automation workflows',
+    description: 'Learn about Epsilon AI Worker and how it can transform your automation workflows',
     readTime: '5 min read',
     updated: '2 days ago'
   },
@@ -32,7 +32,7 @@ const contentSections = [
   {
     id: 'installation',
     title: 'Installation',
-    description: 'Step-by-step guide to install and configure Kortix in your environment',
+    description: 'Step-by-step guide to install and configure Epsilon in your environment',
     readTime: '12 min read',
     updated: '3 days ago'
   }
@@ -55,12 +55,12 @@ export const DocsContent = () => {
               </div>
 
               <h1 className="text-3xl lg:text-5xl font-medium mb-4 bg-gradient-to-r from-foreground to-foreground/60 bg-clip-text text-transparent">
-                Welcome to Kortix
+                Welcome to Epsilon
               </h1>
 
               <p className="text-lg lg:text-xl text-muted-foreground leading-relaxed max-w-3xl">
                 Build, deploy, and manage powerful AI agents that automate complex workflows.
-                Kortix provides everything you need to create intelligent automation solutions.
+                Epsilon provides everything you need to create intelligent automation solutions.
               </p>
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mt-6">
                 <Button size="lg" className="w-full sm:w-auto backdrop-blur-sm">

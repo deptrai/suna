@@ -14,7 +14,7 @@
 Document này chi tiết **technical architecture** thực tế cho ChainLens system, phản ánh đúng current implementation và MVP enhancement path. Architecture hiện tại đã production-ready với clear separation of concerns.
 
 **Current Architecture Reality:**
-- **ChainLens-Automation:** FastAPI backend + Next.js frontend (đã rename từ Suna)
+- **ChainLens-Automation:** FastAPI backend + Next.js frontend (đã rename từ ChainLens)
 - **ChainLens-Core:** NestJS orchestrator + API gateway cho 4 microservices
 - **4 Microservices:** OnChain, Sentiment, Tokenomics, Team (NestJS)
 - **MVP Focus:** Payment integration + Rate limiting + Daily reports
@@ -28,7 +28,7 @@ Document này chi tiết **technical architecture** thực tế cho ChainLens sy
 
 ```mermaid
 graph TB
-    User["👤 User<br/>Research Uniswap"] --> Frontend["ChainLens-Automation Frontend<br/>Next.js (Port 3000)<br/>(Formerly Suna)"]
+    User["👤 User<br/>Research Uniswap"] --> Frontend["ChainLens-Automation Frontend<br/>Next.js (Port 3000)<br/>(Formerly ChainLens)"]
     
     Frontend --> Backend["ChainLens-Automation Backend<br/>FastAPI (Port 8000)<br/>Python + LiteLLM"]
     

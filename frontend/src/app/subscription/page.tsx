@@ -7,11 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { PricingSection } from '@/components/home/sections/pricing-section';
 import { AlertTriangle, Clock, CreditCard, LogOut } from 'lucide-react';
-import { KortixLoader } from '@/components/ui/kortix-loader';
+import { EpsilonLoader } from '@/components/ui/epsilon-loader';
 import { useRouter } from 'next/navigation';
 import { apiClient, backendApi } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton';
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { EpsilonLogo } from '@/components/sidebar/epsilon-logo';
 import { createClient } from '@/lib/supabase/client';
 import { clearUserLocalStorage } from '@/lib/utils/clear-local-storage';
 import { useMaintenanceNoticeQuery } from '@/hooks/react-query/edge-flags';
@@ -68,7 +68,7 @@ export default function SubscriptionRequiredPage() {
   if (isMaintenanceLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex items-center justify-center p-4">
-        <KortixLoader size="large" />
+        <EpsilonLoader size="large" />
       </div>
     );
   }
@@ -111,7 +111,7 @@ export default function SubscriptionRequiredPage() {
           <div className="flex items-center justify-between">
             <div className="flex-1" />
             <div className="text-2xl font-medium flex items-center justify-center gap-2">
-              <KortixLogo />
+              <EpsilonLogo />
               <span>{isTrialExpired ? 'Your Trial Has Ended' : 'Subscription Required'}</span>
             </div>
             <div className="flex-1 flex justify-end">
@@ -128,8 +128,8 @@ export default function SubscriptionRequiredPage() {
           </div>
           <p className="text-md text-muted-foreground max-w-2xl mx-auto">
             {isTrialExpired
-              ? 'Your 7-day free trial has ended. Choose a plan to continue using Kortix AI.'
-              : 'A subscription is required to use Kortix. Choose the plan that works best for you.'}
+              ? 'Your 7-day free trial has ended. Choose a plan to continue using Epsilon AI.'
+              : 'A subscription is required to use Epsilon. Choose the plan that works best for you.'}
           </p>
         </div>
         <PricingSection
@@ -141,8 +141,8 @@ export default function SubscriptionRequiredPage() {
         <div className="text-center text-sm text-muted-foreground -mt-10">
           <p>
             Questions? Contact us at{' '}
-            <a href="mailto:support@kortix.ai" className="underline hover:text-primary">
-              support@kortix.ai
+            <a href="mailto:support@epsilon.ai" className="underline hover:text-primary">
+              support@epsilon.ai
             </a>
           </p>
         </div>

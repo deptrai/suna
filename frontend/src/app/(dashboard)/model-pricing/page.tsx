@@ -1,7 +1,7 @@
 'use client';
 
 import { AlertCircle, Zap, Server, Globe } from 'lucide-react';
-import { KortixLoader } from '@/components/ui/kortix-loader';
+import { EpsilonLoader } from '@/components/ui/epsilon-loader';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -211,7 +211,7 @@ export default function PricingPage() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-4">
-          <KortixLoader size="large" />
+          <EpsilonLoader size="large" />
           <p className="text-sm text-muted-foreground">
             Loading pricing data...
           </p>

@@ -108,7 +108,7 @@ export interface CreateCheckoutSessionRequest {
 
 export interface CreateCheckoutSessionResponse {
   checkout_url?: string;
-  fe_checkout_url?: string;  // Kortix-branded embedded checkout
+  fe_checkout_url?: string;  // Epsilon-branded embedded checkout
   url?: string;
   session_id?: string;
   client_secret?: string;

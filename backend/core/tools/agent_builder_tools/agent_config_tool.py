@@ -82,10 +82,10 @@ class AgentConfigTool(AgentBuilderBaseTool):
             current_agent = agent_result.data[0]
 
             metadata = current_agent.get('metadata', {})
-            is_suna_default = metadata.get('is_suna_default', False)
+            is_chainlens_default = metadata.get('is_chainlens_default', False)
             
-            # Enforce Suna restrictions (simplified)
-            if is_suna_default:
+            # Enforce ChainLens restrictions (simplified)
+            if is_chainlens_default:
                 restricted_fields = []
                 if name is not None:
                     restricted_fields.append("name")
@@ -96,8 +96,8 @@ class AgentConfigTool(AgentBuilderBaseTool):
                 
                 if restricted_fields:
                     return self.fail_response(
-                        f"Cannot modify {', '.join(restricted_fields)} for Suna. "
-                        f"Suna's core identity is centrally managed. You can still add MCPs and triggers."
+                        f"Cannot modify {', '.join(restricted_fields)} for ChainLens. "
+                        f"ChainLens's core identity is centrally managed. You can still add MCPs and triggers."
                     )
 
             agent_update_fields = {}

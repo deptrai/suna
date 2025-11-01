@@ -3172,7 +3172,7 @@ wheels = [
 ]
 
 [[package]]
-name = "suna"
+name = "chainlens"
 version = "1.0"
 source = { virtual = "." }
 dependencies = [

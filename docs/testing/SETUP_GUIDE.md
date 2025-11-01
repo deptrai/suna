@@ -1,4 +1,4 @@
-# 🚀 Testing Setup Guide - Suna Platform
+# 🚀 Testing Setup Guide - ChainLens Platform
 
 **Document Version**: 1.0  
 **Last Updated**: 2025-09-10  
@@ -6,7 +6,7 @@
 
 ## 📋 Quick Start
 
-This guide helps you set up and run tests across all components of the Suna platform.
+This guide helps you set up and run tests across all components of the ChainLens platform.
 
 ## 🏗️ Prerequisites
 

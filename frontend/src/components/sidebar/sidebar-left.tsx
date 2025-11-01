@@ -10,7 +10,7 @@ import { NavAgentsView } from '@/components/sidebar/nav-agents-view';
 import { NavGlobalConfig } from '@/components/sidebar/nav-global-config';
 import { NavTriggerRuns } from '@/components/sidebar/nav-trigger-runs';
 import { NavUserWithTeams } from '@/components/sidebar/nav-user-with-teams';
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { EpsilonLogo } from '@/components/sidebar/epsilon-logo';
 import { CTACard } from '@/components/sidebar/cta';
 import { siteConfig } from '@/lib/home';
 import {
@@ -68,7 +68,7 @@ import { useSubscriptionData } from '@/contexts/SubscriptionContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Image from 'next/image';
 import { isLocalMode } from '@/lib/config';
-import { KortixProcessModal } from './kortix-enterprise-modal';
+import { EpsilonProcessModal } from './epsilon-enterprise-modal';
 
 // Helper function to get plan icon - maps frontend tier names from cloudPricingItems
 function getPlanIcon(planName: string, isLocal: boolean = false) {
@@ -292,7 +292,7 @@ export function SidebarLeft({
             {state === 'collapsed' ? (
               <div className="pl-2 relative flex items-center justify-center w-fit group/logo">
                 <Link href="/dashboard" onClick={() => isMobile && setOpenMobile(false)}>
-                  <KortixLogo size={20} className="flex-shrink-0 opacity-100 group-hover/logo:opacity-0 transition-opacity" />
+                  <EpsilonLogo size={20} className="flex-shrink-0 opacity-100 group-hover/logo:opacity-0 transition-opacity" />
                 </Link>
                 <Tooltip delayDuration={2000}>
                   <TooltipTrigger asChild>
@@ -311,7 +311,7 @@ export function SidebarLeft({
             ) : (
               <div className="pl-2 relative flex items-center justify-center w-fit">
                 <Link href="/dashboard" onClick={() => isMobile && setOpenMobile(false)}>
-                  <KortixLogo size={20} className="flex-shrink-0" />
+                  <EpsilonLogo size={20} className="flex-shrink-0" />
                 </Link>
               </div>
             )}
@@ -490,11 +490,11 @@ export function SidebarLeft({
               <p className="text-xs text-muted-foreground mb-4">
                 Request custom AI Workers implementation
               </p>
-              <KortixProcessModal>
+              <EpsilonProcessModal>
                 <Button size="sm" className="w-full text-xs h-8">
                   Learn More
                 </Button>
-              </KortixProcessModal>
+              </EpsilonProcessModal>
             </div>
           </div>
         )

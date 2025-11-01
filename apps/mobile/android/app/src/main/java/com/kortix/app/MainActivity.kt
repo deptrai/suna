@@ -1,4 +1,4 @@
-package com.kortix.app
+package com.epsilon.app
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

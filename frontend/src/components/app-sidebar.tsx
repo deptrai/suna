@@ -26,20 +26,20 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { ThemeToggle } from "./home/theme-toggle"
-import { KortixLogo } from "./sidebar/kortix-logo"
+import { EpsilonLogo } from "./sidebar/epsilon-logo"
 import Image from "next/image"
 import { useEffect } from "react"
 import { useTheme } from "next-themes"
 
 const data = {
   user: {
-    name: "Kortix User",
-    email: "docs@kortix.ai",
+    name: "Epsilon User",
+    email: "docs@epsilon.ai",
     avatar: "/favicon.png",
   },
   teams: [
     {
-      name: "Kortix AI",
+      name: "Epsilon AI",
       logo: GalleryVerticalEnd,
       plan: "Open Source",
     },
@@ -49,7 +49,7 @@ const data = {
       title: "Getting Started",
       items: [
         {
-          title: "What is Kortix?",
+          title: "What is Epsilon?",
           url: "/docs/introduction",
         },
         {
@@ -81,7 +81,7 @@ const data = {
       items: [
         {
           title: "GitHub Repository",
-          url: "https://github.com/kortix-ai/suna",
+          url: "https://github.com/epsilon-ai/chainlens",
           external: true,
         },
         {
@@ -110,7 +110,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar className="w-72 [&_[data-sidebar=sidebar]]:bg-white dark:[&_[data-sidebar=sidebar]]:bg-black border-none" {...props}>
       <SidebarHeader className="bg-transparent p-6 px-2">
-        <KortixLogo size={24} />
+        <EpsilonLogo size={24} />
       </SidebarHeader>
       <SidebarContent className="px-2 bg-transparent scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
         {data.navMain.map((section) => (

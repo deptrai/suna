@@ -18,8 +18,8 @@
 
 ## 🚀 Getting Started
 
-### **Q: What is Suna AI Agent Platform?**
-**A:** Suna is a comprehensive AI agent platform that enables developers to build, deploy, and manage intelligent agents with advanced tool integrations, blockchain analysis capabilities, and enterprise-grade security features.
+### **Q: What is ChainLens AI Agent Platform?**
+**A:** ChainLens is a comprehensive AI agent platform that enables developers to build, deploy, and manage intelligent agents with advanced tool integrations, blockchain analysis capabilities, and enterprise-grade security features.
 
 ### **Q: What are the system requirements?**
 **A:** 
@@ -165,7 +165,7 @@ supabase status
 ```
 
 ### **Q: Can I use different LLM providers?**
-**A:** Yes! Suna supports multiple providers through LiteLLM:
+**A:** Yes! ChainLens supports multiple providers through LiteLLM:
 
 - **OpenAI**: GPT-4, GPT-3.5
 - **Anthropic**: Claude 3 (Opus, Sonnet, Haiku)
@@ -217,7 +217,7 @@ supabase db reset
 
 # Manual PostgreSQL reset (if needed)
 docker compose down postgres
-docker volume rm suna_postgres_data
+docker volume rm chainlens_postgres_data
 docker compose up postgres -d
 ```
 
@@ -445,7 +445,7 @@ async def handle_webhook(
 
 ## 🤖 AI & Agents
 
-### **Q: Which LLM models work best with Suna?**
+### **Q: Which LLM models work best with ChainLens?**
 **A:** Recommended models by use case:
 
 **General Purpose:**
@@ -485,7 +485,7 @@ agent_config = {
 ```
 
 ### **Q: Can agents remember conversation history?**
-**A:** Yes! Suna implements multiple memory strategies:
+**A:** Yes! ChainLens implements multiple memory strategies:
 
 - **Short-term**: Recent conversation context
 - **Long-term**: Vector database storage
@@ -533,7 +533,7 @@ error_config = {
 - **Sessions**: JWT tokens with short expiration
 - **Local Storage**: Encrypted sensitive data
 
-### **Q: Can I run Suna in an air-gapped environment?**
+### **Q: Can I run ChainLens in an air-gapped environment?**
 **A:** Yes, with modifications:
 
 1. **Local LLM Models**: Use Ollama or similar
@@ -569,7 +569,7 @@ AUDIT_CONFIG = {
 }
 ```
 
-### **Q: What compliance standards does Suna support?**
+### **Q: What compliance standards does ChainLens support?**
 **A:** Current compliance support:
 
 - **SOC 2 Type II**: Security controls framework
@@ -676,14 +676,14 @@ terraform apply
 docker swarm init
 
 # Deploy stack
-docker stack deploy -c docker-stack.yml suna
+docker stack deploy -c docker-stack.yml chainlens
 ```
 
 **Kubernetes:**
 ```bash
 # Apply Kubernetes manifests
 kubectl apply -f deployment/k8s/
-kubectl get pods -n suna
+kubectl get pods -n chainlens
 ```
 
 ### **Q: How do I set up SSL/HTTPS?**
@@ -821,7 +821,7 @@ See [CONTRIBUTING.md](../CONTRIBUTING.md) for detailed guidelines.
 
 ### **Community Resources:**
 
-- **🧑‍💻 Stack Overflow**: Tag questions with `suna-agent`
+- **🧑‍💻 Stack Overflow**: Tag questions with `chainlens-agent`
 - **🎥 YouTube**: Tutorials and walkthroughs
 - **📝 Blog**: Technical articles and updates
 - **🗓️ Office Hours**: Weekly community Q&A sessions

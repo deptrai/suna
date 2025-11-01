@@ -25,7 +25,7 @@ import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { getPdfUrl } from '@/components/thread/tool-views/utils/presentation-utils';
 
-interface SunaModesPanelProps {
+interface ChainLensModesPanelProps {
   selectedMode: string | null;
   onModeSelect: (mode: string | null) => void;
   onSelectPrompt: (prompt: string) => void;
@@ -1091,7 +1091,7 @@ const ChartIcon = ({ type, className }: { type: string; className?: string }) =>
   }
 };
 
-export function SunaModesPanel({ 
+export function ChainLensModesPanel({ 
   selectedMode, 
   onModeSelect, 
   onSelectPrompt, 
@@ -1102,7 +1102,7 @@ export function SunaModesPanel({
   onOutputFormatChange,
   selectedTemplate: controlledSelectedTemplate,
   onTemplateChange
-}: SunaModesPanelProps) {
+}: ChainLensModesPanelProps) {
   const currentMode = selectedMode ? modes.find((m) => m.id === selectedMode) : null;
   const promptCount = isMobile ? 2 : 4;
   

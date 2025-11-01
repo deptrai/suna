@@ -23,7 +23,7 @@
 
 ### **🧭 Core Testing Principles**
 
-At Suna, we believe in **Quality by Design** - building quality into every layer of our system from the ground up. Our testing strategy follows these fundamental principles:
+At ChainLens, we believe in **Quality by Design** - building quality into every layer of our system from the ground up. Our testing strategy follows these fundamental principles:
 
 1. **🔺 Test Pyramid Approach**: Heavy on unit tests, moderate integration tests, light E2E tests
 2. **⚡ Shift-Left Testing**: Catch bugs early in the development cycle
@@ -1429,7 +1429,7 @@ class TestDatabasePerformance:
     async def test_connection_pool_performance(self):
         """Test database connection pool under load"""
         
-        DATABASE_URL = "postgresql://user:pass@localhost:5432/suna_test"
+        DATABASE_URL = "postgresql://user:pass@localhost:5432/chainlens_test"
         
         async def execute_query(pool, query_id):
             start_time = time.time()
@@ -1475,7 +1475,7 @@ class TestDatabasePerformance:
     async def test_bulk_operations_performance(self):
         """Test bulk insert/update performance"""
         
-        DATABASE_URL = "postgresql://user:pass@localhost:5432/suna_test"
+        DATABASE_URL = "postgresql://user:pass@localhost:5432/chainlens_test"
         
         pool = await asyncpg.create_pool(DATABASE_URL, min_size=5, max_size=20)
         
@@ -1531,7 +1531,7 @@ class TestDatabasePerformance:
         from psycopg2.extras import execute_batch, execute_values
         
         connection = psycopg2.connect(
-            "postgresql://user:pass@localhost:5432/suna_test"
+            "postgresql://user:pass@localhost:5432/chainlens_test"
         )
         cursor = connection.cursor()
         

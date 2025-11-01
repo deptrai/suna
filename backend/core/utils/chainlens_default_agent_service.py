@@ -4,7 +4,7 @@ from core.services.supabase import DBConnection
 from datetime import datetime, timezone
 
 
-class ChainlensDefaultAgentService:
+class ChainLensDefaultAgentService:
     """Simplified Chainlens agent management service."""
     
     def __init__(self, db: Optional[DBConnection] = None):

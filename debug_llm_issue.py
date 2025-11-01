@@ -103,9 +103,9 @@ async def test_router_setup():
         import traceback
         traceback.print_exc()
 
-async def test_suna_llm_service():
-    """Test Suna LLM service"""
-    print("\n🧪 Testing Suna LLM service...")
+async def test_chainlens_llm_service():
+    """Test ChainLens LLM service"""
+    print("\n🧪 Testing ChainLens LLM service...")
     
     try:
         from backend.core.services.llm import make_llm_api_call
@@ -117,11 +117,11 @@ async def test_suna_llm_service():
             stream=False
         )
         
-        print(f"✅ Suna LLM service working!")
+        print(f"✅ ChainLens LLM service working!")
         print(f"📝 Response: {response}")
         
     except Exception as e:
-        print(f"❌ Suna LLM service failed: {e}")
+        print(f"❌ ChainLens LLM service failed: {e}")
         import traceback
         traceback.print_exc()
 
@@ -156,7 +156,7 @@ async def main():
     await test_litellm_direct()
     await test_router_setup()
     await test_model_resolution()
-    await test_suna_llm_service()
+    await test_chainlens_llm_service()
     
     print("\n🏁 DEBUG COMPLETE")
 

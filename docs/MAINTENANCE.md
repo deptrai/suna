@@ -18,7 +18,7 @@
 
 ## 🎯 Overview
 
-This document establishes the comprehensive maintenance framework for the Suna AI Agent Platform documentation ecosystem. It defines ownership, processes, metrics, and automation to ensure our documentation remains accurate, current, and valuable.
+This document establishes the comprehensive maintenance framework for the ChainLens AI Agent Platform documentation ecosystem. It defines ownership, processes, metrics, and automation to ensure our documentation remains accurate, current, and valuable.
 
 ### **🔍 Documentation Scope**
 
@@ -503,7 +503,7 @@ python scripts/check_dependencies.py
 # Update search index
 curl -X POST "https://docsearch.algolia.com/api/crawl" \
   -H "Authorization: Bearer $ALGOLIA_API_KEY" \
-  -d '{"sitemap": "https://docs.suna.ai/sitemap.xml"}'
+  -d '{"sitemap": "https://docs.chainlens.ai/sitemap.xml"}'
 
 echo "✅ Daily maintenance complete"
 ```
@@ -899,10 +899,10 @@ This maintenance framework ensures our documentation remains a **world-class dev
 
 ### **💡 Contact & Support**
 
-- **📧 Documentation Team**: docs@suna.ai
+- **📧 Documentation Team**: docs@chainlens.ai
 - **💬 Slack Channel**: #documentation
-- **🐛 Issues**: [GitHub Documentation Issues](https://github.com/suna/platform/issues)
-- **📋 Process Questions**: [Documentation Wiki](https://docs.suna.ai/maintenance)
+- **🐛 Issues**: [GitHub Documentation Issues](https://github.com/chainlens/platform/issues)
+- **📋 Process Questions**: [Documentation Wiki](https://docs.chainlens.ai/maintenance)
 
 ---
 

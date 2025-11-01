@@ -16,7 +16,7 @@ export function UpgradeDialog({ open, onOpenChange, onDismiss }: UpgradeDialogPr
     // Close the upgrade dialog and open the billing modal
     onOpenChange(false);
     setShowBillingModal(true);
-    localStorage.setItem('suna_upgrade_dialog_displayed', 'true');
+    localStorage.setItem('chainlens_upgrade_dialog_displayed', 'true');
   };
 
   const handleBillingModalClose = (isOpen: boolean) => {
@@ -33,8 +33,8 @@ export function UpgradeDialog({ open, onOpenChange, onDismiss }: UpgradeDialogPr
         open={open}
         onOpenChange={onOpenChange}
         icon={Crown}
-        title="Unlock the Full Kortix Experience"
-        description="Upgrade to unlock Kortix's full potential. Access our most powerful AI models and enhanced capabilities."
+        title="Unlock the Full Epsilon Experience"
+        description="Upgrade to unlock Epsilon's full potential. Access our most powerful AI models and enhanced capabilities."
         theme="primary"
         size="sm"
         preventOutsideClick={true}

@@ -95,7 +95,7 @@ Management:
 
 | Dimension | Current State | Future State (MVP) | Gap | Action Required |
 |-----------|--------------|-------------------|-----|-----------------|
-| **Technology** | Suna clone 90% complete | Full production system | 10% | Complete testing, LLM module |
+| **Technology** | ChainLens clone 90% complete | Full production system | 10% | Complete testing, LLM module |
 | **Data** | Manual analysis | Automated real-time | High | API integrations, caching |
 | **Process** | Ad-hoc queries | Systematic analysis | Medium | Workflow automation |
 | **People** | Small team | Scaled operation | Medium | Hire 2-3 developers |
@@ -381,7 +381,7 @@ Compliance Rules:
 | Budget | $50K initial funding | Limited runway |
 | Team | 3 developers | Scope limitation |
 | Timeline | 14-day MVP | Feature prioritization |
-| Technology | Suna platform base | Architecture decisions |
+| Technology | ChainLens platform base | Architecture decisions |
 | Market | Crypto bear market | User acquisition challenge |
 
 ---

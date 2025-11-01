@@ -324,7 +324,7 @@ uv run uvicorn api:app --host 0.0.0.0 --port 8000 --reload
 
 **GlitchTip Dashboard:** https://glitchtip.g-exchange.com  
 **Organization:** chainlens  
-**Project:** suna
+**Project:** chainlens
 
 **For Issues:**
 1. Check GlitchTip dashboard

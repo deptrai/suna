@@ -20,7 +20,7 @@
 - ✅ **Lợi Thế Cạnh Tranh**: Tốc độ (<3 giây) + AI synthesis từ multi-domain tools
 - ✅ **Phân Khúc Khách Hàng**: Cả 4 personas được validate, đặc biệt retail (natural language)
 - ✅ **Tiềm Năng Doanh Thu**: Path realistic đến $50M ARR với 2,000 khách hàng @ $2K average
-- ✅ **Khả Thi Kỹ Thuật**: Suna runtime + 4 microservices architecture proven
+- ✅ **Khả Thi Kỹ Thuật**: ChainLens runtime + 4 microservices architecture proven
 
 ### 📊 Điểm Số Tổng Thể
 
@@ -308,7 +308,7 @@ ChainLens có **lợi thế đột phá** mà KHÔNG CÓ competitor nào có đ�
 #### Competitive Moat Analysis
 
 **Why Competitors CAN'T Copy Easily:**
-1. **Suna Agent Runtime**: Proven conversational AI infrastructure
+1. **ChainLens Agent Runtime**: Proven conversational AI infrastructure
 2. **Multi-tool Integration**: Complex orchestration of 4 specialized services
 3. **AI Synthesis Engine**: Custom models trained on crypto domain knowledge
 4. **Project-Centric Data Model**: Optimized for conversational queries
@@ -743,7 +743,7 @@ ChainLens technical goals trong PRD are realistic với proper implementation:
 - **Success Metric**: $1M ARR by end of year 1
 
 #### 2. Product Development và Feature Expansion
-- **Epic 3-4**: AI-powered microservices, Suna integration optimization  
+- **Epic 3-4**: AI-powered microservices, ChainLens integration optimization  
 - **Advanced Features**: Predictive analytics, custom alerts, portfolio integration
 - **User Experience**: Mobile responsiveness, API development cho third parties
 - **Success Metric**: Feature adoption >60%, NPS score >50
@@ -832,7 +832,7 @@ ChainLens technical goals trong PRD are realistic với proper implementation:
 - [ ] Initiate legal setup for compliance requirements
 
 #### Month 1: Development Kickoff
-- [ ] Begin Epic 1 development (Foundation & Suna Integration)
+- [ ] Begin Epic 1 development (Foundation & ChainLens Integration)
 - [ ] Establish data provider relationships (Etherscan, CoinGecko)  
 - [ ] Create beta user recruitment strategy
 - [ ] Set up analytics và monitoring systems

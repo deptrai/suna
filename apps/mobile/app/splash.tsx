@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { View } from 'react-native';
 import { useRouter, Stack, type Href } from 'expo-router';
-import { KortixLoader } from '@/components/ui';
+import { EpsilonLoader } from '@/components/ui';
 import { useAuthContext } from '@/contexts';
 import { useOnboarding } from '@/hooks/useOnboarding';
 
@@ -42,7 +42,7 @@ export default function SplashScreen() {
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <View className="flex-1 bg-background items-center justify-center">
-        <KortixLoader size="xlarge" />
+        <EpsilonLoader size="xlarge" />
       </View>
     </>
   );

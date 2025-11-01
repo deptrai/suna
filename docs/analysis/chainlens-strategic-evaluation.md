@@ -6,7 +6,7 @@
 ## 📋 Executive Summary
 
 **Project**: ChainLens - AI-Powered Conversational Crypto Analytics Platform  
-**Base Strategy**: Clone Suna.so + Add Specialized Crypto Microservices  
+**Base Strategy**: Clone ChainLens.so + Add Specialized Crypto Microservices  
 **Vision**: Multi-domain expansion (Crypto → Stocks → Real Estate)  
 **Strategic Score**: **9.3/10** → **10/10** (với improvements)
 
@@ -17,7 +17,7 @@ ChainLens transforms complex crypto analytics thành conversational AI experienc
 
 ## 🏗️ Strategic Architecture Analysis
 
-### 1. Foundation Strategy: Leverage Suna Platform
+### 1. Foundation Strategy: Leverage ChainLens Platform
 **Score: 9.5/10**
 
 **Strengths**:
@@ -40,7 +40,7 @@ ChainLens transforms complex crypto analytics thành conversational AI experienc
 ┌─────────────────────────────────────────┐
 │         ChainLens Core Platform         │
 ├─────────────────────────────────────────┤
-│     Suna.so Base (AI Agent Engine)     │
+│     ChainLens.so Base (AI Agent Engine)     │
 ├─────────────────────────────────────────┤
 │        Specialized Microservices        │
 ├──────────┬──────────┬─────────┬────────┤
@@ -286,7 +286,7 @@ Infrastructure:
 ### Phase 1: Foundation (Months 1-3)
 **Goal**: Launch MVP với core features
 
-- [x] Clone Suna.so base platform
+- [x] Clone ChainLens.so base platform
 - [x] Integrate crypto microservices
 - [ ] Implement subscription model
 - [ ] Launch beta với 100 users
@@ -397,7 +397,7 @@ Infrastructure:
 **ChainLens Final Score: 10/10 (với implemented improvements)**
 
 ChainLens positioned perfectly để dominate conversational crypto analytics market với:
-- ✅ Strong technical foundation (Suna.so)
+- ✅ Strong technical foundation (ChainLens.so)
 - ✅ Clear differentiation (chat-first)
 - ✅ Scalable business model
 - ✅ Multi-domain expansion vision

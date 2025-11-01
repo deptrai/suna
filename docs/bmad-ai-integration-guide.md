@@ -22,7 +22,7 @@ This guide documents the implementation of BMad Master persona integration acros
 BMad AI Integration Architecture
 ================================
 
-📁 Project Root (suna/)
+📁 Project Root (chainlens/)
 ├── 🧙 BMad Core System
 │   └── .bmad-core/agents/bmad-master.md (Master definition)
 │
@@ -180,7 +180,7 @@ Output: Complete workflow for new sessions
 1. **Update Project Context:**
    ```bash
    # Edit activation files to reflect your project
-   sed -i 's/suna/your-project-name/g' .cursorrules .augmentcode .ai-context
+   sed -i 's/chainlens/your-project-name/g' .cursorrules .augmentcode .ai-context
    ```
 
 2. **Modify BMad Commands:**

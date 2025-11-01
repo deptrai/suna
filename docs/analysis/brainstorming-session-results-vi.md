@@ -144,7 +144,7 @@
 - Tất cả tools trên platform thống nhất
 
 #### Định Nghĩa MVP Cuối Cùng:
-✅ Đã hoàn thành: Clone Suna.so, rebranding, tích hợp crypto tools
+✅ Đã hoàn thành: Clone ChainLens.so, rebranding, tích hợp crypto tools
 📝 Nhiệm vụ còn lại:
 1. Hoàn thành testing framework
 2. Module điều phối LLM
@@ -281,7 +281,7 @@
 
 ### Vòng Quay ChainLens
 ```
-Clone Suna (Chi Phí Dev Thấp) →
+Clone ChainLens (Chi Phí Dev Thấp) →
 Smart Caching (Chi Phí Ops Thấp) →
 Network Effects (Lợi Thế Dữ Liệu) →
 Kinh Tế Token (Tăng Trưởng Hệ Sinh Thái) →

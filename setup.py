@@ -30,7 +30,7 @@ class Colors:
 
 # --- UI Helpers ---
 def print_banner():
-    """Prints the Suna setup banner."""
+    """Prints the ChainLens setup banner."""
     print(
         f"""
 {Colors.BLUE}{Colors.BOLD}
@@ -167,8 +167,8 @@ def load_existing_env_vars():
             "COMPOSIO_API_KEY": backend_env.get("COMPOSIO_API_KEY", ""),
             "COMPOSIO_WEBHOOK_SECRET": backend_env.get("COMPOSIO_WEBHOOK_SECRET", ""),
         },
-        "kortix": {
-            "KORTIX_ADMIN_API_KEY": backend_env.get("KORTIX_ADMIN_API_KEY", ""),
+        "epsilon": {
+            "EPSILON_ADMIN_API_KEY": backend_env.get("EPSILON_ADMIN_API_KEY", ""),
         },
         "vapi": {
             "VAPI_PRIVATE_KEY": backend_env.get("VAPI_PRIVATE_KEY", ""),
@@ -272,7 +272,7 @@ def generate_encryption_key():
 
 
 def generate_admin_api_key():
-    """Generates a secure admin API key for Kortix."""
+    """Generates a secure admin API key for Epsilon."""
     # Generate 32 random bytes and encode as hex for a readable API key
     key_bytes = secrets.token_bytes(32)
     return key_bytes.hex()
@@ -306,7 +306,7 @@ class SetupWizard:
             "webhook": existing_env_vars["webhook"],
             "mcp": existing_env_vars["mcp"],
             "composio": existing_env_vars["composio"],
-            "kortix": existing_env_vars["kortix"],
+            "epsilon": existing_env_vars["epsilon"],
             "vapi": existing_env_vars.get("vapi", {}),
             "stripe": existing_env_vars.get("stripe", {}),
             "langfuse": existing_env_vars.get("langfuse", {}),
@@ -433,11 +433,11 @@ class SetupWizard:
             config_items.append(
                 f"{Colors.YELLOW}○{Colors.ENDC} Morph (recommended)")
 
-        # Check Kortix configuration
-        if self.env_vars["kortix"]["KORTIX_ADMIN_API_KEY"]:
-            config_items.append(f"{Colors.GREEN}✓{Colors.ENDC} Kortix Admin")
+        # Check Epsilon configuration
+        if self.env_vars["epsilon"]["EPSILON_ADMIN_API_KEY"]:
+            config_items.append(f"{Colors.GREEN}✓{Colors.ENDC} Epsilon Admin")
         else:
-            config_items.append(f"{Colors.YELLOW}○{Colors.ENDC} Kortix Admin")
+            config_items.append(f"{Colors.YELLOW}○{Colors.ENDC} Epsilon Admin")
 
         if any("✓" in item for item in config_items):
             print_info("Current configuration status:")
@@ -475,7 +475,7 @@ class SetupWizard:
         """Runs the setup wizard."""
         print_banner()
         print(
-            "This wizard will guide you through setting up Suna, an open-source generalist AI Worker.\n"
+            "This wizard will guide you through setting up ChainLens, an open-source generalist AI Worker.\n"
         )
 
         # Show current configuration status
@@ -484,7 +484,7 @@ class SetupWizard:
         # Check if setup is already complete
         if self.is_setup_complete():
             print_info("Setup already complete!")
-            print_info("Would you like to start Suna?")
+            print_info("Would you like to start ChainLens?")
             print()
             print("[1] Start with Docker Compose")
             print("[2] Start manually (show commands)")
@@ -495,8 +495,8 @@ class SetupWizard:
             choice = input("Enter your choice (1-4): ").strip()
             
             if choice == "1":
-                print_info("Starting Suna with Docker Compose...")
-                self.start_suna()
+                print_info("Starting ChainLens with Docker Compose...")
+                self.start_chainlens()
                 return
             elif choice == "2":
                 self.final_instructions()
@@ -527,7 +527,7 @@ class SetupWizard:
             self.run_step_optional(6, self.collect_morph_api_key, "Morph API Key (Optional)")
             self.run_step_optional(7, self.collect_search_api_keys, "Search API Keys (Optional)")
             self.run_step_optional(8, self.collect_rapidapi_keys, "RapidAPI Keys (Optional)")
-            self.run_step(9, self.collect_kortix_keys)
+            self.run_step(9, self.collect_epsilon_keys)
             # Supabase Cron does not require keys; ensure DB migrations enable cron functions
             self.run_step_optional(10, self.collect_webhook_keys, "Webhook Configuration (Optional)")
             self.run_step_optional(11, self.collect_mcp_keys, "MCP Configuration (Optional)")
@@ -536,7 +536,7 @@ class SetupWizard:
             self.run_step(13, self.configure_env_files)
             self.run_step(14, self.setup_supabase_database)
             self.run_step(15, self.install_dependencies)
-            self.run_step(16, self.start_suna)
+            self.run_step(16, self.start_chainlens)
 
             self.final_instructions()
 
@@ -589,7 +589,7 @@ class SetupWizard:
             return
 
         print_info(
-            "You can start Suna using either Docker Compose or by manually starting the services."
+            "You can start ChainLens using either Docker Compose or by manually starting the services."
         )
         
         # Important note about Supabase compatibility
@@ -597,9 +597,9 @@ class SetupWizard:
         print(f"  • {Colors.GREEN}Docker Compose{Colors.ENDC} → Only supports {Colors.CYAN}Cloud Supabase{Colors.ENDC}")
         print(f"  • {Colors.GREEN}Manual Setup{Colors.ENDC} → Supports both {Colors.CYAN}Cloud and Local Supabase{Colors.ENDC}")
         print(f"\n  Why? Docker networking can't easily reach local Supabase containers.")
-        print(f"  Want to fix this? See: {Colors.CYAN}https://github.com/kortix-ai/suna/issues/1920{Colors.ENDC}")
+        print(f"  Want to fix this? See: {Colors.CYAN}https://github.com/epsilon-ai/chainlens/issues/1920{Colors.ENDC}")
         
-        print(f"\n{Colors.CYAN}How would you like to set up Suna?{Colors.ENDC}")
+        print(f"\n{Colors.CYAN}How would you like to set up ChainLens?{Colors.ENDC}")
         print(
             f"{Colors.CYAN}[1] {Colors.GREEN}Manual{Colors.ENDC} {Colors.CYAN}(supports both Cloud and Local Supabase){Colors.ENDC}"
         )
@@ -668,7 +668,7 @@ class SetupWizard:
             sys.exit(1)
 
         self.check_docker_running()
-        self.check_suna_directory()
+        self.check_chainlens_directory()
 
     def check_docker_running(self):
         """Checks if the Docker daemon is running."""
@@ -689,7 +689,7 @@ class SetupWizard:
             )
             sys.exit(1)
 
-    def check_suna_directory(self):
+    def check_chainlens_directory(self):
         """Checks if the script is run from the correct project root directory."""
         print_info("Verifying project structure...")
         required_dirs = ["backend", "frontend"]
@@ -698,18 +698,18 @@ class SetupWizard:
         for directory in required_dirs:
             if not os.path.isdir(directory):
                 print_error(
-                    f"'{directory}' directory not found. Make sure you're in the Suna repository root."
+                    f"'{directory}' directory not found. Make sure you're in the ChainLens repository root."
                 )
                 sys.exit(1)
 
         for file in required_files:
             if not os.path.isfile(file):
                 print_error(
-                    f"'{file}' not found. Make sure you're in the Suna repository root."
+                    f"'{file}' not found. Make sure you're in the ChainLens repository root."
                 )
                 sys.exit(1)
 
-        print_success("Suna repository detected.")
+        print_success("ChainLens repository detected.")
         return True
 
     def _get_input(
@@ -745,7 +745,7 @@ class SetupWizard:
         print_step(3, self.total_steps, "Collecting Supabase Information")
 
         # Always ask user to choose between local and cloud Supabase
-        print_info("Suna REQUIRES a Supabase project to function. Without these keys, the application will crash on startup.")
+        print_info("ChainLens REQUIRES a Supabase project to function. Without these keys, the application will crash on startup.")
         print_info("You can choose between:")
         print_info("  1. Local Supabase (automatic setup, recommended for development & local use - runs in Docker)")
         print_info("  2. Cloud Supabase (hosted on supabase.com - requires manual setup)")
@@ -1002,7 +1002,7 @@ class SetupWizard:
             )
         else:
             print_info(
-                "Suna REQUIRES Daytona for sandboxing functionality. Without this key, sandbox features will fail.")
+                "ChainLens REQUIRES Daytona for sandboxing functionality. Without this key, sandbox features will fail.")
             print_info(
                 "Visit https://app.daytona.io/ to create an account.")
             print_info("Then, generate an API key from the 'Keys' menu.")
@@ -1040,7 +1040,7 @@ class SetupWizard:
         print_success("Daytona information saved.")
 
         print_warning(
-            "IMPORTANT: You must create a Suna snapshot in Daytona for it to work properly."
+            "IMPORTANT: You must create a ChainLens snapshot in Daytona for it to work properly."
         )
         print_info(
             f"Visit {Colors.GREEN}https://app.daytona.io/dashboard/snapshots{Colors.ENDC}{Colors.CYAN} to create a snapshot."
@@ -1076,7 +1076,7 @@ class SetupWizard:
             )
         else:
             print_info(
-                "LLM providers are OPTIONAL tools that enable AI features in Suna.")
+                "LLM providers are OPTIONAL tools that enable AI features in ChainLens.")
             print_info(
                 "Supported: Anthropic (Recommended), OpenAI, Groq, OpenRouter, xAI, Google Gemini, OpenAI Compatible, AWS Bedrock."
             )
@@ -1147,7 +1147,7 @@ class SetupWizard:
         if configured_providers:
             print_success(f"LLM providers configured: {', '.join(configured_providers)}")
         else:
-            print_warning("No LLM providers configured - Suna will work but AI features will be disabled.")
+            print_warning("No LLM providers configured - ChainLens will work but AI features will be disabled.")
         
         print_success("LLM keys saved.")
 
@@ -1165,7 +1165,7 @@ class SetupWizard:
             print_info("AI-powered code editing is enabled using Morph.")
             return
 
-        print_info("Suna uses Morph for fast, intelligent code editing.")
+        print_info("ChainLens uses Morph for fast, intelligent code editing.")
         print_info(
             "This is optional but highly recommended for the best experience.")
         print_info(f"Learn more about Morph at: {Colors.GREEN}https://morphllm.com/{Colors.ENDC}")
@@ -1224,9 +1224,9 @@ class SetupWizard:
             )
         else:
             print_info(
-                "Search APIs are OPTIONAL tools that enhance Suna's capabilities.")
+                "Search APIs are OPTIONAL tools that enhance ChainLens's capabilities.")
             print_info(
-                "Without these, Suna will work but won't have web search or scraping functionality.")
+                "Without these, ChainLens will work but won't have web search or scraping functionality.")
             print_info(
                 "Optional: Tavily for web search, Firecrawl for web scraping")
             print_info(
@@ -1315,7 +1315,7 @@ class SetupWizard:
         if configured_search_tools:
             print_success(f"Search tools configured: {', '.join(configured_search_tools)}")
         else:
-            print_info("No search tools configured - Suna will work without web search capabilities.")
+            print_info("No search tools configured - ChainLens will work without web search capabilities.")
 
         print_success("Search and scraping keys saved.")
 
@@ -1350,15 +1350,15 @@ class SetupWizard:
         else:
             print_info("Skipping RapidAPI key.")
 
-    def collect_kortix_keys(self):
-        """Auto-generates the Kortix admin API key."""
-        print_step(9, self.total_steps, "Auto-generating Kortix Admin API Key")
+    def collect_epsilon_keys(self):
+        """Auto-generates the Epsilon admin API key."""
+        print_step(9, self.total_steps, "Auto-generating Epsilon Admin API Key")
 
         # Always generate a new key (overwrite existing if any)
-        print_info("Generating a secure admin API key for Kortix administrative functions...")
-        self.env_vars["kortix"]["KORTIX_ADMIN_API_KEY"] = generate_admin_api_key()
-        print_success("Kortix admin API key generated.")
-        print_success("Kortix admin configuration saved.")
+        print_info("Generating a secure admin API key for Epsilon administrative functions...")
+        self.env_vars["epsilon"]["EPSILON_ADMIN_API_KEY"] = generate_admin_api_key()
+        print_success("Epsilon admin API key generated.")
+        print_success("Epsilon admin configuration saved.")
 
     def collect_mcp_keys(self):
         """Collects the MCP configuration."""
@@ -1394,7 +1394,7 @@ class SetupWizard:
             )
         else:
             print_info(
-                "Composio provides extra tools and integrations for Suna agents.")
+                "Composio provides extra tools and integrations for ChainLens agents.")
             print_info(
                 "With Composio, your agents can interact with 200+ external services including:")
             print_info("  • Email services (Gmail, Outlook, SendGrid)")
@@ -1451,7 +1451,7 @@ class SetupWizard:
             print_info(
                 "Webhook base URL is required for workflows to receive callbacks.")
             print_info(
-                "This must be a publicly accessible URL where Suna API can receive webhooks from Supabase Cron.")
+                "This must be a publicly accessible URL where ChainLens API can receive webhooks from Supabase Cron.")
             print_info(
                 "For local development, you can use services like ngrok or localtunnel to expose http://localhost:8000 to the internet.")
 
@@ -1511,7 +1511,7 @@ class SetupWizard:
             **self.env_vars["mcp"],
             **self.env_vars["composio"],
             **self.env_vars["daytona"],
-            **self.env_vars["kortix"],
+            **self.env_vars["epsilon"],
             **self.env_vars.get("vapi", {}),
             **self.env_vars.get("stripe", {}),
             **self.env_vars.get("langfuse", {}),
@@ -1522,7 +1522,7 @@ class SetupWizard:
             "NEXT_PUBLIC_URL": "http://localhost:3000",
         }
 
-        backend_env_content = f"# Generated by Suna install script for '{self.env_vars['setup_method']}' setup\n\n"
+        backend_env_content = f"# Generated by ChainLens install script for '{self.env_vars['setup_method']}' setup\n\n"
         for key, value in backend_env.items():
             backend_env_content += f"{key}={value or ''}\n"
 
@@ -1541,11 +1541,11 @@ class SetupWizard:
             "NEXT_PUBLIC_SUPABASE_ANON_KEY": self.env_vars["supabase"]["SUPABASE_ANON_KEY"],
             "NEXT_PUBLIC_BACKEND_URL": backend_url,
             "NEXT_PUBLIC_URL": "http://localhost:3000",
-            "KORTIX_ADMIN_API_KEY": self.env_vars["kortix"]["KORTIX_ADMIN_API_KEY"],
+            "EPSILON_ADMIN_API_KEY": self.env_vars["epsilon"]["EPSILON_ADMIN_API_KEY"],
             **self.env_vars.get("frontend", {}),
         }
 
-        frontend_env_content = "# Generated by Suna install script\n\n"
+        frontend_env_content = "# Generated by ChainLens install script\n\n"
         for key, value in frontend_env.items():
             frontend_env_content += f"{key}={value or ''}\n"
 
@@ -1564,7 +1564,7 @@ class SetupWizard:
             "EXPO_PUBLIC_URL": "http://localhost:3000",
         }
 
-        mobile_env_content = "# Generated by Suna install script\n\n"
+        mobile_env_content = "# Generated by ChainLens install script\n\n"
         for key, value in mobile_env.items():
             mobile_env_content += f"{key}={value or ''}\n"
 
@@ -1764,11 +1764,11 @@ class SetupWizard:
                 "Please install dependencies manually and run the script again.")
             sys.exit(1)
 
-    def start_suna(self):
-        """Starts Suna using Docker Compose or shows instructions for manual startup."""
-        print_step(17, self.total_steps, "Starting Suna")
+    def start_chainlens(self):
+        """Starts ChainLens using Docker Compose or shows instructions for manual startup."""
+        print_step(17, self.total_steps, "Starting ChainLens")
         if self.env_vars["setup_method"] == "docker":
-            print_info("Starting Suna with Docker Compose...")
+            print_info("Starting ChainLens with Docker Compose...")
             try:
                 subprocess.run(
                     ["docker", "compose", "up", "-d", "--build"],
@@ -1785,13 +1785,13 @@ class SetupWizard:
                     shell=IS_WINDOWS,
                 )
                 if "backend" in result.stdout and "frontend" in result.stdout:
-                    print_success("Suna services are starting up!")
+                    print_success("ChainLens services are starting up!")
                 else:
                     print_warning(
                         "Some services might not be running. Check 'docker compose ps' for details."
                     )
             except subprocess.SubprocessError as e:
-                print_error(f"Failed to start Suna with Docker Compose: {e}")
+                print_error(f"Failed to start ChainLens with Docker Compose: {e}")
                 print_warning(
                     "The Docker build might be failing due to environment variable issues during build time."
                 )
@@ -1814,24 +1814,24 @@ class SetupWizard:
     def final_instructions(self):
         """Shows final instructions to the user."""
         print(
-            f"\n{Colors.GREEN}{Colors.BOLD}✨ Suna Setup Complete! ✨{Colors.ENDC}\n")
+            f"\n{Colors.GREEN}{Colors.BOLD}✨ ChainLens Setup Complete! ✨{Colors.ENDC}\n")
 
         print_info(
-            f"Suna is configured with your LLM API keys and ready to use."
+            f"ChainLens is configured with your LLM API keys and ready to use."
         )
         print_info(
             f"Delete the {Colors.RED}.setup_progress{Colors.ENDC} file to reset the setup."
         )
 
         if self.env_vars["setup_method"] == "docker":
-            print_info("Your Suna instance is ready to use!")
+            print_info("Your ChainLens instance is ready to use!")
             
             # Important limitation for local Supabase with Docker
             if self.env_vars.get("supabase_setup_method") == "local":
                 print(f"\n{Colors.RED}{Colors.BOLD}⚠️  IMPORTANT LIMITATION:{Colors.ENDC}")
                 print(f"{Colors.YELLOW}Local Supabase is currently NOT supported with Docker Compose.{Colors.ENDC}")
                 print("\nThis is due to network configuration complexity between:")
-                print("  • Suna containers (backend, frontend, worker)")
+                print("  • ChainLens containers (backend, frontend, worker)")
                 print("  • Local Supabase containers (via npx supabase start)")
                 print("  • Your browser (accessing from host machine)")
                 print("\n" + "="*70)
@@ -1855,10 +1855,10 @@ class SetupWizard:
                 f"  {Colors.CYAN}docker compose logs -f{Colors.ENDC}    - Follow logs"
             )
             print(
-                f"  {Colors.CYAN}docker compose down{Colors.ENDC}       - Stop Suna services"
+                f"  {Colors.CYAN}docker compose down{Colors.ENDC}       - Stop ChainLens services"
             )
             print(
-                f"  {Colors.CYAN}python start.py{Colors.ENDC}           - To start or stop Suna services"
+                f"  {Colors.CYAN}python start.py{Colors.ENDC}           - To start or stop ChainLens services"
             )
             
             # Cloud Supabase commands
@@ -1868,7 +1868,7 @@ class SetupWizard:
                 print(f"  {Colors.CYAN}Project URL:{Colors.ENDC} {self.env_vars['supabase'].get('SUPABASE_URL', 'N/A')}")
         else:
             print_info(
-                "To start Suna, you need to run these commands in separate terminals:"
+                "To start ChainLens, you need to run these commands in separate terminals:"
             )
             
             # Show Supabase start command for local setup
@@ -1910,7 +1910,7 @@ class SetupWizard:
                 )
                 print(f"{Colors.CYAN}   cd backend && npx supabase stop{Colors.ENDC}")
 
-        print("\nOnce all services are running, access Suna at: http://localhost:3000")
+        print("\nOnce all services are running, access ChainLens at: http://localhost:3000")
 
 
 if __name__ == "__main__":

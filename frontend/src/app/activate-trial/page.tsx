@@ -4,14 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles, CreditCard, Zap, Shield, ArrowRight, CheckCircle, Clock, XCircle, LogOut, Loader2 } from 'lucide-react';
-import { KortixLoader } from '@/components/ui/kortix-loader';
+import { EpsilonLoader } from '@/components/ui/epsilon-loader';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { useTrialStatus, useStartTrial } from '@/hooks/react-query/billing/use-trial-status';
 import { useSubscription } from '@/hooks/react-query/use-billing-v2';
 import { Skeleton } from '@/components/ui/skeleton';
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { EpsilonLogo } from '@/components/sidebar/epsilon-logo';
 import Link from 'next/link';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { createClient } from '@/lib/supabase/client';
@@ -75,7 +75,7 @@ export default function ActivateTrialPage() {
   if (isMaintenanceLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex items-center justify-center p-4">
-        <KortixLoader size="large" />
+        <EpsilonLoader size="large" />
       </div>
     );
   }
@@ -89,7 +89,7 @@ export default function ActivateTrialPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/20">
-        <KortixLoader size="large" />
+        <EpsilonLoader size="large" />
       </div>
     );
   }
@@ -111,8 +111,8 @@ export default function ActivateTrialPage() {
         <CardHeader className="text-center space-y-4">
           <div>
             <CardTitle className="text-2xl font-medium flex items-center justify-center gap-2">
-              <KortixLogo />
-              <span>Welcome to Suna</span>
+              <EpsilonLogo />
+              <span>Welcome to ChainLens</span>
             </CardTitle>
             <CardDescription className="mt-2">
               Start your journey with a 7-day free trial

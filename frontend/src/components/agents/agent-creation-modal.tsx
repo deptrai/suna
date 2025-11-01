@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useCreateNewAgent } from '@/hooks/react-query/agents/use-agents';
-import { useKortixTeamTemplates } from '@/hooks/react-query/secure-mcp/use-secure-mcp';
+import { useEpsilonTeamTemplates } from '@/hooks/react-query/secure-mcp/use-secure-mcp';
 import { AgentCountLimitError } from '@/lib/api';
 import { toast } from 'sonner';
 import { AgentCountLimitDialog } from './agent-count-limit-dialog';
@@ -35,7 +35,7 @@ export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreat
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   const createNewAgentMutation = useCreateNewAgent();
-  const { data: templates, isLoading } = useKortixTeamTemplates();
+  const { data: templates, isLoading } = useEpsilonTeamTemplates();
 
   const displayTemplates = templates?.templates?.slice(0, 6) || [];
 
@@ -72,7 +72,7 @@ export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreat
       system_prompt: template.system_prompt,
       tags: template.tags || [],
       download_count: template.download_count || 0,
-      is_kortix_team: template.is_kortix_team || false,
+      is_epsilon_team: template.is_epsilon_team || false,
       creator_name: template.creator_name,
       created_at: template.created_at,
       icon_name: template.icon_name,
@@ -102,7 +102,7 @@ export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreat
     icon_background: template.icon_background,
     creator_id: template.creator_id,
     creator_name: template.creator_name,
-    is_kortix_team: template.is_kortix_team || false,
+    is_epsilon_team: template.is_epsilon_team || false,
     download_count: template.download_count || 0,
     marketplace_published_at: template.marketplace_published_at,
     mcp_requirements: template.mcp_requirements || [],

@@ -7,7 +7,7 @@ import { useAccounts } from '@/hooks/use-accounts';
 import { useAuth } from '@/components/AuthProvider';
 import { useMaintenanceNoticeQuery } from '@/hooks/react-query/edge-flags';
 import { useRouter } from 'next/navigation';
-import { KortixLoader } from '@/components/ui/kortix-loader';
+import { EpsilonLoader } from '@/components/ui/epsilon-loader';
 import { useApiHealth } from '@/hooks/react-query';
 import { MaintenancePage } from '@/components/maintenance/maintenance-page';
 import { DeleteOperationProvider } from '@/contexts/DeleteOperationContext';
@@ -89,7 +89,7 @@ export default function DashboardLayoutContent({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <KortixLoader size="large" />
+        <EpsilonLoader size="large" />
       </div>
     );
   }

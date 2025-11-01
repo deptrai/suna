@@ -10,7 +10,7 @@ import { supabase } from './supabase';
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:8000/api';
 
 // Frontend URL for sharing (defaults to production URL)
-const FRONTEND_URL = process.env.EXPO_PUBLIC_FRONTEND_URL || 'https://kortix.com';
+const FRONTEND_URL = process.env.EXPO_PUBLIC_FRONTEND_URL || 'https://epsilon.com';
 
 /**
  * Get the correct server URL based on platform

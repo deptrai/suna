@@ -64,13 +64,13 @@ create_directories() {
     # Create directories with error handling
     if ! mkdir -p "$LOG_DIR" 2>/dev/null; then
         echo "Warning: Cannot create logs directory, using /tmp"
-        LOG_DIR="/tmp/suna_logs"
+        LOG_DIR="/tmp/chainlens_logs"
         mkdir -p "$LOG_DIR"
     fi
 
     if ! mkdir -p "$PID_DIR" 2>/dev/null; then
         echo "Warning: Cannot create pids directory, using /tmp"
-        PID_DIR="/tmp/suna_pids"
+        PID_DIR="/tmp/chainlens_pids"
         mkdir -p "$PID_DIR"
     fi
 

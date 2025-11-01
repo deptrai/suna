@@ -1,5 +1,5 @@
 {"timestamp":"2025-09-27T06:02:30.010Z","level":"INFO","component":"utils","message":"Structured logging initialized"}
-{"timestamp":"2025-09-27T06:02:30.037Z","level":"INFO","component":"config","category":"system","severity":"low","message":"Loading configuration from /Users/mac_1/Documents/GitHub/suna/scripts/config/dev-environment.yaml","extra":{}}
+{"timestamp":"2025-09-27T06:02:30.037Z","level":"INFO","component":"config","category":"system","severity":"low","message":"Loading configuration from /Users/mac_1/Documents/GitHub/chainlens/scripts/config/dev-environment.yaml","extra":{}}
 {"timestamp":"2025-09-27T06:02:30.051Z","level":"INFO","component":"startup","category":"system","severity":"low","message":"Initializing Chain Lens development environment","extra":{}}
 {"timestamp":"2025-09-27T06:02:30.067Z","level":"INFO","component":"monitoring","category":"infrastructure","severity":"low","message":"Monitoring system initialized","extra":{}}
 {"timestamp":"2025-09-27T06:02:30.086Z","level":"INFO","component":"startup","category":"system","severity":"low","message":"Environment variables loaded from backend/.env","extra":{}}

@@ -3,7 +3,7 @@
 import { motion, useInView, AnimatePresence } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 import { Icons } from '@/components/home/icons';
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { EpsilonLogo } from '@/components/sidebar/epsilon-logo';
 
 interface TaskConfig {
   title: string;
@@ -116,7 +116,7 @@ export function AITaskExecution({
           className="relative"
         >
           <div className="size-12 bg-black rounded-full flex items-center justify-center">
-            <KortixLogo size={24} />
+            <EpsilonLogo size={24} />
           </div>
           {/* Pulsing ring */}
           <motion.div

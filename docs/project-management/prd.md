@@ -16,7 +16,7 @@
 3. [Mục tiêu Thiết kế User Interface](#3-mục-tiêu-thiết-kế-user-interface)
 4. [Giả định Kỹ thuật](#4-giả-định-kỹ-thuật)
 5. [Danh sách Epic](#5-danh-sách-epic)
-6. [Chi tiết Epic 1: Foundation & Suna Integration](#6-chi-tiết-epic-1-foundation--suna-integration)
+6. [Chi tiết Epic 1: Foundation & ChainLens Integration](#6-chi-tiết-epic-1-foundation--chainlens-integration)
 7. [Chi tiết Epic 2: Core API Gateway & Cache Layer](#7-chi-tiết-epic-2-core-api-gateway--cache-layer)
 8. [Epic 3-5 Details](#8-epic-3-5-details) *(TODO - Chưa hoàn thành)*
 9. [Kết quả Checklist](#9-kết-quả-checklist) *(TODO - Chưa hoàn thành)*
@@ -49,7 +49,7 @@ Chainlens ra đời để giải quyết gap này với:
 - **Cache strategy thông minh**
 - **Microservices architecture** chuyên biệt
 
-MVP phase này tận dụng **Suna agent runtime** làm orchestrator để rút ngắn time-to-market, focus vào 4 core microservices (On-chain, Sentiment, Tokenomics, Team/Partnership) và validate product-market fit trước khi scale.
+MVP phase này tận dụng **ChainLens agent runtime** làm orchestrator để rút ngắn time-to-market, focus vào 4 core microservices (On-chain, Sentiment, Tokenomics, Team/Partnership) và validate product-market fit trước khi scale.
 
 ### 📝 Change Log
 
@@ -67,7 +67,7 @@ MVP phase này tận dụng **Suna agent runtime** làm orchestrator để rút 
 
 **FR2:** Platform cung cấp 4 core analysis modules: On-chain metrics, Sentiment analysis, Tokenomics evaluation, và Team/Partnership verification
 
-**FR3:** Users có thể input project symbols thông qua Suna's conversational interface và nhận comprehensive analysis reports ở format Markdown/PDF
+**FR3:** Users có thể input project symbols thông qua ChainLens's conversational interface và nhận comprehensive analysis reports ở format Markdown/PDF
 
 **FR4:** Hệ thống implement Project-Centric Knowledge Base cho phép data management và analysis riêng biệt cho từng crypto project
 
@@ -121,37 +121,37 @@ MVP phase này tận dụng **Suna agent runtime** làm orchestrator để rút 
 
 ### 🎨 Tầm nhìn UX tổng thể
 
-Tận dụng hoàn toàn **Suna's existing chat interface** và agent runtime UI. Chainlens chỉ cần customize branding elements, color scheme và thêm crypto-specific visual components để reflect brand identity **"Where Alpha Hides, We Find"** mà không thay đổi core UX patterns.
+Tận dụng hoàn toàn **ChainLens's existing chat interface** và agent runtime UI. Chainlens chỉ cần customize branding elements, color scheme và thêm crypto-specific visual components để reflect brand identity **"Where Alpha Hides, We Find"** mà không thay đổi core UX patterns.
 
 ### 🔄 Paradigms tương tác chính
 
-- **Leverage Suna's Conversational Interface**: Giữ nguyên chat-based interaction patterns đã proven
+- **Leverage ChainLens's Conversational Interface**: Giữ nguyên chat-based interaction patterns đã proven
 - **Extend Tool Integration**: Thêm crypto analysis tools (onchain.get, sentiment.get, tokenomics.get, team.verify) vào existing tool registry
 - **Customize Response Templates**: Modify output formatting để hiển thị crypto-specific metrics và insights
-- **Brand Overlay**: Apply Chainlens visual identity lên existing Suna UI framework
+- **Brand Overlay**: Apply Chainlens visual identity lên existing ChainLens UI framework
 
 ### 📱 Core Screens và Views
 
-Giữ nguyên Suna's existing screens, chỉ customize:
-- **Suna Chat Interface**: Rebrand với Chainlens colors và crypto-focused welcome messages
+Giữ nguyên ChainLens's existing screens, chỉ customize:
+- **ChainLens Chat Interface**: Rebrand với Chainlens colors và crypto-focused welcome messages
 - **Agent Response Format**: Customize để show risk scores, key insights với crypto-specific templates
-- **Export Functionality**: Leverage Suna's existing PDF/Markdown export, customize headers với Chainlens branding
+- **Export Functionality**: Leverage ChainLens's existing PDF/Markdown export, customize headers với Chainlens branding
 - **Settings Panel**: Add API key management cho Chainlens Gateway integration
 
 ### ♿ Accessibility
 
-Tận dụng accessibility features hiện có của Suna platform, không cần develop thêm.
+Tận dụng accessibility features hiện có của ChainLens platform, không cần develop thêm.
 
 ### 🎨 Branding Customization
 
-- **Color Palette Override**: Thay Suna colors bằng Chainlens brand colors (xanh lam #0052cc, tím đậm #4b0082, bạc #c0c0c0)
-- **Logo và Typography**: Replace Suna branding với Chainlens logo và maintain existing typography system
+- **Color Palette Override**: Thay ChainLens colors bằng Chainlens brand colors (xanh lam #0052cc, tím đậm #4b0082, bạc #c0c0c0)
+- **Logo và Typography**: Replace ChainLens branding với Chainlens logo và maintain existing typography system
 - **Custom Prompts**: Inject crypto-specific system prompts và response templates
 - **Favicon và Meta Tags**: Update với Chainlens identity
 
 ### 📺 Target Device và Platforms
 
-**Web Responsive** - Tận dụng hoàn toàn Suna's existing responsive web design, không cần additional platform development.
+**Web Responsive** - Tận dụng hoàn toàn ChainLens's existing responsive web design, không cần additional platform development.
 
 ---
 
@@ -159,13 +159,13 @@ Tận dụng accessibility features hiện có của Suna platform, không cần
 
 ### 📁 Repository Structure: Monorepo
 
-Chainlens sử dụng **monorepo structure** để manage cả Suna fork và Chainlens microservices trong cùng workspace. Điều này giúp streamline development workflow và maintain consistency giữa các components trong MVP phase.
+Chainlens sử dụng **monorepo structure** để manage cả ChainLens fork và Chainlens microservices trong cùng workspace. Điều này giúp streamline development workflow và maintain consistency giữa các components trong MVP phase.
 
 ### 🏗️ Service Architecture
 
 **Distributed Microservices Architecture: Parallel Processing + Project-Centric Data Management**
 
-- **ChainLens-Core**: Enhanced Suna agent runtime làm orchestrator, project manager và report versioning engine
+- **ChainLens-Core**: Enhanced ChainLens agent runtime làm orchestrator, project manager và report versioning engine
 - **4 Independent NestJS Microservices**: 
   - **OnChain Analysis Service** (Port 3001): Blockchain data, transactions, wallet analysis
   - **Sentiment Analysis Service** (Port 3002): Social media, news sentiment, market psychology
@@ -183,7 +183,7 @@ Chainlens sử dụng **monorepo structure** để manage cả Suna fork và Cha
 
 - **Unit Tests**: Mỗi microservice có comprehensive unit test coverage cho crypto calculation logic
 - **Integration Tests**: API Gateway integration với Redis cache và database layers
-- **End-to-end Testing**: Complete analysis workflow từ Suna input đến final report generation
+- **End-to-end Testing**: Complete analysis workflow từ ChainLens input đến final report generation
 - **Performance Tests**: Load testing để validate 5-8 second response time requirements
 - **Mock Data Strategy**: Create comprehensive crypto project mock data để ensure consistent testing
 
@@ -213,7 +213,7 @@ Chainlens sử dụng **monorepo structure** để manage cả Suna fork và Cha
 - **API Key Authentication**: Bearer token authentication cho Chainlens Gateway
 - **Service Account Separation**: Isolated credentials cho each external data source
 - **Rate Limiting**: Per-API-key limits để prevent abuse
-- **CORS Configuration**: Proper CORS setup cho Suna UI → Gateway communication
+- **CORS Configuration**: Proper CORS setup cho ChainLens UI → Gateway communication
 
 #### Data Management
 - **Cache Strategy**: Redis-first approach với intelligent cache invalidation
@@ -228,7 +228,7 @@ Chainlens sử dụng **monorepo structure** để manage cả Suna fork và Cha
 ### 📋 Epic Overview - MARKET DOMINATION ROADMAP
 
 **Epic 1: Foundation & Enterprise Infrastructure**  
-Establish world-class technical foundation với Suna fork customization, enterprise-grade security, comprehensive monitoring, và Chainlens branding excellence.
+Establish world-class technical foundation với ChainLens fork customization, enterprise-grade security, comprehensive monitoring, và Chainlens branding excellence.
 
 **Epic 2: Advanced API Gateway & Multi-Layer Caching**  
 Build industry-leading API Gateway với intelligent caching (L1/L2/L3), predictive warming, auto-scaling, và performance guarantees < 3 seconds.
@@ -253,21 +253,21 @@ International rollout (Europe, Asia), multi-language support, regulatory complia
 
 ---
 
-## 6. Chi tiết Epic 1: Foundation & Suna Integration
+## 6. Chi tiết Epic 1: Foundation & ChainLens Integration
 
-Epic 1 thiết lập foundation infrastructure và Suna customization để tạo platform cơ bản cho Chainlens MVP development. Epic này deliver working development environment với branded Suna instance và basic health monitoring.
+Epic 1 thiết lập foundation infrastructure và ChainLens customization để tạo platform cơ bản cho Chainlens MVP development. Epic này deliver working development environment với branded ChainLens instance và basic health monitoring.
 
-### 📦 Story 1.1: Fork và Setup Suna Development Environment
+### 📦 Story 1.1: Fork và Setup ChainLens Development Environment
 
 **As a** developer,  
-**I want** to fork Suna repository và setup local development environment,  
+**I want** to fork ChainLens repository và setup local development environment,  
 **so that** team có stable codebase để customize cho Chainlens requirements.
 
 #### ✅ Acceptance Criteria
 
-1. Suna repository được fork thành công với clean Git history và proper remote configuration
+1. ChainLens repository được fork thành công với clean Git history và proper remote configuration
 2. Local development environment chạy được với tất cả dependencies installed và configured
-3. Default Suna agent runtime khởi động successfully với sample conversation functionality
+3. Default ChainLens agent runtime khởi động successfully với sample conversation functionality
 4. Development database (PostgreSQL) và Redis instance running locally với proper connection testing
 5. Docker Compose setup hoàn chỉnh cho consistent development environment across team members
 6. Basic CI/CD pipeline template configured để support automated testing trong subsequent stories
@@ -275,13 +275,13 @@ Epic 1 thiết lập foundation infrastructure và Suna customization để tạ
 ### 🎨 Story 1.2: Implement Chainlens Branding Customization
 
 **As a** product manager,  
-**I want** Suna interface customized với Chainlens brand identity,  
-**so that** users experience proper branded crypto analysis platform thay vì generic Suna.
+**I want** ChainLens interface customized với Chainlens brand identity,  
+**so that** users experience proper branded crypto analysis platform thay vì generic ChainLens.
 
 #### ✅ Acceptance Criteria
 
 1. Logo và favicon updated với Chainlens branding assets
-2. Color palette changed từ Suna defaults sang Chainlens colors (#0052cc xanh lam, #4b0082 tím đậm, #c0c0c0 bạc)
+2. Color palette changed từ ChainLens defaults sang Chainlens colors (#0052cc xanh lam, #4b0082 tím đậm, #c0c0c0 bạc)
 3. Welcome messages và system prompts updated để reflect crypto analysis focus và "Find Alpha" messaging
 4. Page titles, meta descriptions updated cho proper SEO và browser tab identification
 5. Custom CSS overrides applied successfully without breaking existing responsive design
@@ -299,7 +299,7 @@ Epic 1 thiết lập foundation infrastructure và Suna customization để tạ
 2. API key management system configured cho future Chainlens Gateway integration
 3. Database connection strings và credentials properly externalized từ codebase
 4. Secret management strategy implemented (local .env files, production secret management)
-5. CORS configuration setup để allow Suna UI communicate với future API Gateway
+5. CORS configuration setup để allow ChainLens UI communicate với future API Gateway
 6. Basic security headers configured trong web server setup
 
 ### 🏥 Story 1.4: Implement Basic Health Monitoring
@@ -327,7 +327,7 @@ Epic 2 xây dựng Chainlens API Gateway với Redis caching infrastructure đ�
 
 **As a** backend developer,  
 **I want** to create Chainlens API Gateway với basic FastAPI framework setup,  
-**so that** có centralized endpoint để route requests từ Suna tools đến appropriate microservices.
+**so that** có centralized endpoint để route requests từ ChainLens tools đến appropriate microservices.
 
 #### ✅ Acceptance Criteria
 
@@ -387,7 +387,7 @@ Epic 2 xây dựng Chainlens API Gateway với Redis caching infrastructure đ�
 
 **As a** integration developer,  
 **I want** standardized API endpoints cho each analysis type,  
-**so that** Suna tools có thể call consistent interfaces để retrieve crypto analysis data.
+**so that** ChainLens tools có thể call consistent interfaces để retrieve crypto analysis data.
 
 #### ✅ Acceptance Criteria
 
@@ -481,14 +481,14 @@ Epic 3 phát triển 4 core analysis microservices để cung cấp specialized 
 
 ---
 
-## 9. Chi tiết Epic 4: Suna Tool Integration & Workflows
+## 9. Chi tiết Epic 4: ChainLens Tool Integration & Workflows
 
-Epic 4 tích hợp Chainlens analysis capabilities vào Suna agent runtime thông qua custom tools và create multi-step analysis workflows. Epic này deliver complete end-to-end user experience từ conversational input đến comprehensive crypto analysis reports.
+Epic 4 tích hợp Chainlens analysis capabilities vào ChainLens agent runtime thông qua custom tools và create multi-step analysis workflows. Epic này deliver complete end-to-end user experience từ conversational input đến comprehensive crypto analysis reports.
 
 ### 🔧 Story 4.1: Implement Chainlens Analysis Tools
 
 **As a** integration developer,  
-**I want** to create Chainlens-specific tools trong Suna tool registry,  
+**I want** to create Chainlens-specific tools trong ChainLens tool registry,  
 **so that** agent có thể call crypto analysis services through standardized interfaces.
 
 #### ✅ Acceptance Criteria
@@ -503,7 +503,7 @@ Epic 4 tích hợp Chainlens analysis capabilities vào Suna agent runtime thôn
 ### 🔄 Story 4.2: Create Multi-Step Analysis Workflows
 
 **As a** product manager,  
-**I want** orchestrated analysis workflows trong Suna agent để deliver comprehensive project evaluations,  
+**I want** orchestrated analysis workflows trong ChainLens agent để deliver comprehensive project evaluations,  
 **so that** users receive holistic insights thay vì fragmented tool outputs.
 
 #### ✅ Acceptance Criteria
@@ -518,7 +518,7 @@ Epic 4 tích hợp Chainlens analysis capabilities vào Suna agent runtime thôn
 ### 📝 Story 4.3: Develop Response Templates & Formatting
 
 **As a** UX designer,  
-**I want** crypto-specific response templates trong Suna agent,  
+**I want** crypto-specific response templates trong ChainLens agent,  
 **so that** analysis results được present clearly với actionable insights cho users.
 
 #### ✅ Acceptance Criteria
@@ -548,7 +548,7 @@ Epic 4 tích hợp Chainlens analysis capabilities vào Suna agent runtime thôn
 ### 🤖 Story 4.5: Configure System Prompts & Agent Behavior
 
 **As a** AI engineer,  
-**I want** Suna agent optimized cho crypto analysis domain với appropriate personality và expertise,  
+**I want** ChainLens agent optimized cho crypto analysis domain với appropriate personality và expertise,  
 **so that** users experience professional crypto analyst interaction thay vì generic assistant.
 
 #### ✅ Acceptance Criteria
@@ -953,7 +953,7 @@ Input: Complete PRD với Epic 1-5 detailed stories
 Task: Create UX architecture cho Chainlens crypto analysis platform
 
 Key Focus Areas:
-- Suna chat interface customization với Chainlens branding
+- ChainLens chat interface customization với Chainlens branding
 - Crypto analysis response templates với risk scoring visualization
 - Professional user workflows cho complex analysis export/sharing
 - Mobile-responsive design cho quick analysis checks
@@ -976,13 +976,13 @@ Input: Complete PRD với 20 functional/non-functional requirements và 25 detai
 Task: Design comprehensive system architecture cho Chainlens MVP
 
 Architecture Constraints:
-- Hybrid: Suna Agent Orchestrator + Chainlens Microservices
+- Hybrid: ChainLens Agent Orchestrator + Chainlens Microservices
 - Tech Stack: Python, FastAPI, PostgreSQL/TimescaleDB, Redis
 - Performance: 5-8 second response time, 70% cache hit rate
 - Scalability: Support 100+ concurrent users, horizontal microservice scaling
 
 Key Components:
-1. Suna Fork với Chainlens tools integration
+1. ChainLens Fork với Chainlens tools integration
 2. API Gateway với caching và rate limiting
 3. 4 Analysis Microservices (Onchain, Sentiment, Tokenomics, Team)
 4. Database layer với time-series optimization
@@ -1095,7 +1095,7 @@ Success Criteria: Architecture supports all 25 user stories với technical cons
 ### 🎆 ALL SECTIONS COMPLETED + ENHANCED
 - ✅ **Strategic Goals & Vision** (Market domination strategy, 3-year roadmap)
 - ✅ **Advanced Requirements** (15 world-class NFRs, enterprise standards)
-- ✅ **UX Excellence** (Suna optimization + brand customization)
+- ✅ **UX Excellence** (ChainLens optimization + brand customization)
 - ✅ **Technical Architecture** (< 3s performance, 99.99% SLA guarantee)
 - ✅ **Epic 1-5**: Core platform development (25 stories)
 - ✅ **Epic 6**: Strategic Partnership Network (25+ partners)

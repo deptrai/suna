@@ -4,7 +4,7 @@
  * Handles opening checkout URLs (provided by our backend) in an in-app browser.
  * Our backend handles the actual Stripe integration and returns masked/proxied URLs.
  * 
- * Note: The backend should return kortix.com URLs that wrap/proxy Stripe,
+ * Note: The backend should return epsilon.com URLs that wrap/proxy Stripe,
  * not direct stripe.com URLs for compliance.
  */
 
@@ -57,7 +57,7 @@ async function fetchApi<T>(
 // Backend API Functions
 // 
 // These call our backend, which handles Stripe integration and returns
-// checkout URLs (should be kortix.com masked URLs, not direct stripe.com)
+// checkout URLs (should be epsilon.com masked URLs, not direct stripe.com)
 // ============================================================================
 
 const checkoutApi = {
@@ -126,7 +126,7 @@ function buildCancelUrl(): string {
  * Open checkout URL in in-app browser
  * 
  * The checkout URL is provided by our backend, which should return
- * a kortix.com masked URL (not direct stripe.com for compliance)
+ * a epsilon.com masked URL (not direct stripe.com for compliance)
  */
 async function openCheckoutInBrowser(
   checkoutUrl: string,
@@ -189,7 +189,7 @@ export async function openExternalUrl(url: string): Promise<void> {
  * Start trial activation flow
  * 
  * 1. Calls backend /billing/trial/start
- * 2. Backend returns checkout URL (should be kortix.com masked)
+ * 2. Backend returns checkout URL (should be epsilon.com masked)
  * 3. Opens URL in in-app browser
  * 4. User completes checkout
  * 5. Redirects back to app via deep link
@@ -323,7 +323,7 @@ export async function openBillingPortal(returnUrl?: string): Promise<void> {
     // Direct users to the web app's billing management page
     const webBillingUrl = process.env.EXPO_PUBLIC_WEB_APP_URL 
       ? `${process.env.EXPO_PUBLIC_WEB_APP_URL}/subscription`
-      : 'https://app.kortix.ai/subscription';
+      : 'https://app.epsilon.ai/subscription';
 
     await openExternalUrl(webBillingUrl);
   } catch (error) {

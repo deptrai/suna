@@ -33,7 +33,7 @@
                             │ Request
 ┌────────────────────────────▼─────────────────────────────────────┐
 │         ChainLens-Automation Frontend (Port 3000)                │
-│              (Formerly Suna - Chat Interface)                    │
+│              (Formerly ChainLens - Chat Interface)                    │
 └────────────────────────────┬─────────────────────────────────────┘
                             │ HTTP/WebSocket
 ┌────────────────────────────▼─────────────────────────────────────┐

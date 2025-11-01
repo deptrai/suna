@@ -22,15 +22,15 @@ export function InstructionsScreen({ agentId }: InstructionsScreenProps) {
         }
     }, [agent?.system_prompt]);
 
-    const isSunaAgent = agent?.metadata?.is_suna_default || false;
+    const isChainLensAgent = agent?.metadata?.is_chainlens_default || false;
     const restrictions = agent?.metadata?.restrictions || {};
-    const isEditable = (restrictions.system_prompt_editable !== false) && !isSunaAgent;
+    const isEditable = (restrictions.system_prompt_editable !== false) && !isChainLensAgent;
 
     const handleSave = async (value: string) => {
         if (!isEditable) {
-            if (isSunaAgent) {
+            if (isChainLensAgent) {
                 toast.error("System prompt cannot be edited", {
-                    description: "Suna's system prompt is managed centrally.",
+                    description: "ChainLens's system prompt is managed centrally.",
                 });
             }
             return;

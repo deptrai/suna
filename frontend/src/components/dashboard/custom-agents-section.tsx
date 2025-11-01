@@ -321,7 +321,7 @@ export function CustomAgentsSection({ onAgentSelect }: CustomAgentsSectionProps)
     icon_background: template.icon_background,
     creator_id: template.creator_id,
     creator_name: template.creator_name,
-    is_kortix_team: template.is_kortix_team || false,
+    is_epsilon_team: template.is_epsilon_team || false,
     download_count: template.download_count || 0,
     marketplace_published_at: template.marketplace_published_at,
     mcp_requirements: template.mcp_requirements || [],

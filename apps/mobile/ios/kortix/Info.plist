@@ -9,7 +9,7 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>$(DEVELOPMENT_LANGUAGE)</string>
     <key>CFBundleDisplayName</key>
-    <string>kortix</string>
+    <string>epsilon</string>
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIdentifier</key>
@@ -29,8 +29,8 @@
       <dict>
         <key>CFBundleURLSchemes</key>
         <array>
-          <string>kortix</string>
-          <string>com.kortix.app</string>
+          <string>epsilon</string>
+          <string>com.epsilon.app</string>
         </array>
       </dict>
     </array>

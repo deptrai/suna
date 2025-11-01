@@ -50,7 +50,7 @@ class AgentData:
     version_created_by: Optional[str] = None
     
     # Metadata flags
-    is_suna_default: bool = False
+    is_chainlens_default: bool = False
     centrally_managed: bool = False
     config_loaded: bool = False
     restrictions: Optional[Dict[str, Any]] = None
@@ -130,7 +130,7 @@ class AgentData:
                 "agentpress_tools": self.agentpress_tools,
                 "triggers": self.triggers,
                 "version_name": self.version_name,
-                "is_suna_default": self.is_suna_default,
+                "is_chainlens_default": self.is_chainlens_default,
                 "centrally_managed": self.centrally_managed,
                 "restrictions": self.restrictions,
             })
@@ -297,7 +297,7 @@ class AgentLoader:
             agentpress_tools=template_row.get('agentpress_tools', {}),
             triggers=[],
             version_name='template',
-            is_suna_default=False,
+            is_chainlens_default=False,
             centrally_managed=False,
             config_loaded=True,  # Templates have config built-in
             restrictions={}
@@ -325,27 +325,27 @@ class AgentLoader:
             current_version_id=row.get('current_version_id'),
             version_count=row.get('version_count', 1),
             metadata=metadata,
-            is_suna_default=metadata.get('is_suna_default', False),
+            is_chainlens_default=metadata.get('is_chainlens_default', False),
             config_loaded=False
         )
     
     async def _load_agent_config(self, agent: AgentData, user_id: str):
         """Load full configuration for a single agent."""
-        if agent.is_suna_default:
-            self._load_suna_config(agent)
+        if agent.is_chainlens_default:
+            self._load_chainlens_config(agent)
         else:
             await self._load_custom_config(agent, user_id)
         
         agent.config_loaded = True
     
-    def _load_suna_config(self, agent: AgentData):
-        """Load Suna central configuration."""
-        from core.suna_config import SUNA_CONFIG
+    def _load_chainlens_config(self, agent: AgentData):
+        """Load ChainLens central configuration."""
+        from core.chainlens_config import CHAINLENS_CONFIG
         from core.config_helper import _extract_agentpress_tools_for_run
         
-        agent.system_prompt = SUNA_CONFIG['system_prompt']
-        agent.model = SUNA_CONFIG['model']
-        agent.agentpress_tools = _extract_agentpress_tools_for_run(SUNA_CONFIG['agentpress_tools'])
+        agent.system_prompt = CHAINLENS_CONFIG['system_prompt']
+        agent.model = CHAINLENS_CONFIG['model']
+        agent.agentpress_tools = _extract_agentpress_tools_for_run(CHAINLENS_CONFIG['agentpress_tools'])
         agent.configured_mcps = []
         agent.custom_mcps = []
         agent.triggers = []
@@ -431,14 +431,14 @@ class AgentLoader:
     async def _batch_load_configs(self, agents: list[AgentData]):
         """Batch load configurations for multiple agents."""
         
-        # Get all version IDs for non-Suna agents
-        version_ids = [a.current_version_id for a in agents if a.current_version_id and not a.is_suna_default]
+        # Get all version IDs for non-ChainLens agents
+        version_ids = [a.current_version_id for a in agents if a.current_version_id and not a.is_chainlens_default]
         
         if not version_ids:
-            # Only Suna agents, load their configs
+            # Only ChainLens agents, load their configs
             for agent in agents:
-                if agent.is_suna_default:
-                    self._load_suna_config(agent)
+                if agent.is_chainlens_default:
+                    self._load_chainlens_config(agent)
                     agent.config_loaded = True
             return
         
@@ -450,7 +450,7 @@ class AgentLoader:
             # Create version map using versioning service
             version_map = {}
             for agent in agents:
-                if agent.current_version_id and not agent.is_suna_default:
+                if agent.current_version_id and not agent.is_chainlens_default:
                     try:
                         version = await version_service.get_version(
                             agent_id=agent.agent_id,
@@ -465,8 +465,8 @@ class AgentLoader:
             
             # Apply configs
             for agent in agents:
-                if agent.is_suna_default:
-                    self._load_suna_config(agent)
+                if agent.is_chainlens_default:
+                    self._load_chainlens_config(agent)
                     agent.config_loaded = True
                 elif agent.agent_id in version_map:
                     self._apply_version_config(agent, version_map[agent.agent_id])
@@ -475,10 +475,10 @@ class AgentLoader:
                 
         except Exception as e:
             logger.warning(f"Failed to batch load agent configs: {e}")
-            # Fallback: load Suna configs only
+            # Fallback: load ChainLens configs only
             for agent in agents:
-                if agent.is_suna_default:
-                    self._load_suna_config(agent)
+                if agent.is_chainlens_default:
+                    self._load_chainlens_config(agent)
                     agent.config_loaded = True
     
     def _apply_version_config(self, agent: AgentData, version_row: Dict[str, Any]):

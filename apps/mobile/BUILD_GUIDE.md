@@ -1,4 +1,4 @@
-# Kortix Mobile App - Build & Deploy Guide
+# Epsilon Mobile App - Build & Deploy Guide
 
 ## 📱 Quick Start
 

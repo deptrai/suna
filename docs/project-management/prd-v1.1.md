@@ -12,7 +12,7 @@ Liên quan: docs/project-management/prd.md (bản đầy đủ chiến lược)
 
 Mục tiêu: Đưa ChainLens (AI-driven crypto analytics) lên production với MVP tập trung tốc độ, chi phí thấp và network effects. Bản v1.1 này là bản cập nhật thực thi (execution-focused) cho 14 ngày tới, dựa trên:
 - Brainstorming Session: Caching → Network Effects → Token Economy → Developer Marketplace → Market Dominance
-- Strategic Evaluation: Clone Suna.so (agent runtime) + Microservices crypto chuyên biệt + Viral Growth Engine
+- Strategic Evaluation: Clone ChainLens.so (agent runtime) + Microservices crypto chuyên biệt + Viral Growth Engine
 
 Key Outcomes trong 14 ngày:
 - Hoàn thiện Testing Framework + LLM Orchestration Module
@@ -45,7 +45,7 @@ Use cases ưu tiên:
 4) MVP Feature Set (14 ngày)
 
 Phải có (Must-have):
-- Conversational UX (Suna base) + crypto-focused templates
+- Conversational UX (ChainLens base) + crypto-focused templates
 - 4 service endpoints qua Gateway: onchain, sentiment, tokenomics, team
 - Caching layer (Redis) với TTL theo loại dữ liệu + warming top tickers
 - LLM orchestration (fallback + streaming + tool selection)
@@ -88,7 +88,7 @@ NFR-MVP-6 Compliance: Disclaimer “không phải lời khuyên đầu tư” + 
 7) Technical Architecture (MVP-focused)
 
 Thành phần:
-- Suna-based Chat Frontend: UI đàm thoại + templates crypto
+- ChainLens-based Chat Frontend: UI đàm thoại + templates crypto
 - API Gateway (FastAPI): routing → microservices; auth; rate limit; OpenAPI (/docs)
 - Redis Cache: key pattern kpi:{symbol}:{metric}, sent:{symbol}; TTL theo loại
 - Microservices (NestJS): OnChain, Sentiment, Tokenomics, Team (PostgreSQL/TimescaleDB)

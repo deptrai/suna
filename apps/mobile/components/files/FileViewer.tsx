@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Modal, Pressable, Share, Platform } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { Icon } from '@/components/ui/icon';
-import { KortixLoader } from '@/components/ui';
+import { EpsilonLoader } from '@/components/ui';
 import { X, Download, Share2, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import Animated, {
@@ -300,7 +300,7 @@ export function FileViewer({
         <View className="flex-1">
           {isLoading ? (
             <View className="flex-1 items-center justify-center">
-              <KortixLoader size="large" />
+              <EpsilonLoader size="large" />
               <Text className="text-sm text-muted-foreground mt-4">
                 Loading file...
               </Text>

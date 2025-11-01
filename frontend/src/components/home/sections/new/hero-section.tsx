@@ -38,8 +38,8 @@ import { createQueryHook } from '@/hooks/use-query';
 import { agentKeys } from '@/hooks/react-query/agents/keys';
 import { getAgents } from '@/hooks/react-query/agents/utils';
 import { AgentRunLimitDialog } from '@/components/thread/agent-run-limit-dialog';
-import { SunaModesPanel } from '@/components/dashboard/suna-modes-panel';
-import { useSunaModePersistence } from '@/hooks/use-suna-modes-persistence';
+import { ChainLensModesPanel } from '@/components/dashboard/chainlens-modes-panel';
+import { useChainLensModePersistence } from '@/hooks/use-chainlens-modes-persistence';
 import { useAgentSelection } from '@/lib/stores/agent-selection-store';
 
 // Custom dialog overlay with blur effect
@@ -66,7 +66,7 @@ export function HeroSection() {
         getCurrentAgent
     } = useAgentSelection();
 
-    // Use centralized Suna modes persistence hook
+    // Use centralized ChainLens modes persistence hook
     const {
         selectedMode,
         selectedCharts,
@@ -76,7 +76,7 @@ export function HeroSection() {
         setSelectedCharts,
         setSelectedOutputFormat,
         setSelectedTemplate,
-    } = useSunaModePersistence();
+    } = useChainLensModePersistence();
     const router = useRouter();
     const { user, isLoading } = useAuth();
     const { billingError, handleBillingError, clearBillingError } =
@@ -122,12 +122,12 @@ export function HeroSection() {
         }
     }, [agents, initializeFromAgents, setSelectedAgent]);
 
-    // Determine if selected agent is Suna default
-    // For unauthenticated users, assume Suna is the default
+    // Determine if selected agent is ChainLens default
+    // For unauthenticated users, assume ChainLens is the default
     const selectedAgent = selectedAgentId
         ? agents.find(agent => agent.agent_id === selectedAgentId)
         : null;
-    const isSunaAgent = !user || selectedAgent?.metadata?.is_suna_default || false;
+    const isChainLensAgent = !user || selectedAgent?.metadata?.is_chainlens_default || false;
 
     // Auth dialog state
     const [authDialogOpen, setAuthDialogOpen] = useState(false);
@@ -310,10 +310,10 @@ export function HeroSection() {
                         </div>
                     </div>
 
-                    {/* Modes Panel - Below chat input, visible for Suna agent */}
-                    {isSunaAgent && (
+                    {/* Modes Panel - Below chat input, visible for ChainLens agent */}
+                    {isChainLensAgent && (
                         <div className="w-full max-w-3xl mx-auto mt-4 px-2 sm:px-0">
-                            <SunaModesPanel
+                            <ChainLensModesPanel
                                 selectedMode={selectedMode}
                                 onModeSelect={setSelectedMode}
                                 onSelectPrompt={setInputValue}
@@ -350,7 +350,7 @@ export function HeroSection() {
               </button> */}
                         </div>
                         <DialogDescription className="text-muted-foreground">
-                            Sign in or create an account to talk with Kortix
+                            Sign in or create an account to talk with Epsilon
                         </DialogDescription>
                     </DialogHeader>
 
@@ -393,11 +393,11 @@ export function HeroSection() {
 
                     <div className="mt-8 text-center text-[13px] text-muted-foreground leading-relaxed">
                         By continuing, you agree to our{' '}
-                        <a href="https://www.kortix.com/legal?tab=terms" target="_blank" rel="noopener noreferrer" className="text-foreground/70 hover:text-foreground underline underline-offset-2 transition-colors">
+                        <a href="https://www.epsilon.com/legal?tab=terms" target="_blank" rel="noopener noreferrer" className="text-foreground/70 hover:text-foreground underline underline-offset-2 transition-colors">
                             Terms of Service
                         </a>{' '}
                         and{' '}
-                        <a href="https://www.kortix.com/legal?tab=privacy" target="_blank" rel="noopener noreferrer" className="text-foreground/70 hover:text-foreground underline underline-offset-2 transition-colors">
+                        <a href="https://www.epsilon.com/legal?tab=privacy" target="_blank" rel="noopener noreferrer" className="text-foreground/70 hover:text-foreground underline underline-offset-2 transition-colors">
                             Privacy Policy
                         </a>
                     </div>

@@ -1,4 +1,4 @@
-# Kortix Mobile App
+# Epsilon Mobile App
 
 Modern React Native + Expo mobile application with centralized API layer.
 

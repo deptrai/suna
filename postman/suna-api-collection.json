@@ -1,12 +1,12 @@
 {
   "info": {
-    "name": "Suna API Collection",
-    "description": "Collection for testing Suna backend API with v98store integration",
+    "name": "ChainLens API Collection",
+    "description": "Collection for testing ChainLens backend API with v98store integration",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
-      "key": "suna_base_url",
+      "key": "chainlens_base_url",
       "value": "http://127.0.0.1:8000",
       "type": "string"
     },
@@ -92,8 +92,8 @@
               }
             ],
             "url": {
-              "raw": "{{suna_base_url}}/api/billing/available-models",
-              "host": ["{{suna_base_url}}"],
+              "raw": "{{chainlens_base_url}}/api/billing/available-models",
+              "host": ["{{chainlens_base_url}}"],
               "path": ["api", "billing", "available-models"]
             }
           },
@@ -139,8 +139,8 @@
               ]
             },
             "url": {
-              "raw": "{{suna_base_url}}/api/agent/initiate",
-              "host": ["{{suna_base_url}}"],
+              "raw": "{{chainlens_base_url}}/api/agent/initiate",
+              "host": ["{{chainlens_base_url}}"],
               "path": ["api", "agent", "initiate"]
             }
           },
@@ -181,8 +181,8 @@
               ]
             },
             "url": {
-              "raw": "{{suna_base_url}}/api/agent/initiate",
-              "host": ["{{suna_base_url}}"],
+              "raw": "{{chainlens_base_url}}/api/agent/initiate",
+              "host": ["{{chainlens_base_url}}"],
               "path": ["api", "agent", "initiate"]
             }
           },

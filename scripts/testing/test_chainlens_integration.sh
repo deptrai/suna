@@ -228,7 +228,7 @@ if [ $TESTS_FAILED -eq 0 ]; then
     echo ""
     echo -e "${BLUE}Next Steps:${NC}"
     echo "1. Start ChainLens Core Orchestrator service (port 3006)"
-    echo "2. Start Suna backend with updated configuration"
+    echo "2. Start ChainLens backend with updated configuration"
     echo "3. Test comprehensive analysis via agent or API"
     echo "4. Monitor performance improvements in production"
     exit 0

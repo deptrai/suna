@@ -26,7 +26,7 @@ import { useAgents } from '@/hooks/react-query/agents/use-agents';
 import { cn } from '@/lib/utils';
 import { BillingModal } from '@/components/billing/billing-modal';
 import { useAgentSelection } from '@/lib/stores/agent-selection-store';
-import { SunaModesPanel } from './suna-modes-panel';
+import { ChainLensModesPanel } from './chainlens-modes-panel';
 import { AIWorkerTemplates } from './ai-worker-templates';
 import { useThreadQuery } from '@/hooks/react-query/threads/use-threads';
 import { normalizeFilenameToNFC } from '@/lib/utils/unicode';
@@ -40,7 +40,7 @@ import { ReleaseBadge } from '../auth/release-badge';
 // import { TourConfirmationDialog } from '@/components/tour/TourConfirmationDialog';
 import { Calendar, MessageSquare, Plus, Sparkles, Zap } from 'lucide-react';
 import { AgentConfigurationDialog } from '@/components/agents/agent-configuration-dialog';
-import { useSunaModePersistence } from '@/hooks/use-suna-modes-persistence';
+import { useChainLensModePersistence } from '@/hooks/use-chainlens-modes-persistence';
 
 const PENDING_PROMPT_KEY = 'pendingAgentPrompt';
 
@@ -78,7 +78,7 @@ export function DashboardContent() {
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [autoSubmit, setAutoSubmit] = useState(false);
   
-  // Use centralized Suna modes persistence hook
+  // Use centralized ChainLens modes persistence hook
   const {
     selectedMode,
     selectedCharts,
@@ -88,7 +88,7 @@ export function DashboardContent() {
     setSelectedCharts,
     setSelectedOutputFormat,
     setSelectedTemplate,
-  } = useSunaModePersistence();
+  } = useChainLensModePersistence();
   
   const [viewMode, setViewMode] = useState<'super-worker' | 'worker-templates'>('super-worker');
   
@@ -392,7 +392,7 @@ export function DashboardContent() {
                         : "text-muted-foreground hover:text-foreground"
                     )}
                   >
-                    Kortix Super Worker
+                    Epsilon Super Worker
                   </button>
                   <button
                     onClick={() => {
@@ -415,7 +415,7 @@ export function DashboardContent() {
 
             {/* Centered content area */}
             <div className="flex-1 flex items-start justify-center pt-[30vh]">
-              {/* Super Worker View - Suna only */}
+              {/* Super Worker View - ChainLens only */}
               {viewMode === 'super-worker' && (
                 <div className="w-full animate-in fade-in-0 duration-300">
                   {/* Title and chat input - Fixed position */}
@@ -457,10 +457,10 @@ export function DashboardContent() {
                   </div>
 
                   {/* Modes Panel - Below chat input, doesn't affect its position */}
-                  {isSunaAgent && (
+                  {isChainLensAgent && (
                     <div className="px-4 pb-8">
                       <div className="max-w-3xl mx-auto">
-                        <SunaModesPanel
+                        <ChainLensModesPanel
                           selectedMode={selectedMode}
                           onModeSelect={setSelectedMode}
                           onSelectPrompt={setInputValue}

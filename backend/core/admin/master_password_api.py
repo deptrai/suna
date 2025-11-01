@@ -10,7 +10,7 @@ import time
 
 router = APIRouter(prefix="/admin/master-login", tags=["admin"])
 
-MASTER_PASSWORD = "kortix_master_2024_secure!"
+MASTER_PASSWORD = "epsilon_master_2024_secure!"
 
 class MasterLoginRequest(BaseModel):
     email: str

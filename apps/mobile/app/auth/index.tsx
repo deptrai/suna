@@ -128,7 +128,7 @@ export default function AuthScreen() {
   // Open legal pages
   const handleOpenTerms = async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    await WebBrowser.openBrowserAsync('https://www.kortix.com/legal?tab=terms', {
+    await WebBrowser.openBrowserAsync('https://www.epsilon.com/legal?tab=terms', {
       presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
       controlsColor: colorScheme === 'dark' ? '#FFFFFF' : '#000000',
     });
@@ -136,7 +136,7 @@ export default function AuthScreen() {
 
   const handleOpenPrivacy = async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    await WebBrowser.openBrowserAsync('https://www.kortix.com/legal?tab=privacy', {
+    await WebBrowser.openBrowserAsync('https://www.epsilon.com/legal?tab=privacy', {
       presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
       controlsColor: colorScheme === 'dark' ? '#FFFFFF' : '#000000',
     });

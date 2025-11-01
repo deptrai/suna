@@ -46,7 +46,7 @@
 ├─────────────────────────────────────────────┤
 │                                             │
 │   ┌─────────────────────────────────┐      │
-│   │     Suna Chat Interface         │      │
+│   │     ChainLens Chat Interface         │      │
 │   └──────────────┬──────────────────┘      │
 │                  │                          │
 │   ┌──────────────▼──────────────────┐      │
@@ -89,7 +89,7 @@ Backend:
   - LLM: OpenAI GPT-3.5-turbo (primary only)
   
 Frontend:
-  - Suna chat interface (existing)
+  - ChainLens chat interface (existing)
   - Responsive web (no mobile app)
   
 Infrastructure:

@@ -119,7 +119,7 @@ def check_server_logs():
         # Get recent logs with optimization debug
         result = subprocess.run([
             "tail", "-n", "100", "logs/structured.jsonl"
-        ], capture_output=True, text=True, cwd="/Users/mac_1/Documents/GitHub/suna")
+        ], capture_output=True, text=True, cwd="/Users/mac_1/Documents/GitHub/chainlens")
         
         if result.returncode == 0:
             lines = result.stdout.strip().split('\n')

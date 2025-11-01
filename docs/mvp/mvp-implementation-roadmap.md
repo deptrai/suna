@@ -11,7 +11,7 @@
 ## 📊 Current Status Assessment
 
 ### ✅ **COMPLETED (90%)**
-- [x] Suna.so platform cloned successfully
+- [x] ChainLens.so platform cloned successfully
 - [x] ChainLens rebranding implemented
 - [x] Core crypto tools integrated
 - [x] Basic microservices architecture
@@ -235,7 +235,7 @@ Tiers:
 ├─────────────────────────────────────────┤
 │  Frontend: Next.js 14 + Tailwind CSS   │
 ├─────────────────────────────────────────┤
-│   Backend: Suna.so + Custom Services    │
+│   Backend: ChainLens.so + Custom Services    │
 ├─────────────────────────────────────────┤
 │     AI Layer: Multi-LLM Orchestrator    │
 ├─────────────────────────────────────────┤

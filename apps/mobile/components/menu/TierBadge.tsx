@@ -16,7 +16,7 @@ interface TierBadgeProps {
 /**
  * TierBadge Component
  * 
- * Displays tier badge with Kortix brandmark and tier name.
+ * Displays tier badge with Epsilon brandmark and tier name.
  * Three variants: Plus (pink gradient), Pro (orange gradient), Ultra (rainbow gradient).
  * 
  * Design Specifications (Figma: 89-8016):

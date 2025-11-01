@@ -426,7 +426,7 @@ export const MessageThread: React.FC<MessageThreadProps> = ({
         return (
             <View style={styles.thinkingContainer}>
                 <ThinkingText color={theme.placeholderText}>
-                    Kortix is thinking...
+                    Epsilon is thinking...
                 </ThinkingText>
             </View>
         );

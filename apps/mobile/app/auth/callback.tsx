@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/api/supabase';
 import { Text } from '@/components/ui/text';
-import { KortixLoader } from '@/components/ui';
+import { EpsilonLoader } from '@/components/ui';
 
 /**
  * OAuth Callback Handler
@@ -55,7 +55,7 @@ export default function AuthCallback() {
 
   return (
     <View className="flex-1 items-center justify-center bg-background">
-      <KortixLoader size="large" />
+      <EpsilonLoader size="large" />
       <Text className="text-foreground font-roobert-medium mt-4">
         Completing sign in...
       </Text>

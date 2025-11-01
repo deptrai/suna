@@ -1,4 +1,4 @@
-# 📏 Testing Standards - Suna Platform
+# 📏 Testing Standards - ChainLens Platform
 
 **Document Version**: 1.0  
 **Last Updated**: 2025-09-10  
@@ -6,7 +6,7 @@
 
 ## 🎯 Overview
 
-This document establishes testing standards, conventions, and best practices for maintaining high-quality, consistent tests across the Suna platform.
+This document establishes testing standards, conventions, and best practices for maintaining high-quality, consistent tests across the ChainLens platform.
 
 ## 📝 Test Naming Conventions
 

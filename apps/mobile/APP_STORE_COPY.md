@@ -1,11 +1,11 @@
-# Kortix App Store Copy
+# Epsilon App Store Copy
 
 Complete copy for Apple App Store submission.
 
 ---
 
 ## App Name
-**Kortix: Super AI Worker**
+**Epsilon: Super AI Worker**
 
 ## Subtitle (30 characters max)
 **Your AI That Takes Action**
@@ -18,11 +18,11 @@ Alternative options:
 ---
 
 ## Promotional Text
-**Meet Kortix – Your Super AI Worker That Never Sleeps**
+**Meet Epsilon – Your Super AI Worker That Never Sleeps**
 
-While other AI tools just chat, Kortix takes action. Research, analyze, create, automate – Kortix is your ultra-intelligent colleague that handles complex tasks while you focus on what matters.
+While other AI tools just chat, Epsilon takes action. Research, analyze, create, automate – Epsilon is your ultra-intelligent colleague that handles complex tasks while you focus on what matters.
 
-Plus, Kortix integrates with all your favorite apps (Gmail, Drive, Notion, Slack, and more) so it can perform actions directly in them. Your AI worker doesn't just create – it works in your actual apps.
+Plus, Epsilon integrates with all your favorite apps (Gmail, Drive, Notion, Slack, and more) so it can perform actions directly in them. Your AI worker doesn't just create – it works in your actual apps.
 
 *New in v1.0: Multi-modal intelligence, voice interactions, app integrations, and powerful automation that delivers real results.*
 
@@ -30,19 +30,19 @@ Plus, Kortix integrates with all your favorite apps (Gmail, Drive, Notion, Slack
 
 ## Description (4000 characters max)
 
-Kortix: Your Super AI Worker That Delivers Real Results
+Epsilon: Your Super AI Worker That Delivers Real Results
 
-Forget simple chatbots. Kortix is your ultra-intelligent AI worker that doesn't just respond – it executes, researches, analyzes, creates, and delivers. It's like having a genius colleague in your pocket that works 24/7, handling your toughest tasks while you focus on what truly matters.
+Forget simple chatbots. Epsilon is your ultra-intelligent AI worker that doesn't just respond – it executes, researches, analyzes, creates, and delivers. It's like having a genius colleague in your pocket that works 24/7, handling your toughest tasks while you focus on what truly matters.
 
-WHY KORTIX IS DIFFERENT
+WHY EPSILON IS DIFFERENT
 
-Most AI tools stop at conversation. Kortix takes action.
+Most AI tools stop at conversation. Epsilon takes action.
 
-While other apps give you answers, Kortix gives you results. Need market research? Done. Complex data analysis? Handled. Multi-step automation? Consider it complete. 
+While other apps give you answers, Epsilon gives you results. Need market research? Done. Complex data analysis? Handled. Multi-step automation? Consider it complete. 
 
-But here's what really sets Kortix apart: it doesn't just create content – it performs actions in your actual apps. Connect Kortix to Gmail, and it can send emails. Connect it to Notion, and it updates your databases. Connect it to Google Calendar, and it schedules meetings. Kortix is built for people who need AI that works in their real tools, not just talks.
+But here's what really sets Epsilon apart: it doesn't just create content – it performs actions in your actual apps. Connect Epsilon to Gmail, and it can send emails. Connect it to Notion, and it updates your databases. Connect it to Google Calendar, and it schedules meetings. Epsilon is built for people who need AI that works in their real tools, not just talks.
 
-WHAT YOU CAN CREATE WITH KORTIX
+WHAT YOU CAN CREATE WITH EPSILON
 
 AI Slides & Presentations
 • Generate stunning slide decks from any topic or document
@@ -81,21 +81,21 @@ People & Contact Finding
 • Gather professional backgrounds and insights
 
 App Integrations & Automation
-• Connect Kortix to all your favorite apps and tools
-• Kortix can perform actions directly in your connected apps
+• Connect Epsilon to all your favorite apps and tools
+• Epsilon can perform actions directly in your connected apps
 • Integrate with Gmail, Google Drive, Slack, Notion, Airtable, and more
 • Automate workflows across multiple platforms seamlessly
 • Sync data between applications automatically
 • Manage your productivity suite through natural language commands
 
-Terms of Use: https://www.kortix.com/legal?tab=terms
-Privacy Policy: https://www.kortix.com/legal?tab=privacy
+Terms of Use: https://www.epsilon.com/legal?tab=terms
+Privacy Policy: https://www.epsilon.com/legal?tab=privacy
 
 ---
 
 ## Keywords (100 characters max, comma-separated)
 
-ai worker,ai,assistant,productivity,automation,slides,spreadsheet,research,ai report,document,kortix
+ai worker,ai,assistant,productivity,automation,slides,spreadsheet,research,ai report,document,epsilon
 
 Alternative keyword combinations:
 - ai,super ai,ai worker,assistant,productivity,automation,slides,research,reports,documents
@@ -105,9 +105,9 @@ Alternative keyword combinations:
 
 ## What's New (Version 1.0)
 
-**Welcome to Kortix – Your Super AI Worker**
+**Welcome to Epsilon – Your Super AI Worker**
 
-We're excited to bring you the first release of Kortix for iOS!
+We're excited to bring you the first release of Epsilon for iOS!
 
 **🎉 Launch Features:**
 
@@ -134,7 +134,7 @@ We're excited to bring you the first release of Kortix for iOS!
 
 **Get started today and experience the future of AI-powered productivity!**
 
-We'd love to hear your feedback. Rate us on the App Store or reach out at support@kortix.com
+We'd love to hear your feedback. Rate us on the App Store or reach out at support@epsilon.com
 
 ---
 
@@ -167,34 +167,34 @@ Manage all your AI-created work in one place
 ---
 
 ## Support URL
-support@kortix.com
+support@epsilon.com
 
 ## Marketing URL  
-https://www.kortix.com
+https://www.epsilon.com
 
 ## Privacy Policy URL
-https://www.kortix.com/legal?tab=privacy
+https://www.epsilon.com/legal?tab=privacy
 
 ## Terms of Use URL
-https://www.kortix.com/legal?tab=terms
+https://www.epsilon.com/legal?tab=terms
 
 ---
 
 ## Copyright
-© 2025 Kortix Inc.
+© 2025 Epsilon Inc.
 
 ---
 
 ## App Review Notes (for Apple Review Team)
 
 **Demo Account Credentials:**
-- Username: reviewer@kortix.com
+- Username: reviewer@epsilon.com
 - Password: [Provide secure password]
 
 **Testing Instructions:**
 
 1. **Sign In** – Use the provided demo account or Sign in with Apple
-2. **Start a Conversation** – Tap "New Chat" and ask Suna to research any topic
+2. **Start a Conversation** – Tap "New Chat" and ask ChainLens to research any topic
 3. **Try Voice Input** – Use the microphone button for voice commands
 4. **Create Custom Agent** – Navigate to Settings > Agents > Create New Agent
 5. **Test Background Processing** – Start a long task, close the app, and return later
@@ -212,7 +212,7 @@ https://www.kortix.com/legal?tab=terms
 
 **API Services Used:**
 - Supabase (Authentication & Database)
-- Backend API at kortix.com
+- Backend API at epsilon.com
 - Various AI model providers (Anthropic, OpenAI)
 
 **Permissions Requested:**
@@ -225,7 +225,7 @@ https://www.kortix.com/legal?tab=terms
 - Some features are limited in the free tier
 - Background processing is limited by iOS system constraints
 
-Thank you for reviewing Kortix!
+Thank you for reviewing Epsilon!
 
 ---
 
@@ -274,22 +274,22 @@ Suggested rating factors:
 ## App Store Localization (Optional)
 
 ### Spanish (es)
-**Name:** Kortix: Plataforma de Agentes IA
+**Name:** Epsilon: Plataforma de Agentes IA
 **Subtitle:** Crea y Despliega Agentes IA
 **Description:** [Translate main description]
 
 ### German (de)
-**Name:** Kortix: KI-Agenten-Plattform
+**Name:** Epsilon: KI-Agenten-Plattform
 **Subtitle:** KI-Agenten Erstellen
 **Description:** [Translate main description]
 
 ### French (fr)
-**Name:** Kortix: Plateforme d'Agents IA
+**Name:** Epsilon: Plateforme d'Agents IA
 **Subtitle:** Créez des Agents IA
 **Description:** [Translate main description]
 
 ### Japanese (ja)
-**Name:** Kortix: AIエージェントプラットフォーム
+**Name:** Epsilon: AIエージェントプラットフォーム
 **Subtitle:** AIエージェントを構築
 **Description:** [Translate main description]
 
@@ -312,14 +312,14 @@ Use these in promotional materials, social media, and ads:
 
 ## Press Kit One-Liner
 
-**Kortix is your super AI worker that creates real deliverables – AI slides, spreadsheets, documents, reports, and images – and performs actions in your favorite apps (Gmail, Drive, Notion, Slack, and more) – transforming how professionals work on-the-go.**
+**Epsilon is your super AI worker that creates real deliverables – AI slides, spreadsheets, documents, reports, and images – and performs actions in your favorite apps (Gmail, Drive, Notion, Slack, and more) – transforming how professionals work on-the-go.**
 
 ---
 
 ## Social Media Copy
 
 ### Twitter/X Launch Post
-🚀 Introducing Kortix for iOS!
+🚀 Introducing Epsilon for iOS!
 
 Your super AI worker that creates real deliverables:
 ✨ AI Slides & Presentations
@@ -336,11 +336,11 @@ Download now: [App Store Link]
 #AI #Productivity #AIWorker #Automation
 
 ### LinkedIn Launch Post
-We're thrilled to announce the launch of Kortix for iOS! 🎉
+We're thrilled to announce the launch of Epsilon for iOS! 🎉
 
-Kortix is your super AI worker that creates real deliverables directly from your mobile device. Unlike traditional chatbots that just respond, Kortix creates actual work products you can use immediately.
+Epsilon is your super AI worker that creates real deliverables directly from your mobile device. Unlike traditional chatbots that just respond, Epsilon creates actual work products you can use immediately.
 
-What you can create with Kortix:
+What you can create with Epsilon:
 ✅ AI Slides & Presentations
 ✅ AI Spreadsheets & Data Analysis
 ✅ AI Documents & Reports  
@@ -349,16 +349,16 @@ What you can create with Kortix:
 ✅ People & Contact Finding
 ✅ App Integrations – Actions in Gmail, Drive, Notion, Slack & more
 
-From ideation to finished deliverable in seconds. Whether you need a presentation for tomorrow's meeting, a research report, or data analysis, Kortix creates it while you focus on strategy.
+From ideation to finished deliverable in seconds. Whether you need a presentation for tomorrow's meeting, a research report, or data analysis, Epsilon creates it while you focus on strategy.
 
-Download Kortix today and experience the future of AI-powered productivity.
+Download Epsilon today and experience the future of AI-powered productivity.
 
 [App Store Link]
 
 ### Instagram Caption
 Your new AI worker just arrived. 💼✨
 
-Kortix creates real deliverables, not just conversations:
+Epsilon creates real deliverables, not just conversations:
 
 📊 AI Slides in seconds
 📈 AI Spreadsheets with insights
@@ -366,48 +366,48 @@ Kortix creates real deliverables, not just conversations:
 🎨 AI Images & graphics
 🔍 Deep research reports
 
-Tell Kortix what you need, and it creates while you focus on what matters most.
+Tell Epsilon what you need, and it creates while you focus on what matters most.
 
-Download Kortix today. Link in bio. 📲
+Download Epsilon today. Link in bio. 📲
 
-#Kortix #AI #Productivity #AIWorker #AISlides #FutureOfWork #TechInnovation
+#Epsilon #AI #Productivity #AIWorker #AISlides #FutureOfWork #TechInnovation
 
 ---
 
 ## Customer Support FAQs
 
-### What is Kortix?
-Kortix is your super AI worker that creates real deliverables like AI slides, spreadsheets, documents, reports, and images – transforming how you work.
+### What is Epsilon?
+Epsilon is your super AI worker that creates real deliverables like AI slides, spreadsheets, documents, reports, and images – transforming how you work.
 
-### What can I create with Kortix?
-You can create AI-powered presentations, spreadsheets, documents, images, research reports, and more. Kortix also integrates with your favorite apps (Gmail, Google Drive, Notion, Slack, and many others) so it can perform actions directly in them – not just create content, but actually work in your apps.
+### What can I create with Epsilon?
+You can create AI-powered presentations, spreadsheets, documents, images, research reports, and more. Epsilon also integrates with your favorite apps (Gmail, Google Drive, Notion, Slack, and many others) so it can perform actions directly in them – not just create content, but actually work in your apps.
 
-### How is Kortix different from ChatGPT or other AI chatbots?
-While most AI tools focus on conversation, Kortix creates real deliverables. Need a presentation? Kortix creates slides. Need data analysis? Kortix creates spreadsheets. Need research? Kortix creates reports. It's AI that delivers finished work products, not just responses.
+### How is Epsilon different from ChatGPT or other AI chatbots?
+While most AI tools focus on conversation, Epsilon creates real deliverables. Need a presentation? Epsilon creates slides. Need data analysis? Epsilon creates spreadsheets. Need research? Epsilon creates reports. It's AI that delivers finished work products, not just responses.
 
 ### Is my data secure?
 Yes. All conversations are encrypted, we never sell your data, and we're compliant with GDPR and CCPA regulations. See our Privacy Policy for details.
 
-### What AI models does Kortix use?
-Kortix supports multiple AI models including Claude (Anthropic), GPT-4 (OpenAI), and others, giving you access to the most advanced AI capabilities available.
+### What AI models does Epsilon use?
+Epsilon supports multiple AI models including Claude (Anthropic), GPT-4 (OpenAI), and others, giving you access to the most advanced AI capabilities available.
 
-### Can I use Kortix for free?
-Yes! Kortix offers a free plan with basic features. Pro and Team plans unlock advanced capabilities, unlimited creations, and higher usage limits.
+### Can I use Epsilon for free?
+Yes! Epsilon offers a free plan with basic features. Pro and Team plans unlock advanced capabilities, unlimited creations, and higher usage limits.
 
-### What apps can Kortix integrate with?
-Kortix integrates with popular productivity apps including Gmail, Google Drive, Outlook, Notion, Airtable, Slack, Microsoft Teams, Salesforce, Trello, Asana, GitHub, and many more. Once connected, Kortix can perform actions directly in these apps – sending emails, creating documents, updating databases, scheduling meetings, and more.
+### What apps can Epsilon integrate with?
+Epsilon integrates with popular productivity apps including Gmail, Google Drive, Outlook, Notion, Airtable, Slack, Microsoft Teams, Salesforce, Trello, Asana, GitHub, and many more. Once connected, Epsilon can perform actions directly in these apps – sending emails, creating documents, updating databases, scheduling meetings, and more.
 
-### What file formats can Kortix create?
-Kortix can export to PowerPoint, Word, Excel, PDF, Google Slides, Google Docs, Google Sheets, and various image formats – whatever you need for your workflow.
+### What file formats can Epsilon create?
+Epsilon can export to PowerPoint, Word, Excel, PDF, Google Slides, Google Docs, Google Sheets, and various image formats – whatever you need for your workflow.
 
-### Does Kortix work offline?
-You can view your created work offline, but creating new slides, documents, and reports requires an internet connection as Kortix uses advanced AI models in the cloud.
+### Does Epsilon work offline?
+You can view your created work offline, but creating new slides, documents, and reports requires an internet connection as Epsilon uses advanced AI models in the cloud.
 
-### Can I use Kortix on multiple devices?
-Yes! All your created work – slides, documents, spreadsheets, and reports – syncs seamlessly across all devices through your Kortix account.
+### Can I use Epsilon on multiple devices?
+Yes! All your created work – slides, documents, spreadsheets, and reports – syncs seamlessly across all devices through your Epsilon account.
 
 ### How can I get help?
-Visit support@kortix.com. We typically respond within 24 hours.
+Visit support@epsilon.com. We typically respond within 24 hours.
 
 ---
 

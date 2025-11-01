@@ -13,7 +13,7 @@ import { useTheme } from 'next-themes';
 import { useAuth } from '@/components/AuthProvider';
 import { useGitHubStars } from '@/hooks/use-github-stars';
 import { useRouter, usePathname } from 'next/navigation';
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { EpsilonLogo } from '@/components/sidebar/epsilon-logo';
 
 const INITIAL_WIDTH = '70rem';
 const MAX_WIDTH = '1000px';
@@ -66,7 +66,7 @@ export function Navbar({ tabs }: NavbarProps = {}) {
   const { theme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const { user } = useAuth();
-  const { formattedStars, loading: starsLoading } = useGitHubStars('kortix-ai', 'suna');
+  const { formattedStars, loading: starsLoading } = useGitHubStars('epsilon-ai', 'chainlens');
   const router = useRouter();
   const pathname = usePathname();
 
@@ -139,7 +139,7 @@ export function Navbar({ tabs }: NavbarProps = {}) {
             {/* Left Section - Logo */}
             <div className="flex items-center justify-start flex-shrink-0 w-auto md:w-[200px]">
               <Link href="/" className="flex items-center gap-3">
-                <KortixLogo size={18} variant='logomark' />
+                <EpsilonLogo size={18} variant='logomark' />
               </Link>
             </div>
             {/* 
@@ -152,7 +152,7 @@ export function Navbar({ tabs }: NavbarProps = {}) {
               <div className="flex flex-row items-center gap-2 md:gap-3 shrink-0">
                 <div className="flex items-center space-x-3">
                   <Link
-                    href="https://github.com/kortix-ai/suna"
+                    href="https://github.com/epsilon-ai/chainlens"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1.5 h-7 px-2.5 text-xs font-medium rounded-full bg-transparent text-muted-foreground/60 hover:text-muted-foreground hover:bg-accent/30 transition-all duration-200"
@@ -211,7 +211,7 @@ export function Navbar({ tabs }: NavbarProps = {}) {
               <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between">
                   <Link href="/" className="flex items-center gap-3">
-                    <KortixLogo size={120} />
+                    <EpsilonLogo size={120} />
                   </Link>
                   <button
                     onClick={toggleDrawer}
@@ -270,7 +270,7 @@ export function Navbar({ tabs }: NavbarProps = {}) {
 
                 {/* GitHub link for mobile */}
                 <Link
-                  href="https://github.com/kortix-ai/suna"
+                  href="https://github.com/epsilon-ai/chainlens"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-1.5 h-7 px-2.5 text-xs font-medium rounded-full bg-transparent text-muted-foreground/60 hover:text-muted-foreground hover:bg-accent/30 transition-all duration-200"

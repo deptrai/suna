@@ -5,7 +5,7 @@ import { useColorScheme } from 'nativewind';
 import { getIconFromName } from '@/lib/utils/icon-mapping';
 import { MessageSquare, Zap, Layers } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
-import KortixSymbol from '@/assets/brand/Symbol.svg';
+import EpsilonSymbol from '@/assets/brand/Symbol.svg';
 
 type AvatarVariant = 'agent' | 'model' | 'thread' | 'trigger' | 'custom';
 
@@ -31,8 +31,8 @@ interface AvatarProps extends ViewProps {
   /** Show border (default: true) */
   showBorder?: boolean;
   
-  /** Use Kortix symbol instead of icon (for SUNA agent) */
-  useKortixSymbol?: boolean;
+  /** Use Epsilon symbol instead of icon (for CHAINLENS agent) */
+  useEpsilonSymbol?: boolean;
   
   /** Fallback text (first letter shown if no icon) */
   fallbackText?: string;
@@ -52,7 +52,7 @@ interface AvatarProps extends ViewProps {
  * - Default size: 48px × 48px
  * - Border radius: 16px (33.3% of size) - matches Figma
  * - Icon size: 40% of container (smaller than before for better spacing)
- * - Kortix symbol: 50% of container (larger for brand recognition)
+ * - Epsilon symbol: 50% of container (larger for brand recognition)
  * - Border: 1.5px solid
  * - Adapts to dark/light theme
  * 
@@ -77,7 +77,7 @@ export function Avatar({
   backgroundColor,
   borderColor,
   showBorder = true,
-  useKortixSymbol = false,
+  useEpsilonSymbol = false,
   fallbackText,
   style,
   ...props
@@ -86,15 +86,15 @@ export function Avatar({
   
   // Calculate sizes - optimized for minimalist design
   const iconSize = Math.round(size * 0.45); // 45% of container for better visibility
-  const symbolSize = Math.round(size * 0.55); // 55% for Kortix symbol (more prominent)
+  const symbolSize = Math.round(size * 0.55); // 55% for Epsilon symbol (more prominent)
   const borderRadius = Math.round(size * 0.32); // 32% for slightly softer corners
   
   // Get default colors based on variant and theme
   const getDefaultColors = () => {
     const isDark = colorScheme === 'dark';
     
-    // Kortix symbol always uses solid black bg with white icon
-    if (useKortixSymbol) {
+    // Epsilon symbol always uses solid black bg with white icon
+    if (useEpsilonSymbol) {
       return {
         bg: '#000000',
         icon: '#FFFFFF',
@@ -152,8 +152,8 @@ export function Avatar({
       ]}
       {...props}
     >
-      {useKortixSymbol ? (
-        <KortixSymbol 
+      {useEpsilonSymbol ? (
+        <EpsilonSymbol 
           width={symbolSize} 
           height={symbolSize} 
           fill={finalIconColor}

@@ -1,4 +1,4 @@
-# 🎯 Testing Strategy - Suna Platform
+# 🎯 Testing Strategy - ChainLens Platform
 
 **Document Version**: 1.0  
 **Last Updated**: 2025-09-10  
@@ -6,7 +6,7 @@
 
 ## 📋 Overview
 
-This document outlines the comprehensive testing strategy for the Suna AI Agent Platform, establishing standards, frameworks, and coverage targets across all components.
+This document outlines the comprehensive testing strategy for the ChainLens AI Agent Platform, establishing standards, frameworks, and coverage targets across all components.
 
 ## 🏗️ Testing Pyramid
 

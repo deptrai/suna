@@ -45,7 +45,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { EpsilonLogo } from '@/components/sidebar/epsilon-logo';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 import { useAgentVersionData } from '@/hooks/use-agent-version-data';
@@ -159,11 +159,11 @@ export function AgentConfigurationDialog({
     setEditName(configSource.name || '');
   }, [agent, versionData]);
 
-  const isSunaAgent = agent?.metadata?.is_suna_default || false;
+  const isChainLensAgent = agent?.metadata?.is_chainlens_default || false;
   const restrictions = agent?.metadata?.restrictions || {};
-  const isNameEditable = !isViewingOldVersion && (restrictions.name_editable !== false) && !isSunaAgent;
-  const isSystemPromptEditable = !isViewingOldVersion && (restrictions.system_prompt_editable !== false) && !isSunaAgent;
-  const areToolsEditable = !isViewingOldVersion && (restrictions.tools_editable !== false) && !isSunaAgent;
+  const isNameEditable = !isViewingOldVersion && (restrictions.name_editable !== false) && !isChainLensAgent;
+  const isSystemPromptEditable = !isViewingOldVersion && (restrictions.system_prompt_editable !== false) && !isChainLensAgent;
+  const areToolsEditable = !isViewingOldVersion && (restrictions.tools_editable !== false) && !isChainLensAgent;
 
   const hasChanges = useMemo(() => {
     return JSON.stringify(formData) !== JSON.stringify(originalFormData);
@@ -230,9 +230,9 @@ export function AgentConfigurationDialog({
     }
 
     if (!isNameEditable) {
-      if (isSunaAgent) {
+      if (isChainLensAgent) {
         toast.error("Name cannot be edited", {
-          description: "Suna's name is managed centrally and cannot be changed.",
+          description: "ChainLens's name is managed centrally and cannot be changed.",
         });
       }
       setEditName(formData.name);
@@ -246,9 +246,9 @@ export function AgentConfigurationDialog({
 
   const handleSystemPromptChange = (value: string) => {
     if (!isSystemPromptEditable) {
-      if (isSunaAgent) {
+      if (isChainLensAgent) {
         toast.error("System prompt cannot be edited", {
-          description: "Suna's system prompt is managed centrally.",
+          description: "ChainLens's system prompt is managed centrally.",
         });
       }
       return;
@@ -263,9 +263,9 @@ export function AgentConfigurationDialog({
 
   const handleToolsChange = (tools: Record<string, boolean | { enabled: boolean; description: string }>) => {
     if (!areToolsEditable) {
-      if (isSunaAgent) {
+      if (isChainLensAgent) {
         toast.error("Tools cannot be edited", {
-          description: "Suna's tools are managed centrally.",
+          description: "ChainLens's tools are managed centrally.",
         });
       }
       return;
@@ -388,9 +388,9 @@ export function AgentConfigurationDialog({
                 <div
                   className="flex-shrink-0"
                 >
-                  {isSunaAgent ? (
+                  {isChainLensAgent ? (
                     <AgentAvatar
-                      isSunaDefault={true}
+                      isChainLensDefault={true}
                       agentName={formData.name}
                       size={40}
                       className="ring-1 ring-border"
@@ -499,7 +499,7 @@ export function AgentConfigurationDialog({
                                     iconColor={agent.icon_color}
                                     backgroundColor={agent.icon_background}
                                     agentName={agent.name}
-                                    isSunaDefault={agent.metadata?.is_suna_default}
+                                    isChainLensDefault={agent.metadata?.is_chainlens_default}
                                     size={24}
                                     className="flex-shrink-0"
                                   />
@@ -635,11 +635,11 @@ export function AgentConfigurationDialog({
 
                 <TabsContent value="instructions" className="p-6 mt-0 flex flex-col h-full">
                   <div className="flex flex-col flex-1 min-h-0">
-                    {isSunaAgent && (
+                    {isChainLensAgent && (
                       <Alert className="mb-4 bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-900">
                         <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                         <AlertDescription className="text-sm text-blue-800 dark:text-blue-300">
-                          You can't edit the main Kortix Super Worker, but you can create a new AI Worker that you can modify as you wish.
+                          You can't edit the main Epsilon Super Worker, but you can create a new AI Worker that you can modify as you wish.
                         </AlertDescription>
                       </Alert>
                     )}
@@ -656,11 +656,11 @@ export function AgentConfigurationDialog({
 
                 <TabsContent value="tools" className="p-6 mt-0 flex flex-col h-full">
                   <div className="flex flex-col flex-1 min-h-0 h-full">
-                    {isSunaAgent && (
+                    {isChainLensAgent && (
                       <Alert className="mb-4 bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-900">
                         <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                         <AlertDescription className="text-sm text-blue-800 dark:text-blue-300">
-                          You can't edit the main Kortix Super Worker, but you can create a new AI Worker that you can modify as you wish.
+                          You can't edit the main Epsilon Super Worker, but you can create a new AI Worker that you can modify as you wish.
                         </AlertDescription>
                       </Alert>
                     )}
@@ -668,7 +668,7 @@ export function AgentConfigurationDialog({
                       tools={formData.agentpress_tools}
                       onToolsChange={handleToolsChange}
                       disabled={!areToolsEditable}
-                      isSunaAgent={isSunaAgent}
+                      isChainLensAgent={isChainLensAgent}
                       isLoading={isLoading}
                     />
                   </div>

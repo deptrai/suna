@@ -24,7 +24,7 @@ Inconsistent default values for `enable_context_manager`:
 |----------|---------------|---------|
 | `backend/core/api_models/threads.py` | `True` ✅ | Correct |
 | `backend/core/run.py` | `False` ❌ | **FIXED** |
-| `sdk/kortix/api/threads.py` | `False` ❌ | Needs fix |
+| `sdk/epsilon/api/threads.py` | `False` ❌ | Needs fix |
 
 ### **The Fix**
 Changed `backend/core/run.py` line 821:

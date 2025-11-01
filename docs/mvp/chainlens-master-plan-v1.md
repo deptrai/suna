@@ -625,7 +625,7 @@ api_pricing = {
 
 ### Phase 1: Intelligence Foundation (Months 1-4)
 #### Core Infrastructure
-- [ ] Fork và customize Suna AI core engine
+- [ ] Fork và customize ChainLens AI core engine
 - [ ] Build Project-Centric Knowledge Graph architecture
 - [ ] Develop 9-Domain Analysis Engine framework
 - [ ] Create incremental analysis pipeline
@@ -878,7 +878,7 @@ In 3-5 years, every serious crypto investor, fund, exchange, and institution wil
 ### Immediate Next Steps (Next 30 Days):
 
 #### Week 1-2: Foundation
-1. **Technical**: Fork Suna repository, setup development environment
+1. **Technical**: Fork ChainLens repository, setup development environment
 2. **Business**: Conduct 25 user interviews để validate analysis framework
 3. **Legal**: Entity formation, IP protection strategy
 4. **Team**: Begin recruiting AI/ML Lead và CTO candidates

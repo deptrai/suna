@@ -71,7 +71,7 @@
   },
   "chat": {
     "newChat": "新しいチャット",
-    "placeholder": "Kortixにタスクを...",
+    "placeholder": "Epsilonにタスクを...",
     "recording": "録音中...",
     "cancelRecording": "録音キャンセル",
     "stopRecording": "録音停止",
@@ -87,7 +87,7 @@
     "newWorker": "新しいWorker",
     "myWorkers": "マイWorkers",
     "searchAgents": "Worker検索",
-    "defaultAgent": "Kortix",
+    "defaultAgent": "Epsilon",
     "defaultDescription": "すべてのタスクに対応する汎用AI",
     "superWorker": "Super Worker",
     "coder": "Coder",
@@ -242,7 +242,7 @@
     "chooseModelFor": "{{agent}}のモデルを選択"
   },
   "placeholders": {
-    "default": "Kortixにタスクを...",
+    "default": "Epsilonにタスクを...",
     "search": "検索...",
     "searchConversations": "チャット検索",
     "searchAgents": "Worker検索",

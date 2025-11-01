@@ -65,7 +65,7 @@ async def _load_agent_config(client, agent_id: Optional[str], account_id: str, u
         agent_id: Optional agent ID to load
         account_id: Account ID for default agent lookup
         user_id: User ID for authorization
-        is_new_thread: If True, ensures Suna is installed for new threads
+        is_new_thread: If True, ensures ChainLens is installed for new threads
     """
     from .agent_loader import get_agent_loader
     loader = await get_agent_loader()
@@ -82,13 +82,13 @@ async def _load_agent_config(client, agent_id: Optional[str], account_id: str, u
         # Load default agent
         logger.debug(f"[AGENT LOAD] Loading default agent")
         
-        # For new threads, ensure Suna is installed
+        # For new threads, ensure ChainLens is installed
         if is_new_thread:
-            from core.utils.ensure_suna import ensure_suna_installed
-            await ensure_suna_installed(account_id)
+            from core.utils.ensure_chainlens import ensure_chainlens_installed
+            await ensure_chainlens_installed(account_id)
             
-            # Try to find the default agent (Suna)
-            default_agent = await client.table('agents').select('agent_id').eq('account_id', account_id).eq('metadata->>is_suna_default', 'true').maybe_single().execute()
+            # Try to find the default agent (ChainLens)
+            default_agent = await client.table('agents').select('agent_id').eq('account_id', account_id).eq('metadata->>is_chainlens_default', 'true').maybe_single().execute()
             
             if default_agent and default_agent.data:
                 agent_data = await loader.load_agent(default_agent.data['agent_id'], user_id, load_config=True)

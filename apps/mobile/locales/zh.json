@@ -71,7 +71,7 @@
   },
   "chat": {
     "newChat": "新对话",
-    "placeholder": "给 Kortix 一个任务...",
+    "placeholder": "给 Epsilon 一个任务...",
     "recording": "录音中...",
     "cancelRecording": "取消录音",
     "stopRecording": "停止录音",
@@ -87,7 +87,7 @@
     "newWorker": "新建 Worker",
     "myWorkers": "我的 Workers",
     "searchAgents": "搜索 workers",
-    "defaultAgent": "Kortix",
+    "defaultAgent": "Epsilon",
     "defaultDescription": "适用于所有任务的通用 AI",
     "superWorker": "Super Worker",
     "coder": "Coder",
@@ -242,7 +242,7 @@
     "chooseModelFor": "为 {{agent}} 选择模型"
   },
   "placeholders": {
-    "default": "给 Kortix 一个任务...",
+    "default": "给 Epsilon 一个任务...",
     "search": "搜索...",
     "searchConversations": "搜索对话",
     "searchAgents": "搜索 workers",

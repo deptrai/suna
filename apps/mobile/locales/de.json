@@ -71,7 +71,7 @@
   },
   "chat": {
     "newChat": "Neuer Chat",
-    "placeholder": "Gib Kortix eine Aufgabe...",
+    "placeholder": "Gib Epsilon eine Aufgabe...",
     "recording": "Nimmt auf...",
     "cancelRecording": "Aufnahme abbrechen",
     "stopRecording": "Aufnahme stoppen",
@@ -87,7 +87,7 @@
     "newWorker": "Neuer Worker",
     "myWorkers": "Meine Workers",
     "searchAgents": "Worker suchen",
-    "defaultAgent": "Kortix",
+    "defaultAgent": "Epsilon",
     "defaultDescription": "Allzweck-KI für alle Aufgaben",
     "superWorker": "Super Worker",
     "coder": "Coder",
@@ -242,7 +242,7 @@
     "chooseModelFor": "Wähle ein Modell für {{agent}}"
   },
   "placeholders": {
-    "default": "Gib Kortix eine Aufgabe...",
+    "default": "Gib Epsilon eine Aufgabe...",
     "search": "Suchen...",
     "searchConversations": "Chats durchsuchen",
     "searchAgents": "Workers suchen",

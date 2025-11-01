@@ -1,15 +1,15 @@
 {
   "expo": {
-    "name": "Suna",
-    "slug": "suna-mobile",
+    "name": "ChainLens",
+    "slug": "chainlens-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "owner": "kortix",
-    "scheme": "sunamobile",
+    "owner": "epsilon",
+    "scheme": "chainlensmobile",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "description": "Suna is a fully open source AI assistant that helps you accomplish real-world tasks with ease. Through natural conversation, Suna becomes your digital companion for research, data analysis, and everyday challenges.",
+    "description": "ChainLens is a fully open source AI assistant that helps you accomplish real-world tasks with ease. Through natural conversation, ChainLens becomes your digital companion for research, data analysis, and everyday challenges.",
     "primaryColor": "#121215",
     "privacy": "public",
     "platforms": [
@@ -28,13 +28,13 @@
       "research",
       "data analysis"
     ],
-    "githubUrl": "https://github.com/kortix-ai/suna",
+    "githubUrl": "https://github.com/epsilon-ai/chainlens",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.kortix.suna",
+      "bundleIdentifier": "com.epsilon.chainlens",
       "buildNumber": "1.0.0",
       "infoPlist": {
-        "CFBundleDisplayName": "Suna",
+        "CFBundleDisplayName": "ChainLens",
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
         }
@@ -46,7 +46,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.kortix.suna",
+      "package": "com.epsilon.chainlens",
       "versionCode": 1,
       "permissions": [
         "INTERNET",
@@ -58,9 +58,9 @@
       "bundler": "metro",
       "output": "static",
       "favicon": "./assets/images/favicon.png",
-      "name": "Suna - Open Source Generalist AI Agent",
-      "shortName": "Suna",
-      "description": "Suna is a fully open source AI assistant that helps you accomplish real-world tasks with ease through natural conversation.",
+      "name": "ChainLens - Open Source Generalist AI Agent",
+      "shortName": "ChainLens",
+      "description": "ChainLens is a fully open source AI assistant that helps you accomplish real-world tasks with ease through natural conversation.",
       "startUrl": "/",
       "display": "standalone",
       "orientation": "portrait",
@@ -75,7 +75,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/kortix-splash.png",
+          "image": "./assets/images/epsilon-splash.png",
           "imageWidth": 400,
           "resizeMode": "contain",
           "backgroundColor": "#121215"
@@ -89,13 +89,13 @@
     },
     "extra": {
       "metadata": {
-        "applicationName": "Suna",
-        "authors": "Kortix Team",
-        "creator": "Kortix Team",
-        "publisher": "Kortix Team",
+        "applicationName": "ChainLens",
+        "authors": "Epsilon Team",
+        "creator": "Epsilon Team",
+        "publisher": "Epsilon Team",
         "category": "Technology",
-        "siteUrl": "https://suna.so",
-        "twitterHandle": "@kortixai"
+        "siteUrl": "https://chainlens.net",
+        "twitterHandle": "@epsilonai"
       }
     }
   }

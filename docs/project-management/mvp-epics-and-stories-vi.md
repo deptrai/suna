@@ -109,7 +109,7 @@ Document này define **5 Epics** và **25 User Stories** cho ChainLens MVP launc
 
 **Technical Notes:**
 - Playwright cho browser automation
-- Test với real Suna UI
+- Test với real ChainLens UI
 - Capture screenshots on failure
 - Performance metrics collection
 

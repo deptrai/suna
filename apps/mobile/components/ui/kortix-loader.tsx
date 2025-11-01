@@ -4,7 +4,7 @@ import LottieView from 'lottie-react-native';
 import { useColorScheme } from 'nativewind';
 import { cn } from '@/lib/utils';
 
-interface KortixLoaderProps {
+interface EpsilonLoaderProps {
   /**
    * Size preset for the loader
    * @default 'medium'
@@ -56,7 +56,7 @@ const SIZE_MAP = {
 } as const;
 
 /**
- * KortixLoader - A unified loading animation component
+ * EpsilonLoader - A unified loading animation component
  * 
  * Uses the Lottie animation for consistent loading indicators across the app.
  * Automatically adapts to light/dark mode with appropriate colors.
@@ -69,20 +69,20 @@ const SIZE_MAP = {
  * @example
  * ```tsx
  * // Simple usage (auto-themed)
- * <KortixLoader />
+ * <EpsilonLoader />
  * 
  * // Custom size
- * <KortixLoader size="large" />
+ * <EpsilonLoader size="large" />
  * 
  * // Force dark theme (white loader)
- * <KortixLoader forceTheme="dark" />
+ * <EpsilonLoader forceTheme="dark" />
  * 
  * // With ref for manual control
  * const lottieRef = useRef<LottieView>(null);
- * <KortixLoader lottieRef={lottieRef} autoPlay={false} />
+ * <EpsilonLoader lottieRef={lottieRef} autoPlay={false} />
  * ```
  */
-export function KortixLoader({
+export function EpsilonLoader({
   size = 'medium',
   speed = 1.2,
   customSize,
@@ -92,7 +92,7 @@ export function KortixLoader({
   loop = true,
   lottieRef,
   forceTheme,
-}: KortixLoaderProps) {
+}: EpsilonLoaderProps) {
   const { colorScheme } = useColorScheme();
   const loaderSize = customSize || SIZE_MAP[size];
   

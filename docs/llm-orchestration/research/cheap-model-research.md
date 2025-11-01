@@ -26,7 +26,7 @@ Dựa trên nghiên cứu chuyên sâu 170+ nguồn cập nhật 2024-2025, đâ
 - **Latency**: 0.30s TTFT - excellent responsiveness [1]
 - **Context**: 128K tokens - đủ cho most crypto analysis tasks [7]
 
-**Use cases optimal cho Suna.so:**
+**Use cases optimal cho ChainLens.so:**
 ```python
 # Nova Micro routing conditions
 def should_use_nova_micro(query_complexity, task_type):
@@ -151,10 +151,10 @@ def claude_haiku_routing(task_analysis):
 
 ## 4. Smart Model Selection Algorithm
 
-### **Advanced Routing Logic cho Suna.so**
+### **Advanced Routing Logic cho ChainLens.so**
 
 ```python
-class SunaAdvancedModelSelector:
+class ChainLensAdvancedModelSelector:
     def __init__(self):
         self.models = {
             "ultra_budget": {
@@ -268,7 +268,7 @@ crypto_benchmark_results = {
 }
 ```
 
-### **Cost Savings Projections cho Suna.so**
+### **Cost Savings Projections cho ChainLens.so**
 
 **Monthly cost scenarios (10K queries/month):**
 
@@ -340,7 +340,7 @@ class ModelPerformanceMetrics:
 
 ## Kết Luận
 
-**Strategic Model Selection cho Suna.so:**
+**Strategic Model Selection cho ChainLens.so:**
 
 1. **Primary Router (80% traffic)**: Nova Micro - Unbeatable cost/speed ratio
 2. **Intelligence Backup (15% traffic)**: DeepSeek V3.1 - Best reasoning per dollar
@@ -358,4 +358,4 @@ class ModelPerformanceMetrics:
 - **Month 3**: Complete system pays for itself
 - **Month 6**: Significant competitive advantage trong crypto analysis market
 
-Giải pháp này transforms Suna.so từ cost-prohibitive sang extremely cost-competitive while maintaining high-quality cryptocurrency analysis capabilities.
+Giải pháp này transforms ChainLens.so từ cost-prohibitive sang extremely cost-competitive while maintaining high-quality cryptocurrency analysis capabilities.

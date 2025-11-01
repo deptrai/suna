@@ -19,7 +19,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ArrowUp, X, Image as ImageIcon, Presentation, BarChart3, FileText, Search, Users, Code2, Sparkles, Brain as BrainIcon, MessageSquare, CornerDownLeft, Plug } from 'lucide-react';
-import { KortixLoader } from '@/components/ui/kortix-loader';
+import { EpsilonLoader } from '@/components/ui/epsilon-loader';
 import { VoiceRecorder } from './voice-recorder';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { UnifiedConfigMenu } from './unified-config-menu';
@@ -205,9 +205,9 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
     const [agentConfigDialog, setAgentConfigDialog] = useState<{ open: boolean; tab: 'instructions' | 'knowledge' | 'triggers' | 'tools' | 'integrations' }>({ open: false, tab: 'instructions' });
     const [mounted, setMounted] = useState(false);
     const [animatedPlaceholder, setAnimatedPlaceholder] = useState('');
-    const [isModeDismissing, setIsModeDismissing] = useState(false);    // Suna Agent Modes feature flag
-    const ENABLE_SUNA_AGENT_MODES = false;
-    const [sunaAgentModes, setSunaAgentModes] = useState<'adaptive' | 'autonomous' | 'chat'>('adaptive');
+    const [isModeDismissing, setIsModeDismissing] = useState(false);    // ChainLens Agent Modes feature flag
+    const ENABLE_CHAINLENS_AGENT_MODES = false;
+    const [chainlensAgentModes, setChainLensAgentModes] = useState<'adaptive' | 'autonomous' | 'chat'>('adaptive');
 
     const {
       selectedModel,
@@ -275,9 +275,9 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
     const { data: agentsResponse } = useAgents({}, { enabled: isLoggedIn });
     const agents = agentsResponse?.agents || [];
 
-    // Check if selected agent is Suna based on agent data
+    // Check if selected agent is ChainLens based on agent data
     const selectedAgent = agents.find(agent => agent.agent_id === selectedAgentId);
-    const isSunaAgent = selectedAgent?.metadata?.is_suna_default || false;
+    const isChainLensAgent = selectedAgent?.metadata?.is_chainlens_default || false;
 
     const { initializeFromAgents } = useAgentSelection();
     useImperativeHandle(ref, () => ({
@@ -696,17 +696,17 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
             </TooltipProvider>
           )}
 
-          {/* Agent Mode Switcher - Only for Suna */}
-          {ENABLE_SUNA_AGENT_MODES && (isStagingMode() || isLocalMode()) && isSunaAgent && (
+          {/* Agent Mode Switcher - Only for ChainLens */}
+          {ENABLE_CHAINLENS_AGENT_MODES && (isStagingMode() || isLocalMode()) && isChainLensAgent && (
             <TooltipProvider>
               <div className="flex items-center gap-1 p-0.5 bg-muted/50 rounded-lg">
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
-                      onClick={() => setSunaAgentModes('adaptive')}
+                      onClick={() => setChainLensAgentModes('adaptive')}
                       className={cn(
                         "p-1.5 rounded-md transition-all duration-200 cursor-pointer",
-                        sunaAgentModes === 'adaptive'
+                        chainlensAgentModes === 'adaptive'
                           ? "bg-background text-foreground shadow-sm"
                           : "text-muted-foreground hover:text-foreground hover:bg-background/50"
                       )}
@@ -725,10 +725,10 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
-                      onClick={() => setSunaAgentModes('autonomous')}
+                      onClick={() => setChainLensAgentModes('autonomous')}
                       className={cn(
                         "p-1.5 rounded-md transition-all duration-200 cursor-pointer",
-                        sunaAgentModes === 'autonomous'
+                        chainlensAgentModes === 'autonomous'
                           ? "bg-background text-foreground shadow-sm"
                           : "text-muted-foreground hover:text-foreground hover:bg-background/50"
                       )}
@@ -747,10 +747,10 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
-                      onClick={() => setSunaAgentModes('chat')}
+                      onClick={() => setChainLensAgentModes('chat')}
                       className={cn(
                         "p-1.5 rounded-md transition-all duration-200 cursor-pointer",
-                        sunaAgentModes === 'chat'
+                        chainlensAgentModes === 'chat'
                           ? "bg-background text-foreground shadow-sm"
                           : "text-muted-foreground hover:text-foreground hover:bg-background/50"
                       )}
@@ -830,7 +830,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
                     }
                   >
                     {((loading || isUploading) && !isAgentRunning) ? (
-                      <KortixLoader size="small" customSize={20} forceTheme="dark" />
+                      <EpsilonLoader size="small" customSize={20} forceTheme="dark" />
                     ) : isAgentRunning ? (
                       <div className="min-h-[14px] min-w-[14px] w-[14px] h-[14px] rounded-sm bg-current" />
                     ) : (
@@ -848,7 +848,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
           </div>
         </div>
       </div>
-    ), [hideAttachments, loading, disabled, isAgentRunning, isUploading, sandboxId, projectId, messages, isLoggedIn, renderConfigDropdown, billingModalOpen, setBillingModalOpen, handleTranscription, onStopAgent, handleSubmit, value, uploadedFiles, selectedMode, onModeDeselect, handleModeDeselect, isModeDismissing, isSunaAgent, sunaAgentModes, pendingFiles, threadId, selectedModel, googleDriveIcon, slackIcon, notionIcon]);
+    ), [hideAttachments, loading, disabled, isAgentRunning, isUploading, sandboxId, projectId, messages, isLoggedIn, renderConfigDropdown, billingModalOpen, setBillingModalOpen, handleTranscription, onStopAgent, handleSubmit, value, uploadedFiles, selectedMode, onModeDeselect, handleModeDeselect, isModeDismissing, isChainLensAgent, chainlensAgentModes, pendingFiles, threadId, selectedModel, googleDriveIcon, slackIcon, notionIcon]);
 
     return (
       <div className="mx-auto w-full max-w-4xl relative">
@@ -915,7 +915,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
                     {isUploading && pendingFiles.length > 0 && (
                       <div className="absolute inset-0 bg-background/50 backdrop-blur-sm rounded-xl flex items-center justify-center">
                         <div className="flex items-center gap-2 bg-background/90 px-3 py-2 rounded-lg border border-border">
-                          <KortixLoader size="small" customSize={16} forceTheme="dark" />
+                          <EpsilonLoader size="small" customSize={16} forceTheme="dark" />
                           <span className="text-sm">Uploading {pendingFiles.length} file{pendingFiles.length !== 1 ? 's' : ''}...</span>
                         </div>
                       </div>

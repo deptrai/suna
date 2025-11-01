@@ -23,7 +23,7 @@ ChainLens Flywheel là cơ chế tăng trưởng tự củng cố (self-reinforc
 │                    THE CHAINLENS FLYWHEEL                    │
 ├─────────────────────────────────────────────────────────────┤
 │                                                               │
-│     Clone Suna → Low Dev Cost ($100K saved)                  │
+│     Clone ChainLens → Low Dev Cost ($100K saved)                  │
 │            ↓                                                  │
 │     Smart Caching → Low Ops Cost (70% reduction)             │
 │            ↓                                                  │
@@ -42,7 +42,7 @@ ChainLens Flywheel là cơ chế tăng trưởng tự củng cố (self-reinforc
 
 ## 📊 Stage 1: Cost Advantage Foundation
 
-### Clone Suna Strategy
+### Clone ChainLens Strategy
 **Immediate Value Capture:**
 - Development cost: $30K vs $130K (build from scratch)
 - Time to market: 1 month vs 6 months
@@ -50,7 +50,7 @@ ChainLens Flywheel là cơ chế tăng trưởng tự củng cố (self-reinforc
 - Focus resources: 100% on crypto-specific features
 
 **Implementation Tactics:**
-1. Fork Suna codebase → Rebrand to ChainLens
+1. Fork ChainLens codebase → Rebrand to ChainLens
 2. Maintain core agent runtime architecture
 3. Customize templates for crypto use cases
 4. Add crypto-specific tools to registry
@@ -336,7 +336,7 @@ ChainLens earns: $3,000
 ## 🚀 Implementation Roadmap
 
 ### Month 1: Foundation
-- [x] Clone Suna
+- [x] Clone ChainLens
 - [ ] Implement basic caching
 - [ ] Launch daily alpha reports
 - [ ] Track initial metrics

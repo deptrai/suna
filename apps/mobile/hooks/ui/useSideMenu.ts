@@ -30,7 +30,7 @@ export function useSideMenu({ onNewChat }: UseSideMenuProps = {}) {
   const [profile] = React.useState<UserProfile>({
     id: 'user-1',
     name: 'Marko Kraemer',
-    email: 'marko@kortix.ai',
+    email: 'marko@epsilon.ai',
     tier: 'Ultra',
   });
   

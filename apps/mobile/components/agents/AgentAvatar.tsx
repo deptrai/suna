@@ -15,27 +15,27 @@ interface AgentAvatarProps extends ViewProps {
  * Automatically handles:
  * - Agent icon from backend (icon_name)
  * - Agent colors (icon_color, icon_background)
- * - SUNA/KORTIX SUPER WORKER special case (Kortix symbol)
+ * - CHAINLENS/EPSILON SUPER WORKER special case (Epsilon symbol)
  * - Fallback to agent name initial
  * 
  * @example
  * <AgentAvatar agent={agent} size={48} />
  */
 export function AgentAvatar({ agent, size = 48, style, ...props }: AgentAvatarProps) {
-  // Check if this is the SUNA/KORTIX SUPER WORKER
-  const isSunaAgent = agent?.metadata?.is_suna_default || 
-                      agent?.name?.toLowerCase() === 'suna' ||
+  // Check if this is the CHAINLENS/EPSILON SUPER WORKER
+  const isChainLensAgent = agent?.metadata?.is_chainlens_default || 
+                      agent?.name?.toLowerCase() === 'chainlens' ||
                       agent?.name?.toLowerCase() === 'superworker' ||
-                      agent?.name?.toLowerCase() === 'kortix super worker';
+                      agent?.name?.toLowerCase() === 'epsilon super worker';
 
   return (
     <Avatar
       variant="agent"
       size={size}
       icon={agent?.icon_name || undefined}
-      iconColor={isSunaAgent ? undefined : agent?.icon_color}
-      backgroundColor={isSunaAgent ? undefined : agent?.icon_background}
-      useKortixSymbol={isSunaAgent}
+      iconColor={isChainLensAgent ? undefined : agent?.icon_color}
+      backgroundColor={isChainLensAgent ? undefined : agent?.icon_background}
+      useEpsilonSymbol={isChainLensAgent}
       fallbackText={agent?.name}
       style={style}
       {...props}

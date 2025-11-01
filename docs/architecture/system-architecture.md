@@ -1,12 +1,12 @@
 # 🏗️ System Architecture Diagrams
 
-*Visual representation of the Suna AI Agent Platform architecture*
+*Visual representation of the ChainLens AI Agent Platform architecture*
 
 ---
 
 ## 🎯 Overview
 
-This document contains comprehensive architectural diagrams for the Suna AI Agent Platform, rendered using Mermaid syntax for GitHub compatibility and interactive documentation.
+This document contains comprehensive architectural diagrams for the ChainLens AI Agent Platform, rendered using Mermaid syntax for GitHub compatibility and interactive documentation.
 
 ---
 

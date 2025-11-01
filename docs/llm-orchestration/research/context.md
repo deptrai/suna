@@ -6,9 +6,9 @@ Dựa trên nghiên cứu chuyên sâu về LLM routing frameworks, model perfor
 
 ### **Kiến Trúc Tổng Thể**
 ```python
-class SunaIntelligentModelSelector:
+class ChainLensIntelligentModelSelector:
     """
-    Hệ thống Intelligent Model Selection cho Suna.so
+    Hệ thống Intelligent Model Selection cho ChainLens.so
     - Cost reduction: 70-85%
     - Performance maintenance: 90%+
     - Response time improvement: 2-3x
@@ -501,7 +501,7 @@ class CostOptimizer:
 ```python
 class SemanticCacheManager:
     def __init__(self):
-        self.vector_store = ChromaDB(collection_name="suna_query_cache")
+        self.vector_store = ChromaDB(collection_name="chainlens_query_cache")
         self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
         self.cache_config = {
             'ttl_hours': 24,        # Cache expiry
@@ -727,14 +727,14 @@ class PerformanceMonitor:
 
 ```python
 # Step 1: Initialize Core Components
-async def initialize_suna_router():
+async def initialize_chainlens_router():
     """Initialize the intelligent model selector"""
     
     # 1. Setup model configurations
     model_configs = load_model_configurations()
     
     # 2. Initialize routing engine
-    router = SunaIntelligentModelSelector()
+    router = ChainLensIntelligentModelSelector()
     await router.initialize(model_configs)
     
     # 3. Setup caching system
@@ -797,7 +797,7 @@ async def intelligent_chat_endpoint(request: ChatRequest):
 ```python
 # Multi-agent routing capability
 class MultiAgentOrchestrator:
-    def __init__(self, router: SunaIntelligentModelSelector):
+    def __init__(self, router: ChainLensIntelligentModelSelector):
         self.router = router
         self.agent_configs = {
             'researcher': {'models': ['llama_3.3_70b', 'deepseek_chat']},
@@ -934,7 +934,7 @@ class ROICalculator:
 # Projected results
 expected_results = ROICalculator().calculate_monthly_roi()
 print(f"""
-Expected Results for Suna.so:
+Expected Results for ChainLens.so:
 
 💰 Cost Savings:
    - Monthly: ${expected_results.monthly_savings_usd:,.0f} ({expected_results.savings_percentage:.1f}% reduction)
@@ -956,7 +956,7 @@ Expected Results for Suna.so:
 
 ### **Giải Pháp Hoàn Chỉnh**
 
-Hệ thống **Intelligent Model Selection** cho Suna.so cung cấp:
+Hệ thống **Intelligent Model Selection** cho ChainLens.so cung cấp:
 
 1. **Phân tích thông minh**: Query complexity + task classification với độ chính xác 90%+
 2. **Routing tối ưu**: 3-tier model system với cost reduction 70-85% 

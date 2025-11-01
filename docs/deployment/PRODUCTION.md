@@ -21,7 +21,7 @@
 
 ## 🎯 Overview
 
-This guide provides comprehensive instructions for deploying Suna AI Agent Platform to production environments. It covers cloud infrastructure setup, security hardening, monitoring, and operational best practices.
+This guide provides comprehensive instructions for deploying ChainLens AI Agent Platform to production environments. It covers cloud infrastructure setup, security hardening, monitoring, and operational best practices.
 
 ### 🏗️ **Production Architecture**
 
@@ -72,61 +72,61 @@ This guide provides comprehensive instructions for deploying Suna AI Agent Platf
 #### **AWS Infrastructure**
 ```hcl
 # terraform/aws/main.tf
-resource "aws_vpc" "suna_vpc" {
+resource "aws_vpc" "chainlens_vpc" {
   cidr_block           = "10.0.0.0/16"
   enable_dns_hostnames = true
   enable_dns_support   = true
 
   tags = {
-    Name        = "suna-vpc"
+    Name        = "chainlens-vpc"
     Environment = var.environment
   }
 }
 
-resource "aws_eks_cluster" "suna_cluster" {
-  name     = "suna-${var.environment}"
+resource "aws_eks_cluster" "chainlens_cluster" {
+  name     = "chainlens-${var.environment}"
   role_arn = aws_iam_role.eks_cluster_role.arn
   version  = "1.28"
 
   vpc_config {
-    subnet_ids = aws_subnet.suna_subnets[*].id
+    subnet_ids = aws_subnet.chainlens_subnets[*].id
   }
 }
 
-resource "aws_rds_cluster" "suna_db" {
-  cluster_identifier      = "suna-${var.environment}"
+resource "aws_rds_cluster" "chainlens_db" {
+  cluster_identifier      = "chainlens-${var.environment}"
   engine                 = "aurora-postgresql"
   engine_version         = "15.4"
-  database_name          = "suna_prod"
+  database_name          = "chainlens_prod"
   master_username        = var.db_username
   master_password        = var.db_password
   backup_retention_period = 35
   preferred_backup_window = "07:00-09:00"
   
   vpc_security_group_ids = [aws_security_group.rds_sg.id]
-  db_subnet_group_name   = aws_db_subnet_group.suna_db_subnet_group.name
+  db_subnet_group_name   = aws_db_subnet_group.chainlens_db_subnet_group.name
   
   storage_encrypted = true
-  kms_key_id       = aws_kms_key.suna_key.arn
+  kms_key_id       = aws_kms_key.chainlens_key.arn
 }
 ```
 
 #### **GCP Infrastructure**
 ```hcl
 # terraform/gcp/main.tf
-resource "google_container_cluster" "suna_cluster" {
-  name     = "suna-${var.environment}"
+resource "google_container_cluster" "chainlens_cluster" {
+  name     = "chainlens-${var.environment}"
   location = var.region
 
   remove_default_node_pool = true
   initial_node_count       = 1
 
-  network    = google_compute_network.suna_vpc.name
-  subnetwork = google_compute_subnetwork.suna_subnet.name
+  network    = google_compute_network.chainlens_vpc.name
+  subnetwork = google_compute_subnetwork.chainlens_subnet.name
 }
 
-resource "google_sql_database_instance" "suna_db" {
-  name             = "suna-${var.environment}"
+resource "google_sql_database_instance" "chainlens_db" {
+  name             = "chainlens-${var.environment}"
   database_version = "POSTGRES_15"
   region          = var.region
 
@@ -141,7 +141,7 @@ resource "google_sql_database_instance" "suna_db" {
     
     ip_configuration {
       ipv4_enabled    = false
-      private_network = google_compute_network.suna_vpc.id
+      private_network = google_compute_network.chainlens_vpc.id
     }
   }
 }
@@ -150,11 +150,11 @@ resource "google_sql_database_instance" "suna_db" {
 #### **Azure Infrastructure**
 ```hcl
 # terraform/azure/main.tf
-resource "azurerm_kubernetes_cluster" "suna_cluster" {
-  name                = "suna-${var.environment}"
-  location            = azurerm_resource_group.suna_rg.location
-  resource_group_name = azurerm_resource_group.suna_rg.name
-  dns_prefix          = "suna-${var.environment}"
+resource "azurerm_kubernetes_cluster" "chainlens_cluster" {
+  name                = "chainlens-${var.environment}"
+  location            = azurerm_resource_group.chainlens_rg.location
+  resource_group_name = azurerm_resource_group.chainlens_rg.name
+  dns_prefix          = "chainlens-${var.environment}"
 
   default_node_pool {
     name       = "default"
@@ -167,10 +167,10 @@ resource "azurerm_kubernetes_cluster" "suna_cluster" {
   }
 }
 
-resource "azurerm_postgresql_flexible_server" "suna_db" {
-  name                   = "suna-${var.environment}"
-  resource_group_name    = azurerm_resource_group.suna_rg.name
-  location              = azurerm_resource_group.suna_rg.location
+resource "azurerm_postgresql_flexible_server" "chainlens_db" {
+  name                   = "chainlens-${var.environment}"
+  resource_group_name    = azurerm_resource_group.chainlens_rg.name
+  location              = azurerm_resource_group.chainlens_rg.location
   version               = "15"
   administrator_login    = var.db_username
   administrator_password = var.db_password
@@ -240,7 +240,7 @@ terraform apply -var-file="terraform.tfvars"
 #### **2. EKS Cluster Setup**
 ```bash
 # Update kubeconfig
-aws eks update-kubeconfig --region us-east-1 --name suna-prod
+aws eks update-kubeconfig --region us-east-1 --name chainlens-prod
 
 # Verify cluster connection
 kubectl get nodes
@@ -255,17 +255,17 @@ kubectl apply -f k8s/aws-load-balancer-controller.yaml
 #### **3. Application Deployment**
 ```bash
 # Create namespace
-kubectl create namespace suna
+kubectl create namespace chainlens
 
 # Deploy secrets
-kubectl apply -f k8s/secrets.yaml -n suna
+kubectl apply -f k8s/secrets.yaml -n chainlens
 
 # Deploy applications
-kubectl apply -f k8s/ -n suna
+kubectl apply -f k8s/ -n chainlens
 
 # Verify deployment
-kubectl get pods -n suna
-kubectl get services -n suna
+kubectl get pods -n chainlens
+kubectl get services -n chainlens
 ```
 
 ### **🌐 GCP Deployment**
@@ -285,13 +285,13 @@ terraform apply -var="project_id=your-project-id"
 #### **2. GKE Cluster Setup**
 ```bash
 # Get cluster credentials
-gcloud container clusters get-credentials suna-prod --region us-central1
+gcloud container clusters get-credentials chainlens-prod --region us-central1
 
 # Install ingress controller
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/cloud/deploy.yaml
 
 # Deploy applications
-kubectl apply -f k8s/ -n suna
+kubectl apply -f k8s/ -n chainlens
 ```
 
 ### **⚡ Azure Deployment**
@@ -310,7 +310,7 @@ terraform apply -var="location=eastus"
 #### **2. AKS Cluster Setup**
 ```bash
 # Get cluster credentials
-az aks get-credentials --resource-group suna-rg --name suna-prod
+az aks get-credentials --resource-group chainlens-rg --name chainlens-prod
 
 # Install ingress controller
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/cloud/deploy.yaml
@@ -328,9 +328,9 @@ kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: suna
+  name: chainlens
   labels:
-    name: suna
+    name: chainlens
     environment: production
 ```
 
@@ -341,7 +341,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: frontend
-  namespace: suna
+  namespace: chainlens
 spec:
   replicas: 3
   selector:
@@ -354,7 +354,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: your-registry/suna-frontend:latest
+        image: your-registry/chainlens-frontend:latest
         ports:
         - containerPort: 3000
         env:
@@ -388,7 +388,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: backend
-  namespace: suna
+  namespace: chainlens
 spec:
   replicas: 3
   selector:
@@ -401,19 +401,19 @@ spec:
     spec:
       containers:
       - name: backend
-        image: your-registry/suna-backend:latest
+        image: your-registry/chainlens-backend:latest
         ports:
         - containerPort: 8000
         env:
         - name: DATABASE_URL
           valueFrom:
             secretKeyRef:
-              name: suna-secrets
+              name: chainlens-secrets
               key: database-url
         - name: REDIS_URL
           valueFrom:
             secretKeyRef:
-              name: suna-secrets
+              name: chainlens-secrets
               key: redis-url
         resources:
           requests:
@@ -437,7 +437,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: postgres
-  namespace: suna
+  namespace: chainlens
 spec:
   serviceName: postgres
   replicas: 1
@@ -456,7 +456,7 @@ spec:
         - containerPort: 5432
         env:
         - name: POSTGRES_DB
-          value: suna_prod
+          value: chainlens_prod
         - name: POSTGRES_USER
           valueFrom:
             secretKeyRef:
@@ -518,8 +518,8 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: suna-ingress
-  namespace: suna
+  name: chainlens-ingress
+  namespace: chainlens
   annotations:
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
@@ -529,7 +529,7 @@ spec:
   - hosts:
     - yourdomain.com
     - api.yourdomain.com
-    secretName: suna-tls
+    secretName: chainlens-tls
   rules:
   - host: yourdomain.com
     http:
@@ -560,7 +560,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: deny-all
-  namespace: suna
+  namespace: chainlens
 spec:
   podSelector: {}
   policyTypes:
@@ -571,7 +571,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-frontend-to-backend
-  namespace: suna
+  namespace: chainlens
 spec:
   podSelector:
     matchLabels:
@@ -594,7 +594,7 @@ spec:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: suna
+  name: chainlens
   labels:
     pod-security.kubernetes.io/enforce: restricted
     pod-security.kubernetes.io/audit: restricted
@@ -625,10 +625,10 @@ data:
       - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
         action: keep
         regex: true
-    - job_name: 'suna-backend'
+    - job_name: 'chainlens-backend'
       static_configs:
       - targets: ['backend:8000']
-    - job_name: 'suna-microservices'
+    - job_name: 'chainlens-microservices'
       static_configs:
       - targets: 
         - 'onchain-service:3001'
@@ -652,7 +652,7 @@ kubectl apply -f monitoring/grafana-deployment.yaml -n monitoring
 curl -X POST \
   http://admin:admin@grafana.yourdomain.com/api/dashboards/db \
   -H 'Content-Type: application/json' \
-  -d @monitoring/dashboards/suna-overview.json
+  -d @monitoring/dashboards/chainlens-overview.json
 ```
 
 ### **🚨 Alerting Rules**
@@ -666,7 +666,7 @@ metadata:
 data:
   alerts.yml: |
     groups:
-    - name: suna-alerts
+    - name: chainlens-alerts
       rules:
       - alert: HighMemoryUsage
         expr: container_memory_usage_bytes / container_spec_memory_limit_bytes > 0.8
@@ -722,40 +722,40 @@ jobs:
     - name: 🏗️ Build and Push Docker Images
       run: |
         # Backend
-        docker build -t $ECR_REGISTRY/suna-backend:$GITHUB_SHA ./backend
-        docker push $ECR_REGISTRY/suna-backend:$GITHUB_SHA
+        docker build -t $ECR_REGISTRY/chainlens-backend:$GITHUB_SHA ./backend
+        docker push $ECR_REGISTRY/chainlens-backend:$GITHUB_SHA
         
         # Frontend
-        docker build -t $ECR_REGISTRY/suna-frontend:$GITHUB_SHA ./frontend
-        docker push $ECR_REGISTRY/suna-frontend:$GITHUB_SHA
+        docker build -t $ECR_REGISTRY/chainlens-frontend:$GITHUB_SHA ./frontend
+        docker push $ECR_REGISTRY/chainlens-frontend:$GITHUB_SHA
         
         # Microservices
         for service in onchain sentiment tokenomics team; do
-          docker build -t $ECR_REGISTRY/suna-$service:$GITHUB_SHA ./microservices/$service-service
-          docker push $ECR_REGISTRY/suna-$service:$GITHUB_SHA
+          docker build -t $ECR_REGISTRY/chainlens-$service:$GITHUB_SHA ./microservices/$service-service
+          docker push $ECR_REGISTRY/chainlens-$service:$GITHUB_SHA
         done
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
     
     - name: 🎯 Deploy to EKS
       run: |
-        aws eks update-kubeconfig --region us-east-1 --name suna-prod
+        aws eks update-kubeconfig --region us-east-1 --name chainlens-prod
         
         # Update deployment images
-        kubectl set image deployment/backend backend=$ECR_REGISTRY/suna-backend:$GITHUB_SHA -n suna
-        kubectl set image deployment/frontend frontend=$ECR_REGISTRY/suna-frontend:$GITHUB_SHA -n suna
+        kubectl set image deployment/backend backend=$ECR_REGISTRY/chainlens-backend:$GITHUB_SHA -n chainlens
+        kubectl set image deployment/frontend frontend=$ECR_REGISTRY/chainlens-frontend:$GITHUB_SHA -n chainlens
         
         # Wait for rollout
-        kubectl rollout status deployment/backend -n suna --timeout=600s
-        kubectl rollout status deployment/frontend -n suna --timeout=600s
+        kubectl rollout status deployment/backend -n chainlens --timeout=600s
+        kubectl rollout status deployment/frontend -n chainlens --timeout=600s
     
     - name: 🧪 Run Health Checks
       run: |
         # Wait for services to be ready
-        kubectl wait --for=condition=ready pod -l app=backend -n suna --timeout=300s
+        kubectl wait --for=condition=ready pod -l app=backend -n chainlens --timeout=300s
         
         # Test API health
-        API_URL=$(kubectl get ingress suna-ingress -n suna -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+        API_URL=$(kubectl get ingress chainlens-ingress -n chainlens -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
         curl -f https://$API_URL/health
     
     - name: 📧 Notify Deployment Status
@@ -772,7 +772,7 @@ jobs:
 # scripts/blue-green-deploy.sh
 #!/bin/bash
 
-NAMESPACE="suna"
+NAMESPACE="chainlens"
 SERVICE="backend"
 NEW_VERSION=$1
 
@@ -812,7 +812,7 @@ DEBUG=false
 LOG_LEVEL=info
 
 # Database
-DATABASE_URL=postgresql://user:pass@prod-db.cluster-xxx.us-east-1.rds.amazonaws.com:5432/suna_prod
+DATABASE_URL=postgresql://user:pass@prod-db.cluster-xxx.us-east-1.rds.amazonaws.com:5432/chainlens_prod
 DATABASE_POOL_SIZE=20
 DATABASE_MAX_CONNECTIONS=100
 
@@ -851,11 +851,11 @@ RATE_LIMIT_MAX=1000
 apiVersion: v1
 kind: Secret
 metadata:
-  name: suna-secrets
-  namespace: suna
+  name: chainlens-secrets
+  namespace: chainlens
 type: Opaque
 stringData:
-  database-url: "postgresql://user:pass@host:5432/suna_prod"
+  database-url: "postgresql://user:pass@host:5432/chainlens_prod"
   redis-url: "redis://redis-host:6379"
   jwt-secret: "your-jwt-secret"
   openai-api-key: "sk-..."
@@ -869,8 +869,8 @@ stringData:
 ### **🌐 Application Load Balancer (AWS)**
 ```hcl
 # terraform/aws/alb.tf
-resource "aws_lb" "suna_alb" {
-  name               = "suna-${var.environment}"
+resource "aws_lb" "chainlens_alb" {
+  name               = "chainlens-${var.environment}"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb_sg.id]
@@ -884,10 +884,10 @@ resource "aws_lb" "suna_alb" {
 }
 
 resource "aws_lb_target_group" "frontend" {
-  name     = "suna-frontend-${var.environment}"
+  name     = "chainlens-frontend-${var.environment}"
   port     = 3000
   protocol = "HTTP"
-  vpc_id   = aws_vpc.suna_vpc.id
+  vpc_id   = aws_vpc.chainlens_vpc.id
 
   health_check {
     enabled             = true
@@ -903,11 +903,11 @@ resource "aws_lb_target_group" "frontend" {
 }
 
 resource "aws_lb_listener" "frontend" {
-  load_balancer_arn = aws_lb.suna_alb.arn
+  load_balancer_arn = aws_lb.chainlens_alb.arn
   port              = "443"
   protocol          = "HTTPS"
   ssl_policy        = "ELBSecurityPolicy-TLS-1-2-2017-01"
-  certificate_arn   = aws_acm_certificate.suna_cert.arn
+  certificate_arn   = aws_acm_certificate.chainlens_cert.arn
 
   default_action {
     type             = "forward"
@@ -985,17 +985,17 @@ server {
 #!/bin/bash
 
 DB_HOST="prod-db.cluster-xxx.us-east-1.rds.amazonaws.com"
-DB_NAME="suna_prod"
-DB_USER="suna_user"
+DB_NAME="chainlens_prod"
+DB_USER="chainlens_user"
 BACKUP_DIR="/backups"
-S3_BUCKET="suna-backups-prod"
+S3_BUCKET="chainlens-backups-prod"
 DATE=$(date +%Y%m%d_%H%M%S)
 
 # Create backup
-pg_dump -h $DB_HOST -U $DB_USER -d $DB_NAME | gzip > $BACKUP_DIR/suna_prod_$DATE.sql.gz
+pg_dump -h $DB_HOST -U $DB_USER -d $DB_NAME | gzip > $BACKUP_DIR/chainlens_prod_$DATE.sql.gz
 
 # Upload to S3
-aws s3 cp $BACKUP_DIR/suna_prod_$DATE.sql.gz s3://$S3_BUCKET/daily/
+aws s3 cp $BACKUP_DIR/chainlens_prod_$DATE.sql.gz s3://$S3_BUCKET/daily/
 
 # Cleanup local files older than 7 days
 find $BACKUP_DIR -name "*.sql.gz" -mtime +7 -delete
@@ -1005,7 +1005,7 @@ aws s3 ls s3://$S3_BUCKET/daily/ | \
   awk '$1 <= "'$(date -d '30 days ago' '+%Y-%m-%d')'" {print $4}' | \
   xargs -I {} aws s3 rm s3://$S3_BUCKET/daily/{}
 
-echo "✅ Database backup completed: suna_prod_$DATE.sql.gz"
+echo "✅ Database backup completed: chainlens_prod_$DATE.sql.gz"
 ```
 
 ### **🔄 Automated Backup Schedule**
@@ -1015,7 +1015,7 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: database-backup
-  namespace: suna
+  namespace: chainlens
 spec:
   schedule: "0 2 * * *"  # Daily at 2 AM
   jobTemplate:
@@ -1029,12 +1029,12 @@ spec:
             - /bin/bash
             - -c
             - |
-              pg_dump $DATABASE_URL | gzip | aws s3 cp - s3://suna-backups/$(date +%Y%m%d_%H%M%S).sql.gz
+              pg_dump $DATABASE_URL | gzip | aws s3 cp - s3://chainlens-backups/$(date +%Y%m%d_%H%M%S).sql.gz
             env:
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: suna-secrets
+                  name: chainlens-secrets
                   key: database-url
             - name: AWS_ACCESS_KEY_ID
               valueFrom:
@@ -1055,26 +1055,26 @@ spec:
 #!/bin/bash
 
 # 1. Restore from latest backup
-LATEST_BACKUP=$(aws s3 ls s3://suna-backups-prod/daily/ | sort | tail -n 1 | awk '{print $4}')
-aws s3 cp s3://suna-backups-prod/daily/$LATEST_BACKUP /tmp/
+LATEST_BACKUP=$(aws s3 ls s3://chainlens-backups-prod/daily/ | sort | tail -n 1 | awk '{print $4}')
+aws s3 cp s3://chainlens-backups-prod/daily/$LATEST_BACKUP /tmp/
 
 # 2. Create new database instance
 aws rds create-db-instance \
-  --db-instance-identifier suna-prod-recovery \
+  --db-instance-identifier chainlens-prod-recovery \
   --db-instance-class db.r5.xlarge \
   --engine postgres \
-  --master-username suna_user \
+  --master-username chainlens_user \
   --master-user-password $DB_PASSWORD \
   --allocated-storage 100
 
 # 3. Wait for instance to be available
-aws rds wait db-instance-available --db-instance-identifier suna-prod-recovery
+aws rds wait db-instance-available --db-instance-identifier chainlens-prod-recovery
 
 # 4. Restore data
-gunzip -c /tmp/$LATEST_BACKUP | psql -h recovery-endpoint -U suna_user -d suna_prod
+gunzip -c /tmp/$LATEST_BACKUP | psql -h recovery-endpoint -U chainlens_user -d chainlens_prod
 
 # 5. Update application configuration
-kubectl patch deployment backend -n suna -p '{"spec":{"template":{"spec":{"containers":[{"name":"backend","env":[{"name":"DATABASE_URL","value":"postgresql://suna_user:pass@recovery-endpoint:5432/suna_prod"}]}]}}}}'
+kubectl patch deployment backend -n chainlens -p '{"spec":{"template":{"spec":{"containers":[{"name":"backend","env":[{"name":"DATABASE_URL","value":"postgresql://chainlens_user:pass@recovery-endpoint:5432/chainlens_prod"}]}]}}}}'
 
 echo "✅ Disaster recovery completed"
 ```
@@ -1090,7 +1090,7 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: backend-hpa
-  namespace: suna
+  namespace: chainlens
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
@@ -1158,34 +1158,34 @@ max_parallel_workers = 8
 #### **High Memory Usage**
 ```bash
 # Check memory usage
-kubectl top pods -n suna
+kubectl top pods -n chainlens
 
 # Scale up if needed
-kubectl scale deployment backend --replicas=5 -n suna
+kubectl scale deployment backend --replicas=5 -n chainlens
 
 # Check for memory leaks
-kubectl logs -f deployment/backend -n suna | grep -i memory
+kubectl logs -f deployment/backend -n chainlens | grep -i memory
 ```
 
 #### **Database Connection Issues**
 ```bash
 # Check database connectivity
-kubectl exec -it deployment/backend -n suna -- pg_isready -h $DB_HOST
+kubectl exec -it deployment/backend -n chainlens -- pg_isready -h $DB_HOST
 
 # Check connection pool
-kubectl logs deployment/backend -n suna | grep -i "connection\|pool"
+kubectl logs deployment/backend -n chainlens | grep -i "connection\|pool"
 
 # Reset connections if needed
-kubectl rollout restart deployment/backend -n suna
+kubectl rollout restart deployment/backend -n chainlens
 ```
 
 #### **SSL Certificate Issues**
 ```bash
 # Check certificate status
-kubectl describe certificate suna-tls -n suna
+kubectl describe certificate chainlens-tls -n chainlens
 
 # Renew certificate manually if needed
-kubectl delete certificate suna-tls -n suna
+kubectl delete certificate chainlens-tls -n chainlens
 kubectl apply -f k8s/ingress.yaml
 ```
 
@@ -1202,8 +1202,8 @@ curl -I https://api.openai.com
 curl -I https://api.anthropic.com
 
 # 3. Scale critical services
-kubectl scale deployment backend --replicas=10 -n suna
-kubectl scale deployment frontend --replicas=5 -n suna
+kubectl scale deployment backend --replicas=10 -n chainlens
+kubectl scale deployment frontend --replicas=5 -n chainlens
 
 # 4. Enable maintenance mode
 kubectl apply -f k8s/maintenance-page.yaml
@@ -1213,15 +1213,15 @@ kubectl apply -f k8s/maintenance-page.yaml
 ```bash
 # 1. Create read replica for failover
 aws rds create-db-instance-read-replica \
-  --db-instance-identifier suna-prod-replica \
-  --source-db-instance-identifier suna-prod
+  --db-instance-identifier chainlens-prod-replica \
+  --source-db-instance-identifier chainlens-prod
 
 # 2. Promote replica to standalone
 aws rds promote-read-replica \
-  --db-instance-identifier suna-prod-replica
+  --db-instance-identifier chainlens-prod-replica
 
 # 3. Update application connection
-kubectl patch deployment backend -n suna -p '{"spec":{"template":{"spec":{"containers":[{"name":"backend","env":[{"name":"DATABASE_URL","value":"new-database-endpoint"}]}]}}}}'
+kubectl patch deployment backend -n chainlens -p '{"spec":{"template":{"spec":{"containers":[{"name":"backend","env":[{"name":"DATABASE_URL","value":"new-database-endpoint"}]}]}}}}'
 ```
 
 ---

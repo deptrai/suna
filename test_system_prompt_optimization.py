@@ -170,7 +170,7 @@ Here are the memories from previous interactions between the AI assistant (you) 
 ```
 Luôn luôn dùng mcp feedback enhanced sau khi làm xong
 Không tự ý start hay stop backend, front end, worker, mọi thứ đều được restart tự động khi thay đổi code rồi
-/as dev: activate persona dev /Users/mac_1/Documents/GitHub/suna/.bmad-core/agents/dev.md
+/as dev: activate persona dev /Users/mac_1/Documents/GitHub/chainlens/.bmad-core/agents/dev.md
 ```
 
 # Summary of most important instructions

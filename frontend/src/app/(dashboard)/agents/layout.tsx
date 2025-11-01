@@ -2,11 +2,11 @@ import { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 
 export const metadata: Metadata = {
-  title: 'Agent Conversation | Kortix',
-  description: 'Interactive agent conversation powered by Kortix',
+  title: 'Agent Conversation | Epsilon',
+  description: 'Interactive agent conversation powered by Epsilon',
   openGraph: {
-    title: 'Agent Conversation | Kortix',
-    description: 'Interactive agent conversation powered by Kortix',
+    title: 'Agent Conversation | Epsilon',
+    description: 'Interactive agent conversation powered by Epsilon',
     type: 'website',
   },
 };

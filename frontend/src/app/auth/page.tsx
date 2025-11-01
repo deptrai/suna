@@ -16,7 +16,7 @@ import {
   AlertCircle,
   MailCheck,
 } from 'lucide-react';
-import { KortixLoader } from '@/components/ui/kortix-loader';
+import { EpsilonLoader } from '@/components/ui/epsilon-loader';
 import { useAuth } from '@/components/AuthProvider';
 import { useAuthMethodTracking } from '@/lib/stores/auth-tracking';
 import { toast } from 'sonner';
@@ -30,7 +30,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import GitHubSignIn from '@/components/GithubSignIn';
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { EpsilonLogo } from '@/components/sidebar/epsilon-logo';
 import { AnimatedBg } from '@/components/home/ui/AnimatedBg';
 import { ReleaseBadge } from '@/components/auth/release-badge';
 
@@ -210,7 +210,7 @@ function LoginContent() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <KortixLoader size="large" />
+        <EpsilonLoader size="large" />
       </div>
     );
   }
@@ -267,7 +267,7 @@ function LoginContent() {
     <div className="min-h-screen bg-background relative">
       <div className="absolute top-6 left-6 z-10">
         <Link href="/" className="flex items-center space-x-2">
-          <KortixLogo size={28} />
+          <EpsilonLogo size={28} />
         </Link>
       </div>
       <div className="flex min-h-screen">
@@ -334,7 +334,7 @@ function LoginContent() {
                     >
                       I accept the{' '}
                       <a 
-                        href="https://www.kortix.com/legal?tab=privacy" 
+                        href="https://www.epsilon.com/legal?tab=privacy" 
                         target="_blank"
                         rel="noopener noreferrer"
                         className="hover:underline underline-offset-2 transition-colors"
@@ -344,7 +344,7 @@ function LoginContent() {
                       </a>
                       {' '}and{' '}
                       <a 
-                        href="https://www.kortix.com/legal?tab=terms"
+                        href="https://www.epsilon.com/legal?tab=terms"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="hover:underline underline-offset-2 transition-colors"

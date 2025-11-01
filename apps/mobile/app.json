@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Kortix",
-    "slug": "kortix",
+    "name": "Epsilon",
+    "slug": "epsilon",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/AppIcon-Light.png",
-    "scheme": "kortix",
+    "scheme": "epsilon",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -18,7 +18,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.kortix.app",
+      "bundleIdentifier": "com.epsilon.app",
       "usesAppleSignIn": true
     },
     "android": {
@@ -27,7 +27,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.kortix.app"
+      "package": "com.epsilon.app"
     },
     "web": {
       "bundler": "metro",
@@ -59,6 +59,6 @@
         "projectId": "9fca3cff-a291-41c9-88b9-feb8053b990f"
       }
     },
-    "owner": "kortix"
+    "owner": "epsilon"
   }
 }

@@ -1,16 +1,16 @@
-# Suna AI Agent Platform - Postman API Collection
+# ChainLens AI Agent Platform - Postman API Collection
 
 ## 📋 Overview
 
-This is a comprehensive Postman collection for the **Suna AI Agent Platform** with **ChainLens** integration. The collection includes all API endpoints for testing and development.
+This is a comprehensive Postman collection for the **ChainLens AI Agent Platform** with **ChainLens** integration. The collection includes all API endpoints for testing and development.
 
 ## 🚀 Quick Start
 
 ### 1. Import Collection & Environment
 
-1. **Import Collection**: Import `Suna_API_Collection.postman_collection.json`
-2. **Import Environment**: Import `Suna_API_Environment.postman_environment.json`
-3. **Select Environment**: Choose "Suna API - Local Development" environment
+1. **Import Collection**: Import `ChainLens_API_Collection.postman_collection.json`
+2. **Import Environment**: Import `ChainLens_API_Environment.postman_environment.json`
+3. **Select Environment**: Choose "ChainLens API - Local Development" environment
 
 ### 2. Setup Authentication
 
@@ -160,7 +160,7 @@ This is a comprehensive Postman collection for the **Suna AI Agent Platform** wi
 
 ## ⚠️ Prerequisites
 
-1. **Backend Running**: Ensure Suna backend is running on `http://localhost:8000`
+1. **Backend Running**: Ensure ChainLens backend is running on `http://localhost:8000`
 2. **Database Setup**: Database schema must be migrated
 3. **Services Running**: Redis, Supabase, and other services should be active
 
@@ -188,6 +188,6 @@ This is a comprehensive Postman collection for the **Suna AI Agent Platform** wi
 
 ## 🔗 Related Documentation
 
-- [Suna Project Documentation](./docs/PROJECT_DOCUMENT.md)
+- [ChainLens Project Documentation](./docs/PROJECT_DOCUMENT.md)
 - [API Architecture](./docs/architecture/)
 - [Backend Setup](./backend/README.md)

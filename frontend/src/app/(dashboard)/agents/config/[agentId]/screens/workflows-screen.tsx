@@ -21,15 +21,15 @@ export function WorkflowsScreen({ agentId }: WorkflowsScreenProps) {
         }
     }, [agent?.agentpress_tools]);
 
-    const isSunaAgent = agent?.metadata?.is_suna_default || false;
+    const isChainLensAgent = agent?.metadata?.is_chainlens_default || false;
     const restrictions = agent?.metadata?.restrictions || {};
-    const areToolsEditable = (restrictions.tools_editable !== false) && !isSunaAgent;
+    const areToolsEditable = (restrictions.tools_editable !== false) && !isChainLensAgent;
 
     const handleToolsChange = async (newTools: Record<string, boolean | { enabled: boolean; description: string }>) => {
         if (!areToolsEditable) {
-            if (isSunaAgent) {
+            if (isChainLensAgent) {
                 toast.error("Tools cannot be edited", {
-                    description: "Suna's tools are managed centrally.",
+                    description: "ChainLens's tools are managed centrally.",
                 });
             }
             return;
@@ -68,7 +68,7 @@ export function WorkflowsScreen({ agentId }: WorkflowsScreenProps) {
                     tools={tools}
                     onToolsChange={handleToolsChange}
                     disabled={!areToolsEditable}
-                    isSunaAgent={isSunaAgent}
+                    isChainLensAgent={isChainLensAgent}
                     isLoading={updateAgentMutation.isPending}
                 />
             </div>

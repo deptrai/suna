@@ -6,7 +6,7 @@
 ## 📋 Tóm Tắt Điều Hành
 
 **Dự Án**: ChainLens - Nền Tảng Phân Tích Crypto Đàm Thoại AI  
-**Chiến Lược Cơ Bản**: Clone Suna.so + Thêm Microservices Crypto Chuyên Biệt  
+**Chiến Lược Cơ Bản**: Clone ChainLens.so + Thêm Microservices Crypto Chuyên Biệt  
 **Tầm Nhìn**: Mở rộng đa lĩnh vực (Crypto → Cổ Phiếu → Bất Động Sản)  
 **Điểm Chiến Lược**: **9.3/10** → **10/10** (với cải tiến)
 
@@ -17,7 +17,7 @@ ChainLens chuyển đổi phân tích crypto phức tạp thành trải nghiệm
 
 ## 🏗️ Phân Tích Kiến Trúc Chiến Lược
 
-### 1. Chiến Lược Nền Tảng: Tận Dụng Suna Platform
+### 1. Chiến Lược Nền Tảng: Tận Dụng ChainLens Platform
 **Điểm: 9.5/10**
 
 **Điểm Mạnh**:
@@ -40,7 +40,7 @@ ChainLens chuyển đổi phân tích crypto phức tạp thành trải nghiệm
 ┌─────────────────────────────────────────┐
 │         ChainLens Core Platform         │
 ├─────────────────────────────────────────┤
-│     Suna.so Base (AI Agent Engine)     │
+│     ChainLens.so Base (AI Agent Engine)     │
 ├─────────────────────────────────────────┤
 │        Specialized Microservices        │
 ├──────────┬──────────┬─────────┬────────┤
@@ -286,7 +286,7 @@ Infrastructure:
 ### Giai Đoạn 1: Nền Tảng (Tháng 1-3)
 **Mục Tiêu**: Launch MVP với tính năng cốt lõi
 
-- [x] Clone nền tảng Suna.so cơ bản
+- [x] Clone nền tảng ChainLens.so cơ bản
 - [x] Tích hợp crypto microservices
 - [ ] Triển khai mô hình subscription
 - [ ] Launch beta với 100 người dùng
@@ -397,7 +397,7 @@ Infrastructure:
 **Điểm Cuối Cùng ChainLens: 10/10 (với các cải tiến đã triển khai)**
 
 ChainLens được định vị hoàn hảo để thống trị thị trường phân tích crypto đàm thoại với:
-- ✅ Nền tảng kỹ thuật mạnh mẽ (Suna.so)
+- ✅ Nền tảng kỹ thuật mạnh mẽ (ChainLens.so)
 - ✅ Sự khác biệt rõ ràng (chat-first)
 - ✅ Mô hình kinh doanh có thể mở rộng
 - ✅ Tầm nhìn mở rộng đa lĩnh vực

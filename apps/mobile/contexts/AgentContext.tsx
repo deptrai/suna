@@ -22,7 +22,7 @@ interface AgentContextType {
   loadAgents: () => Promise<void>;
   getDefaultAgent: () => Agent | null;
   getCurrentAgent: () => Agent | null;
-  isSunaAgent: () => boolean;
+  isChainLensAgent: () => boolean;
   clearSelection: () => Promise<void>;
 }
 
@@ -115,9 +115,9 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
           return;
         }
         
-        // Otherwise, find the Suna agent (metadata.is_suna_default) or first agent
-        const sunaAgent = agents.find(agent => agent.metadata?.is_suna_default);
-        const defaultAgent = sunaAgent || agents[0];
+        // Otherwise, find the ChainLens agent (metadata.is_chainlens_default) or first agent
+        const chainlensAgent = agents.find(agent => agent.metadata?.is_chainlens_default);
+        const defaultAgent = chainlensAgent || agents[0];
         
         if (defaultAgent) {
           setSelectedAgentId(defaultAgent.agent_id);
@@ -162,8 +162,8 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
   }, [refetch]);
   
   const getDefaultAgent = React.useCallback((): Agent | null => {
-    const sunaAgent = agents.find(agent => agent.metadata?.is_suna_default);
-    return sunaAgent || agents[0] || null;
+    const chainlensAgent = agents.find(agent => agent.metadata?.is_chainlens_default);
+    return chainlensAgent || agents[0] || null;
   }, [agents]);
   
   const getCurrentAgent = React.useCallback((): Agent | null => {
@@ -171,9 +171,9 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
     return agents.find(agent => agent.agent_id === selectedAgentId) || null;
   }, [selectedAgentId, agents]);
   
-  const isSunaAgent = React.useCallback((): boolean => {
+  const isChainLensAgent = React.useCallback((): boolean => {
     const currentAgent = getCurrentAgent();
-    return currentAgent?.metadata?.is_suna_default || false;
+    return currentAgent?.metadata?.is_chainlens_default || false;
   }, [getCurrentAgent]);
   
   const clearSelection = React.useCallback(async () => {
@@ -202,7 +202,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
     loadAgents,
     getDefaultAgent,
     getCurrentAgent,
-    isSunaAgent,
+    isChainLensAgent,
     clearSelection,
   };
   

@@ -58,17 +58,17 @@ export interface PricingTier {
 }
 
 export const siteConfig = {
-  name: 'Kortix',
+  name: 'Epsilon',
   description: 'The Generalist AI Worker that can act on your behalf.',
   cta: 'Start Free',
   url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
   keywords: ['AI Worker', 'Generalist AI', 'Open Source AI', 'Autonomous Agent'],
   links: {
-    email: 'support@kortix.ai',
-    twitter: 'https://x.com/kortixai',
-    // discord: 'https://discord.gg/kortixai',
-    github: 'https://github.com/Kortix-ai/Suna',
-    instagram: 'https://instagram.com/kortixai',
+    email: 'support@epsilon.ai',
+    twitter: 'https://x.com/epsilonai',
+    // discord: 'https://discord.gg/epsilonai',
+    github: 'https://github.com/Epsilon-ai/ChainLens',
+    instagram: 'https://instagram.com/epsilonai',
   },
   nav: {
     links: [
@@ -108,11 +108,11 @@ export const siteConfig = {
       </svg>
     ),
     badge: '100% OPEN SOURCE',
-    githubUrl: 'https://github.com/kortix-ai/suna',
-    title: 'Kortix – Build, manage and train your AI Workforce.',
+    githubUrl: 'https://github.com/epsilon-ai/chainlens',
+    title: 'Epsilon – Build, manage and train your AI Workforce.',
     description:
-      'Kortix – open-source platform to build, manage and train your AI Workforce.',
-    inputPlaceholder: 'Ask Kortix to...',
+      'Epsilon – open-source platform to build, manage and train your AI Workforce.',
+    inputPlaceholder: 'Ask Epsilon to...',
   },
   cloudPricingItems: [
     {
@@ -499,15 +499,15 @@ export const siteConfig = {
     ],
   },
   featureSection: {
-    title: 'How Kortix Kortix Works',
+    title: 'How Epsilon Epsilon Works',
     description:
-      'Discover how Kortix Kortix transforms your commands into action in four easy steps',
+      'Discover how Epsilon Epsilon transforms your commands into action in four easy steps',
     items: [
       {
         id: 1,
         title: 'Request an Action',
         content:
-          'Speak or type your command—let Kortix Kortix capture your intent. Your request instantly sets the process in motion.',
+          'Speak or type your command—let Epsilon Epsilon capture your intent. Your request instantly sets the process in motion.',
         image:
           'https://images.unsplash.com/photo-1720371300677-ba4838fa0678?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
       },
@@ -515,7 +515,7 @@ export const siteConfig = {
         id: 2,
         title: 'AI Understanding & Planning',
         content:
-          'Kortix analyzes your request, understands the context, and develops a structured plan to complete the task efficiently.',
+          'Epsilon analyzes your request, understands the context, and develops a structured plan to complete the task efficiently.',
         image:
           'https://images.unsplash.com/photo-1686170287433-c95faf6d3608?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxmZWF0dXJlZC1waG90b3MtZmVlZHwzfHx8ZW58MHx8fHx8fA%3D%3D',
       },
@@ -523,7 +523,7 @@ export const siteConfig = {
         id: 3,
         title: 'Autonomous Execution',
         content:
-          'Using its capabilities and integrations, Kortix executes the task independently, handling any complexities along the way.',
+          'Using its capabilities and integrations, Epsilon executes the task independently, handling any complexities along the way.',
         image:
           'https://images.unsplash.com/photo-1720378042271-60aff1e1c538?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxmZWF0dXJlZC1waG90b3MtZmVlZHwxMHx8fGVufDB8fHx8fA%3D%3D',
       },
@@ -531,30 +531,30 @@ export const siteConfig = {
         id: 4,
         title: 'Results & Learning',
         content:
-          'Kortix delivers results and learns from each interaction, continuously improving its performance to better serve your needs.',
+          'Epsilon delivers results and learns from each interaction, continuously improving its performance to better serve your needs.',
         image:
           'https://images.unsplash.com/photo-1666882990322-e7f3b8df4f75?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1yZWxhdGVkfDF8fHxlbnwwfHx8fHw%3D',
       },
     ],
   },
   bentoSection: {
-    title: 'Empower Your Workflow with Kortix',
+    title: 'Empower Your Workflow with Epsilon',
     description:
-      'Let Kortix act on your behalf with advanced AI capabilities, seamless integrations, and autonomous task execution.',
+      'Let Epsilon act on your behalf with advanced AI capabilities, seamless integrations, and autonomous task execution.',
     items: [
       {
         id: 1,
         content: <FirstBentoAnimation />,
         title: 'Autonomous Task Execution',
         description:
-          'Experience true automation with Kortix. Ask your AI Worker to complete tasks, research information, and handle complex workflows with minimal supervision.',
+          'Experience true automation with Epsilon. Ask your AI Worker to complete tasks, research information, and handle complex workflows with minimal supervision.',
       },
       {
         id: 2,
         content: <SecondBentoAnimation />,
         title: 'Seamless Integrations',
         description:
-          'Connect Kortix to your existing tools for a unified workflow. Boost productivity through AI-powered interconnected systems.',
+          'Connect Epsilon to your existing tools for a unified workflow. Boost productivity through AI-powered interconnected systems.',
       },
       {
         id: 3,
@@ -568,21 +568,21 @@ export const siteConfig = {
         ),
         title: 'Intelligent Data Analysis',
         description:
-          "Transform raw data into actionable insights in seconds. Make better decisions with Kortix's real-time, adaptive intelligence.",
+          "Transform raw data into actionable insights in seconds. Make better decisions with Epsilon's real-time, adaptive intelligence.",
       },
       {
         id: 4,
         content: <FourthBentoAnimation once={false} />,
         title: 'Complete Customization',
         description:
-          'Tailor Kortix to your specific needs. As an open source solution, you have full control over its capabilities, integrations, and implementation.',
+          'Tailor Epsilon to your specific needs. As an open source solution, you have full control over its capabilities, integrations, and implementation.',
       },
     ],
   },
   benefits: [
     {
       id: 1,
-      text: "Automate everyday tasks with Kortix's powerful AI capabilities.",
+      text: "Automate everyday tasks with Epsilon's powerful AI capabilities.",
       image: '/Device-6.png',
     },
     {
@@ -592,7 +592,7 @@ export const siteConfig = {
     },
     {
       id: 3,
-      text: 'Improve focus on high-value work as Kortix handles the routine.',
+      text: 'Improve focus on high-value work as Epsilon handles the routine.',
       image: '/Device-8.png',
     },
     {
@@ -898,13 +898,13 @@ export const siteConfig = {
 
         title: 'Community Powered',
         description:
-          "Join a thriving community of developers and users continuously enhancing and expanding Kortix's capabilities.",
+          "Join a thriving community of developers and users continuously enhancing and expanding Epsilon's capabilities.",
       },
     ],
   },
   quoteSection: {
     quote:
-      'Kortix has transformed how we approach everyday tasks. The level of automation it provides, combined with its open source nature, makes it an invaluable tool for our entire organization.',
+      'Epsilon has transformed how we approach everyday tasks. The level of automation it provides, combined with its open source nature, makes it an invaluable tool for our entire organization.',
     author: {
       name: 'Alex Johnson',
       role: 'CTO, Innovatech',
@@ -914,7 +914,7 @@ export const siteConfig = {
   pricing: {
     title: 'Open Source & Free Forever',
     description:
-      'Kortix is 100% open source and free to use. No hidden fees, no premium features locked behind paywalls.',
+      'Epsilon is 100% open source and free to use. No hidden fees, no premium features locked behind paywalls.',
     pricingItems: [
       {
         name: 'Community',
@@ -929,7 +929,7 @@ export const siteConfig = {
           // 'Community support',
         ],
         description: 'Perfect for individual users and developers',
-        buttonText: 'Hire Kortix',
+        buttonText: 'Hire Epsilon',
         buttonColor: 'bg-accent text-primary',
         isPopular: false,
       },
@@ -1179,7 +1179,7 @@ export const siteConfig = {
   faqSection: {
     title: 'Frequently Asked Questions',
     description:
-      "Answers to common questions about Kortix and its capabilities. If you have any other questions, please don't hesitate to contact us.",
+      "Answers to common questions about Epsilon and its capabilities. If you have any other questions, please don't hesitate to contact us.",
     faQitems: [
       {
         id: 1,
@@ -1189,33 +1189,33 @@ export const siteConfig = {
       },
       {
         id: 2,
-        question: 'How does Kortix work?',
+        question: 'How does Epsilon work?',
         answer:
-          'Kortix works by analyzing your requirements, leveraging advanced AI algorithms to understand context, and executing tasks based on your instructions. It can integrate with your workflow, learn from feedback, and continuously improve its performance.',
+          'Epsilon works by analyzing your requirements, leveraging advanced AI algorithms to understand context, and executing tasks based on your instructions. It can integrate with your workflow, learn from feedback, and continuously improve its performance.',
       },
       {
         id: 3,
-        question: 'Is Kortix really free?',
+        question: 'Is Epsilon really free?',
         answer:
-          'Yes, Kortix is completely free and open source. We believe in democratizing AI technology and making it accessible to everyone. You can use it, modify it, and contribute to its development without any cost.',
+          'Yes, Epsilon is completely free and open source. We believe in democratizing AI technology and making it accessible to everyone. You can use it, modify it, and contribute to its development without any cost.',
       },
       {
         id: 4,
-        question: 'Can I integrate Kortix with my existing tools?',
+        question: 'Can I integrate Epsilon with my existing tools?',
         answer:
-          'Yes, Kortix is designed to be highly compatible with popular tools and platforms. We offer APIs and pre-built integrations for seamless connection with your existing workflow tools and systems.',
+          'Yes, Epsilon is designed to be highly compatible with popular tools and platforms. We offer APIs and pre-built integrations for seamless connection with your existing workflow tools and systems.',
       },
       {
         id: 5,
-        question: 'How can I contribute to Kortix?',
+        question: 'How can I contribute to Epsilon?',
         answer:
-          'You can contribute to Kortix by submitting pull requests on GitHub, reporting bugs, suggesting new features, or helping with documentation. Join our Discord community to connect with other contributors and Hire Kortix.',
+          'You can contribute to Epsilon by submitting pull requests on GitHub, reporting bugs, suggesting new features, or helping with documentation. Join our Discord community to connect with other contributors and Hire Epsilon.',
       },
       {
         id: 6,
-        question: 'How does Kortix save me time?',
+        question: 'How does Epsilon save me time?',
         answer:
-          'Kortix automates repetitive tasks, streamlines workflows, and provides quick solutions to common challenges. This automation and efficiency can save hours of manual work, allowing you to focus on more strategic activities.',
+          'Epsilon automates repetitive tasks, streamlines workflows, and provides quick solutions to common challenges. This automation and efficiency can save hours of manual work, allowing you to focus on more strategic activities.',
       },
     ],
   },
@@ -1231,11 +1231,11 @@ export const siteConfig = {
   },
   footerLinks: [
     {
-      title: 'Kortix',
+      title: 'Epsilon',
       links: [
-        { id: 1, title: 'About', url: 'https://kortix.ai' },
-        { id: 3, title: 'Contact', url: 'mailto:hey@kortix.ai' },
-        { id: 4, title: 'Careers', url: 'https://kortix.ai/careers' },
+        { id: 1, title: 'About', url: 'https://epsilon.ai' },
+        { id: 3, title: 'Contact', url: 'mailto:hey@epsilon.ai' },
+        { id: 4, title: 'Careers', url: 'https://epsilon.ai/careers' },
       ],
     },
     {
@@ -1244,10 +1244,10 @@ export const siteConfig = {
         {
           id: 5,
           title: 'Documentation',
-          url: 'https://github.com/Kortix-ai/Suna',
+          url: 'https://github.com/Epsilon-ai/ChainLens',
         },
         { id: 7, title: 'Discord', url: 'https://discord.gg/Py6pCBUUPw' },
-        { id: 8, title: 'GitHub', url: 'https://github.com/Kortix-ai/Suna' },
+        { id: 8, title: 'GitHub', url: 'https://github.com/Epsilon-ai/ChainLens' },
       ],
     },
     {
@@ -1256,17 +1256,17 @@ export const siteConfig = {
         {
           id: 9,
           title: 'Privacy Policy',
-          url: 'https://suna.so/legal?tab=privacy',
+          url: 'https://chainlens.net/legal?tab=privacy',
         },
         {
           id: 10,
           title: 'Terms of Service',
-          url: 'https://suna.so/legal?tab=terms',
+          url: 'https://chainlens.net/legal?tab=terms',
         },
         {
           id: 11,
           title: 'License Apache 2.0',
-          url: 'https://github.com/Kortix-ai/Suna/blob/main/LICENSE',
+          url: 'https://github.com/Epsilon-ai/ChainLens/blob/main/LICENSE',
         },
       ],
     },
@@ -1312,7 +1312,7 @@ export const siteConfig = {
       ),
       image:
         'https://images.unsplash.com/photo-1576091160550-2173dba999ef?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2400&q=80',
-      url: 'https://suna.so/share/2fbf0552-87d6-4d12-be25-d54f435bc493',
+      url: 'https://chainlens.net/share/2fbf0552-87d6-4d12-be25-d54f435bc493',
     },
     {
       id: 'vc-list',
@@ -1347,7 +1347,7 @@ export const siteConfig = {
       ),
       image:
         'https://images.unsplash.com/photo-1444653614773-995cb1ef9efa?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2400&q=80',
-      url: 'https://suna.so/share/a172382b-aa77-42a2-a3e1-46f32a0f9c37',
+      url: 'https://chainlens.net/share/a172382b-aa77-42a2-a3e1-46f32a0f9c37',
     },
     {
       id: 'candidate-search',
@@ -1389,7 +1389,7 @@ export const siteConfig = {
       ),
       image:
         'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2400&q=80',
-      url: 'https://suna.so/share/d9e39c94-4f6f-4b5a-b1a0-b681bfe0dee8',
+      url: 'https://chainlens.net/share/d9e39c94-4f6f-4b5a-b1a0-b681bfe0dee8',
     },
     {
       id: 'company-trip',
@@ -1438,7 +1438,7 @@ export const siteConfig = {
       ),
       image:
         'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2400&q=80',
-      url: 'https://suna.so/share/23f7d904-eb66-4a9c-9247-b9704ddfd233',
+      url: 'https://chainlens.net/share/23f7d904-eb66-4a9c-9247-b9704ddfd233',
     },
     {
       id: 'excel-spreadsheet',
@@ -1480,7 +1480,7 @@ export const siteConfig = {
       ),
       image:
         'https://images.unsplash.com/photo-1532153975070-2e9ab71f1b14?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2400&q=80',
-      url: 'https://suna.so/share/2a147a3a-3778-4624-8285-42474c8c1c9c',
+      url: 'https://chainlens.net/share/2a147a3a-3778-4624-8285-42474c8c1c9c',
     },
     {
       id: 'speaker-prospecting',
@@ -1522,7 +1522,7 @@ export const siteConfig = {
       ),
       image:
         'https://images.unsplash.com/photo-1523580494863-6f3031224c94?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2400&q=80',
-      url: 'https://suna.so/share/6830cc6d-3fbd-492a-93f8-510a5f48ce50',
+      url: 'https://chainlens.net/share/6830cc6d-3fbd-492a-93f8-510a5f48ce50',
     },
     {
       id: 'scientific-papers',
@@ -1564,7 +1564,7 @@ export const siteConfig = {
       ),
       image:
         'https://images.unsplash.com/photo-1532153975070-2e9ab71f1b14?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2400&q=80',
-      url: 'https://suna.so/share/a106ef9f-ed97-46ee-8e51-7bfaf2ac3c29',
+      url: 'https://chainlens.net/share/a106ef9f-ed97-46ee-8e51-7bfaf2ac3c29',
     },
     {
       id: 'lead-generation',
@@ -1606,13 +1606,13 @@ export const siteConfig = {
       ),
       image:
         'https://images.unsplash.com/photo-1552581234-26160f608093?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2400&q=80',
-      url: 'https://suna.so/share/c3472df7-adc1-4d5f-9927-4f8f513ec2fe',
+      url: 'https://chainlens.net/share/c3472df7-adc1-4d5f-9927-4f8f513ec2fe',
     },
     {
       id: 'seo-analysis',
       title: 'SEO Analysis',
       description:
-        "Based on my website suna.so, generate an SEO report analysis, find top-ranking pages by keyword clusters, and identify topics I'm missing.",
+        "Based on my website chainlens.net, generate an SEO report analysis, find top-ranking pages by keyword clusters, and identify topics I'm missing.",
       category: 'marketing',
       featured: true,
       icon: (
@@ -1655,7 +1655,7 @@ export const siteConfig = {
       ),
       image:
         'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2400&q=80',
-      url: 'https://suna.so/share/cf756e02-fee9-4281-a0e4-76ac850f1ac9',
+      url: 'https://chainlens.net/share/cf756e02-fee9-4281-a0e4-76ac850f1ac9',
     },
     {
       id: 'personal-trip',
@@ -1704,7 +1704,7 @@ export const siteConfig = {
       ),
       image:
         'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2400&q=80',
-      url: 'https://suna.so/share/8442cc76-ac8b-438c-b539-4b93909a2218',
+      url: 'https://chainlens.net/share/8442cc76-ac8b-438c-b539-4b93909a2218',
     },
     {
       id: 'funded-startups',
@@ -1739,7 +1739,7 @@ export const siteConfig = {
       ),
       image:
         'https://images.unsplash.com/photo-1444653614773-995cb1ef9efa?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2400&q=80',
-      url: 'https://suna.so/share/f04c871c-6bf5-4464-8e9c-5351c9cf5a60',
+      url: 'https://chainlens.net/share/f04c871c-6bf5-4464-8e9c-5351c9cf5a60',
     },
     {
       id: 'scrape-forums',
@@ -1781,7 +1781,7 @@ export const siteConfig = {
       ),
       image:
         'https://images.unsplash.com/photo-1523580494863-6f3031224c94?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2400&q=80',
-      url: 'https://suna.so/share/53bcd4c7-40d6-4293-9f69-e2638ddcfad8',
+      url: 'https://chainlens.net/share/53bcd4c7-40d6-4293-9f69-e2638ddcfad8',
     },
   ],
 };

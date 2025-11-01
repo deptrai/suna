@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     template: `%s - ${siteConfig.name}`,
   },
   description:
-    'Kortix is a fully open source AI assistant that helps you accomplish real-world tasks with ease. Through natural conversation, Kortix becomes your digital companion for research, data analysis, and everyday challenges.',
+    'Epsilon is a fully open source AI assistant that helps you accomplish real-world tasks with ease. Through natural conversation, Epsilon becomes your digital companion for research, data analysis, and everyday challenges.',
   keywords: [
     'AI',
     'artificial intelligence',
@@ -37,13 +37,13 @@ export const metadata: Metadata = {
     'research',
     'data analysis',
   ],
-  authors: [{ name: 'Kortix Team', url: 'https://suna.so' }],
+  authors: [{ name: 'Epsilon Team', url: 'https://chainlens.net' }],
   creator:
-    'Kortix Team',
+    'Epsilon Team',
   publisher:
-    'Kortix Team',
+    'Epsilon Team',
   category: 'Technology',
-  applicationName: 'Kortix',
+  applicationName: 'Epsilon',
   formatDetection: {
     telephone: false,
     email: false,
@@ -58,17 +58,17 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: 'Kortix - Open Source Generalist AI Worker',
+    title: 'Epsilon - Open Source Generalist AI Worker',
     description:
-      'Kortix is a fully open source AI assistant that helps you accomplish real-world tasks with ease through natural conversation.',
+      'Epsilon is a fully open source AI assistant that helps you accomplish real-world tasks with ease through natural conversation.',
     url: siteConfig.url,
-    siteName: 'Kortix',
+    siteName: 'Epsilon',
     images: [
       {
         url: new URL('/banner.png', siteConfig.url).toString(),
         width: 1200,
         height: 630,
-        alt: 'Kortix - Open Source Generalist AI Worker',
+        alt: 'Epsilon - Open Source Generalist AI Worker',
         type: 'image/png',
       },
     ],
@@ -76,11 +76,11 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Kortix - Open Source Generalist AI Worker',
+    title: 'Epsilon - Open Source Generalist AI Worker',
     description:
-      'Kortix is a fully open source AI assistant that helps you accomplish real-world tasks with ease through natural conversation.',
-    creator: '@kortixai',
-    site: '@kortixai',
+      'Epsilon is a fully open source AI assistant that helps you accomplish real-world tasks with ease through natural conversation.',
+    creator: '@epsilonai',
+    site: '@epsilonai',
     images: [new URL('/banner.png', siteConfig.url).toString()],
   },
   icons: {

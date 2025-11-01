@@ -13,7 +13,7 @@
 
 ### Điều chỉnh quan trọng từ v1.2
 ❌ **KHÔNG rebuild từ đầu** - Hệ thống đã production-ready
-✅ **System đã có:** Backend Python (Suna), Microservices NestJS, LLM orchestration, Tool ecosystem
+✅ **System đã có:** Backend Python (ChainLens), Microservices NestJS, LLM orchestration, Tool ecosystem
 ✅ **Focus MVP:** Activate existing features + Payment integration + User onboarding
 ✅ **Timeline:** 14 ngày để launch business features, không phải build technical infrastructure
 
@@ -41,13 +41,13 @@ Microservices (NestJS) - Đã tích hợp:
 
 Frontend (Next.js 15):
   - Port: 3000
-  - Chat Interface: Suna UI ✅
+  - Chat Interface: ChainLens UI ✅
   - Real-time Communication ✅
   - Multi-language Support (8 languages) ✅
 
 Integration:
   - API Gateway: chainlens-core routing ✅
-  - Tool Calls: Suna → Services → Response ✅
+  - Tool Calls: ChainLens → Services → Response ✅
   - Authentication: Supabase RLS ✅
 ```
 

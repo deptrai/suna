@@ -19,7 +19,7 @@
 
 ## 🎯 Overview
 
-This document provides comprehensive visual representations of the Suna AI Agent Platform architecture using Mermaid diagrams. These diagrams serve as the single source of truth for understanding system components, their relationships, and data flows.
+This document provides comprehensive visual representations of the ChainLens AI Agent Platform architecture using Mermaid diagrams. These diagrams serve as the single source of truth for understanding system components, their relationships, and data flows.
 
 ### **🔍 Diagram Types**
 

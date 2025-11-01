@@ -71,7 +71,7 @@
   },
   "chat": {
     "newChat": "Nouveau Chat",
-    "placeholder": "Donne une tâche à Kortix...",
+    "placeholder": "Donne une tâche à Epsilon...",
     "recording": "Enregistrement...",
     "cancelRecording": "Annuler",
     "stopRecording": "Arrêter",
@@ -87,7 +87,7 @@
     "newWorker": "Nouveau Worker",
     "myWorkers": "Mes Workers",
     "searchAgents": "Rechercher workers",
-    "defaultAgent": "Kortix",
+    "defaultAgent": "Epsilon",
     "defaultDescription": "IA polyvalente pour toutes les tâches",
     "superWorker": "Super Worker",
     "coder": "Coder",
@@ -242,7 +242,7 @@
     "chooseModelFor": "Choisis un modèle pour {{agent}}"
   },
   "placeholders": {
-    "default": "Donne une tâche à Kortix...",
+    "default": "Donne une tâche à Epsilon...",
     "search": "Rechercher...",
     "searchConversations": "Rechercher chats",
     "searchAgents": "Rechercher workers",

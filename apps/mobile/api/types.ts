@@ -212,9 +212,9 @@ export interface Agent {
   current_version?: AgentVersion | null;
   metadata?: {
     template_name?: string;
-    kortix_template_id?: string;
-    is_kortix_team?: boolean;
-    is_suna_default?: boolean;
+    epsilon_template_id?: string;
+    is_epsilon_team?: boolean;
+    is_chainlens_default?: boolean;
     centrally_managed?: boolean;
     management_version?: string;
     restrictions?: {

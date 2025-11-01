@@ -198,7 +198,7 @@ export function useAuth() {
       }
 
       // Force mobile redirect URL (not web Site URL)
-      const redirectTo = 'kortix://auth/callback';
+      const redirectTo = 'epsilon://auth/callback';
 
       console.log('📊 Redirect URL:', redirectTo);
 
@@ -318,7 +318,7 @@ export function useAuth() {
       setError(null);
 
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'kortix://auth/reset-password',
+        redirectTo: 'epsilon://auth/reset-password',
       });
 
       if (resetError) {

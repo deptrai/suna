@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the architectural implementation of OpenAI-compatible model integration in the Suna AI Agent system, specifically designed to support third-party providers like v98store that follow the OpenAI API specification.
+This document describes the architectural implementation of OpenAI-compatible model integration in the ChainLens AI Agent system, specifically designed to support third-party providers like v98store that follow the OpenAI API specification.
 
 ## Architecture Principles
 

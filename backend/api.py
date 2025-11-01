@@ -132,7 +132,7 @@ async def log_requests_middleware(request: Request, call_next):
         raise
 
 # Define allowed origins based on environment
-allowed_origins = ["https://www.kortix.com", "https://kortix.com", "https://www.suna.so", "https://suna.so"]
+allowed_origins = ["https://www.epsilon.com", "https://epsilon.com", "https://www.chainlens.net", "https://chainlens.net"]
 allow_origin_regex = None
 
 # Add staging-specific origins
@@ -142,10 +142,10 @@ if config.ENV_MODE == EnvMode.LOCAL:
 
 # Add staging-specific origins
 if config.ENV_MODE == EnvMode.STAGING:
-    allowed_origins.append("https://staging.suna.so")
+    allowed_origins.append("https://staging.chainlens.net")
     allowed_origins.append("http://localhost:3000")
     # Allow Vercel preview deployments for both legacy and new project names
-    allow_origin_regex = r"https://(suna|kortixcom)-.*-prjcts\.vercel\.app"
+    allow_origin_regex = r"https://(chainlens|epsiloncom)-.*-prjcts\.vercel\.app"
 
 # Add localhost for production mode local testing (for master password login)
 if config.ENV_MODE == EnvMode.PRODUCTION:

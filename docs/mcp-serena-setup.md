@@ -16,7 +16,7 @@ Serena là một powerful coding agent toolkit providing semantic retrieval and 
 
 ### **Project Structure:**
 ```
-/Users/mac_1/Documents/GitHub/suna/
+/Users/mac_1/Documents/GitHub/chainlens/
 ├── serena/                          # Serena toolkit clone
 │   ├── .venv/                       # Python virtual environment
 │   ├── src/serena/                  # Serena source code
@@ -37,16 +37,16 @@ Serena là một powerful coding agent toolkit providing semantic retrieval and 
     "command": "uvx",
     "args": [
       "--from",
-      "/Users/mac_1/Documents/GitHub/suna/serena",
+      "/Users/mac_1/Documents/GitHub/chainlens/serena",
       "serena",
       "start-mcp-server",
       "--project",
-      "/Users/mac_1/Documents/GitHub/suna",
+      "/Users/mac_1/Documents/GitHub/chainlens",
       "--transport",
       "stdio"
     ],
     "env": {},
-    "working_directory": "/Users/mac_1/Documents/GitHub/suna"
+    "working_directory": "/Users/mac_1/Documents/GitHub/chainlens"
   }
 }
 ```
@@ -63,18 +63,18 @@ Serena là một powerful coding agent toolkit providing semantic retrieval and 
 ```json
 {
   "serena": {
-    "command": "/Users/mac_1/Documents/GitHub/suna/serena/.venv/bin/python",
+    "command": "/Users/mac_1/Documents/GitHub/chainlens/serena/.venv/bin/python",
     "args": [
       "-m",
       "serena.cli",
       "start-mcp-server",
       "--project",
-      "/Users/mac_1/Documents/GitHub/suna",
+      "/Users/mac_1/Documents/GitHub/chainlens",
       "--transport",
       "stdio"
     ],
     "env": {},
-    "working_directory": "/Users/mac_1/Documents/GitHub/suna/serena"
+    "working_directory": "/Users/mac_1/Documents/GitHub/chainlens/serena"
   }
 }
 ```
@@ -102,11 +102,11 @@ Serena là một powerful coding agent toolkit providing semantic retrieval and 
          "command": "uvx",
          "args": [
            "--from",
-           "/Users/mac_1/Documents/GitHub/suna/serena",
+           "/Users/mac_1/Documents/GitHub/chainlens/serena",
            "serena",
            "start-mcp-server",
            "--project",
-           "/Users/mac_1/Documents/GitHub/suna",
+           "/Users/mac_1/Documents/GitHub/chainlens",
            "--transport",
            "stdio"
          ]
@@ -174,7 +174,7 @@ cd serena && uv sync --python 3.11
 # Solution: Ensure proper virtual environment activation
 
 # Using uvx (automatic)
-uvx --from /Users/mac_1/Documents/GitHub/suna/serena serena --help
+uvx --from /Users/mac_1/Documents/GitHub/chainlens/serena serena --help
 
 # Using direct Python (manual)
 cd serena && uv run serena --help
@@ -186,7 +186,7 @@ cd serena && uv run serena --help
 # Solution: Verify server starts correctly
 
 # Test server startup
-cd serena && uv run serena start-mcp-server --project /Users/mac_1/Documents/GitHub/suna
+cd serena && uv run serena start-mcp-server --project /Users/mac_1/Documents/GitHub/chainlens
 ```
 
 **4. Project Path Issues**
@@ -195,10 +195,10 @@ cd serena && uv run serena start-mcp-server --project /Users/mac_1/Documents/Git
 # Solution: Ensure correct absolute paths in configuration
 
 # Verify project path exists
-ls -la /Users/mac_1/Documents/GitHub/suna
+ls -la /Users/mac_1/Documents/GitHub/chainlens
 
 # Test project detection
-cd serena && uv run serena project health-check /Users/mac_1/Documents/GitHub/suna
+cd serena && uv run serena project health-check /Users/mac_1/Documents/GitHub/chainlens
 ```
 
 ### **Debugging Steps**
@@ -210,12 +210,12 @@ cd serena && uv run serena project health-check /Users/mac_1/Documents/GitHub/su
 
 2. **Test MCP Server:**
    ```bash
-   cd serena && uv run serena start-mcp-server --project /Users/mac_1/Documents/GitHub/suna --log-level DEBUG
+   cd serena && uv run serena start-mcp-server --project /Users/mac_1/Documents/GitHub/chainlens --log-level DEBUG
    ```
 
 3. **Check Project Health:**
    ```bash
-   cd serena && uv run serena project health-check /Users/mac_1/Documents/GitHub/suna
+   cd serena && uv run serena project health-check /Users/mac_1/Documents/GitHub/chainlens
    ```
 
 4. **Validate JSON Configuration:**
@@ -229,7 +229,7 @@ cd serena && uv run serena project health-check /Users/mac_1/Documents/GitHub/su
 
 ```bash
 # Navigate to serena directory
-cd /Users/mac_1/Documents/GitHub/suna/serena
+cd /Users/mac_1/Documents/GitHub/chainlens/serena
 
 # Pull latest changes
 git pull origin main
@@ -245,7 +245,7 @@ uv run serena --help
 
 ```bash
 # Test uvx configuration
-uvx --from /Users/mac_1/Documents/GitHub/suna/serena serena start-mcp-server --project /Users/mac_1/Documents/GitHub/suna --help
+uvx --from /Users/mac_1/Documents/GitHub/chainlens/serena serena start-mcp-server --project /Users/mac_1/Documents/GitHub/chainlens --help
 
 # Validate JSON syntax
 python -c "import json; print('Valid JSON') if json.load(open('mcp-serena-simple-config.json')) else print('Invalid JSON')"
@@ -273,13 +273,13 @@ python -c "import json; print('Valid JSON') if json.load(open('mcp-serena-simple
 
 ```bash
 # Custom project configuration
-cd serena && uv run serena project generate-yml /Users/mac_1/Documents/GitHub/suna --language typescript
+cd serena && uv run serena project generate-yml /Users/mac_1/Documents/GitHub/chainlens --language typescript
 
 # Index project for faster symbol lookup
-cd serena && uv run serena project index /Users/mac_1/Documents/GitHub/suna
+cd serena && uv run serena project index /Users/mac_1/Documents/GitHub/chainlens
 
 # Health check with detailed information
-cd serena && uv run serena project health-check /Users/mac_1/Documents/GitHub/suna --verbose
+cd serena && uv run serena project health-check /Users/mac_1/Documents/GitHub/chainlens --verbose
 ```
 
 ## 🎉 **Next Steps**
@@ -300,4 +300,4 @@ cd serena && uv run serena project health-check /Users/mac_1/Documents/GitHub/su
 
 **Last Updated**: September 9, 2025  
 **Serena Version**: Latest from GitHub  
-**Project**: suna AI Agent Platform
+**Project**: chainlens AI Agent Platform

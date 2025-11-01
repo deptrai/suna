@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Auto-generated ENHANCED monitoring script with optional service handling
-source "/Users/mac_1/Documents/GitHub/suna/scripts/lib/utils.sh"
-source "/Users/mac_1/Documents/GitHub/suna/scripts/lib/health_checks.sh"
-source "/Users/mac_1/Documents/GitHub/suna/scripts/lib/monitoring.sh"
+source "/Users/mac_1/Documents/GitHub/chainlens/scripts/lib/utils.sh"
+source "/Users/mac_1/Documents/GitHub/chainlens/scripts/lib/health_checks.sh"
+source "/Users/mac_1/Documents/GitHub/chainlens/scripts/lib/monitoring.sh"
 
 # Initialize monitoring
 init_monitoring
