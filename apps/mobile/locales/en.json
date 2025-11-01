@@ -154,7 +154,8 @@
   },
   "chat": {
     "newChat": "New Chat",
-    "placeholder": "Give Epsilon a task...",
+    "placeholder": "Give Kortix a task...",
+    "inputPlaceholder": "Ask Kortix to do anything...",
     "recording": "Recording...",
     "cancelRecording": "Cancel recording",
     "stopRecording": "Stop recording",
@@ -170,7 +171,7 @@
     "newWorker": "New Worker",
     "myWorkers": "My Workers",
     "searchAgents": "Search workers",
-    "defaultAgent": "Epsilon",
+    "defaultAgent": "Kortix",
     "defaultDescription": "General purpose AI for all tasks",
     "superWorker": "Super Worker",
     "coder": "Coder",
@@ -195,6 +196,9 @@
     "docs": "Docs",
     "people": "People",
     "research": "Research",
+    "summarizePlaceholder": "What would you like to summarize?",
+    "translatePlaceholder": "What would you like to translate?",
+    "explainPlaceholder": "What would you like explained?",
     "chooseStyle": "Choose {{action}} style",
     "imageStyles": {
       "abstract": "Abstract",
@@ -318,12 +322,21 @@
     "fileTooLarge": "File size exceeds the maximum allowed size.",
     "uploadFailed": "Failed to upload files. Please try again."
   },
+  "permissions": {
+    "cameraTitle": "Camera Permission Required",
+    "cameraMessage": "Please enable camera access in your settings to take photos.",
+    "galleryTitle": "Photo Library Permission Required",
+    "galleryMessage": "Please enable photo library access in your settings to choose images."
+  },
+  "audio": {
+    "transcriptionFailed": "Failed to transcribe audio. Please try again."
+  },
   "models": {
     "selectModel": "Select Model",
     "chooseModelFor": "Choose a model for {{agent}}"
   },
   "placeholders": {
-    "default": "Give Epsilon a task...",
+    "default": "Give Kortix a task...",
     "search": "Search...",
     "searchConversations": "Search chats",
     "searchAgents": "Search workers",

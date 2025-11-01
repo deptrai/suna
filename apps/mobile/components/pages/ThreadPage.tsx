@@ -14,7 +14,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import LottieView from 'lottie-react-native';
-import { MessageRenderer, ToolCallPanel, ChatInputSection, ChatDrawers, type ToolMessagePair } from '@/components/chat';
+import { ThreadContent, ToolCallPanel, ChatInputSection, ChatDrawers, type ToolMessagePair } from '@/components/chat';
 import { ThreadHeader, ThreadActionsDrawer } from '@/components/threads';
 import { FileManagerScreen } from '@/components/files';
 import { useChatCommons, type UseChatReturn, useDeleteThread, useShareThread } from '@/hooks';
@@ -240,13 +240,22 @@ export function ThreadPage({
   const router = useRouter();
   const [isThreadActionsVisible, setIsThreadActionsVisible] = React.useState(false);
   const [isFileManagerVisible, setIsFileManagerVisible] = React.useState(false);
+  const [selectedFilePath, setSelectedFilePath] = React.useState<string | undefined>();
   
   // Thread actions hooks
   const deleteThreadMutation = useDeleteThread();
   const shareThreadMutation = useShareThread();
   
   // Get full thread data with sandbox info
-  const { data: fullThreadData } = useThread(chat.activeThread?.id);
+  const { data: fullThreadData, refetch: refetchThreadData } = useThread(chat.activeThread?.id);
+  
+  // Refetch thread data when file manager opens to ensure latest sandbox info
+  React.useEffect(() => {
+    if (isFileManagerVisible) {
+      console.log('[ThreadPage] File manager opened - refetching thread/sandbox data...');
+      refetchThreadData();
+    }
+  }, [isFileManagerVisible, refetchThreadData]);
   
   const messages = chat.messages || [];
   const streamingContent = chat.streamingContent || '';
@@ -439,7 +448,7 @@ export function ThreadPage({
               flexGrow: 1,
               paddingTop: insets.top + 60, 
               paddingBottom: 200,
-              paddingHorizontal: 16,
+              paddingHorizontal: 14,
             }}
             keyboardShouldPersistTaps="handled"
             scrollEventThrottle={16}
@@ -465,14 +474,25 @@ export function ThreadPage({
               />
             }
           >
-            <MessageRenderer
+            <ThreadContent
               messages={messages}
-              streamingContent={streamingContent}
+              streamingTextContent={streamingContent}
               streamingToolCall={streamingToolCall}
-              isStreaming={chat.isStreaming}
-              sandboxId={fullThreadData?.project?.sandbox?.id}
+              agentStatus={chat.isAgentRunning ? 'running' : 'idle'}
+              streamHookStatus={chat.isStreaming ? 'streaming' : 'idle'}
+              sandboxId={chat.activeSandboxId || fullThreadData?.project?.sandbox?.id}
+              handleToolClick={(assistantMessageId: string | null, toolName: string) => {
+                console.log('[ThreadPage] Tool clicked:', toolName);
+              }}
               onToolPress={(toolMessages, initialIndex) => {
+                console.log('[ThreadPage] Tool card pressed, opening panel');
                 chat.setSelectedToolData({ toolMessages, initialIndex });
+              }}
+              onFilePress={(filePath: string) => {
+                console.log('[ThreadPage] File clicked:', filePath);
+                const normalizedPath = filePath.startsWith('/') ? filePath : `/workspace/${filePath}`;
+                setSelectedFilePath(normalizedPath);
+                setIsFileManagerVisible(true);
               }}
             />
           </ScrollView>
@@ -489,22 +509,20 @@ export function ThreadPage({
       )}
 
 
-    <View className="absolute top-0 left-0 right-0">
       {/* Thread Header */}
       <ThreadHeader
-          threadTitle={chat.activeThread?.title}
-          onTitleChange={async (newTitle) => {
-            console.log('📝 Thread title changed to:', newTitle);
-            try {
-              await chat.updateThreadTitle(newTitle);
-            } catch (error) {
-              console.error('❌ Failed to update thread title:', error);
-            }
-          }}
-          onMenuPress={onMenuPress}
-          onActionsPress={() => setIsThreadActionsVisible(true)}
-        />
-    </View>        
+        threadTitle={chat.activeThread?.title}
+        onTitleChange={async (newTitle) => {
+          console.log('📝 Thread title changed to:', newTitle);
+          try {
+            await chat.updateThreadTitle(newTitle);
+          } catch (error) {
+            console.error('❌ Failed to update thread title:', error);
+          }
+        }}
+        onMenuPress={onMenuPress}
+        onActionsPress={() => setIsThreadActionsVisible(true)}
+      />        
 
       {/* Chat Input Section with Gradient */}
       <ChatInputSection
@@ -629,11 +647,17 @@ export function ThreadPage({
         presentationStyle="fullScreen"
         onRequestClose={() => setIsFileManagerVisible(false)}
       >
-        {fullThreadData?.project?.sandbox?.id ? (
+        {(chat.activeSandboxId || fullThreadData?.project?.sandbox?.id) ? (
           <FileManagerScreen
-            sandboxId={fullThreadData.project.sandbox.id}
-            sandboxUrl={fullThreadData.project.sandbox.sandbox_url}
-            onClose={() => setIsFileManagerVisible(false)}
+            key={`${chat.activeSandboxId}-${chat.isStreaming}`}
+            sandboxId={chat.activeSandboxId || fullThreadData?.project?.sandbox?.id || ''}
+            sandboxUrl={fullThreadData?.project?.sandbox?.sandbox_url}
+            initialFilePath={selectedFilePath}
+            isStreaming={chat.isStreaming}
+            onClose={() => {
+              setIsFileManagerVisible(false);
+              setSelectedFilePath(undefined);
+            }}
           />
         ) : (
           <View style={{ flex: 1, backgroundColor: isDark ? '#121215' : '#f8f8f8' }}>
