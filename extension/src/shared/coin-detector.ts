@@ -206,46 +206,6 @@ function matchCoinSymbols(text: string): Array<{ symbol: string; name: string }>
 }
 
 /**
- * Extract Price từ Text
- * @param text Text content to search
- * @returns Parsed price as number, or null if not found
- */
-function extractPrice(text: string): number | null {
-  // Try each price pattern
-  for (const pattern of PRICE_PATTERNS) {
-    pattern.lastIndex = 0;
-    const match = pattern.exec(text);
-    
-    if (match) {
-      const priceStr = match[1].replace(/,/g, ''); // Remove commas
-      const price = parseFloat(priceStr);
-      
-      if (!isNaN(price) && price > 0) {
-        // Handle "k" suffix (e.g., 45k = 45000)
-        if (text.toLowerCase().includes(`${priceStr}k`) || text.toLowerCase().includes(`${match[1]}k`)) {
-          return price * 1000;
-        }
-        return price;
-      }
-    }
-  }
-  
-  return null;
-}
-
-/**
- * Parse Price Value
- * @param priceStr Price string (e.g., "45,000", "$45,000")
- * @returns Parsed price as number
- */
-function parsePrice(priceStr: string): number {
-  // Remove currency symbols and commas
-  const cleaned = priceStr.replace(/[$€£¥,\s]/g, '');
-  const price = parseFloat(cleaned);
-  return isNaN(price) ? 0 : price;
-}
-
-/**
  * Extract Price Near Symbol
  * Extracts price từ text that appears near a coin symbol
  * Looks for prices within reasonable distance (e.g., "BTC $45,000" or "ETH 3,500 USD")
@@ -298,6 +258,9 @@ export function detectCoins(element: HTMLElement): CoinDetection[] {
   const results: CoinDetection[] = [];
   const processedElements = new Set<HTMLElement>();
   
+  // Create coin name pattern once (optimization: avoid recreating in loop)
+  const coinNamePattern = createCoinNamePattern();
+  
   // Use TreeWalker to traverse text nodes
   const walker = document.createTreeWalker(
     element,
@@ -322,8 +285,7 @@ export function detectCoins(element: HTMLElement): CoinDetection[] {
     const parentElement = textNode.parentElement;
     if (!parentElement || processedElements.has(parentElement)) continue;
     
-    // Match coin names
-    const coinNamePattern = createCoinNamePattern();
+    // Match coin names (reuse pattern created outside loop)
     coinNamePattern.lastIndex = 0;
     let nameMatch;
     while ((nameMatch = coinNamePattern.exec(text)) !== null) {
@@ -360,14 +322,21 @@ export function detectCoins(element: HTMLElement): CoinDetection[] {
   }
   
   // Deduplicate results (same element + name + symbol combination)
+  // Optimization: Use Map với element reference for efficient deduplication
   const uniqueResults: CoinDetection[] = [];
-  const seen = new Set<string>();
+  const seen = new Map<HTMLElement, Set<string>>();
   
   for (const result of results) {
-    // Create unique key based on element, name, và symbol
-    const key = `${result.element.tagName}-${result.element.textContent?.substring(0, 50)}-${result.name}-${result.symbol || ''}`;
-    if (!seen.has(key)) {
-      seen.add(key);
+    // Get or create set for this element
+    if (!seen.has(result.element)) {
+      seen.set(result.element, new Set());
+    }
+    const elementKeys = seen.get(result.element)!;
+    
+    // Create unique key based on name và symbol for this element
+    const key = `${result.name}-${result.symbol || ''}`;
+    if (!elementKeys.has(key)) {
+      elementKeys.add(key);
       uniqueResults.push(result);
     }
   }
