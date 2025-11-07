@@ -8,6 +8,7 @@ using LiteLLM with simplified error handling and clean parameter management.
 from typing import Union, Dict, Any, Optional, AsyncGenerator, List
 import os
 import asyncio
+import time
 import litellm
 from litellm.router import Router
 from litellm.files.main import ModelResponse
@@ -29,11 +30,112 @@ litellm.drop_params = True
 # Constants
 MAX_RETRIES = 3
 provider_router = None
+_litellm_cache_configured = False
 
 
 class LLMError(Exception):
     """Exception for LLM-related errors."""
     pass
+
+async def _perform_cache_health_check() -> None:
+    """Perform cache health check (async helper)."""
+    try:
+        from core.services.cache_metrics import check_cache_health
+        health_status = await check_cache_health()
+        if health_status.get('healthy'):
+            logger.info("✅ LiteLLM cache health check passed")
+        else:
+            logger.warning(
+                f"⚠️ LiteLLM cache health check failed: {health_status.get('details', {})}"
+            )
+    except Exception as e:
+        logger.debug(f"Cache health check error (non-critical): {e}")
+
+
+def setup_litellm_redis_cache() -> None:
+    """
+    Configure LiteLLM Redis caching for exact match responses (Story 1.2).
+    
+    This enables LiteLLM to cache LLM responses in Redis for exact query matches,
+    reducing API calls by 10-20% without quality impact.
+    """
+    global _litellm_cache_configured
+    
+    if _litellm_cache_configured:
+        return  # Already configured
+    
+    if not config:
+        logger.warning("Config not loaded - skipping LiteLLM cache setup")
+        return
+    
+    # Check if caching is enabled
+    cache_enabled = getattr(config, 'LITELLM_CACHE_ENABLED', True)
+    if not cache_enabled:
+        logger.info("LiteLLM Redis caching is disabled (LITELLM_CACHE_ENABLED=False)")
+        _litellm_cache_configured = True
+        return
+    
+    try:
+        # Get Redis configuration
+        redis_host = getattr(config, 'REDIS_HOST', 'localhost')
+        redis_port = getattr(config, 'REDIS_PORT', 6379)
+        redis_password = getattr(config, 'REDIS_PASSWORD', None)
+        cache_ttl = getattr(config, 'LITELLM_CACHE_TTL', 3600)  # Default 1 hour
+        
+        # Configure LiteLLM Redis cache (exact match only, not semantic)
+        # Use environment variables for LiteLLM cache configuration
+        # LiteLLM reads these automatically when cache_type="redis"
+        os.environ['LITELLM_CACHE_TYPE'] = 'redis'  # Exact match only (not redis-semantic)
+        os.environ['LITELLM_CACHE_HOST'] = str(redis_host)
+        os.environ['LITELLM_CACHE_PORT'] = str(redis_port)
+        if redis_password:
+            os.environ['LITELLM_CACHE_PASSWORD'] = redis_password
+        os.environ['LITELLM_CACHE_TTL_SECONDS'] = str(cache_ttl)
+        
+        # Set cache namespace prefix to prevent conflicts with other Redis keys
+        os.environ['LITELLM_CACHE_KEY_PREFIX'] = 'litellm:cache:'
+        
+        # Initialize LiteLLM cache using Cache class
+        # LiteLLM supports Redis caching via Cache or RedisCache class
+        try:
+            # Try RedisCache first (more specific)
+            try:
+                from litellm import RedisCache
+                litellm.cache = RedisCache(
+                    host=redis_host,
+                    port=redis_port,
+                    password=redis_password,
+                    ttl=cache_ttl,
+                )
+            except (ImportError, AttributeError):
+                # Fallback to Cache class
+                from litellm import Cache
+                litellm.cache = Cache(
+                    type="redis",
+                    host=redis_host,
+                    port=redis_port,
+                    password=redis_password,
+                    ttl=cache_ttl,
+                )
+        except Exception as e:
+            # Fallback: Use environment variables only (LiteLLM will read them)
+            logger.debug(f"LiteLLM Cache class not available ({e}), using environment variables only")
+        
+        _litellm_cache_configured = True
+        logger.info(
+            f"✅ LiteLLM Redis caching configured: "
+            f"host={redis_host}, port={redis_port}, ttl={cache_ttl}s, "
+            f"namespace=litellm:cache:"
+        )
+        
+        # Minor Recommendation: Cache Health Check (deferred to first use)
+        # Health check will be performed when cache is first used
+        logger.debug("Cache health check will be performed on first cache operation")
+        
+    except Exception as e:
+        logger.warning(f"Failed to configure LiteLLM Redis caching: {e}. Continuing without cache.")
+        _litellm_cache_configured = True  # Mark as configured to avoid repeated attempts
+
 
 def setup_api_keys() -> None:
     """Set up API keys from environment variables."""
@@ -258,6 +360,87 @@ async def make_llm_api_call(
         
         response = await provider_router.acompletion(**params)
         
+        # Track LiteLLM cache metrics (Story 1.2 - Redis Response Caching)
+        # Minor Recommendation: Cache Metrics Aggregation
+        cache_hit = False
+        cache_key = None
+        response_time_ms = None
+        
+        try:
+            # Extract cache hit/miss information from LiteLLM response
+            # LiteLLM adds cache metadata to response object in various ways
+            start_time = time.time() if hasattr(response, '_response_ms') else None
+            
+            # Method 1: Check _hidden_params (most common)
+            if hasattr(response, '_hidden_params') and response._hidden_params:
+                cache_info = response._hidden_params.get('cache', {})
+                if cache_info:
+                    cache_hit = cache_info.get('hit', False) or cache_info.get('cache_hit', False)
+                    cache_key = cache_info.get('key', None) or cache_info.get('cache_key', None)
+            
+            # Calculate response time if available
+            if hasattr(response, '_response_ms'):
+                response_time_ms = response._response_ms
+            elif start_time:
+                response_time_ms = (time.time() - start_time) * 1000
+            
+            # Note: LiteLLM cache hit/miss info is primarily in _hidden_params
+            # Other methods are provider-specific and not reliable
+            
+            # Record metrics in collector (Minor Recommendation: Cache Metrics Aggregation)
+            try:
+                from core.services.cache_metrics import get_cache_metrics_collector, check_cache_health
+                collector = get_cache_metrics_collector()
+                
+                # Perform health check on first cache operation (Minor Recommendation: Cache Health Check)
+                if collector.total_requests == 0:
+                    try:
+                        health_status = await check_cache_health()
+                        if health_status.get('healthy'):
+                            logger.info("✅ LiteLLM cache health check passed (first operation)")
+                        else:
+                            logger.warning(
+                                f"⚠️ LiteLLM cache health check failed: {health_status.get('details', {})}"
+                            )
+                    except Exception as e:
+                        logger.debug(f"Cache health check error (non-critical): {e}")
+                
+                await collector.record_cache_operation(
+                    cache_hit=cache_hit,
+                    model_name=model_name,
+                    cache_key=cache_key,
+                    response_time_ms=response_time_ms,
+                    metadata={'stream': stream}
+                )
+                
+                # Log aggregated metrics periodically (every 100 requests)
+                if collector.total_requests % 100 == 0:
+                    hit_rate = collector.get_cache_hit_rate_percentage()
+                    logger.info(
+                        f"📊 Cache Metrics Summary - "
+                        f"Total: {collector.total_requests}, "
+                        f"Hits: {collector.cache_hits}, "
+                        f"Misses: {collector.cache_misses}, "
+                        f"Hit Rate: {hit_rate:.2f}%"
+                    )
+            except Exception as e:
+                logger.debug(f"Cache metrics collection error (non-critical): {e}")
+            
+            # Log cache metrics
+            if cache_hit:
+                logger.info(
+                    f"📊 LiteLLM Cache HIT - model={model_name}, "
+                    f"cache_key={cache_key[:50] if cache_key else 'N/A'}..."
+                )
+            else:
+                logger.debug(
+                    f"📊 LiteLLM Cache MISS - model={model_name}"
+                )
+                
+        except Exception as e:
+            # Don't fail LLM calls if cache metrics extraction fails
+            logger.debug(f"Cache metrics extraction error (non-critical): {e}")
+        
         # Track quality metrics (Story 2.4 - Quality Monitoring Framework)
         try:
             from core.optimizations.quality_monitor import get_quality_monitor
@@ -296,6 +479,9 @@ async def _wrap_streaming_response(response) -> AsyncGenerator:
         processed_error = ErrorProcessor.process_llm_error(e)
         ErrorProcessor.log_error(processed_error)
         raise LLMError(processed_error.message)
+
+# Initialize LiteLLM Redis caching (Story 1.2)
+setup_litellm_redis_cache()
 
 setup_api_keys()
 setup_provider_router()

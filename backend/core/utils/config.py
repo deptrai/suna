@@ -326,6 +326,10 @@ class Configuration:
     REDIS_PASSWORD: Optional[str] = None
     REDIS_SSL: Optional[bool] = True
     
+    # LiteLLM Redis Cache configuration (Story 1.2)
+    LITELLM_CACHE_TTL: Optional[int] = 3600  # Default 1 hour (3600 seconds)
+    LITELLM_CACHE_ENABLED: Optional[bool] = True  # Enable LiteLLM Redis caching
+    
     # Daytona sandbox configuration (optional - sandbox features disabled if not configured)
     DAYTONA_API_KEY: Optional[str] = None
     DAYTONA_SERVER_URL: Optional[str] = None
