@@ -114,12 +114,37 @@ See `package.json` for complete dependency list.
 
 ## Build Process
 
-Build configuration will be implemented in Story 10.3. The build process will:
+Build configuration is implemented in Story 10.3. The build process:
 
-1. Bundle content script, popup, và background worker
-2. Resolve TypeScript path aliases
-3. Include Tailwind CSS styles
-4. Output to `dist/` directory for Chrome extension loading
+1. Bundles content script, popup, và background worker
+2. Processes TypeScript và React code
+3. Extracts CSS for content scripts
+4. Copies static assets (icons, manifest.json)
+5. Runs ESLint during build (with caching)
+6. Shows build progress automatically
+
+### Build Scripts
+
+- `pnpm run build` - Production build
+- `pnpm run dev` - Development build với watch mode
+- `pnpm run analyze` - Production build với bundle analyzer (opens browser)
+- `pnpm run lint` - Run ESLint manually
+- `pnpm run lint:fix` - Run ESLint và auto-fix issues
+
+### Bundle Analysis
+
+Use `pnpm run analyze` để analyze bundle sizes. This will:
+- Open a browser với interactive bundle visualization
+- Generate `bundle-report.html` và `bundle-stats.json` trong dist/
+- Show which modules contribute to bundle size
+
+### ESLint Integration
+
+ESLint runs automatically during build:
+- **Development**: Shows warnings và errors, doesn't fail build
+- **Production**: Fails build on errors, shows warnings
+- **Caching**: Enabled for faster subsequent builds
+- **Cache location**: `node_modules/.cache/.eslintcache`
 
 ## Testing
 

@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+*.log
+
+# Cache directories
+.cache/
+node_modules/.cache/
+.eslintcache
+*.cache
+
+# Bundle analysis reports
+bundle-report.html
+bundle-stats.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# TypeScript
+*.tsbuildinfo
+
+# Testing
+coverage/
+.nyc_output/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+

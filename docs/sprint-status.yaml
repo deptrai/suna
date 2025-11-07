@@ -44,7 +44,7 @@ development_status:
   epic-1-retrospective: optional
 
   epic-2: backlog
-  2-1-semantic-response-caching-quality-controlled: ready-for-dev
+  2-1-semantic-response-caching-quality-controlled: done
   2-2-message-history-compression-quality-preserving: ready-for-dev
   2-3-tool-schema-optimization-minimal-format: ready-for-dev
   2-4-quality-monitoring-framework: done
@@ -58,9 +58,9 @@ development_status:
 
   # Extension Project Stories (Epic 10-14)
   extension-epic-1: backlog
-  10-1-extension-project-structure-setup: review
+  10-1-extension-project-structure-setup: done
   10-2-extension-manifest-configuration: review
-  10-3-build-configuration-shared-code-setup: ready-for-dev
+  10-3-build-configuration-shared-code-setup: done
   10-4-basic-popup-skeleton: ready-for-dev
   extension-epic-1-retrospective: optional
 
