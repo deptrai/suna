@@ -1,0 +1,233 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.1</storyId>
+    <title>Enable OpenAI Prompt Caching</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-07</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/1-1-enable-openai-prompt-caching.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>system administrator</asA>
+    <iWant>to enable OpenAI prompt caching for system prompts</iWant>
+    <soThat>I can reduce LLM costs by 30-50% for cached tokens without any quality impact</soThat>
+    <tasks>
+      <task id="1" ac="1">
+        <title>Restructure system prompt với static content first</title>
+        <subtasks>
+          <subtask>Analyze current prompt structure trong `backend/core/run.py::PromptManager.build_system_prompt()`</subtask>
+          <subtask>Identify static sections (default system prompt, agent builder prompt, tool schemas)</subtask>
+          <subtask>Identify dynamic sections (knowledge base, datetime, user-specific content)</subtask>
+          <subtask>Reorder prompt sections: static content first, dynamic content last</subtask>
+          <subtask>Ensure total prompt size > 1,024 tokens after restructuring</subtask>
+          <subtask>Test prompt structure với sample requests</subtask>
+          <subtask>Unit test prompt restructuring logic</subtask>
+          <subtask>Integration test với actual LLM calls</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="2">
+        <title>Verify prompt caching requirements</title>
+        <subtasks>
+          <subtask>Confirm prompt size > 1,024 tokens (OpenAI caching threshold)</subtask>
+          <subtask>Verify static content is at the beginning of prompt</subtask>
+          <subtask>Test với OpenAI Compatible API (v98store) để confirm caching works</subtask>
+          <subtask>Document caching requirements và best practices</subtask>
+          <subtask>Verify cache hit detection trong responses</subtask>
+          <subtask>Test với different prompt sizes</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="3,4">
+        <title>Implement cache monitoring</title>
+        <subtasks>
+          <subtask>Extract `cached_tokens` từ LLM response usage</subtask>
+          <subtask>Log cache metrics (cached_tokens, total_tokens, cache_hit_rate)</subtask>
+          <subtask>Add cache metrics to monitoring dashboard</subtask>
+          <subtask>Create cache hit rate tracking và reporting</subtask>
+          <subtask>Test monitoring với sample requests</subtask>
+          <subtask>Unit test cache metrics extraction</subtask>
+          <subtask>Integration test monitoring dashboard updates</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="5">
+        <title>Quality validation</title>
+        <subtasks>
+          <subtask>Compare responses với/without caching</subtask>
+          <subtask>Verify 100% similarity (cached responses = original responses)</subtask>
+          <subtask>Document quality validation results</subtask>
+          <subtask>Add quality checks to monitoring</subtask>
+          <subtask>Automated similarity testing (semantic similarity check)</subtask>
+          <subtask>A/B testing framework setup</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1">System prompt được restructure với static content first (để enable caching)</ac>
+    <ac id="2">Prompts đảm bảo > 1,024 tokens (threshold cho OpenAI caching)</ac>
+    <ac id="3">Monitor `cached_tokens` trong responses và log metrics</ac>
+    <ac id="4">Cache hit rate được track và report trong monitoring dashboard</ac>
+    <ac id="5">No quality degradation (100% similarity với original responses)</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/epics-optimization.md</path>
+        <title>ChainLens AI Worker - Epic Breakdown: LLM Optimization</title>
+        <section>Story 1.1: Enable OpenAI Prompt Caching</section>
+        <snippet>Story 1.1 defines the requirements for enabling OpenAI prompt caching. Expected savings: $18-27/month with zero quality impact. Effort: 30 minutes.</snippet>
+      </doc>
+      <doc>
+        <path>docs/optimization-master-plan-v1.1.md</path>
+        <title>ChainLens AI Worker - Master Optimization Plan v1.1</title>
+        <section>Phase 1: Quality-Preserving Quick Wins - Task 1.1: Enable OpenAI Prompt Caching</section>
+        <snippet>OpenAI prompt caching requires prompts ≥ 1,024 tokens. Static content must be placed first. Cached tokens receive 90% discount. No code changes needed - chỉ cần restructure prompt order.</snippet>
+      </doc>
+      <doc>
+        <path>docs/research-prompt-optimization.md</path>
+        <title>Research Prompt: System Prompt Optimization</title>
+        <section>5. Prompt Caching Implementation - 5.1 OpenAI-Compatible Caching</section>
+        <snippet>OpenAI and compatible APIs provide automatic prompt caching for prompts ≥ 1,024 tokens. Cache increments: 128-token chunks. TTL: 5-10 minutes. Cost reduction: Up to 50% for cached tokens. Latency reduction: Up to 80%.</snippet>
+      </doc>
+      <doc>
+        <path>docs/code-review-llm-chat-optimization.md</path>
+        <title>Code Review: LLM Chat Processing & System Prompt Optimization</title>
+        <section>1.2 System Prompt Construction</section>
+        <snippet>Current system prompt structure in `backend/core/run.py::PromptManager.build_system_prompt()`. Issues identified: System prompt bloat, redundant information, tool schema duplication.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>backend/core/run.py</path>
+        <kind>service</kind>
+        <symbol>PromptManager.build_system_prompt()</symbol>
+        <lines>326-491</lines>
+        <reason>Primary method to modify for prompt restructuring. Currently builds prompt by concatenating sections in order: default system prompt, agent-specific, builder prompt, knowledge base, MCP tools, tool schemas, datetime. Need to reorder: static sections first, dynamic sections last.</reason>
+      </file>
+      <file>
+        <path>backend/core/services/llm.py</path>
+        <kind>service</kind>
+        <symbol>make_llm_api_call()</symbol>
+        <lines>180-303</lines>
+        <reason>LLM API call handler. Need to extract `cached_tokens` from response usage metrics. Response includes usage information with cached_tokens field for OpenAI Compatible APIs.</reason>
+      </file>
+      <file>
+        <path>backend/core/agentpress/prompt_caching.py</path>
+        <kind>service</kind>
+        <symbol>apply_anthropic_caching_strategy()</symbol>
+        <lines>339-705</lines>
+        <reason>Reference implementation for Anthropic caching. Shows patterns for cache control directives, token counting, and cache management. Can reference for monitoring patterns but focus on OpenAI Compatible API.</reason>
+      </file>
+      <file>
+        <path>backend/core/prompts/agent_builder_prompt.py</path>
+        <kind>prompt</kind>
+        <symbol>get_agent_builder_prompt()</symbol>
+        <lines>382-383</lines>
+        <reason>Returns static builder prompt content (~300 tokens). This is a static section that should be placed early in the prompt for caching.</reason>
+      </file>
+      <file>
+        <path>backend/core/prompts/system_prompt.py</path>
+        <kind>prompt</kind>
+        <symbol>get_system_prompt()</symbol>
+        <lines>1-100</lines>
+        <reason>Returns default system prompt (~1,000 tokens). This is a static section that should be placed first in the prompt for caching.</reason>
+      </file>
+    </code>
+    <dependencies>
+      <ecosystem>Python</ecosystem>
+      <packages>
+        <package>litellm</package>
+        <package>openai</package>
+      </packages>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>
+      <type>Quality Requirement</type>
+      <description>Zero quality impact required. Cached responses must maintain 100% similarity with original responses.</description>
+    </constraint>
+    <constraint>
+      <type>Architecture Pattern</type>
+      <description>Dual-mode architecture: Original mode (baseline) + Optimized mode (with caching). Feature flags allow switching and rollback.</description>
+    </constraint>
+    <constraint>
+      <type>API Compatibility</type>
+      <description>Must work with OpenAI Compatible API (v98store). Current models: gpt-4o-mini, qwen3-30b, deepseek-v3-1, qwen3-235b, claude-haiku-4-5.</description>
+    </constraint>
+    <constraint>
+      <type>Token Threshold</type>
+      <description>Prompts must exceed 1,024 tokens to trigger OpenAI caching. Current prompt size: ~4,350 tokens (meets requirement).</description>
+    </constraint>
+    <constraint>
+      <type>Code Change Scope</type>
+      <description>Minimal code changes. Only restructure prompt order in `PromptManager.build_system_prompt()`. No new files required.</description>
+    </constraint>
+    <constraint>
+      <type>Backward Compatibility</type>
+      <description>Must not break existing LLM calls. Changes should be transparent to callers. Test with existing agent configurations.</description>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>PromptManager.build_system_prompt()</name>
+      <kind>method</kind>
+      <signature>async def build_system_prompt(model_name: str, agent_config: Optional[dict], thread_id: str, mcp_wrapper_instance: Optional[MCPToolWrapper], client=None, tool_registry=None, xml_tool_calling: bool = True) -> dict</signature>
+      <path>backend/core/run.py</path>
+    </interface>
+    <interface>
+      <name>make_llm_api_call()</name>
+      <kind>function</kind>
+      <signature>async def make_llm_api_call(messages: List[Dict[str, Any]], model_name: str, response_format: Optional[Any] = None, temperature: float = 0, max_tokens: Optional[int] = None, tools: Optional[List[Dict[str, Any]]] = None, tool_choice: str = "auto", api_key: Optional[str] = None, api_base: Optional[str] = None, stream: bool = True, top_p: Optional[float] = None, model_id: Optional[str] = None, headers: Optional[Dict[str, str]] = None, extra_headers: Optional[Dict[str, str]] = None) -> Union[Dict[str, Any], AsyncGenerator, ModelResponse]</signature>
+      <path>backend/core/services/llm.py</path>
+    </interface>
+    <interface>
+      <name>ModelResponse.usage</name>
+      <kind>attribute</kind>
+      <signature>response.usage.cached_tokens (for OpenAI Compatible APIs)</signature>
+      <path>backend/core/services/llm.py</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing standards include: Quality validation (100% similarity check), Performance testing (cache hit rate, cost savings, latency), Integration testing (existing LLM calls, different models, agent configurations). Use semantic similarity checking for quality validation. A/B testing framework for comparing original vs optimized modes.
+    </standards>
+    <locations>
+      <location>backend/tests/</location>
+      <location>backend/core/tests/</location>
+      <location>backend/core/services/tests/</location>
+    </locations>
+    <ideas>
+      <test ac="1">
+        <idea>Unit test: Verify prompt restructuring logic correctly identifies static vs dynamic sections and reorders them</idea>
+      </test>
+      <test ac="1">
+        <idea>Integration test: Test prompt structure with actual LLM calls to verify caching works</idea>
+      </test>
+      <test ac="2">
+        <idea>Test: Verify prompt size > 1,024 tokens after restructuring</idea>
+      </test>
+      <test ac="2">
+        <idea>Test: Verify static content is at the beginning of prompt (first 1,024+ tokens)</idea>
+      </test>
+      <test ac="3,4">
+        <idea>Unit test: Extract cached_tokens from LLM response usage object</idea>
+      </test>
+      <test ac="3,4">
+        <idea>Integration test: Verify cache metrics are logged and appear in monitoring dashboard</idea>
+      </test>
+      <test ac="5">
+        <idea>Automated test: Compare cached vs non-cached responses using semantic similarity (target: 100% similarity)</idea>
+      </test>
+      <test ac="5">
+        <idea>A/B test: Run same queries with original and optimized modes, compare quality metrics</idea>
+      </test>
+    </ideas>
+  </tests>
+</story-context>
+

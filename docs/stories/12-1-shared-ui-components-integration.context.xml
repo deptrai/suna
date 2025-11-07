@@ -1,0 +1,141 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>12</epicId>
+    <storyId>12.1</storyId>
+    <title>Shared UI Components Integration</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-08</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/12-1-shared-ui-components-integration.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>import và use UI components từ frontend</iWant>
+    <soThat>popup UI matches main app design</soThat>
+    <tasks>
+      <task id="1" ac="1">
+        <title>Import Button component</title>
+        <subtasks>
+          <subtask>Import Button từ `@/components/ui/button` trong popup component</subtask>
+          <subtask>Test import resolves correctly (no build errors)</subtask>
+          <subtask>Render Button component trong popup</subtask>
+          <subtask>Test Button với different variants và sizes</subtask>
+          <subtask>Verify Button styles apply correctly</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="2">
+        <title>Import Card component</title>
+        <subtasks>
+          <subtask>Import Card components từ `@/components/ui/card`</subtask>
+          <subtask>Test import resolves correctly</subtask>
+          <subtask>Render Card component trong popup</subtask>
+          <subtask>Test Card với different content</subtask>
+          <subtask>Verify Card styles apply correctly</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="3">
+        <title>Import Dialog component</title>
+        <subtasks>
+          <subtask>Import Dialog components từ `@/components/ui/dialog`</subtask>
+          <subtask>Test import resolves correctly</subtask>
+          <subtask>Render Dialog component trong popup</subtask>
+          <subtask>Test Dialog open/close functionality</subtask>
+          <subtask>Verify Dialog styles apply correctly</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="4">
+        <title>Verify components render correctly</title>
+        <subtasks>
+          <subtask>Test all components render trong popup</subtask>
+          <subtask>Verify no console errors</subtask>
+          <subtask>Test components với different props</subtask>
+          <subtask>Verify components are interactive</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="5">
+        <title>Verify Tailwind CSS styles</title>
+        <subtasks>
+          <subtask>Verify Tailwind CSS is loaded trong popup</subtask>
+          <subtask>Test Tailwind classes work correctly</subtask>
+          <subtask>Verify component styles match frontend</subtask>
+          <subtask>Test với dark mode (if applicable)</subtask>
+        </subtasks>
+      </task>
+      <task id="6" ac="6">
+        <title>Test components với various props</title>
+        <subtasks>
+          <subtask>Test Button với variants và sizes</subtask>
+          <subtask>Test Card với different content layouts</subtask>
+          <subtask>Test Dialog với different sizes</subtask>
+          <subtask>Test components với disabled và loading states</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1">Successfully import `Button` component từ `@/components/ui/button`</ac>
+    <ac id="2">Successfully import `Card` component từ `@/components/ui/card`</ac>
+    <ac id="3">Successfully import `Dialog` component từ `@/components/ui/dialog`</ac>
+    <ac id="4">Components render correctly trong extension popup</ac>
+    <ac id="5">Tailwind CSS styles applied correctly</ac>
+    <ac id="6">Components tested với various props</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/architecture-extension-suna.md</path>
+        <title>Browser Extension Architecture</title>
+        <section>Code Reuse Strategy - UI Components Reuse</section>
+      </doc>
+      <doc>
+        <path>docs/stories/10-3-build-configuration-shared-code-setup.md</path>
+        <title>Story 10.3: Build Configuration & Shared Code Setup</title>
+        <snippet>Path aliases configured (`@/*` → `../frontend/src/*`). Build tool resolves path aliases correctly.</snippet>
+      </doc>
+      <doc>
+        <path>docs/stories/10-4-basic-popup-skeleton.md</path>
+        <title>Story 10.4: Basic Popup Skeleton</title>
+        <snippet>Basic popup HTML và React entry point created. Popup ready for component integration.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>frontend/src/components/ui/button.tsx</path>
+        <title>Button Component</title>
+        <snippet>Button component với variants (default, destructive, outline, etc.) và sizes (sm, md, lg). Uses Radix UI Slot và class-variance-authority.</snippet>
+      </file>
+      <file>
+        <path>frontend/src/components/ui/card.tsx</path>
+        <title>Card Component</title>
+        <snippet>Card component với CardHeader, CardTitle, CardContent subcomponents. Uses Tailwind CSS for styling.</snippet>
+      </file>
+      <file>
+        <path>frontend/src/components/ui/dialog.tsx</path>
+        <title>Dialog Component</title>
+        <snippet>Dialog component using Radix UI Dialog. Includes DialogContent, DialogTrigger subcomponents.</snippet>
+      </file>
+    </code>
+  </artifacts>
+
+  <dependencies>
+    <prerequisite>Story 10.3: Build configuration với path aliases must be complete</prerequisite>
+    <prerequisite>Story 10.4: Basic popup skeleton must be created</prerequisite>
+  </dependencies>
+
+  <constraints>
+    <constraint>Path aliases must resolve correctly trong build tool</constraint>
+    <constraint>Tailwind CSS must be available trong popup</constraint>
+    <constraint>Components must work as-is without modifications</constraint>
+  </constraints>
+
+  <testing>
+    <test>Test all imports resolve without build errors</test>
+    <test>Test components render correctly trong popup</test>
+    <test>Test Tailwind styles apply correctly</test>
+    <test>Test components với various props và states</test>
+  </testing>
+</story-context>
+

@@ -1,0 +1,123 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>12</epicId>
+    <storyId>12.2</storyId>
+    <title>Popup Layout & Structure</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-08</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/12-2-popup-layout-structure.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>well-organized popup layout</iWant>
+    <soThat>I can easily view analysis results</soThat>
+    <tasks>
+      <task id="1" ac="1">
+        <title>Create popup layout structure</title>
+        <subtasks>
+          <subtask>Create layout component: `PopupLayout.tsx`</subtask>
+          <subtask>Define header, content, và footer sections</subtask>
+          <subtask>Use flexbox hoặc grid for layout</subtask>
+          <subtask>Ensure layout is responsive</subtask>
+          <subtask>Test layout structure renders correctly</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="2">
+        <title>Implement header section</title>
+        <subtasks>
+          <subtask>Create header component hoặc section</subtask>
+          <subtask>Display extension name: "Suna" hoặc "Suna Coin Analysis"</subtask>
+          <subtask>Add logo/icon if available</subtask>
+          <subtask>Style header với consistent design</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="3">
+        <title>Implement content area</title>
+        <subtasks>
+          <subtask>Create content area section</subtask>
+          <subtask>Make content area scrollable if needed</subtask>
+          <subtask>Prepare for analysis results display</subtask>
+          <subtask>Style content area</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="4">
+        <title>Implement footer section</title>
+        <subtasks>
+          <subtask>Create footer component hoặc section</subtask>
+          <subtask>Add "Generate Full Report" button</subtask>
+          <subtask>Add other action buttons if needed</subtask>
+          <subtask>Style footer với consistent design</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="5">
+        <title>Ensure responsive layout</title>
+        <subtasks>
+          <subtask>Test layout với small content</subtask>
+          <subtask>Test layout với large content (scrollable)</subtask>
+          <subtask>Test layout với different popup sizes</subtask>
+          <subtask>Verify layout adapts correctly</subtask>
+        </subtasks>
+      </task>
+      <task id="6" ac="6">
+        <title>Match main app design patterns</title>
+        <subtasks>
+          <subtask>Reference frontend layout patterns</subtask>
+          <subtask>Use similar spacing và typography</subtask>
+          <subtask>Use similar color scheme</subtask>
+          <subtask>Match component styling</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1">Popup layout với header, content area, và footer</ac>
+    <ac id="2">Header shows extension name/logo</ac>
+    <ac id="3">Content area ready for analysis results display</ac>
+    <ac id="4">Footer với action buttons (Generate Report, etc.)</ac>
+    <ac id="5">Responsive layout works với different content sizes</ac>
+    <ac id="6">Layout matches main app design patterns</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/epics-extension.md</path>
+        <title>Epic 12: Popup UI & Shared Components Integration</title>
+        <section>Story 12.2: Popup Layout & Structure</section>
+      </doc>
+      <doc>
+        <path>docs/stories/12-1-shared-ui-components-integration.md</path>
+        <title>Story 12.1: Shared UI Components Integration</title>
+        <snippet>UI components (Button, Card, Dialog) available và can be imported. Tailwind CSS configured.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>frontend/src/app/(home)/layout.tsx</path>
+        <title>Frontend Layout</title>
+        <snippet>Reference for layout patterns, spacing, typography, và design consistency.</snippet>
+      </file>
+    </code>
+  </artifacts>
+
+  <dependencies>
+    <prerequisite>Story 12.1: Shared UI components must be available</prerequisite>
+  </dependencies>
+
+  <constraints>
+    <constraint>Layout must be responsive và work với different content sizes</constraint>
+    <constraint>Layout must match main app design patterns</constraint>
+    <constraint>Use shared UI components từ Story 12.1</constraint>
+  </constraints>
+
+  <testing>
+    <test>Test layout structure renders correctly</test>
+    <test>Test header, content, footer all display</test>
+    <test>Test responsive layout works</test>
+    <test>Test layout matches main app design</test>
+  </testing>
+</story-context>
+

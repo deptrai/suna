@@ -1,0 +1,184 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>11</epicId>
+    <storyId>11.3</storyId>
+    <title>Analysis Button Injection</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-08</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/11-3-analysis-button-injection.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>inject "Analyze with Suna" buttons next to detected coins</iWant>
+    <soThat>user can easily trigger analysis</soThat>
+    <tasks>
+      <task id="1" ac="1">
+        <title>Create injector.ts module</title>
+        <subtasks>
+          <subtask>Create `extension/src/content-script/injector.ts`</subtask>
+          <subtask>Define button injection function: `injectAnalysisButton(element: HTMLElement, coinData: CoinDetection): void`</subtask>
+          <subtask>Export injection function</subtask>
+          <subtask>Add JSDoc comments</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="2">
+        <title>Implement button injection logic</title>
+        <subtasks>
+          <subtask>Create button element: `document.createElement('button')`</subtask>
+          <subtask>Set button text: "Analyze with Suna" hoặc similar</subtask>
+          <subtask>Position button next to detected coin element</subtask>
+          <subtask>Handle different element types (inline, block, etc.)</subtask>
+          <subtask>Test button appears correctly</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="3">
+        <title>Style button với Tailwind classes</title>
+        <subtasks>
+          <subtask>Import Tailwind CSS (if available) hoặc use inline styles</subtask>
+          <subtask>Apply button styling classes</subtask>
+          <subtask>Match extension design (reference frontend button component)</subtask>
+          <subtask>Ensure button is visible và readable</subtask>
+          <subtask>Test button styling on different backgrounds</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="4">
+        <title>Implement click handler</title>
+        <subtasks>
+          <subtask>Add click event listener to button</subtask>
+          <subtask>Prevent event propagation (stopPropagation)</subtask>
+          <subtask>Send message to background worker: `chrome.runtime.sendMessage()`</subtask>
+          <subtask>Message type: `{ type: 'ANALYZE_COIN', coin: coinData.name }`</subtask>
+          <subtask>Handle message response (optional)</subtask>
+          <subtask>Test message sending works</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="5">
+        <title>Implement duplicate prevention</title>
+        <subtasks>
+          <subtask>Check if button already exists: `element.querySelector('.suna-analyze-btn')`</subtask>
+          <subtask>Skip injection if button exists</subtask>
+          <subtask>Add unique identifier to button (data attribute)</subtask>
+          <subtask>Handle button removal và re-injection</subtask>
+          <subtask>Test duplicate prevention works</subtask>
+        </subtasks>
+      </task>
+      <task id="6" ac="6">
+        <title>Test trên various layouts</title>
+        <subtasks>
+          <subtask>Test button on inline elements (spans, links)</subtask>
+          <subtask>Test button on block elements (divs, paragraphs)</subtask>
+          <subtask>Test button on table cells</subtask>
+          <subtask>Test button on list items</subtask>
+          <subtask>Test button positioning với different CSS layouts</subtask>
+          <subtask>Verify button doesn't break page layout</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1">`injector.ts` module với button injection logic</ac>
+    <ac id="2">Button injected next to detected coin elements</ac>
+    <ac id="3">Button styling matches extension design (reuse Tailwind classes)</ac>
+    <ac id="4">Button click handler sends message to background worker</ac>
+    <ac id="5">Duplicate injection prevention (check if button already exists)</ac>
+    <ac id="6">Button visible và clickable trên various page layouts</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/architecture-extension-suna.md</path>
+        <title>Browser Extension Architecture - Suna.so</title>
+        <section>Implementation Patterns - Pattern 2: UI Injection</section>
+        <snippet>Non-intrusive button injection pattern. Create button element, position next to coin element, add click handler sending message to background worker. Avoid duplicate injection.</snippet>
+      </doc>
+      <doc>
+        <path>docs/stories/11-2-content-script-injection.md</path>
+        <title>Story 11.2: Content Script Injection</title>
+        <section>Dev Agent Record</section>
+        <snippet>Content script runs coin detection và returns CoinDetection[] với element references. These element references can be used for button injection.</snippet>
+      </doc>
+      <doc>
+        <path>frontend/src/components/ui/button.tsx</path>
+        <kind>component</kind>
+        <symbol>Button component</symbol>
+        <lines>N/A</lines>
+        <reason>Reference for button styling. Can reuse Tailwind classes từ frontend button component.</reason>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>extension/src/content-script/injector.ts</path>
+        <kind>module</kind>
+        <symbol>injectAnalysisButton</symbol>
+        <lines>N/A</lines>
+        <reason>Button injection module. Function: injectAnalysisButton(element: HTMLElement, coinData: CoinDetection): void</reason>
+      </file>
+      <file>
+        <path>extension/src/shared/coin-detector.ts</path>
+        <kind>module</kind>
+        <symbol>CoinDetection</symbol>
+        <lines>N/A</lines>
+        <reason>CoinDetection type definition. Used as parameter for button injection function.</reason>
+      </file>
+    </code>
+    <dependencies>
+      <ecosystem>Chrome Extension</ecosystem>
+      <packages>
+        <package>@types/chrome</package>
+      </packages>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>
+      <type>Non-Intrusive Injection</type>
+      <description>Button doesn't break page layout. Position relative to coin element. Use CSS positioning (relative/absolute) if needed. Handle different element types và layouts.</description>
+    </constraint>
+    <constraint>
+      <type>Message Passing</type>
+      <description>Use chrome.runtime.sendMessage() to send to background worker. Message format: { type: 'ANALYZE_COIN', coin: string }. Background worker will handle analysis request.</description>
+    </constraint>
+    <constraint>
+      <type>Duplicate Prevention</type>
+      <description>Check for existing button before injection. Use unique class name: .suna-analyze-btn. Add data attributes for identification. Handle re-injection scenarios.</description>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>injectAnalysisButton Function</name>
+      <kind>function</kind>
+      <signature>function injectAnalysisButton(element: HTMLElement, coinData: CoinDetection): void</signature>
+      <path>extension/src/content-script/injector.ts</path>
+    </interface>
+    <interface>
+      <name>Chrome Runtime Message</name>
+      <kind>browser-api</kind>
+      <signature>chrome.runtime.sendMessage({ type: 'ANALYZE_COIN', coin: string })</signature>
+      <path>extension/src/content-script/injector.ts</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing standards: Test button injection function works, test button appears next to coin elements, test button styling is correct, test click handler sends message, test duplicate prevention works, test button works trên various page layouts. Use Chrome DevTools để verify button injection và message sending.
+    </standards>
+    <locations>
+      <location>extension/src/content-script/</location>
+      <location>Crypto websites</location>
+    </locations>
+    <ideas>
+      <test ac="1">Test injector.ts module exports injectAnalysisButton function</test>
+      <test ac="2">Test button appears next to detected coin elements</test>
+      <test ac="3">Test button styling matches extension design</test>
+      <test ac="4">Test button click sends message to background worker</test>
+      <test ac="5">Test duplicate prevention prevents multiple buttons</test>
+      <test ac="6">Test button works trên various page layouts (inline, block, table, list)</test>
+    </ideas>
+  </tests>
+</story-context>
+

@@ -1,0 +1,282 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>10</epicId>
+    <storyId>10.3</storyId>
+    <title>Build Configuration & Shared Code Setup</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-08</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/10-3-build-configuration-shared-code-setup.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>build configuration để bundle extension và setup shared code access</iWant>
+    <soThat>extension can reuse frontend components và utilities</soThat>
+    <tasks>
+      <task id="1" ac="1">
+        <title>Setup build tool configuration</title>
+        <subtasks>
+          <subtask>Choose build tool: Webpack hoặc Vite (recommend Webpack for extension)</subtask>
+          <subtask>Create `extension/webpack.config.js` hoặc `extension/vite.config.ts`</subtask>
+          <subtask>Configure entry points: content-script, background, popup</subtask>
+          <subtask>Configure output directory: `dist/`</subtask>
+          <subtask>Configure build mode (development/production)</subtask>
+          <subtask>Test build command runs successfully</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="2">
+        <title>Configure build output directory</title>
+        <subtasks>
+          <subtask>Set output path to `extension/dist/`</subtask>
+          <subtask>Configure output filenames: `content-script.js`, `background.js`, `popup.js`</subtask>
+          <subtask>Configure HTML output: `popup.html` (if using HTML plugin)</subtask>
+          <subtask>Ensure dist directory structure matches manifest requirements</subtask>
+          <subtask>Test build outputs files correctly</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="3">
+        <title>Configure path aliases trong build tool</title>
+        <subtasks>
+          <subtask>Configure webpack resolve aliases: `@/*` → `../frontend/src/*`</subtask>
+          <subtask>Hoặc configure Vite alias: `@/*` → `../frontend/src/*`</subtask>
+          <subtask>Ensure aliases match TypeScript path config từ Story 10.1</subtask>
+          <subtask>Test alias resolution trong build process</subtask>
+          <subtask>Verify imports resolve correctly during build</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="4">
+        <title>Test shared code import</title>
+        <subtasks>
+          <subtask>Create test file trong extension: `extension/src/shared/test-import.ts`</subtask>
+          <subtask>Import `cn()` utility: `import { cn } from '@/lib/utils'`</subtask>
+          <subtask>Use `cn()` function trong test file</subtask>
+          <subtask>Run build và verify import resolves correctly</subtask>
+          <subtask>Verify no build errors related to path aliases</subtask>
+          <subtask>Test import works at runtime (if possible)</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="5">
+        <title>Verify build outputs</title>
+        <subtasks>
+          <subtask>Run build command</subtask>
+          <subtask>Verify `dist/content-script.js` exists</subtask>
+          <subtask>Verify `dist/background.js` exists</subtask>
+          <subtask>Verify `dist/popup.js` exists</subtask>
+          <subtask>Verify `dist/popup.html` exists</subtask>
+          <subtask>Verify all files are properly bundled (check file sizes)</subtask>
+          <subtask>Test loading extension với built files</subtask>
+        </subtasks>
+      </task>
+      <task id="6" ac="1,2,3,4,5">
+        <title>Testing</title>
+        <subtasks>
+          <subtask>Test build command completes without errors</subtask>
+          <subtask>Verify all output files exist và are valid</subtask>
+          <subtask>Test path alias imports resolve correctly</subtask>
+          <subtask>Test shared code import works (cn() utility)</subtask>
+          <subtask>Verify build outputs match manifest.json references</subtask>
+          <subtask>Test extension loads với built files</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1">Webpack hoặc Vite configuration để build extension</ac>
+    <ac id="2">Build script outputs to `dist/` directory</ac>
+    <ac id="3">Path aliases configured để import từ frontend (`@/components`, `@/lib`, etc.)</ac>
+    <ac id="4">Shared code import test: successfully import `cn()` utility từ frontend</ac>
+    <ac id="5">Build produces: `content-script.js`, `background.js`, `popup.js`, `popup.html`</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/architecture-extension-suna.md</path>
+        <title>Browser Extension Architecture - Suna.so</title>
+        <section>Technology Stack Decisions</section>
+        <snippet>Build Tool: Webpack hoặc Vite. Extension uses path aliases để import từ frontend codebase. Build outputs to dist/ directory.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture-extension-suna.md</path>
+        <title>Browser Extension Architecture - Suna.so</title>
+        <section>Project Structure</section>
+        <snippet>Build output structure: `dist/content-script.js`, `dist/background.js`, `dist/popup.js`, `dist/popup.html`. Build tool must support multiple entry points và path alias resolution.</snippet>
+      </doc>
+      <doc>
+        <path>docs/epics-extension.md</path>
+        <title>Suna.so Browser Extension - Epic Breakdown</title>
+        <section>Story 10.3: Build Configuration & Shared Code Setup</section>
+        <snippet>As a developer, I want build configuration để bundle extension và setup shared code access, So that extension can reuse frontend components và utilities. Acceptance criteria include build tool config, output directory, path aliases, shared code import test, và build outputs.</snippet>
+      </doc>
+      <doc>
+        <path>docs/stories/10-1-extension-project-structure-setup.md</path>
+        <title>Story 10.1: Extension Project Structure Setup</title>
+        <section>Dev Agent Record</section>
+        <snippet>TypeScript configuration với path aliases (`@/*` → `../frontend/src/*`) created. Package.json với dependencies matching frontend created. This story builds on that foundation.</snippet>
+      </doc>
+      <doc>
+        <path>docs/stories/10-2-extension-manifest-configuration.md</path>
+        <title>Story 10.2: Extension Manifest Configuration</title>
+        <section>Dev Agent Record</section>
+        <snippet>Manifest references built files: `content-script.js`, `background.js`, `popup.html`. Build process must produce these files matching manifest references exactly.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>extension/tsconfig.json</path>
+        <kind>config</kind>
+        <symbol>compilerOptions.paths</symbol>
+        <lines>N/A</lines>
+        <reason>TypeScript path alias configuration. Build tool resolve aliases must match this config: `@/*` → `../frontend/src/*`.</reason>
+      </file>
+      <file>
+        <path>extension/package.json</path>
+        <kind>config</kind>
+        <symbol>scripts, dependencies</symbol>
+        <lines>N/A</lines>
+        <reason>Package.json với build scripts và dependencies. Build tool should be added as devDependency. Build script should output to dist/.</reason>
+      </file>
+      <file>
+        <path>extension/manifest.json</path>
+        <kind>config</kind>
+        <symbol>content_scripts, background, action</symbol>
+        <lines>N/A</lines>
+        <reason>Manifest references built files. Build output must match these references: content-script.js, background.js, popup.html.</reason>
+      </file>
+      <file>
+        <path>frontend/src/lib/utils.ts</path>
+        <kind>utility</kind>
+        <symbol>cn()</symbol>
+        <lines>1-20</lines>
+        <reason>Test import target. Create test file importing `cn()` from `@/lib/utils` để verify path aliases work correctly.</reason>
+      </file>
+      <file>
+        <path>frontend/tsconfig.json</path>
+        <kind>config</kind>
+        <symbol>compilerOptions</symbol>
+        <lines>1-45</lines>
+        <reason>Reference for TypeScript compiler options. Extension build config should match frontend settings để ensure compatibility.</reason>
+      </file>
+    </code>
+    <dependencies>
+      <ecosystem>Node.js</ecosystem>
+      <packages>
+        <package>webpack</package>
+        <package>webpack-cli</package>
+        <package>ts-loader</package>
+        <package>html-webpack-plugin</package>
+        <package>copy-webpack-plugin</package>
+        <package>vite</package>
+        <package>@vitejs/plugin-react</package>
+      </packages>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>
+      <type>Build Tool Selection</type>
+      <description>Webpack recommended for extensions (better extension-specific plugins). Vite also viable but may need more configuration. Must support multiple entry points, path aliases, TypeScript, React/JSX, và Tailwind CSS.</description>
+    </constraint>
+    <constraint>
+      <type>Path Alias Alignment</type>
+      <description>Build tool resolve aliases must match TypeScript path config: `@/*` → `../frontend/src/*`. Both configurations must be synchronized.</description>
+    </constraint>
+    <constraint>
+      <type>Output Directory Structure</type>
+      <description>Build outputs to `extension/dist/` directory. Files must match manifest.json references exactly: content-script.js, background.js, popup.js, popup.html.</description>
+    </constraint>
+    <constraint>
+      <type>Multiple Entry Points</type>
+      <description>Build tool must support multiple entry points: content-script, background, popup. Each entry point produces separate output file.</description>
+    </constraint>
+    <constraint>
+      <type>Shared Code Import Test</type>
+      <description>Must successfully import `cn()` utility từ `@/lib/utils` để verify path aliases work. This is critical test for code reuse capability.</description>
+    </constraint>
+    <constraint>
+      <type>Build Output Validation</type>
+      <description>Build must produce all required files: content-script.js, background.js, popup.js, popup.html. Files must be valid và loadable in Chrome extension.</description>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>Webpack Configuration</name>
+      <kind>configuration</kind>
+      <signature>webpack.config.js với entry points, output, resolve aliases</signature>
+      <path>extension/webpack.config.js</path>
+    </interface>
+    <interface>
+      <name>Vite Configuration</name>
+      <kind>configuration</kind>
+      <signature>vite.config.ts với entry points, build output, alias resolution</signature>
+      <path>extension/vite.config.ts</path>
+    </interface>
+    <interface>
+      <name>Build Script</name>
+      <kind>script</kind>
+      <signature>npm run build (trong package.json scripts)</signature>
+      <path>extension/package.json</path>
+    </interface>
+    <interface>
+      <name>Path Alias Import</name>
+      <kind>import</kind>
+      <signature>import { cn } from '@/lib/utils'</signature>
+      <path>extension/src/shared/test-import.ts</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing standards: Run build command và verify completion without errors, verify all output files exist và are valid, test path alias imports resolve correctly, test shared code import works (cn() utility), verify build outputs match manifest.json references, test extension loads với built files. Use manual verification và build output inspection.
+    </standards>
+    <locations>
+      <location>extension/</location>
+      <location>extension/dist/</location>
+    </locations>
+    <ideas>
+      <test ac="1">
+        <idea>Run build command (`npm run build`) và verify it completes without errors</idea>
+      </test>
+      <test ac="1">
+        <idea>Verify build tool configuration file exists và is valid (webpack.config.js hoặc vite.config.ts)</idea>
+      </test>
+      <test ac="2">
+        <idea>Verify `extension/dist/` directory is created after build</idea>
+      </test>
+      <test ac="2">
+        <idea>Check dist directory structure matches expected output</idea>
+      </test>
+      <test ac="3">
+        <idea>Create test file importing from `@/lib/utils` và verify build resolves import correctly</idea>
+      </test>
+      <test ac="3">
+        <idea>Verify no build errors related to path alias resolution</idea>
+      </test>
+      <test ac="4">
+        <idea>Import `cn()` utility trong test file và verify it compiles</idea>
+      </test>
+      <test ac="4">
+        <idea>Use `cn()` function trong test code và verify build succeeds</idea>
+      </test>
+      <test ac="5">
+        <idea>Verify `dist/content-script.js` exists và has content</idea>
+      </test>
+      <test ac="5">
+        <idea>Verify `dist/background.js` exists và has content</idea>
+      </test>
+      <test ac="5">
+        <idea>Verify `dist/popup.js` exists và has content</idea>
+      </test>
+      <test ac="5">
+        <idea>Verify `dist/popup.html` exists và references popup.js correctly</idea>
+      </test>
+      <test ac="5">
+        <idea>Load extension trong Chrome với built files và verify it loads without errors</idea>
+      </test>
+    </ideas>
+  </tests>
+</story-context>
+

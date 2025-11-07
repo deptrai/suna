@@ -1,0 +1,233 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>10</epicId>
+    <storyId>10.1</storyId>
+    <title>Extension Project Structure Setup</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-08</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/10-1-extension-project-structure-setup.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>extension project structure với proper organization</iWant>
+    <soThat>code is maintainable và follows best practices</soThat>
+    <tasks>
+      <task id="1" ac="1">
+        <title>Create extension directory structure</title>
+        <subtasks>
+          <subtask>Create `extension/` directory at project root</subtask>
+          <subtask>Create `extension/src/content-script/` folder</subtask>
+          <subtask>Create `extension/src/popup/` folder</subtask>
+          <subtask>Create `extension/src/background/` folder</subtask>
+          <subtask>Create `extension/src/shared/` folder</subtask>
+          <subtask>Create `extension/public/` folder for static assets</subtask>
+          <subtask>Verify folder structure matches architecture spec</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="2">
+        <title>Configure TypeScript với path aliases</title>
+        <subtasks>
+          <subtask>Create `extension/tsconfig.json`</subtask>
+          <subtask>Configure path aliases: `@/*` → `../frontend/src/*`</subtask>
+          <subtask>Set TypeScript compiler options (target, module, etc.)</subtask>
+          <subtask>Verify path aliases resolve correctly</subtask>
+          <subtask>Test import từ frontend using alias</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="3">
+        <title>Setup package.json với dependencies</title>
+        <subtasks>
+          <subtask>Create `extension/package.json`</subtask>
+          <subtask>Add React 18+ dependency (match frontend version)</subtask>
+          <subtask>Add TypeScript 5+ dependency</subtask>
+          <subtask>Add Tailwind CSS 4+ dependency</subtask>
+          <subtask>Add other frontend dependencies (Radix UI, Zustand, React Query, etc.)</subtask>
+          <subtask>Add extension-specific dependencies (chrome types, webpack, etc.)</subtask>
+          <subtask>Verify versions match frontend package.json</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="4">
+        <title>Create basic README</title>
+        <subtasks>
+          <subtask>Create `extension/README.md`</subtask>
+          <subtask>Document project structure</subtask>
+          <subtask>Document setup instructions</subtask>
+          <subtask>Document build process</subtask>
+          <subtask>Document development workflow</subtask>
+          <subtask>Include links to architecture docs</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="1,2,3,4">
+        <title>Testing</title>
+        <subtasks>
+          <subtask>Verify all folders created correctly</subtask>
+          <subtask>Test TypeScript path alias resolution</subtask>
+          <subtask>Test package.json dependencies install correctly</subtask>
+          <subtask>Verify README instructions are clear và complete</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1">Extension directory structure created với folders: `src/content-script/`, `src/popup/`, `src/background/`, `src/shared/`</ac>
+    <ac id="2">TypeScript configuration với path aliases to frontend (`@/*` → `../frontend/src/*`)</ac>
+    <ac id="3">Package.json với dependencies matching frontend (React, TypeScript, Tailwind, etc.)</ac>
+    <ac id="4">Basic README với setup instructions</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/architecture-extension-suna.md</path>
+        <title>Browser Extension Architecture - Suna.so</title>
+        <section>Project Structure</section>
+        <snippet>Recommended structure: extension/ với src/content-script/, src/popup/, src/background/, src/shared/. Alternative simpler structure uses direct import với path aliases.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture-extension-suna.md</path>
+        <title>Browser Extension Architecture - Suna.so</title>
+        <section>Technology Stack Decisions</section>
+        <snippet>React 18+, TypeScript 5+, Tailwind CSS 4+, Chrome Extension Manifest V3. Extension uses path aliases để import từ frontend codebase.</snippet>
+      </doc>
+      <doc>
+        <path>docs/epics-extension.md</path>
+        <title>Suna.so Browser Extension - Epic Breakdown</title>
+        <section>Epic 10: Extension Foundation & Setup</section>
+        <snippet>Epic 10 establishes extension project structure, build configuration, basic manifest, và shared code setup để enable code reuse từ frontend.</snippet>
+      </doc>
+      <doc>
+        <path>docs/epics-extension.md</path>
+        <title>Suna.so Browser Extension - Epic Breakdown</title>
+        <section>Story 10.1: Extension Project Structure Setup</section>
+        <snippet>As a developer, I want extension project structure với proper organization, So that code is maintainable và follows best practices. Acceptance criteria include directory structure, TypeScript config, package.json, và README.</snippet>
+      </doc>
+      <doc>
+        <path>docs/PRD-extension.md</path>
+        <title>Suna.so Browser Extension - Product Requirements Document</title>
+        <section>Goals</section>
+        <snippet>Goals include tối đa hóa code reuse từ frontend Next.js (target ~95-98%) để giảm thiểu development effort và cung cấp trải nghiệm nhất quán với main app.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture/coding-standards.md</path>
+        <title>ChainLens Crypto Services - Coding Standards</title>
+        <section>Project Structure Standards</section>
+        <snippet>Coding standards define directory organization và service structure patterns. Extension should follow similar organizational principles.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>frontend/package.json</path>
+        <kind>config</kind>
+        <symbol>dependencies</symbol>
+        <lines>21-220</lines>
+        <reason>Reference for exact dependency versions to match in extension package.json. Key dependencies: React, TypeScript, Tailwind CSS, Radix UI, Zustand, React Query, Supabase.</reason>
+      </file>
+      <file>
+        <path>frontend/tsconfig.json</path>
+        <kind>config</kind>
+        <symbol>compilerOptions.paths</symbol>
+        <lines>29-33</lines>
+        <reason>Reference for TypeScript path alias configuration. Frontend uses `@/*` → `./src/*`. Extension should use `@/*` → `../frontend/src/*` để import từ frontend.</reason>
+      </file>
+      <file>
+        <path>frontend/src/lib/utils.ts</path>
+        <kind>utility</kind>
+        <symbol>cn()</symbol>
+        <lines>1-20</lines>
+        <reason>Example utility function to test path alias import. Should be importable via `@/lib/utils` from extension code.</reason>
+      </file>
+    </code>
+    <dependencies>
+      <ecosystem>Node.js</ecosystem>
+      <packages>
+        <package>react</package>
+        <package>typescript</package>
+        <package>tailwindcss</package>
+        <package>@radix-ui/react-*</package>
+        <package>zustand</package>
+        <package>@tanstack/react-query</package>
+        <package>@supabase/supabase-js</package>
+        <package>@types/chrome</package>
+        <package>webpack</package>
+      </packages>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>
+      <type>Code Reuse Requirement</type>
+      <description>Extension must maximize code reuse từ frontend (target ~95-98%). Use path aliases để import directly từ frontend codebase without copying code.</description>
+    </constraint>
+    <constraint>
+      <type>Architecture Pattern</type>
+      <description>Extension follows recommended monorepo structure với shared code access via TypeScript path aliases. Alternative simpler structure (Direct Import) is also documented.</description>
+    </constraint>
+    <constraint>
+      <type>Technology Compatibility</type>
+      <description>Extension dependencies must match frontend versions để ensure compatibility. Check frontend/package.json for exact versions.</description>
+    </constraint>
+    <constraint>
+      <type>TypeScript Configuration</type>
+      <description>TypeScript config must enable path aliases (`@/*` → `../frontend/src/*`) và match frontend compiler options để ensure type compatibility.</description>
+    </constraint>
+    <constraint>
+      <type>Directory Structure</type>
+      <description>Extension directory structure must match architecture spec: `extension/src/` với subdirectories cho content-script, popup, background, và shared code.</description>
+    </constraint>
+    <constraint>
+      <type>Documentation Requirement</type>
+      <description>README must document project structure, setup instructions, build process, development workflow, và include links to architecture docs.</description>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>TypeScript Path Alias</name>
+      <kind>configuration</kind>
+      <signature>@/* → ../frontend/src/*</signature>
+      <path>extension/tsconfig.json</path>
+    </interface>
+    <interface>
+      <name>Frontend Utility Import</name>
+      <kind>import</kind>
+      <signature>import { cn } from '@/lib/utils'</signature>
+      <path>extension/src/</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing standards: Verify directory structure matches spec, test TypeScript path alias resolution, verify package.json dependencies install correctly, verify README instructions are clear và complete. Use manual verification và basic import tests.
+    </standards>
+    <locations>
+      <location>extension/</location>
+    </locations>
+    <ideas>
+      <test ac="1">
+        <idea>Verify all required folders exist: src/content-script/, src/popup/, src/background/, src/shared/, public/</idea>
+      </test>
+      <test ac="2">
+        <idea>Test TypeScript path alias: Create test file importing from `@/lib/utils` và verify it resolves correctly</idea>
+      </test>
+      <test ac="2">
+        <idea>Verify tsconfig.json compiler options match frontend config (target, module, etc.)</idea>
+      </test>
+      <test ac="3">
+        <idea>Run `npm install` và verify all dependencies install without errors</idea>
+      </test>
+      <test ac="3">
+        <idea>Compare extension package.json dependencies với frontend/package.json để ensure versions match</idea>
+      </test>
+      <test ac="4">
+        <idea>Review README.md và verify all sections are present và instructions are clear</idea>
+      </test>
+      <test ac="4">
+        <idea>Follow README setup instructions và verify they work correctly</idea>
+      </test>
+    </ideas>
+  </tests>
+</story-context>
+

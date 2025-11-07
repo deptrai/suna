@@ -1,0 +1,124 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>14</epicId>
+    <storyId>14.2</storyId>
+    <title>Comprehensive Error Handling</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-08</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/14-2-comprehensive-error-handling.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>clear error messages khi things go wrong</iWant>
+    <soThat>I understand what happened và how to fix it</soThat>
+    <tasks>
+      <task id="1" ac="1">
+        <title>Reuse frontend error handler</title>
+        <subtasks>
+          <subtask>Import error handler từ `@/lib/error-handler`</subtask>
+          <subtask>Or adapt error handler for extension</subtask>
+          <subtask>Use error handler trong API calls</subtask>
+          <subtask>Test error handler works</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="2">
+        <title>Handle network errors</title>
+        <subtasks>
+          <subtask>Detect network errors (timeout, connection failed)</subtask>
+          <subtask>Display user-friendly error message</subtask>
+          <subtask>Suggest checking internet connection</subtask>
+          <subtask>Provide retry option</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="3">
+        <title>Handle authentication errors</title>
+        <subtasks>
+          <subtask>Detect 401/403 errors</subtask>
+          <subtask>Prompt user to re-login</subtask>
+          <subtask>Redirect to login UI</subtask>
+          <subtask>Clear invalid auth state</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="4">
+        <title>Display API error details</title>
+        <subtasks>
+          <subtask>Extract error details from API response</subtask>
+          <subtask>Display specific error message</subtask>
+          <subtask>Show error code if available</subtask>
+          <subtask>Format error message clearly</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="5">
+        <title>Handle content script errors</title>
+        <subtasks>
+          <subtask>Wrap content script code in try-catch</subtask>
+          <subtask>Log errors to console</subtask>
+          <subtask>Don't break page functionality</subtask>
+          <subtask>Handle errors gracefully</subtask>
+        </subtasks>
+      </task>
+      <task id="6" ac="6">
+        <title>Provide error recovery</title>
+        <subtasks>
+          <subtask>Add retry buttons for recoverable errors</subtask>
+          <subtask>Add "Go to Login" for auth errors</subtask>
+          <subtask>Add "Refresh" for network errors</subtask>
+          <subtask>Provide helpful error messages</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1">Error handling matches frontend patterns (reuse error handler)</ac>
+    <ac id="2">Network errors display user-friendly messages</ac>
+    <ac id="3">Authentication errors prompt re-login</ac>
+    <ac id="4">API errors show specific error details</ac>
+    <ac id="5">Content script errors logged but don't break page</ac>
+    <ac id="6">Error recovery suggestions provided</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/epics-extension.md</path>
+        <title>Epic 14: Report Generation & Polish</title>
+        <section>Story 14.2: Comprehensive Error Handling</section>
+      </doc>
+      <doc>
+        <path>docs/stories/13-4-background-worker-api-coordination.md</path>
+        <title>Story 13.4: Background Worker API Coordination</title>
+        <snippet>API calls ready. Error handling needed for API calls, network errors, authentication errors.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>frontend/src/lib/error-handler.ts</path>
+        <title>Error Handler</title>
+        <snippet>Reference for error handling patterns, error types, và error message formatting.</snippet>
+      </file>
+    </code>
+  </artifacts>
+
+  <dependencies>
+    <prerequisite>Story 13.4: Background worker API coordination must be complete</prerequisite>
+  </dependencies>
+
+  <constraints>
+    <constraint>Error handling must match frontend patterns</constraint>
+    <constraint>Error messages must be user-friendly</constraint>
+    <constraint>Error recovery options must be provided</constraint>
+  </constraints>
+
+  <testing>
+    <test>Test error handler works</test>
+    <test>Test network error handling</test>
+    <test>Test authentication error handling</test>
+    <test>Test API error display</test>
+    <test>Test content script error handling</test>
+    <test>Test error recovery options</test>
+  </testing>
+</story-context>
+

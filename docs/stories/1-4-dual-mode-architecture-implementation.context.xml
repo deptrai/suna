@@ -1,0 +1,275 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.4</storyId>
+    <title>Dual-Mode Architecture Implementation</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-07</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/1-4-dual-mode-architecture-implementation.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>system administrator</asA>
+    <iWant>to implement dual-mode architecture (Original + Optimized) với feature flags</iWant>
+    <soThat>I can switch between modes và rollback anytime nếu có issues</soThat>
+    <tasks>
+      <task id="1" ac="1,2">
+        <title>Create OptimizationMode enum và OptimizationConfig class</title>
+        <subtasks>
+          <subtask>Create `OptimizationMode` enum với values: ORIGINAL, OPTIMIZED, AUTO</subtask>
+          <subtask>Create `OptimizationConfig` class trong `backend/core/utils/config.py`</subtask>
+          <subtask>Add `OPTIMIZATION_MODE` configuration với default value (ORIGINAL)</subtask>
+          <subtask>Make mode configurable via environment variable (e.g., `OPTIMIZATION_MODE`)</subtask>
+          <subtask>Add feature flags for individual optimizations (if needed)</subtask>
+          <subtask>Document configuration options</subtask>
+          <subtask>Unit test OptimizationConfig class</subtask>
+          <subtask>Integration test configuration loading</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="3">
+        <title>Update PromptManager.build_system_prompt() for dual-mode</title>
+        <subtasks>
+          <subtask>Modify `PromptManager.build_system_prompt()` to check `OptimizationConfig.OPTIMIZATION_MODE`</subtask>
+          <subtask>Add conditional logic to switch between `_build_original_prompt()` và `_build_optimized_prompt()`</subtask>
+          <subtask>Ensure backward compatibility (default to ORIGINAL mode)</subtask>
+          <subtask>Test mode switching với different configurations</subtask>
+          <subtask>Unit test mode switching logic</subtask>
+          <subtask>Integration test với actual LLM calls</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="4">
+        <title>Implement _build_original_prompt() method</title>
+        <subtasks>
+          <subtask>Extract current prompt building logic từ `build_system_prompt()`</subtask>
+          <subtask>Move to `_build_original_prompt()` method (preserve exact implementation)</subtask>
+          <subtask>Ensure no changes to original logic (100% identical behavior)</subtask>
+          <subtask>Test original prompt generation matches current implementation</subtask>
+          <subtask>Unit test original prompt generation</subtask>
+          <subtask>Integration test prompt structure matches current</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="5">
+        <title>Implement _build_optimized_prompt() method</title>
+        <subtasks>
+          <subtask>Create `_build_optimized_prompt()` method</subtask>
+          <subtask>Apply quality-preserving optimizations from Stories 1.1, 1.2, 1.3:
+            - Restructure prompt với static content first (Story 1.1)
+            - Enable LiteLLM Redis caching (Story 1.2)
+            - Add Anthropic cache_control directives (Story 1.3)</subtask>
+          <subtask>Ensure optimized prompt maintains 100% quality</subtask>
+          <subtask>Test optimized prompt generation</subtask>
+          <subtask>Unit test optimized prompt generation</subtask>
+          <subtask>Integration test optimized prompt structure</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="6">
+        <title>Configure feature flags via environment variables</title>
+        <subtasks>
+          <subtask>Add environment variable `OPTIMIZATION_MODE` (ORIGINAL, OPTIMIZED, AUTO)</subtask>
+          <subtask>Add optional feature flags for individual optimizations (if needed)</subtask>
+          <subtask>Document environment variable configuration</subtask>
+          <subtask>Test configuration loading từ environment variables</subtask>
+          <subtask>Unit test environment variable parsing</subtask>
+          <subtask>Integration test configuration loading</subtask>
+        </subtasks>
+      </task>
+      <task id="6" ac="7,8">
+        <title>Test mode switching và rollback</title>
+        <subtasks>
+          <subtask>Test switching from ORIGINAL to OPTIMIZED mode</subtask>
+          <subtask>Test switching from OPTIMIZED back to ORIGINAL mode (rollback)</subtask>
+          <subtask>Test AUTO mode (if implemented)</subtask>
+          <subtask>Verify rollback mechanism works correctly</subtask>
+          <subtask>Document mode switching process</subtask>
+          <subtask>Unit test mode switching</subtask>
+          <subtask>Integration test rollback mechanism</subtask>
+          <subtask>A/B testing framework setup</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1">`OptimizationMode` enum được created (ORIGINAL, OPTIMIZED, AUTO)</ac>
+    <ac id="2">`OptimizationConfig` class được implemented với feature flags</ac>
+    <ac id="3">`PromptManager.build_system_prompt()` được updated để support dual-mode</ac>
+    <ac id="4">`_build_original_prompt()` method preserves current implementation (no changes)</ac>
+    <ac id="5">`_build_optimized_prompt()` method applies quality-preserving optimizations</ac>
+    <ac id="6">Feature flags được configurable via environment variables</ac>
+    <ac id="7">Mode switching được tested và documented</ac>
+    <ac id="8">Rollback mechanism được verified (switch to ORIGINAL mode anytime)</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/epics-optimization.md</path>
+        <title>ChainLens AI Worker - Epic Breakdown: LLM Optimization</title>
+        <section>Story 1.4: Dual-Mode Architecture Implementation</section>
+        <snippet>Story 1.4 defines requirements for implementing dual-mode architecture. Enables all Phase 1 optimizations. Effort: 2 hours. Prerequisites: Stories 1.1, 1.2, 1.3.</snippet>
+      </doc>
+      <doc>
+        <path>docs/optimization-master-plan-v1.1.md</path>
+        <title>ChainLens AI Worker - Master Optimization Plan v1.1</title>
+        <section>Dual-Mode Architecture</section>
+        <snippet>Dual-mode architecture: Original mode (baseline) + Optimized mode (with caching). Feature flags allow switching and rollback. Mode selection via environment variable OPTIMIZATION_MODE.</snippet>
+      </doc>
+      <doc>
+        <path>docs/optimization-master-plan-v1.1.md</path>
+        <title>ChainLens AI Worker - Master Optimization Plan v1.1</title>
+        <section>Mode Switching Implementation</section>
+        <snippet>PromptManager.build_system_prompt() switches between _build_original_prompt() và _build_optimized_prompt() based on OptimizationConfig.OPTIMIZATION_MODE. Original mode preserves current implementation exactly.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>backend/core/utils/config.py</path>
+        <kind>config</kind>
+        <symbol>Configuration class</symbol>
+        <lines>73-200</lines>
+        <reason>Primary location to add OptimizationConfig class với OptimizationMode enum. Configuration class already exists và loads environment variables.</reason>
+      </file>
+      <file>
+        <path>backend/core/run.py</path>
+        <kind>service</kind>
+        <symbol>PromptManager.build_system_prompt()</symbol>
+        <lines>326-491</lines>
+        <reason>Primary method to modify for dual-mode support. Need to add conditional logic to switch between _build_original_prompt() và _build_optimized_prompt() based on OptimizationConfig.OPTIMIZATION_MODE.</reason>
+      </file>
+      <file>
+        <path>backend/core/run.py</path>
+        <kind>service</kind>
+        <symbol>PromptManager._build_original_prompt()</symbol>
+        <lines>326-491</lines>
+        <reason>New method to create. Extract current prompt building logic từ build_system_prompt() và move here. Preserve exact implementation (no changes).</reason>
+      </file>
+      <file>
+        <path>backend/core/run.py</path>
+        <kind>service</kind>
+        <symbol>PromptManager._build_optimized_prompt()</symbol>
+        <lines>326-491</lines>
+        <reason>New method to create. Apply quality-preserving optimizations from Stories 1.1, 1.2, 1.3. Restructure prompt với static content first, enable caching, add cache_control directives.</reason>
+      </file>
+    </code>
+    <dependencies>
+      <ecosystem>Python</ecosystem>
+      <packages>
+        <package>enum</package>
+      </packages>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>
+      <type>Quality Requirement</type>
+      <description>Zero quality impact required. Original mode must preserve current implementation exactly (100% identical behavior). Optimized mode must maintain 100% quality.</description>
+    </constraint>
+    <constraint>
+      <type>Architecture Pattern</type>
+      <description>Dual-mode architecture: Original mode (baseline) + Optimized mode (with caching). Feature flags allow switching and rollback. Gradual rollout: 5% → 25% → 50% → 100% traffic.</description>
+    </constraint>
+    <constraint>
+      <type>Backward Compatibility</type>
+      <description>Must not break existing LLM calls. Default to ORIGINAL mode. Changes should be transparent to callers. Test with existing agent configurations.</description>
+    </constraint>
+    <constraint>
+      <type>Mode Switching</type>
+      <description>Mode switching must be configurable via environment variable OPTIMIZATION_MODE. Rollback mechanism must work correctly (switch to ORIGINAL mode anytime).</description>
+    </constraint>
+    <constraint>
+      <type>Code Preservation</type>
+      <description>_build_original_prompt() must preserve current implementation exactly (no changes). Extract existing logic without modification.</description>
+    </constraint>
+    <constraint>
+      <type>Optimization Integration</type>
+      <description>_build_optimized_prompt() must integrate optimizations from Stories 1.1, 1.2, 1.3. Ensure all optimizations work together correctly.</description>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>OptimizationMode enum</name>
+      <kind>enum</kind>
+      <signature>class OptimizationMode(Enum): ORIGINAL = "original", OPTIMIZED = "optimized", AUTO = "auto"</signature>
+      <path>backend/core/utils/config.py</path>
+    </interface>
+    <interface>
+      <name>OptimizationConfig class</name>
+      <kind>class</kind>
+      <signature>class OptimizationConfig: OPTIMIZATION_MODE: OptimizationMode = OptimizationMode.ORIGINAL</signature>
+      <path>backend/core/utils/config.py</path>
+    </interface>
+    <interface>
+      <name>PromptManager.build_system_prompt()</name>
+      <kind>method</kind>
+      <signature>async def build_system_prompt(...) -> dict: if OptimizationConfig.OPTIMIZATION_MODE == OptimizationMode.ORIGINAL: return await _build_original_prompt(...) elif OptimizationConfig.OPTIMIZATION_MODE == OptimizationMode.OPTIMIZED: return await _build_optimized_prompt(...)</signature>
+      <path>backend/core/run.py</path>
+    </interface>
+    <interface>
+      <name>PromptManager._build_original_prompt()</name>
+      <kind>method</kind>
+      <signature>async def _build_original_prompt(...) -> dict: # Current implementation (no changes)</signature>
+      <path>backend/core/run.py</path>
+    </interface>
+    <interface>
+      <name>PromptManager._build_optimized_prompt()</name>
+      <kind>method</kind>
+      <signature>async def _build_optimized_prompt(...) -> dict: # Apply optimizations from Stories 1.1, 1.2, 1.3</signature>
+      <path>backend/core/run.py</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing standards include: Quality validation (100% identical behavior for ORIGINAL mode, 100% quality for OPTIMIZED mode), Performance testing (cost savings với OPTIMIZED mode, quality metrics), Integration testing (existing LLM calls, different models, agent configurations, mode switching, rollback mechanism). Use A/B testing framework for comparing original vs optimized modes.
+    </standards>
+    <locations>
+      <location>backend/tests/</location>
+      <location>backend/core/tests/</location>
+      <location>backend/core/services/tests/</location>
+    </locations>
+    <ideas>
+      <test ac="1,2">
+        <idea>Unit test: Verify OptimizationMode enum và OptimizationConfig class creation</idea>
+      </test>
+      <test ac="1,2">
+        <idea>Integration test: Test configuration loading từ environment variables</idea>
+      </test>
+      <test ac="3">
+        <idea>Unit test: Verify mode switching logic trong build_system_prompt()</idea>
+      </test>
+      <test ac="3">
+        <idea>Integration test: Test mode switching với actual LLM calls</idea>
+      </test>
+      <test ac="4">
+        <idea>Unit test: Verify _build_original_prompt() generates identical prompts to current implementation</idea>
+      </test>
+      <test ac="4">
+        <idea>Integration test: Test original prompt structure matches current implementation exactly</idea>
+      </test>
+      <test ac="5">
+        <idea>Unit test: Verify _build_optimized_prompt() applies optimizations correctly</idea>
+      </test>
+      <test ac="5">
+        <idea>Integration test: Test optimized prompt structure và caching behavior</idea>
+      </test>
+      <test ac="6">
+        <idea>Unit test: Verify environment variable parsing và configuration loading</idea>
+      </test>
+      <test ac="6">
+        <idea>Integration test: Test configuration loading từ environment variables</idea>
+      </test>
+      <test ac="7,8">
+        <idea>Integration test: Test switching from ORIGINAL to OPTIMIZED mode</idea>
+      </test>
+      <test ac="7,8">
+        <idea>Integration test: Test rollback mechanism (switch from OPTIMIZED back to ORIGINAL)</idea>
+      </test>
+      <test ac="7,8">
+        <idea>A/B test: Run same queries with ORIGINAL and OPTIMIZED modes, compare quality metrics</idea>
+      </test>
+    </ideas>
+  </tests>
+</story-context>
+

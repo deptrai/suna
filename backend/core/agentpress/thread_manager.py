@@ -129,16 +129,37 @@ class ThreadManager:
             is_estimated = usage.get("estimated", False)
             is_fallback = usage.get("fallback", False)
             
+            # Extract cached tokens (OpenAI prompt caching)
+            # Try multiple fields for compatibility with different API formats
             cache_read_tokens = int(usage.get("cache_read_input_tokens", 0) or 0)
             if cache_read_tokens == 0:
-                # safely handle prompt_tokens_details that might be None
-                cache_read_tokens = int((usage.get("prompt_tokens_details") or {}).get("cached_tokens", 0) or 0)
+                # OpenAI Compatible API format: prompt_tokens_details.cached_tokens
+                prompt_tokens_details = usage.get("prompt_tokens_details") or {}
+                if isinstance(prompt_tokens_details, dict):
+                    cache_read_tokens = int(prompt_tokens_details.get("cached_tokens", 0) or 0)
             
             cache_creation_tokens = int(usage.get("cache_creation_input_tokens", 0) or 0)
+            total_tokens = prompt_tokens + completion_tokens
+            
+            # Calculate cache hit rate (for OpenAI prompt caching)
+            cache_hit_rate = 0.0
+            if prompt_tokens > 0 and cache_read_tokens > 0:
+                cache_hit_rate = (cache_read_tokens / prompt_tokens) * 100.0
+            
             model = content.get("model")
             
             usage_type = "FALLBACK ESTIMATE" if is_fallback else ("ESTIMATED" if is_estimated else "EXACT")
             logger.info(f"💰 Usage type: {usage_type} - prompt={prompt_tokens}, completion={completion_tokens}, cache_read={cache_read_tokens}, cache_creation={cache_creation_tokens}")
+            
+            # Log cache metrics for OpenAI prompt caching (Story 1.1)
+            if cache_read_tokens > 0:
+                logger.info(
+                    f"📊 OpenAI Prompt Cache Metrics - "
+                    f"cached_tokens={cache_read_tokens}, "
+                    f"total_tokens={total_tokens}, "
+                    f"cache_hit_rate={cache_hit_rate:.2f}%, "
+                    f"model={model}"
+                )
             
             client = await self.db.client
             thread_row = await client.table('threads').select('account_id').eq('thread_id', thread_id).limit(1).execute()

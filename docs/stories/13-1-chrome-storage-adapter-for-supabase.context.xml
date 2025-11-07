@@ -1,0 +1,120 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>13</epicId>
+    <storyId>13.1</storyId>
+    <title>Chrome Storage Adapter for Supabase</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-08</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/13-1-chrome-storage-adapter-for-supabase.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>Supabase client với chrome.storage adapter</iWant>
+    <soThat>authentication works trong extension environment</soThat>
+    <tasks>
+      <task id="1" ac="1">
+        <title>Create supabase-extension.ts</title>
+        <subtasks>
+          <subtask>Create `extension/src/shared/supabase-extension.ts`</subtask>
+          <subtask>Import Supabase client creation function</subtask>
+          <subtask>Define custom storage adapter interface</subtask>
+          <subtask>Export Supabase client creation function</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="2,3">
+        <title>Implement storage adapter</title>
+        <subtasks>
+          <subtask>Create storage adapter object</subtask>
+          <subtask>Implement `getItem(key: string): Promise&lt;string | null&gt;`</subtask>
+          <subtask>Implement `setItem(key: string, value: string): Promise&lt;void&gt;`</subtask>
+          <subtask>Implement `removeItem(key: string): Promise&lt;void&gt;`</subtask>
+          <subtask>Use `chrome.storage.local` API</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="4">
+        <title>Initialize Supabase client</title>
+        <subtasks>
+          <subtask>Import Supabase client creation từ frontend hoặc create locally</subtask>
+          <subtask>Initialize Supabase client với storage adapter</subtask>
+          <subtask>Configure Supabase URL và anon key</subtask>
+          <subtask>Test client initialization works</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="5">
+        <title>Test authentication persistence</title>
+        <subtasks>
+          <subtask>Test auth state persists after extension restart</subtask>
+          <subtask>Test auth state persists after browser restart</subtask>
+          <subtask>Verify tokens stored in chrome.storage.local</subtask>
+          <subtask>Test auth state loads correctly on startup</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="6">
+        <title>Test token refresh</title>
+        <subtasks>
+          <subtask>Test token refresh works automatically</subtask>
+          <subtask>Test refresh token stored correctly</subtask>
+          <subtask>Test new tokens saved after refresh</subtask>
+          <subtask>Test refresh happens before token expires</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1">`supabase-extension.ts` created với custom storage adapter</ac>
+    <ac id="2">Storage adapter uses `chrome.storage.local` thay vì localStorage</ac>
+    <ac id="3">Adapter implements: `getItem`, `setItem`, `removeItem`</ac>
+    <ac id="4">Supabase client initialized với storage adapter</ac>
+    <ac id="5">Authentication state persists across extension restarts</ac>
+    <ac id="6">Token refresh works automatically</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/architecture-extension-suna.md</path>
+        <title>Browser Extension Architecture</title>
+        <section>Security Architecture - Authentication flow với chrome.storage</section>
+      </doc>
+      <doc>
+        <path>docs/epics-extension.md</path>
+        <title>Epic 13: API Integration & Authentication</title>
+        <section>Story 13.1: Chrome Storage Adapter for Supabase</section>
+      </doc>
+      <doc>
+        <path>docs/stories/10-3-build-configuration-shared-code-setup.md</path>
+        <title>Story 10.3: Build Configuration & Shared Code Setup</title>
+        <snippet>Build config enables imports từ frontend. Path aliases configured.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>frontend/src/lib/supabase/client.ts</path>
+        <title>Supabase Client</title>
+        <snippet>Reference for Supabase client setup, configuration, và storage adapter pattern.</snippet>
+      </file>
+    </code>
+  </artifacts>
+
+  <dependencies>
+    <prerequisite>Story 10.3: Build configuration must be complete</prerequisite>
+  </dependencies>
+
+  <constraints>
+    <constraint>Storage adapter must implement getItem, setItem, removeItem</constraint>
+    <constraint>chrome.storage.local is async, must handle promises correctly</constraint>
+    <constraint>Authentication state must persist across extension/browser restarts</constraint>
+  </constraints>
+
+  <testing>
+    <test>Test storage adapter methods work correctly</test>
+    <test>Test Supabase client initialization</test>
+    <test>Test authentication persistence</test>
+    <test>Test token refresh works automatically</test>
+    <test>Test end-to-end authentication flow</test>
+  </testing>
+</story-context>
+

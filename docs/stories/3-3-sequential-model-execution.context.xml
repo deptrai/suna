@@ -1,0 +1,299 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>3.3</storyId>
+    <title>Sequential Model Execution</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-07</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/3-3-sequential-model-execution.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>system administrator</asA>
+    <iWant>to implement sequential model execution for multi-step workflows</iWant>
+    <soThat>I can enable complex workflows where different models handle different steps và maximize cost efficiency</soThat>
+    <tasks>
+      <task id="1" ac="3">
+        <title>Define workflow structure</title>
+        <subtasks>
+          <subtask>Define workflow format: Use Python dict for programmatic workflows (primary), JSON/YAML for configuration-based workflows (optional)</subtask>
+          <subtask>Define step structure (model, input, output, error handling) với example:
+            {
+              "steps": [
+                {
+                  "id": "step_1",
+                  "model": "openai-compatible/gpt-4o-mini",
+                  "input": "user_query",
+                  "prompt_template": "Analyze: {input}",
+                  "output_key": "analysis_result",
+                  "error_handling": {"retry": 2, "fallback_model": "openai-compatible/qwen3-30b"}
+                },
+                {
+                  "id": "step_2",
+                  "model": "openai-compatible/gpt-4o",
+                  "input": "{step_1.output_key}",
+                  "prompt_template": "Create plan based on: {input}",
+                  "output_key": "plan_result"
+                }
+              ]
+            }</subtask>
+          <subtask>Create example workflows</subtask>
+          <subtask>Test workflow definition format</subtask>
+          <subtask>Unit test workflow parsing</subtask>
+          <subtask>Integration test workflow structure</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="1">
+        <title>Implement MultiModelOrchestrator class</title>
+        <subtasks>
+          <subtask>Create `backend/core/optimizations/multi_model_orchestrator.py`</subtask>
+          <subtask>Implement `MultiModelOrchestrator` class</subtask>
+          <subtask>Integrate với ModelRouter (Story 3.2)</subtask>
+          <subtask>Test MultiModelOrchestrator class với sample workflows</subtask>
+          <subtask>Unit test MultiModelOrchestrator class</subtask>
+          <subtask>Integration test với ModelRouter</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="2">
+        <title>Implement sequential chaining</title>
+        <subtasks>
+          <subtask>Implement sequential execution logic</subtask>
+          <subtask>Execute models in order (step 1 → step 2 → step 3)</subtask>
+          <subtask>Handle step dependencies</subtask>
+          <subtask>Test sequential chaining với sample workflows</subtask>
+          <subtask>Unit test sequential execution</subtask>
+          <subtask>Integration test với multi-step workflows</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="4">
+        <title>Implement intermediate result passing</title>
+        <subtasks>
+          <subtask>Pass output from step N to input of step N+1</subtask>
+          <subtask>Handle result transformation (if needed)</subtask>
+          <subtask>Test result passing với sample workflows</subtask>
+          <subtask>Unit test result passing</subtask>
+          <subtask>Integration test với complex workflows</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="5">
+        <title>Implement error handling</title>
+        <subtasks>
+          <subtask>Handle errors at each step</subtask>
+          <subtask>Implement retry logic (if needed)</subtask>
+          <subtask>Implement fallback to alternative model (if needed)</subtask>
+          <subtask>Log error events</subtask>
+          <subtask>Test error handling với failure scenarios</subtask>
+          <subtask>Unit test error handling</subtask>
+          <subtask>Integration test error scenarios</subtask>
+        </subtasks>
+      </task>
+      <task id="6" ac="6">
+        <title>Test end-to-end workflow execution</title>
+        <subtasks>
+          <subtask>Test complete workflows từ start to finish</subtask>
+          <subtask>Validate final results</subtask>
+          <subtask>Measure cost savings vs single-model approach</subtask>
+          <subtask>Measure quality impact</subtask>
+          <subtask>Document workflow execution results</subtask>
+          <subtask>End-to-end test với real workflows</subtask>
+          <subtask>Integration test với different workflow types</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1">`MultiModelOrchestrator` class được implemented trong `backend/core/optimizations/multi_model_orchestrator.py`</ac>
+    <ac id="2">Sequential chaining được implemented để execute models in sequence</ac>
+    <ac id="3">Workflow definition được supported (step-by-step model execution)</ac>
+    <ac id="4">Intermediate results được passed between steps</ac>
+    <ac id="5">Error handling được implemented for each step</ac>
+    <ac id="6">End-to-end workflow execution được tested và validated</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/epics-optimization.md</path>
+        <title>ChainLens AI Worker - Epic Breakdown: LLM Optimization</title>
+        <section>Epic 3: Multi-Model Orchestration - Story 3.3: Sequential Model Execution</section>
+        <snippet>Story 3.3 defines requirements for implementing sequential model execution. Expected savings: $36-45/month (enables multi-model workflows). Quality Impact: ⚠️ 10-15% (but cost savings 40-50%). Effort: 3 hours. Prerequisites: Story 3.2 (Model Selection Rules), Story 1.4 (Dual-mode architecture).</snippet>
+      </doc>
+      <doc>
+        <path>docs/optimization-master-plan-v1.1.md</path>
+        <title>ChainLens AI Worker - Master Optimization Plan v1.1</title>
+        <section>Phase 3: Multi-Model Orchestration - Task 3.3: Sequential Model Execution</section>
+        <snippet>Sequential model execution enables multi-step workflows where different models handle different steps. Example: gpt-4o-mini (analyze) → gpt-4o (plan) → qwen3-30b (execute) → claude-sonnet (synthesize). Quality impact: 10-15% but cost savings 40-50%.</snippet>
+      </doc>
+      <doc>
+        <path>docs/multi-model-orchestration-research-guidance.md</path>
+        <title>Research Guidance: Multi-Model Orchestration</title>
+        <section>Sequential Chaining Implementation</section>
+        <snippet>Sequential chaining executes models in sequence (step 1 → step 2 → step 3). Intermediate results passed between steps. Error handling required at each step. Workflow definition format: Python dict (primary) hoặc JSON/YAML (optional).</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>backend/core/optimizations/multi_model_orchestrator.py</path>
+        <kind>service</kind>
+        <symbol>MultiModelOrchestrator class</symbol>
+        <lines>1-300</lines>
+        <reason>New file to create. Implement MultiModelOrchestrator class với sequential chaining, workflow definition support, intermediate result passing, và error handling.</reason>
+      </file>
+      <file>
+        <path>backend/core/optimizations/model_router.py</path>
+        <kind>service</kind>
+        <symbol>ModelRouter class</symbol>
+        <lines>1-200</lines>
+        <reason>ModelRouter from Story 3.2. Provides model selection for each workflow step based on complexity.</reason>
+      </file>
+      <file>
+        <path>backend/core/run.py</path>
+        <kind>service</kind>
+        <symbol>run_agent()</symbol>
+        <lines>326-491</lines>
+        <reason>Agent execution flow. Need to integrate orchestrator vào agent execution flow to support multi-step workflows.</reason>
+      </file>
+      <file>
+        <path>backend/core/services/llm.py</path>
+        <kind>service</kind>
+        <symbol>make_llm_api_call()</symbol>
+        <lines>180-303</lines>
+        <reason>LLM API call handler. Used for sequential LLM calls in workflow steps. Support sequential calls với intermediate results.</reason>
+      </file>
+      <file>
+        <path>backend/core/utils/config.py</path>
+        <kind>config</kind>
+        <symbol>Configuration class</symbol>
+        <lines>73-200</lines>
+        <reason>Configuration management. Can add orchestrator configuration (workflow definitions, error handling settings) here.</reason>
+      </file>
+    </code>
+    <dependencies>
+      <ecosystem>Python</ecosystem>
+      <packages>
+        <package>litellm</package>
+      </packages>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>
+      <type>Quality Requirement</type>
+      <description>Acceptable quality trade-off (80-85%) for 40-50% cost savings. Multi-model workflows enable cost efficiency while maintaining acceptable quality.</description>
+    </constraint>
+    <constraint>
+      <type>Architecture Pattern</type>
+      <description>Dual-mode architecture: Original mode (baseline) + Optimized mode (with orchestration). Feature flags allow switching and rollback.</description>
+    </constraint>
+    <constraint>
+      <type>Workflow Definition Format</type>
+      <description>Primary format: Python dict for programmatic workflows. Optional: JSON/YAML for configuration-based workflows. Step structure includes: id, model, input, prompt_template, output_key, error_handling.</description>
+    </constraint>
+    <constraint>
+      <type>Sequential Chaining</type>
+      <description>Execute models in sequence (step 1 → step 2 → step 3). Handle step dependencies. Pass intermediate results between steps.</description>
+    </constraint>
+    <constraint>
+      <type>Error Handling</type>
+      <description>Handle errors at each step. Implement retry logic và fallback to alternative model if needed. Log error events.</description>
+    </constraint>
+    <constraint>
+      <type>Cost Tracking</type>
+      <description>Measure cost savings vs single-model approach. Target: 40-50% cost reduction. Track cost per workflow step.</description>
+    </constraint>
+    <constraint>
+      <type>Backward Compatibility</type>
+      <description>Must not break existing LLM calls. Orchestration should be transparent to callers. Test with existing agent configurations.</description>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>MultiModelOrchestrator class</name>
+      <kind>class</kind>
+      <signature>class MultiModelOrchestrator: def __init__(self, model_router: ModelRouter): ... async def execute_workflow(self, workflow: Dict[str, Any], initial_input: str) -> Dict[str, Any]: ... # Returns final result và intermediate results</signature>
+      <path>backend/core/optimizations/multi_model_orchestrator.py</path>
+    </interface>
+    <interface>
+      <name>ModelRouter.route()</name>
+      <kind>method</kind>
+      <signature>async def route(self, task: str, user_id: str) -> str: ... # Returns model_id for workflow step</signature>
+      <path>backend/core/optimizations/model_router.py</path>
+    </interface>
+    <interface>
+      <name>make_llm_api_call()</name>
+      <kind>function</kind>
+      <signature>async def make_llm_api_call(messages: List[Dict[str, Any]], model_name: str, ...) -> Union[Dict[str, Any], AsyncGenerator, ModelResponse]</signature>
+      <path>backend/core/services/llm.py</path>
+    </interface>
+    <interface>
+      <name>Workflow definition format</name>
+      <kind>data structure</kind>
+      <signature>{
+        "steps": [
+          {
+            "id": str,
+            "model": str,
+            "input": str,
+            "prompt_template": str,
+            "output_key": str,
+            "error_handling": Optional[Dict[str, Any]]
+          }
+        ]
+      }</signature>
+      <path>backend/core/optimizations/multi_model_orchestrator.py</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing standards include: Quality validation (end-to-end workflows, quality impact 80-85%), Performance testing (workflow execution time, cost savings 40-50%), Integration testing (ModelRouter integration, existing LLM calls, different workflows, different models, error scenarios). Compare với single-model approach.
+    </standards>
+    <locations>
+      <location>backend/tests/</location>
+      <location>backend/core/tests/</location>
+      <location>backend/core/optimizations/tests/</location>
+    </locations>
+    <ideas>
+      <test ac="1">
+        <idea>Unit test: Verify MultiModelOrchestrator class creation và initialization</idea>
+      </test>
+      <test ac="1">
+        <idea>Integration test: Test MultiModelOrchestrator class với ModelRouter</idea>
+      </test>
+      <test ac="2">
+        <idea>Unit test: Verify sequential execution logic (step 1 → step 2 → step 3)</idea>
+      </test>
+      <test ac="2">
+        <idea>Integration test: Test sequential chaining với multi-step workflows</idea>
+      </test>
+      <test ac="3">
+        <idea>Unit test: Verify workflow definition parsing (Python dict, JSON/YAML)</idea>
+      </test>
+      <test ac="3">
+        <idea>Integration test: Test workflow structure với different formats</idea>
+      </test>
+      <test ac="4">
+        <idea>Unit test: Verify intermediate result passing (output from step N to input of step N+1)</idea>
+      </test>
+      <test ac="4">
+        <idea>Integration test: Test result passing với complex workflows</idea>
+      </test>
+      <test ac="5">
+        <idea>Unit test: Verify error handling (retry logic, fallback to alternative model)</idea>
+      </test>
+      <test ac="5">
+        <idea>Integration test: Test error handling với failure scenarios</idea>
+      </test>
+      <test ac="6">
+        <idea>End-to-end test: Test complete workflows từ start to finish với real workflows</idea>
+      </test>
+      <test ac="6">
+        <idea>Integration test: Test với different workflow types và measure cost savings vs single-model approach</idea>
+      </test>
+    </ideas>
+  </tests>
+</story-context>
+

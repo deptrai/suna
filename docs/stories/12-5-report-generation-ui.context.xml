@@ -1,0 +1,117 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>12</epicId>
+    <storyId>12.5</storyId>
+    <title>Report Generation UI</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-08</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/12-5-report-generation-ui.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>generate full report từ popup</iWant>
+    <soThat>I can get comprehensive analysis</soThat>
+    <tasks>
+      <task id="1" ac="1">
+        <title>Add Generate Report button</title>
+        <subtasks>
+          <subtask>Add "Generate Full Report" button trong popup footer</subtask>
+          <subtask>Style button appropriately</subtask>
+          <subtask>Position button in footer layout</subtask>
+          <subtask>Test button displays correctly</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="2">
+        <title>Implement button click handler</title>
+        <subtasks>
+          <subtask>Add click handler to button</subtask>
+          <subtask>Use `chrome.tabs.create()` to open new tab</subtask>
+          <subtask>Construct report URL</subtask>
+          <subtask>Open new tab với report URL</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="3">
+        <title>Include coin context in URL</title>
+        <subtasks>
+          <subtask>Get current coin name từ analysis data</subtask>
+          <subtask>Add coin name as query parameter: `?coin=BTC` hoặc `?coinName=Bitcoin`</subtask>
+          <subtask>Add other context if needed (symbol, etc.)</subtask>
+          <subtask>Construct complete URL với query params</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="4">
+        <title>Verify report page loads</title>
+        <subtasks>
+          <subtask>Test report page opens với correct URL</subtask>
+          <subtask>Verify report page loads coin data from query params</subtask>
+          <subtask>Test report page displays analysis correctly</subtask>
+          <subtask>Test với different coins</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="5">
+        <title>Implement error handling</title>
+        <subtasks>
+          <subtask>Handle errors khi opening new tab fails</subtask>
+          <subtask>Handle errors khi report URL is invalid</subtask>
+          <subtask>Display error message to user</subtask>
+          <subtask>Provide error recovery options</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1">"Generate Full Report" button trong popup</ac>
+    <ac id="2">Button click opens new tab với report URL</ac>
+    <ac id="3">Report URL includes coin context (query params)</ac>
+    <ac id="4">Report page (frontend) loads với correct coin data</ac>
+    <ac id="5">Error handling nếu report generation fails</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/epics-extension.md</path>
+        <title>Epic 12: Popup UI & Shared Components Integration</title>
+        <section>Story 12.5: Report Generation UI</section>
+      </doc>
+      <doc>
+        <path>docs/stories/12-2-popup-layout-structure.md</path>
+        <title>Story 12.2: Popup Layout & Structure</title>
+        <snippet>Footer với action buttons ready. Button can be added to footer.</snippet>
+      </doc>
+      <doc>
+        <path>docs/stories/12-4-react-query-integration.md</path>
+        <title>Story 12.4: React Query Integration</title>
+        <snippet>Analysis data available via React Query hook. Can get coin name/symbol from analysis data.</snippet>
+      </doc>
+      <doc>
+        <path>docs/PRD-extension.md</path>
+        <title>PRD: Browser Extension</title>
+        <section>FR005: Report generation</section>
+      </doc>
+    </docs>
+  </artifacts>
+
+  <dependencies>
+    <prerequisite>Story 12.4: React Query integration must be complete (analysis data available)</prerequisite>
+    <prerequisite>Story 12.2: Popup layout với footer must be created</prerequisite>
+  </dependencies>
+
+  <constraints>
+    <constraint>Report URL must include coin context (query params)</constraint>
+    <constraint>Chrome tabs API requires `tabs` permission in manifest</constraint>
+    <constraint>Error handling must be implemented</constraint>
+  </constraints>
+
+  <testing>
+    <test>Test button displays và is clickable</test>
+    <test>Test new tab opens với report URL</test>
+    <test>Test URL includes coin context</test>
+    <test>Test report page loads correctly</test>
+    <test>Test error handling</test>
+  </testing>
+</story-context>
+

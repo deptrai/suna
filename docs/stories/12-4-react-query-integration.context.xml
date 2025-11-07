@@ -1,0 +1,128 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>12</epicId>
+    <storyId>12.4</storyId>
+    <title>React Query Integration</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-08</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/12-4-react-query-integration.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>React Query setup trong popup</iWant>
+    <soThat>data fetching và caching works như main app</soThat>
+    <tasks>
+      <task id="1" ac="1">
+        <title>Setup QueryClient provider</title>
+        <subtasks>
+          <subtask>Import QueryClient và QueryClientProvider từ React Query</subtask>
+          <subtask>Create QueryClient instance với configuration</subtask>
+          <subtask>Wrap popup app với QueryClientProvider</subtask>
+          <subtask>Configure QueryClient với caching settings</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="2">
+        <title>Import React Query hooks</title>
+        <subtasks>
+          <subtask>Import hooks từ `@/hooks/react-query/` (if available)</subtask>
+          <subtask>Or create hooks locally trong extension</subtask>
+          <subtask>Test hooks import correctly</subtask>
+          <subtask>Verify hooks work trong popup context</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="3">
+        <title>Create analysis query hook</title>
+        <subtasks>
+          <subtask>Create `useCoinAnalysis` hook hoặc reuse từ frontend</subtask>
+          <subtask>Hook should fetch analysis data từ API</subtask>
+          <subtask>Hook should handle loading và error states</subtask>
+          <subtask>Hook should return analysis data</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="4">
+        <title>Configure caching strategy</title>
+        <subtasks>
+          <subtask>Set staleTime to match frontend (e.g., 5 minutes)</subtask>
+          <subtask>Set gcTime (garbage collection time) to match frontend</subtask>
+          <subtask>Configure other cache settings</subtask>
+          <subtask>Test caching works correctly</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="5">
+        <title>Implement query invalidation</title>
+        <subtasks>
+          <subtask>Setup query invalidation khi needed</subtask>
+          <subtask>Test invalidation triggers refetch</subtask>
+          <subtask>Test invalidation works correctly</subtask>
+        </subtasks>
+      </task>
+      <task id="6" ac="6">
+        <title>Handle loading và error states</title>
+        <subtasks>
+          <subtask>Use `isLoading` từ query hook</subtask>
+          <subtask>Use `isError` và `error` từ query hook</subtask>
+          <subtask>Display loading state trong component</subtask>
+          <subtask>Display error state trong component</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1">QueryClient provider setup trong popup</ac>
+    <ac id="2">React Query hooks imported từ frontend (`@/hooks/react-query/`)</ac>
+    <ac id="3">Analysis query hook created hoặc reused</ac>
+    <ac id="4">Caching strategy matches frontend (staleTime, gcTime)</ac>
+    <ac id="5">Query invalidation works correctly</ac>
+    <ac id="6">Loading và error states handled properly</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/epics-extension.md</path>
+        <title>Epic 12: Popup UI & Shared Components Integration</title>
+        <section>Story 12.4: React Query Integration</section>
+      </doc>
+      <doc>
+        <path>docs/stories/12-3-analysis-results-display-component.md</path>
+        <title>Story 12.3: Analysis Results Display Component</title>
+        <snippet>Analysis component created và ready to receive data. Component has loading và error state placeholders.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>frontend/src/providers/react-query-provider.tsx</path>
+        <title>React Query Provider</title>
+        <snippet>Reference for QueryClient configuration, staleTime (20s), gcTime (2min), retry logic, error handling.</snippet>
+      </file>
+      <file>
+        <path>frontend/src/hooks/react-query/</path>
+        <title>React Query Hooks</title>
+        <snippet>Reference for React Query hooks structure và patterns.</snippet>
+      </file>
+    </code>
+  </artifacts>
+
+  <dependencies>
+    <prerequisite>Story 12.3: Analysis component must be created</prerequisite>
+  </dependencies>
+
+  <constraints>
+    <constraint>Caching strategy must match frontend (staleTime, gcTime)</constraint>
+    <constraint>Hooks must work trong popup context</constraint>
+    <constraint>Loading và error states must be handled properly</constraint>
+  </constraints>
+
+  <testing>
+    <test>Test QueryClient provider setup</test>
+    <test>Test React Query hooks work</test>
+    <test>Test analysis query hook</test>
+    <test>Test caching strategy</test>
+    <test>Test query invalidation</test>
+    <test>Test loading và error states</test>
+  </testing>
+</story-context>
+

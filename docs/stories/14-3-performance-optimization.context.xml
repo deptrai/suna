@@ -1,0 +1,123 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>14</epicId>
+    <storyId>14.3</storyId>
+    <title>Performance Optimization</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-08</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/14-3-performance-optimization.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>fast extension performance</iWant>
+    <soThat>analysis feels instant</soThat>
+    <tasks>
+      <task id="1" ac="1">
+        <title>Analyze bundle size</title>
+        <subtasks>
+          <subtask>Run bundle analyzer (webpack-bundle-analyzer hoặc similar)</subtask>
+          <subtask>Identify large dependencies</subtask>
+          <subtask>Optimize bundle size</subtask>
+          <subtask>Remove unused dependencies</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="2">
+        <title>Optimize popup load time</title>
+        <subtasks>
+          <subtask>Measure popup load time</subtask>
+          <subtask>Identify slow operations</subtask>
+          <subtask>Optimize initial render</subtask>
+          <subtask>Lazy load heavy components</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="3">
+        <title>Optimize content script performance</title>
+        <subtasks>
+          <subtask>Measure detection performance</subtask>
+          <subtask>Use requestIdleCallback (already implemented)</subtask>
+          <subtask>Optimize detection algorithm</subtask>
+          <subtask>Limit detection frequency</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="4">
+        <title>Implement lazy loading</title>
+        <subtasks>
+          <subtask>Lazy load heavy components (Dialog, etc.)</subtask>
+          <subtask>Use React.lazy() for code splitting</subtask>
+          <subtask>Lazy load analysis results component</subtask>
+          <subtask>Test lazy loading works</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="5">
+        <title>Implement code splitting</title>
+        <subtasks>
+          <subtask>Split popup code from content script code</subtask>
+          <subtask>Split background worker code</subtask>
+          <subtask>Use dynamic imports where appropriate</subtask>
+          <subtask>Test code splitting works</subtask>
+        </subtasks>
+      </task>
+      <task id="6" ac="6">
+        <title>Test performance</title>
+        <subtasks>
+          <subtask>Test trên CoinGecko</subtask>
+          <subtask>Test trên Binance</subtask>
+          <subtask>Test trên CoinMarketCap</subtask>
+          <subtask>Test trên other crypto websites</subtask>
+          <subtask>Measure và document performance metrics</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1">Extension bundle size &lt; 2MB (analyze với bundle analyzer)</ac>
+    <ac id="2">Popup loads trong &lt; 2 seconds</ac>
+    <ac id="3">Content script detection doesn't slow page</ac>
+    <ac id="4">Lazy loading implemented cho heavy components</ac>
+    <ac id="5">Code splitting cho popup vs content script</ac>
+    <ac id="6">Performance tested trên various websites</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/epics-extension.md</path>
+        <title>Epic 14: Report Generation & Polish</title>
+        <section>Story 14.3: Performance Optimization</section>
+      </doc>
+      <doc>
+        <path>docs/PRD-extension.md</path>
+        <title>PRD: Browser Extension</title>
+        <section>NFR001: Bundle size &lt; 2MB, NFR002: Popup load &lt; 2s</section>
+      </doc>
+      <doc>
+        <path>docs/stories/11-2-content-script-injection.md</path>
+        <title>Story 11.2: Content Script Injection</title>
+        <snippet>requestIdleCallback already implemented for performance optimization.</snippet>
+      </doc>
+    </docs>
+  </artifacts>
+
+  <dependencies>
+    <prerequisite>Story 14.1: Report generation integration must be complete</prerequisite>
+  </dependencies>
+
+  <constraints>
+    <constraint>Bundle size must be &lt; 2MB</constraint>
+    <constraint>Popup load time must be &lt; 2 seconds</constraint>
+    <constraint>Content script must not slow page performance</constraint>
+  </constraints>
+
+  <testing>
+    <test>Test bundle size &lt; 2MB</test>
+    <test>Test popup load time &lt; 2 seconds</test>
+    <test>Test content script performance</test>
+    <test>Test lazy loading</test>
+    <test>Test code splitting</test>
+    <test>Test performance trên various websites</test>
+  </testing>
+</story-context>
+

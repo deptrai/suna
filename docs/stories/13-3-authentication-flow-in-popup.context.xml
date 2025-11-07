@@ -1,0 +1,130 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>13</epicId>
+    <storyId>13.3</storyId>
+    <title>Authentication Flow in Popup</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-08</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/13-3-authentication-flow-in-popup.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>login trong extension popup</iWant>
+    <soThat>I can access authenticated features</soThat>
+    <tasks>
+      <task id="1" ac="1">
+        <title>Create login UI</title>
+        <subtasks>
+          <subtask>Import auth components từ frontend hoặc create locally</subtask>
+          <subtask>Create login form component</subtask>
+          <subtask>Add email và password fields</subtask>
+          <subtask>Add submit button</subtask>
+          <subtask>Style login form</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="2">
+        <title>Implement login form submission</title>
+        <subtasks>
+          <subtask>Add form submit handler</subtask>
+          <subtask>Get credentials from form</subtask>
+          <subtask>Call Supabase signIn function</subtask>
+          <subtask>Handle login errors</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="3">
+        <title>Store auth token</title>
+        <subtasks>
+          <subtask>After successful login, get session từ Supabase</subtask>
+          <subtask>Session automatically stored via chrome.storage adapter (Story 13.1)</subtask>
+          <subtask>Verify token stored correctly</subtask>
+          <subtask>Test token persistence</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="4">
+        <title>Show logged-in state</title>
+        <subtasks>
+          <subtask>Check auth state on popup open</subtask>
+          <subtask>Display user info if logged in</subtask>
+          <subtask>Hide login form if logged in</subtask>
+          <subtask>Show authenticated UI</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="5">
+        <title>Implement logout</title>
+        <subtasks>
+          <subtask>Add logout button</subtask>
+          <subtask>Call Supabase signOut function</subtask>
+          <subtask>Clear auth state</subtask>
+          <subtask>Show login form after logout</subtask>
+        </subtasks>
+      </task>
+      <task id="6" ac="6">
+        <title>Test auth persistence</title>
+        <subtasks>
+          <subtask>Test auth state persists after popup close</subtask>
+          <subtask>Test auth state persists after browser restart</subtask>
+          <subtask>Test auth state loads on popup open</subtask>
+          <subtask>Test across browser sessions</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1">Login UI trong popup (reuse frontend auth components)</ac>
+    <ac id="2">Login form submits credentials</ac>
+    <ac id="3">Auth token stored in chrome.storage after login</ac>
+    <ac id="4">Popup shows logged-in state</ac>
+    <ac id="5">Logout functionality works</ac>
+    <ac id="6">Auth state persists across browser sessions</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/epics-extension.md</path>
+        <title>Epic 13: API Integration & Authentication</title>
+        <section>Story 13.3: Authentication Flow in Popup</section>
+      </doc>
+      <doc>
+        <path>docs/stories/13-1-chrome-storage-adapter-for-supabase.md</path>
+        <title>Story 13.1: Chrome Storage Adapter for Supabase</title>
+        <snippet>Supabase client available. Auth state persists via chrome.storage adapter.</snippet>
+      </doc>
+      <doc>
+        <path>docs/stories/13-2-api-client-adaptation.md</path>
+        <title>Story 13.2: API Client Adaptation</title>
+        <snippet>API client ready. Token retrieval from chrome.storage works.</snippet>
+      </doc>
+      <doc>
+        <path>docs/stories/12-2-popup-layout-structure.md</path>
+        <title>Story 12.2: Popup Layout & Structure</title>
+        <snippet>Popup layout ready. Login UI can be integrated into popup.</snippet>
+      </doc>
+    </docs>
+  </artifacts>
+
+  <dependencies>
+    <prerequisite>Story 13.2: API client adaptation must be complete</prerequisite>
+    <prerequisite>Story 12.2: Popup layout must be created</prerequisite>
+    <prerequisite>Story 13.1: Supabase client với storage adapter must be complete</prerequisite>
+  </dependencies>
+
+  <constraints>
+    <constraint>Login UI must reuse frontend auth components if possible</constraint>
+    <constraint>Auth state must persist across browser sessions</constraint>
+    <constraint>Logout must clear auth state correctly</constraint>
+  </constraints>
+
+  <testing>
+    <test>Test login UI displays</test>
+    <test>Test login form submission</test>
+    <test>Test auth token storage</test>
+    <test>Test logged-in state</test>
+    <test>Test logout functionality</test>
+    <test>Test auth persistence</test>
+  </testing>
+</story-context>
+

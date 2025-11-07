@@ -1,0 +1,129 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>13</epicId>
+    <storyId>13.2</storyId>
+    <title>API Client Adaptation</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-08</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/13-2-api-client-adaptation.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>reuse API client từ frontend với extension-specific auth</iWant>
+    <soThat>API calls work correctly</soThat>
+    <tasks>
+      <task id="1" ac="1">
+        <title>Extract/import API client</title>
+        <subtasks>
+          <subtask>Import API client từ `@/lib/api` hoặc extract logic</subtask>
+          <subtask>Adapt API client for extension use</subtask>
+          <subtask>Ensure API client functions work</subtask>
+          <subtask>Test API client imports correctly</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="2">
+        <title>Implement auth token retrieval</title>
+        <subtasks>
+          <subtask>Create function to get auth token từ chrome.storage</subtask>
+          <subtask>Use Supabase client từ Story 13.1 to get session</subtask>
+          <subtask>Extract JWT token from session</subtask>
+          <subtask>Handle missing token (user not logged in)</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="3">
+        <title>Add JWT token to headers</title>
+        <subtasks>
+          <subtask>Modify API client to include Authorization header</subtask>
+          <subtask>Format: `Authorization: Bearer &lt;token&gt;`</subtask>
+          <subtask>Get token before each API call</subtask>
+          <subtask>Handle token refresh if needed</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="4">
+        <title>Implement error handling</title>
+        <subtasks>
+          <subtask>Reuse error handler từ frontend (`@/lib/error-handler`)</subtask>
+          <subtask>Handle authentication errors (401, 403)</subtask>
+          <subtask>Handle network errors</subtask>
+          <subtask>Handle API errors</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="5">
+        <title>Test với coin analysis endpoint</title>
+        <subtasks>
+          <subtask>Test API call to `/api/analyze` endpoint</subtask>
+          <subtask>Test với coin name parameter</subtask>
+          <subtask>Verify response is correct</subtask>
+          <subtask>Test error cases</subtask>
+        </subtasks>
+      </task>
+      <task id="6" ac="6">
+        <title>Handle CORS</title>
+        <subtasks>
+          <subtask>Test CORS với direct API calls từ popup</subtask>
+          <subtask>If CORS issues, use background worker as proxy</subtask>
+          <subtask>Implement background worker proxy if needed</subtask>
+          <subtask>Test CORS handling works</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1">API client logic extracted hoặc imported từ frontend</ac>
+    <ac id="2">Auth token retrieved từ chrome.storage</ac>
+    <ac id="3">API calls include JWT token in headers</ac>
+    <ac id="4">Error handling matches frontend patterns</ac>
+    <ac id="5">API client tested với coin analysis endpoint</ac>
+    <ac id="6">CORS handling works (hoặc background worker proxy)</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/architecture-extension-suna.md</path>
+        <title>Browser Extension Architecture</title>
+        <section>API Integration - API client reuse patterns</section>
+      </doc>
+      <doc>
+        <path>docs/stories/13-1-chrome-storage-adapter-for-supabase.md</path>
+        <title>Story 13.1: Chrome Storage Adapter for Supabase</title>
+        <snippet>Supabase client với chrome.storage adapter created. Can get auth token from Supabase session.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>frontend/src/lib/api.ts</path>
+        <title>API Client</title>
+        <snippet>Reference for API client implementation, error handling, authentication headers.</snippet>
+      </file>
+      <file>
+        <path>frontend/src/lib/error-handler.ts</path>
+        <title>Error Handler</title>
+        <snippet>Reference for error handling patterns và error handler implementation.</snippet>
+      </file>
+    </code>
+  </artifacts>
+
+  <dependencies>
+    <prerequisite>Story 13.1: Supabase client với storage adapter must be complete</prerequisite>
+  </dependencies>
+
+  <constraints>
+    <constraint>API client must include JWT token in Authorization header</constraint>
+    <constraint>Error handling must match frontend patterns</constraint>
+    <constraint>CORS handling must work (may require background worker proxy)</constraint>
+  </constraints>
+
+  <testing>
+    <test>Test API client works correctly</test>
+    <test>Test auth token retrieval</test>
+    <test>Test JWT token in headers</test>
+    <test>Test error handling</test>
+    <test>Test coin analysis endpoint</test>
+    <test>Test CORS handling</test>
+  </testing>
+</story-context>
+

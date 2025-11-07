@@ -1,0 +1,292 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>3.2</storyId>
+    <title>Model Selection Rules</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-07</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/3-2-model-selection-rules.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>system administrator</asA>
+    <iWant>to implement model selection rules based on task complexity</iWant>
+    <soThat>I can route tasks to optimal models và achieve 40-50% cost reduction với acceptable quality trade-off</soThat>
+    <tasks>
+      <task id="1" ac="2">
+        <title>Define routing rules</title>
+        <subtasks>
+          <subtask>Map complexity levels to models:
+            - simple → gpt-4o-mini, qwen3-30b (cheap models)
+            - medium → deepseek-v3-1, claude-haiku-4-5 (balanced models)
+            - complex → qwen3-235b (powerful but cheaper)
+            - very_complex → gpt-4o, claude-sonnet (premium models)</subtask>
+          <subtask>Document routing rules và rationale</subtask>
+          <subtask>Create routing decision matrix</subtask>
+          <subtask>Test routing rules với sample tasks</subtask>
+          <subtask>Unit test routing rules</subtask>
+          <subtask>Integration test routing decisions</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="1">
+        <title>Implement ModelRouter class</title>
+        <subtasks>
+          <subtask>Create `backend/core/optimizations/model_router.py`</subtask>
+          <subtask>Implement `ModelRouter` class với routing logic</subtask>
+          <subtask>Integrate với TaskClassifier (Story 3.1)</subtask>
+          <subtask>Test ModelRouter class với sample tasks</subtask>
+          <subtask>Unit test ModelRouter class</subtask>
+          <subtask>Integration test với TaskClassifier</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="3">
+        <title>Implement model selection logic</title>
+        <subtasks>
+          <subtask>Get complexity level từ TaskClassifier</subtask>
+          <subtask>Apply routing rules to select model</subtask>
+          <subtask>Handle multiple models matching same complexity level:
+            - Prefer cheaper model if multiple models match (e.g., simple → prefer gpt-4o-mini over qwen3-30b if both available)
+            - Consider model availability (check if model is enabled và accessible)
+            - Consider model capabilities (if task requires specific features like vision, prefer model with those capabilities)
+            - Use round-robin hoặc random selection if all factors equal</subtask>
+          <subtask>Handle edge cases (unknown complexity, model unavailable)</subtask>
+          <subtask>Test selection logic với different complexity levels</subtask>
+          <subtask>Unit test selection logic</subtask>
+          <subtask>Integration test với different scenarios</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="4">
+        <title>Implement logging và monitoring</title>
+        <subtasks>
+          <subtask>Log routing decisions (complexity → model selected)</subtask>
+          <subtask>Track routing metrics (model distribution, routing accuracy)</subtask>
+          <subtask>Add routing metrics to monitoring dashboard</subtask>
+          <subtask>Test logging với sample requests</subtask>
+          <subtask>Unit test logging logic</subtask>
+          <subtask>Integration test metrics tracking</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="5">
+        <title>Implement fallback mechanism</title>
+        <subtasks>
+          <subtask>Add fallback logic nếu selected model fails</subtask>
+          <subtask>Fallback to next best model based on complexity</subtask>
+          <subtask>Log fallback events</subtask>
+          <subtask>Test fallback mechanism với failure scenarios</subtask>
+          <subtask>Unit test fallback logic</subtask>
+          <subtask>Integration test fallback scenarios</subtask>
+        </subtasks>
+      </task>
+      <task id="6" ac="6">
+        <title>Measure và track cost savings</title>
+        <subtasks>
+          <subtask>Track cost per request (before vs after routing)</subtask>
+          <subtask>Calculate cost savings percentage</subtask>
+          <subtask>Log cost metrics</subtask>
+          <subtask>Add cost metrics to monitoring dashboard</subtask>
+          <subtask>Test cost tracking với sample requests</subtask>
+          <subtask>Unit test cost calculation</subtask>
+          <subtask>Integration test cost tracking</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1">`ModelRouter` class được implemented trong `backend/core/optimizations/model_router.py`</ac>
+    <ac id="2">Routing rules được defined để map complexity levels to models</ac>
+    <ac id="3">Model selection logic được implemented based on complexity</ac>
+    <ac id="4">Routing decisions được logged và monitored</ac>
+    <ac id="5">Fallback mechanism được implemented nếu selected model fails</ac>
+    <ac id="6">Cost savings được measured và tracked</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/epics-optimization.md</path>
+        <title>ChainLens AI Worker - Epic Breakdown: LLM Optimization</title>
+        <section>Epic 3: Multi-Model Orchestration - Story 3.2: Model Selection Rules</section>
+        <snippet>Story 3.2 defines requirements for implementing model selection rules. Expected savings: $36-45/month (40-50% cost reduction). Quality Impact: ⚠️ 10-15% (cheaper models for simple tasks, acceptable trade-off). Effort: 2 hours. Prerequisites: Story 3.1 (Task Complexity Classification), Story 1.4 (Dual-mode architecture).</snippet>
+      </doc>
+      <doc>
+        <path>docs/optimization-master-plan-v1.1.md</path>
+        <title>ChainLens AI Worker - Master Optimization Plan v1.1</title>
+        <section>Phase 3: Multi-Model Orchestration - Task 3.2: Model Selection Rules</section>
+        <snippet>Model selection rules map complexity levels to optimal models: simple → cheap models (gpt-4o-mini, qwen3-30b), medium → balanced models (deepseek-v3-1, claude-haiku-4-5), complex → powerful but cheaper (qwen3-235b), very_complex → premium models (gpt-4o, claude-sonnet). Quality impact: 10-15% (acceptable trade-off).</snippet>
+      </doc>
+      <doc>
+        <path>docs/multi-model-orchestration-research-guidance.md</path>
+        <title>Research Guidance: Multi-Model Orchestration</title>
+        <section>Model Selection Strategy</section>
+        <snippet>Model selection based on task complexity enables 40-50% cost reduction với acceptable quality trade-off (80-85%). Routing rules map complexity to optimal models. Fallback mechanism required if selected model fails.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>backend/core/optimizations/model_router.py</path>
+        <kind>service</kind>
+        <symbol>ModelRouter class</symbol>
+        <lines>1-200</lines>
+        <reason>New file to create. Implement ModelRouter class với routing logic, routing rules, model selection, fallback mechanism, và cost tracking.</reason>
+      </file>
+      <file>
+        <path>backend/core/optimizations/task_classifier.py</path>
+        <kind>service</kind>
+        <symbol>TaskClassifier class</symbol>
+        <lines>1-200</lines>
+        <reason>TaskClassifier from Story 3.1. Provides complexity classification results (complexity level, confidence score) for routing decisions.</reason>
+      </file>
+      <file>
+        <path>backend/core/run.py</path>
+        <kind>service</kind>
+        <symbol>run_agent()</symbol>
+        <lines>326-491</lines>
+        <reason>Agent execution flow. Need to integrate routing vào agent execution flow to select optimal model based on complexity before LLM calls.</reason>
+      </file>
+      <file>
+        <path>backend/core/services/llm.py</path>
+        <kind>service</kind>
+        <symbol>make_llm_api_call()</symbol>
+        <lines>180-303</lines>
+        <reason>LLM API call handler. Use routed model from ModelRouter for LLM calls instead of default model selection.</reason>
+      </file>
+      <file>
+        <path>backend/core/ai_models/manager.py</path>
+        <kind>service</kind>
+        <symbol>get_default_model_for_user()</symbol>
+        <lines>204-244</lines>
+        <reason>Current model selection logic. ModelRouter will override this based on complexity classification.</reason>
+      </file>
+      <file>
+        <path>backend/core/ai_models/registry.py</path>
+        <kind>service</kind>
+        <symbol>ModelRegistry class</symbol>
+        <lines>1-460</lines>
+        <reason>Model registry với available models và capabilities. ModelRouter needs to check model availability và capabilities for routing decisions.</reason>
+      </file>
+      <file>
+        <path>backend/core/utils/config.py</path>
+        <kind>config</kind>
+        <symbol>Configuration class</symbol>
+        <lines>73-200</lines>
+        <reason>Configuration management. Can add routing configuration (routing rules, fallback settings) here.</reason>
+      </file>
+    </code>
+    <dependencies>
+      <ecosystem>Python</ecosystem>
+      <packages>
+        <package>litellm</package>
+      </packages>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>
+      <type>Quality Requirement</type>
+      <description>Acceptable quality trade-off (80-85%) for 40-50% cost savings. Cheaper models for simple tasks, premium models for complex tasks.</description>
+    </constraint>
+    <constraint>
+      <type>Architecture Pattern</type>
+      <description>Dual-mode architecture: Original mode (baseline) + Optimized mode (with routing). Feature flags allow switching and rollback.</description>
+    </constraint>
+    <constraint>
+      <type>Routing Rules</type>
+      <description>Routing rules map complexity levels to models: simple → gpt-4o-mini, qwen3-30b; medium → deepseek-v3-1, claude-haiku-4-5; complex → qwen3-235b; very_complex → gpt-4o, claude-sonnet.</description>
+    </constraint>
+    <constraint>
+      <type>Model Selection Logic</type>
+      <description>If multiple models match same complexity level: prefer cheaper model, consider availability, consider capabilities, use round-robin/random if all factors equal.</description>
+    </constraint>
+    <constraint>
+      <type>Fallback Mechanism</type>
+      <description>If selected model fails, fallback to next best model based on complexity. Log fallback events.</description>
+    </constraint>
+    <constraint>
+      <type>Cost Tracking</type>
+      <description>Track cost per request (before vs after routing). Calculate cost savings percentage. Target: 40-50% cost reduction.</description>
+    </constraint>
+    <constraint>
+      <type>Backward Compatibility</type>
+      <description>Must not break existing LLM calls. Routing should be transparent to callers. Test with existing agent configurations.</description>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>ModelRouter class</name>
+      <kind>class</kind>
+      <signature>class ModelRouter: def __init__(self, task_classifier: TaskClassifier, model_registry: ModelRegistry): ... async def route(self, task: str, user_id: str) -> str: ... # Returns model_id</signature>
+      <path>backend/core/optimizations/model_router.py</path>
+    </interface>
+    <interface>
+      <name>TaskClassifier.classify()</name>
+      <kind>method</kind>
+      <signature>async def classify(self, task: str) -> Dict[str, Any]: ... # Returns {"complexity": "simple|medium|complex|very_complex", "confidence": float}</signature>
+      <path>backend/core/optimizations/task_classifier.py</path>
+    </interface>
+    <interface>
+      <name>ModelRegistry.get()</name>
+      <kind>method</kind>
+      <signature>def get(self, model_id: str) -> Optional[Model]: ... # Returns Model object với pricing, capabilities, enabled status</signature>
+      <path>backend/core/ai_models/registry.py</path>
+    </interface>
+    <interface>
+      <name>make_llm_api_call()</name>
+      <kind>function</kind>
+      <signature>async def make_llm_api_call(messages: List[Dict[str, Any]], model_name: str, ...) -> Union[Dict[str, Any], AsyncGenerator, ModelResponse]</signature>
+      <path>backend/core/services/llm.py</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing standards include: Quality validation (routing decisions correct, quality impact 80-85%), Performance testing (routing overhead &lt;50ms, cost savings 40-50%), Integration testing (TaskClassifier integration, existing LLM calls, different models, agent configurations, fallback scenarios). Monitor quality impact và cost savings.
+    </standards>
+    <locations>
+      <location>backend/tests/</location>
+      <location>backend/core/tests/</location>
+      <location>backend/core/optimizations/tests/</location>
+    </locations>
+    <ideas>
+      <test ac="1">
+        <idea>Unit test: Verify ModelRouter class creation và initialization</idea>
+      </test>
+      <test ac="1">
+        <idea>Integration test: Test ModelRouter class với TaskClassifier</idea>
+      </test>
+      <test ac="2">
+        <idea>Unit test: Verify routing rules (complexity levels mapped to models)</idea>
+      </test>
+      <test ac="2">
+        <idea>Integration test: Test routing decisions với sample tasks</idea>
+      </test>
+      <test ac="3">
+        <idea>Unit test: Verify model selection logic (prefer cheaper, consider availability, consider capabilities)</idea>
+      </test>
+      <test ac="3">
+        <idea>Integration test: Test selection logic với different complexity levels và scenarios</idea>
+      </test>
+      <test ac="4">
+        <idea>Unit test: Verify logging logic (routing decisions, metrics tracking)</idea>
+      </test>
+      <test ac="4">
+        <idea>Integration test: Verify routing metrics are logged và appear in monitoring dashboard</idea>
+      </test>
+      <test ac="5">
+        <idea>Unit test: Verify fallback logic (fallback to next best model if selected model fails)</idea>
+      </test>
+      <test ac="5">
+        <idea>Integration test: Test fallback mechanism với failure scenarios</idea>
+      </test>
+      <test ac="6">
+        <idea>Unit test: Verify cost calculation (cost per request, cost savings percentage)</idea>
+      </test>
+      <test ac="6">
+        <idea>Integration test: Verify cost tracking và cost savings measurement (target: 40-50%)</idea>
+      </test>
+    </ideas>
+  </tests>
+</story-context>
+

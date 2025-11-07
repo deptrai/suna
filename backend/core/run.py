@@ -331,22 +331,33 @@ class PromptManager:
                                   client=None,
                                   tool_registry=None,
                                   xml_tool_calling: bool = True) -> dict:
+        """
+        Build system prompt with optimized structure for OpenAI prompt caching.
         
+        Structure (for OpenAI caching):
+        1. STATIC sections first (cached):
+           - Default system prompt
+           - Builder prompt (if enabled)
+           - Tool schemas (if available)
+        2. DYNAMIC sections last (not cached):
+           - Agent-specific prompt
+           - Knowledge base context
+           - MCP tools info
+           - Datetime info
+        
+        This ordering enables OpenAI automatic prompt caching for prompts ≥1,024 tokens.
+        """
+        
+        # ============================================
+        # PHASE 1: STATIC CONTENT (Cached by OpenAI)
+        # ============================================
+        static_sections = []
+        
+        # 1.1: Default system prompt (STATIC - ~1,000 tokens)
         default_system_content = get_system_prompt()
+        static_sections.append(default_system_content)
         
-        # if "anthropic" not in model_name.lower():
-        #     sample_response_path = os.path.join(os.path.dirname(__file__), 'prompts/samples/1.txt')
-        #     with open(sample_response_path, 'r') as file:
-        #         sample_response = file.read()
-        #     default_system_content = default_system_content + "\n\n <sample_assistant_response>" + sample_response + "</sample_assistant_response>"
-        
-        # Start with agent's normal system prompt or default
-        if agent_config and agent_config.get('system_prompt'):
-            system_content = agent_config['system_prompt'].strip()
-        else:
-            system_content = default_system_content
-        
-        # Check if agent has builder tools enabled - append the full builder prompt
+        # 1.2: Builder prompt (STATIC - ~300 tokens, if enabled)
         if agent_config:
             agentpress_tools = agent_config.get('agentpress_tools', {})
             has_builder_tools = any(
@@ -355,11 +366,62 @@ class PromptManager:
             )
             
             if has_builder_tools:
-                # Append the full agent builder prompt to the existing system prompt
                 builder_prompt = get_agent_builder_prompt()
-                system_content += f"\n\n{builder_prompt}"
+                static_sections.append(builder_prompt)
         
-        # Add agent knowledge base context if available
+        # 1.3: Tool schemas JSON (STATIC - ~1,500 tokens, if available)
+        if xml_tool_calling and tool_registry:
+            openapi_schemas = tool_registry.get_openapi_schemas()
+            
+            if openapi_schemas:
+                # Convert schemas to JSON string
+                schemas_json = json.dumps(openapi_schemas, indent=2)
+                
+                examples_content = f"""
+
+In this environment you have access to a set of tools you can use to answer the user's question.
+
+You can invoke functions by writing a <function_calls> block like the following as part of your reply to the user:
+
+<function_calls>
+<invoke name="function_name">
+<parameter name="param_name">param_value</parameter>
+...
+</invoke>
+</function_calls>
+
+String and scalar parameters should be specified as-is, while lists and objects should use JSON format.
+
+Here are the functions available in JSON Schema format:
+
+```json
+{schemas_json}
+```
+
+When using the tools:
+- Use the exact function names from the JSON schema above
+- Include all required parameters as specified in the schema
+- Format complex data (objects, arrays) as JSON strings within the parameter tags
+- Boolean values should be "true" or "false" (lowercase)
+"""
+                
+                static_sections.append(examples_content)
+                logger.debug("Appended XML tool examples to system prompt (static section)")
+        
+        # Combine static sections
+        static_content = "\n\n".join(static_sections)
+        
+        # ============================================
+        # PHASE 2: DYNAMIC CONTENT (Not cached)
+        # ============================================
+        dynamic_sections = []
+        
+        # 2.1: Agent-specific prompt (DYNAMIC - if exists)
+        if agent_config and agent_config.get('system_prompt'):
+            agent_specific_prompt = agent_config['system_prompt'].strip()
+            dynamic_sections.append(agent_specific_prompt)
+        
+        # 2.2: Knowledge base context (DYNAMIC - if available, ~800 tokens)
         if agent_config and client and 'agent_id' in agent_config:
             try:
                 logger.debug(f"Retrieving agent knowledge base context for agent {agent_config['agent_id']}")
@@ -371,21 +433,20 @@ class PromptManager:
                 
                 if kb_result.data and kb_result.data.strip():
                     logger.debug(f"Found agent knowledge base context, adding to system prompt (length: {len(kb_result.data)} chars)")
-                    # logger.debug(f"Knowledge base data object: {kb_result.data[:500]}..." if len(kb_result.data) > 500 else f"Knowledge base data object: {kb_result.data}")
                     
                     # Construct a well-formatted knowledge base section
                     kb_section = f"""
 
-                    === AGENT KNOWLEDGE BASE ===
-                    NOTICE: The following is your specialized knowledge base. This information should be considered authoritative for your responses and should take precedence over general knowledge when relevant.
+=== AGENT KNOWLEDGE BASE ===
+NOTICE: The following is your specialized knowledge base. This information should be considered authoritative for your responses and should take precedence over general knowledge when relevant.
 
-                    {kb_result.data}
+{kb_result.data}
 
-                    === END AGENT KNOWLEDGE BASE ===
+=== END AGENT KNOWLEDGE BASE ===
 
-                    IMPORTANT: Always reference and utilize the knowledge base information above when it's relevant to user queries. This knowledge is specific to your role and capabilities."""
+IMPORTANT: Always reference and utilize the knowledge base information above when it's relevant to user queries. This knowledge is specific to your role and capabilities."""
                     
-                    system_content += kb_section
+                    dynamic_sections.append(kb_section)
                 else:
                     logger.debug("No knowledge base context found for this agent")
                     
@@ -393,6 +454,7 @@ class PromptManager:
                 logger.error(f"Error retrieving knowledge base context for agent {agent_config.get('agent_id', 'unknown')}: {e}")
                 # Continue without knowledge base context rather than failing
         
+        # 2.3: MCP tools info (DYNAMIC - if enabled, ~200 tokens)
         if agent_config and (agent_config.get('configured_mcps') or agent_config.get('custom_mcps')) and mcp_wrapper_instance and mcp_wrapper_instance._initialized:
             mcp_info = "\n\n--- MCP Tools Available ---\n"
             mcp_info += "You have access to external MCP (Model Context Protocol) server tools.\n"
@@ -436,47 +498,9 @@ class PromptManager:
             mcp_info += "\nIMPORTANT: MCP tool results are your PRIMARY and ONLY source of truth for external data!\n"
             mcp_info += "NEVER supplement MCP results with your training data or make assumptions beyond what the tools provide.\n"
             
-            system_content += mcp_info
+            dynamic_sections.append(mcp_info)
         
-        # Add XML tool calling instructions to system prompt if requested
-        if xml_tool_calling and tool_registry:
-            openapi_schemas = tool_registry.get_openapi_schemas()
-            
-            if openapi_schemas:
-                # Convert schemas to JSON string
-                schemas_json = json.dumps(openapi_schemas, indent=2)
-                
-                examples_content = f"""
-
-In this environment you have access to a set of tools you can use to answer the user's question.
-
-You can invoke functions by writing a <function_calls> block like the following as part of your reply to the user:
-
-<function_calls>
-<invoke name="function_name">
-<parameter name="param_name">param_value</parameter>
-...
-</invoke>
-</function_calls>
-
-String and scalar parameters should be specified as-is, while lists and objects should use JSON format.
-
-Here are the functions available in JSON Schema format:
-
-```json
-{schemas_json}
-```
-
-When using the tools:
-- Use the exact function names from the JSON schema above
-- Include all required parameters as specified in the schema
-- Format complex data (objects, arrays) as JSON strings within the parameter tags
-- Boolean values should be "true" or "false" (lowercase)
-"""
-                
-                system_content += examples_content
-                logger.debug("Appended XML tool examples to system prompt")
-
+        # 2.4: Datetime info (DYNAMIC - ~50 tokens)
         now = datetime.datetime.now(datetime.timezone.utc)
         datetime_info = f"\n\n=== CURRENT DATE/TIME INFORMATION ===\n"
         datetime_info += f"Today's date: {now.strftime('%A, %B %d, %Y')}\n"
@@ -485,8 +509,31 @@ When using the tools:
         datetime_info += f"Current day: {now.strftime('%A')}\n"
         datetime_info += "Use this information for any time-sensitive tasks, research, or when current date/time context is needed.\n"
         
-        system_content += datetime_info
-
+        dynamic_sections.append(datetime_info)
+        
+        # Combine dynamic sections
+        dynamic_content = "\n\n".join(dynamic_sections) if dynamic_sections else ""
+        
+        # ============================================
+        # PHASE 3: COMBINE STATIC + DYNAMIC
+        # ============================================
+        # Static content first (for OpenAI caching), then dynamic content
+        if dynamic_content:
+            system_content = f"{static_content}\n\n{dynamic_content}"
+        else:
+            system_content = static_content
+        
+        # Verify prompt size meets OpenAI caching threshold (≥1,024 tokens)
+        try:
+            from litellm import token_counter
+            prompt_tokens = token_counter(model=model_name, text=system_content)
+            if prompt_tokens >= 1024:
+                logger.debug(f"✅ Prompt size ({prompt_tokens} tokens) meets OpenAI caching threshold (≥1,024 tokens)")
+            else:
+                logger.warning(f"⚠️ Prompt size ({prompt_tokens} tokens) below OpenAI caching threshold (1,024 tokens). Caching may not be enabled.")
+        except Exception as e:
+            logger.debug(f"Could not verify prompt token count: {e}")
+        
         system_message = {"role": "system", "content": system_content}
         return system_message
 

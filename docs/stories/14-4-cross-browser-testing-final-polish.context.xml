@@ -1,0 +1,123 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>14</epicId>
+    <storyId>14.4</storyId>
+    <title>Cross-Browser Testing & Final Polish</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-08</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/14-4-cross-browser-testing-final-polish.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>extension tested trên multiple browsers</iWant>
+    <soThat>it works everywhere</soThat>
+    <tasks>
+      <task id="1" ac="1">
+        <title>Test trên Chrome</title>
+        <subtasks>
+          <subtask>Load extension in Chrome Developer mode</subtask>
+          <subtask>Test all features work correctly</subtask>
+          <subtask>Test coin detection</subtask>
+          <subtask>Test popup functionality</subtask>
+          <subtask>Test report generation</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="2">
+        <title>Test trên Edge</title>
+        <subtasks>
+          <subtask>Load extension in Edge (Chromium-based)</subtask>
+          <subtask>Test all features work correctly</subtask>
+          <subtask>Verify Manifest V3 compatibility</subtask>
+          <subtask>Test all functionality</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="3">
+        <title>Test trên Firefox</title>
+        <subtasks>
+          <subtask>Check Firefox Manifest V3 support</subtask>
+          <subtask>Load extension in Firefox (if supported)</subtask>
+          <subtask>Test all features work correctly</subtask>
+          <subtask>Adapt for Firefox if needed</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="4">
+        <title>Verify all features work</title>
+        <subtasks>
+          <subtask>Test coin detection trên all browsers</subtask>
+          <subtask>Test popup functionality trên all browsers</subtask>
+          <subtask>Test authentication trên all browsers</subtask>
+          <subtask>Test report generation trên all browsers</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="5">
+        <title>UI polish</title>
+        <subtasks>
+          <subtask>Review spacing và padding</subtask>
+          <subtask>Review colors và contrast</subtask>
+          <subtask>Review typography và font sizes</subtask>
+          <subtask>Ensure consistency với main app</subtask>
+        </subtasks>
+      </task>
+      <task id="6" ac="6">
+        <title>Final bug fixes</title>
+        <subtasks>
+          <subtask>Fix any bugs found during testing</subtask>
+          <subtask>Improve error messages</subtask>
+          <subtask>Optimize performance further</subtask>
+          <subtask>Improve user experience</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1">Extension tested trên Chrome (latest)</ac>
+    <ac id="2">Extension tested trên Edge (latest)</ac>
+    <ac id="3">Extension tested trên Firefox (nếu supported)</ac>
+    <ac id="4">All features work correctly trên all browsers</ac>
+    <ac id="5">UI polish: spacing, colors, typography consistent</ac>
+    <ac id="6">Final bug fixes và improvements</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/epics-extension.md</path>
+        <title>Epic 14: Report Generation & Polish</title>
+        <section>Story 14.4: Cross-Browser Testing & Final Polish</section>
+      </doc>
+      <doc>
+        <path>docs/PRD-extension.md</path>
+        <title>PRD: Browser Extension</title>
+        <section>FR012: Cross-browser compatibility</section>
+      </doc>
+      <doc>
+        <path>docs/stories/14-3-performance-optimization.md</path>
+        <title>Story 14.3: Performance Optimization</title>
+        <snippet>Performance optimized. Bundle size optimized, popup load time optimized.</snippet>
+      </doc>
+    </docs>
+  </artifacts>
+
+  <dependencies>
+    <prerequisite>Story 14.3: Performance optimization must be complete</prerequisite>
+  </dependencies>
+
+  <constraints>
+    <constraint>Extension must work trên Chrome và Edge (Chromium-based)</constraint>
+    <constraint>Firefox support depends on Manifest V3 compatibility</constraint>
+    <constraint>UI must be polished và consistent với main app</constraint>
+  </constraints>
+
+  <testing>
+    <test>Test trên Chrome</test>
+    <test>Test trên Edge</test>
+    <test>Test trên Firefox (if supported)</test>
+    <test>Test all features</test>
+    <test>Test UI polish</test>
+    <test>Final bug fixes</test>
+  </testing>
+</story-context>
+

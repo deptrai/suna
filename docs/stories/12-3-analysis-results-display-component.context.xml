@@ -1,0 +1,123 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>12</epicId>
+    <storyId>12.3</storyId>
+    <title>Analysis Results Display Component</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-08</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/12-3-analysis-results-display-component.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>see analysis results trong popup</iWant>
+    <soThat>I can review coin analysis quickly</soThat>
+    <tasks>
+      <task id="1" ac="1">
+        <title>Create coin-analysis component</title>
+        <subtasks>
+          <subtask>Create `extension/src/popup/components/coin-analysis.tsx`</subtask>
+          <subtask>Define component props interface</subtask>
+          <subtask>Create component structure</subtask>
+          <subtask>Export component</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="2">
+        <title>Display analysis data</title>
+        <subtasks>
+          <subtask>Display coin name (prominent)</subtask>
+          <subtask>Display current price (formatted)</subtask>
+          <subtask>Display sentiment (positive/negative/neutral với indicator)</subtask>
+          <subtask>Display risk score (numeric hoặc visual indicator)</subtask>
+          <subtask>Use Card component for layout</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="3">
+        <title>Use shared UI components</title>
+        <subtasks>
+          <subtask>Use Card component for results container</subtask>
+          <subtask>Use Button components for actions</subtask>
+          <subtask>Use other UI components as needed</subtask>
+          <subtask>Ensure components styled correctly</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="4">
+        <title>Implement loading state</title>
+        <subtasks>
+          <subtask>Create loading indicator component</subtask>
+          <subtask>Display loading state khi analysis in progress</subtask>
+          <subtask>Show loading message</subtask>
+          <subtask>Use spinner hoặc skeleton loader</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="5">
+        <title>Implement error state</title>
+        <subtasks>
+          <subtask>Create error display component</subtask>
+          <subtask>Display error message nếu analysis fails</subtask>
+          <subtask>Show error details (if available)</subtask>
+          <subtask>Provide error recovery options</subtask>
+        </subtasks>
+      </task>
+      <task id="6" ac="6">
+        <title>Format results clearly</title>
+        <subtasks>
+          <subtask>Use clear typography</subtask>
+          <subtask>Use appropriate spacing</subtask>
+          <subtask>Use color coding for sentiment/risk</subtask>
+          <subtask>Make data scannable</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1">`coin-analysis.tsx` component created</ac>
+    <ac id="2">Component displays: coin name, price, sentiment, risk score</ac>
+    <ac id="3">Component uses shared UI components (Card, Button, etc.)</ac>
+    <ac id="4">Loading state displayed while analysis in progress</ac>
+    <ac id="5">Error state displayed nếu analysis fails</ac>
+    <ac id="6">Results formatted clearly và readable</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/epics-extension.md</path>
+        <title>Epic 12: Popup UI & Shared Components Integration</title>
+        <section>Story 12.3: Analysis Results Display Component</section>
+      </doc>
+      <doc>
+        <path>docs/stories/12-2-popup-layout-structure.md</path>
+        <title>Story 12.2: Popup Layout & Structure</title>
+        <snippet>Popup layout với header, content, footer created. Content area ready for analysis results.</snippet>
+      </doc>
+      <doc>
+        <path>docs/PRD-extension.md</path>
+        <title>PRD: Browser Extension</title>
+        <section>FR004: Analysis results display</section>
+      </doc>
+    </docs>
+  </artifacts>
+
+  <dependencies>
+    <prerequisite>Story 12.2: Popup layout must be created</prerequisite>
+    <prerequisite>Story 12.1: Shared UI components must be available</prerequisite>
+  </dependencies>
+
+  <constraints>
+    <constraint>Component must use shared UI components (Card, Button)</constraint>
+    <constraint>Component must handle loading và error states</constraint>
+    <constraint>Results must be formatted clearly và readable</constraint>
+  </constraints>
+
+  <testing>
+    <test>Test component renders với analysis data</test>
+    <test>Test loading state displays</test>
+    <test>Test error state displays</test>
+    <test>Test component với shared UI components</test>
+    <test>Test results formatting</test>
+  </testing>
+</story-context>
+

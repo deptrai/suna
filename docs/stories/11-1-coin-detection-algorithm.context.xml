@@ -1,0 +1,255 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>11</epicId>
+    <storyId>11.1</storyId>
+    <title>Coin Detection Algorithm</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-08</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/11-1-coin-detection-algorithm.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>coin detection algorithm để identify coin names trên web pages</iWant>
+    <soThat>extension can find relevant coins to analyze</soThat>
+    <tasks>
+      <task id="1" ac="1">
+        <title>Create coin-detector.ts module</title>
+        <subtasks>
+          <subtask>Create `extension/src/shared/coin-detector.ts`</subtask>
+          <subtask>Define TypeScript interfaces cho detection results</subtask>
+          <subtask>Create main detection function: `detectCoins(element: HTMLElement): CoinDetection[]`</subtask>
+          <subtask>Export detection function và types</subtask>
+          <subtask>Add JSDoc comments cho functions</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="2">
+        <title>Implement coin name pattern matching</title>
+        <subtasks>
+          <subtask>Create regex patterns cho common coin names (Bitcoin, Ethereum, Solana, etc.)</subtask>
+          <subtask>Create function to match coin names trong text content</subtask>
+          <subtask>Handle case-insensitive matching</subtask>
+          <subtask>Handle variations (e.g., "Bitcoin" vs "bitcoin" vs "BITCOIN")</subtask>
+          <subtask>Test với sample coin names</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="3">
+        <title>Implement coin symbol pattern matching</title>
+        <subtasks>
+          <subtask>Create regex patterns cho coin symbols (BTC, ETH, SOL, etc.)</subtask>
+          <subtask>Create function to match coin symbols trong text content</subtask>
+          <subtask>Handle symbol variations (e.g., "$BTC", "BTC", "btc")</subtask>
+          <subtask>Map symbols to coin names (symbol → name mapping)</subtask>
+          <subtask>Test với sample coin symbols</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="4">
+        <title>Implement price pattern matching</title>
+        <subtasks>
+          <subtask>Create regex patterns cho price formats (e.g., "$45,000", "45,000 USD", "€40,000")</subtask>
+          <subtask>Create function to extract price từ text near coin symbols</subtask>
+          <subtask>Parse price values (handle commas, decimals, currency symbols)</subtask>
+          <subtask>Associate prices với nearby coin symbols</subtask>
+          <subtask>Test với sample price formats</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="5">
+        <title>Implement detection result structure</title>
+        <subtasks>
+          <subtask>Define `CoinDetection` interface với required fields</subtask>
+          <subtask>Create function to build detection result object</subtask>
+          <subtask>Include HTMLElement reference trong result</subtask>
+          <subtask>Include coin name (required)</subtask>
+          <subtask>Include coin symbol (optional)</subtask>
+          <subtask>Include price (optional)</subtask>
+          <subtask>Return array of detection results</subtask>
+        </subtasks>
+      </task>
+      <task id="6" ac="6">
+        <title>Create tests với sample HTML</title>
+        <subtasks>
+          <subtask>Create test HTML file với various coin formats</subtask>
+          <subtask>Test coin name detection (e.g., "Bitcoin is popular")</subtask>
+          <subtask>Test coin symbol detection (e.g., "BTC price")</subtask>
+          <subtask>Test price detection (e.g., "BTC $45,000")</subtask>
+          <subtask>Test combined formats (name + symbol + price)</subtask>
+          <subtask>Verify detection results structure</subtask>
+          <subtask>Test edge cases (multiple coins, nested elements, etc.)</subtask>
+        </subtasks>
+      </task>
+      <task id="7" ac="1,2,3,4,5,6">
+        <title>Testing</title>
+        <subtasks>
+          <subtask>Unit test coin-detector.ts module</subtask>
+          <subtask>Test pattern matching functions individually</subtask>
+          <subtask>Test detection result structure</subtask>
+          <subtask>Test với sample HTML files</subtask>
+          <subtask>Test edge cases và error handling</subtask>
+          <subtask>Verify detection accuracy</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1">`coin-detector.ts` module với detection logic</ac>
+    <ac id="2">Pattern matching cho common coin names (Bitcoin, Ethereum, etc.)</ac>
+    <ac id="3">Pattern matching cho coin symbols (BTC, ETH, etc.)</ac>
+    <ac id="4">Pattern matching cho coin symbols với prices (BTC $45,000)</ac>
+    <ac id="5">Detection returns: `{ element: HTMLElement, name: string, symbol?: string, price?: number }`</ac>
+    <ac id="6">Detection tested trên sample HTML với various coin formats</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/architecture-extension-suna.md</path>
+        <title>Browser Extension Architecture - Suna.so</title>
+        <section>Implementation Patterns - Pattern 1: Coin Detection</section>
+        <snippet>Example coin detection pattern với COIN_PATTERNS regex, detectCoins function using TreeWalker, và CoinMatch interface. Pattern matching for coin names, symbols, và prices.</snippet>
+      </doc>
+      <doc>
+        <path>docs/epics-extension.md</path>
+        <title>Suna.so Browser Extension - Epic Breakdown</title>
+        <section>Epic 11: Coin Detection & Content Script</section>
+        <snippet>Epic 11 goal: Implement coin name detection trên web pages và inject "Analyze with Suna" buttons next to detected coins. Core functionality cho phép user discover và trigger analysis từ any crypto website.</snippet>
+      </doc>
+      <doc>
+        <path>docs/epics-extension.md</path>
+        <title>Suna.so Browser Extension - Epic Breakdown</title>
+        <section>Story 11.1: Coin Detection Algorithm</section>
+        <snippet>As a developer, I want coin detection algorithm để identify coin names trên web pages, So that extension can find relevant coins to analyze. Acceptance criteria include coin-detector.ts module, pattern matching for names/symbols/prices, detection result structure, và testing.</snippet>
+      </doc>
+      <doc>
+        <path>docs/integration/chainlens-automation-integration.md</path>
+        <title>ChainLens Automation Integration</title>
+        <section>CryptoDetectionService</section>
+        <snippet>Reference implementation for crypto pattern matching. Includes regex patterns for coin names, symbols, và token addresses. Can reference for pattern design but adapt for extension use case.</snippet>
+      </doc>
+      <doc>
+        <path>services/sentiment-analysis/src/external-apis/reddit.service.ts</path>
+        <title>Reddit Service</title>
+        <section>isRelevantKeyword</section>
+        <snippet>Reference for crypto-related keywords list: bitcoin, btc, ethereum, eth, crypto, cryptocurrency, blockchain, defi, nft, altcoin, trading, etc. Can reference for coin name patterns.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>docs/architecture-extension-suna.md</path>
+        <kind>example</kind>
+        <symbol>detectCoins function</symbol>
+        <lines>443-484</lines>
+        <reason>Reference implementation for coin detection. Shows COIN_PATTERNS regex, TreeWalker usage, và CoinMatch interface structure. Can use as starting point but enhance với more patterns và price detection.</reason>
+      </file>
+      <file>
+        <path>extension/src/shared/</path>
+        <kind>directory</kind>
+        <symbol>coin-detector.ts</symbol>
+        <lines>N/A</lines>
+        <reason>Target location for coin-detector.ts module. Shared module can be used by content script và popup.</reason>
+      </file>
+      <file>
+        <path>extension/src/shared/</path>
+        <kind>directory</kind>
+        <symbol>types.ts (optional)</symbol>
+        <lines>N/A</lines>
+        <reason>Optional location for TypeScript type definitions if types become complex. Can define CoinDetection interface here.</reason>
+      </file>
+    </code>
+    <dependencies>
+      <ecosystem>TypeScript</ecosystem>
+      <packages>
+        <package>typescript</package>
+      </packages>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>
+      <type>Detection Strategy</type>
+      <description>Use DOM traversal (TreeWalker) để scan page content. Pattern matching via regex cho coin names, symbols, và prices. Return structured results với element references. Non-intrusive: detection doesn't modify page.</description>
+    </constraint>
+    <constraint>
+      <type>Coin Name Patterns</type>
+      <description>Common coins: Bitcoin, Ethereum, Solana, Cardano, Polygon, etc. Case-insensitive matching. Handle variations và abbreviations. Consider common misspellings (optional).</description>
+    </constraint>
+    <constraint>
+      <type>Coin Symbol Patterns</type>
+      <description>Common symbols: BTC, ETH, SOL, ADA, MATIC, etc. Handle with/without currency symbols ($BTC, BTC). Map symbols to full names. Consider symbol variations.</description>
+    </constraint>
+    <constraint>
+      <type>Price Pattern Matching</type>
+      <description>Common formats: "$45,000", "45,000 USD", "€40,000", "45k". Extract numeric values. Handle currency symbols và formatting. Associate prices với nearby coin symbols.</description>
+    </constraint>
+    <constraint>
+      <type>Detection Result Structure</type>
+      <description>Must return CoinDetection interface: { element: HTMLElement, name: string, symbol?: string, price?: number }. Element reference required for UI injection. Name required, symbol và price optional.</description>
+    </constraint>
+    <constraint>
+      <type>Module Location</type>
+      <description>Module at `extension/src/shared/coin-detector.ts` - shared code (can be used by content script và popup). This is shared code, not content script specific.</description>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>CoinDetection Interface</name>
+      <kind>type</kind>
+      <signature>interface CoinDetection { element: HTMLElement; name: string; symbol?: string; price?: number; }</signature>
+      <path>extension/src/shared/coin-detector.ts</path>
+    </interface>
+    <interface>
+      <name>detectCoins Function</name>
+      <kind>function</kind>
+      <signature>function detectCoins(element: HTMLElement): CoinDetection[]</signature>
+      <path>extension/src/shared/coin-detector.ts</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing standards: Unit test coin-detector.ts module, test pattern matching functions individually, test detection result structure, test với sample HTML files, test edge cases và error handling, verify detection accuracy. Use DOM testing utilities hoặc mock HTMLElement objects.
+    </standards>
+    <locations>
+      <location>extension/src/shared/__tests__/</location>
+      <location>extension/src/shared/</location>
+    </locations>
+    <ideas>
+      <test ac="1">
+        <idea>Unit test: Verify coin-detector.ts module exports detectCoins function và CoinDetection type</idea>
+      </test>
+      <test ac="2">
+        <idea>Test coin name pattern matching: "Bitcoin is popular", "ethereum network", "SOLANA blockchain"</idea>
+      </test>
+      <test ac="2">
+        <idea>Test case-insensitive matching: "BITCOIN", "Bitcoin", "bitcoin" all match</idea>
+      </test>
+      <test ac="3">
+        <idea>Test coin symbol pattern matching: "BTC", "$BTC", "btc", "ETH price"</idea>
+      </test>
+      <test ac="3">
+        <idea>Test symbol to name mapping: "BTC" → "Bitcoin", "ETH" → "Ethereum"</idea>
+      </test>
+      <test ac="4">
+        <idea>Test price pattern matching: "BTC $45,000", "ETH 3,500 USD", "SOL €150"</idea>
+      </test>
+      <test ac="4">
+        <idea>Test price parsing: handle commas, decimals, currency symbols correctly</idea>
+      </test>
+      <test ac="5">
+        <idea>Test detection result structure: verify all fields present, element reference valid, optional fields handled</idea>
+      </test>
+      <test ac="6">
+        <idea>Test với sample HTML: create test HTML với various coin formats và verify detection works</idea>
+      </test>
+      <test ac="6">
+        <idea>Test edge cases: multiple coins in same element, nested elements, empty text nodes, special characters</idea>
+      </test>
+      <test ac="6">
+        <idea>Test performance: verify detection doesn't slow down page (use requestIdleCallback if needed)</idea>
+      </test>
+    </ideas>
+  </tests>
+</story-context>
+

@@ -1,0 +1,123 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>13</epicId>
+    <storyId>13.4</storyId>
+    <title>Background Worker API Coordination</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-08</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/13-4-background-worker-api-coordination.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>background worker coordinate API calls</iWant>
+    <soThat>content script và popup can request analysis</soThat>
+    <tasks>
+      <task id="1" ac="1">
+        <title>Setup message listener</title>
+        <subtasks>
+          <subtask>Create `extension/src/background/background.ts`</subtask>
+          <subtask>Add `chrome.runtime.onMessage.addListener()`</subtask>
+          <subtask>Listen for messages từ content script và popup</subtask>
+          <subtask>Route messages to appropriate handlers</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="2">
+        <title>Handle ANALYZE_COIN message</title>
+        <subtasks>
+          <subtask>Create handler for `ANALYZE_COIN` message type</subtask>
+          <subtask>Extract coin name từ message</subtask>
+          <subtask>Validate message format</subtask>
+          <subtask>Route to analysis handler</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="3">
+        <title>Call API với authentication</title>
+        <subtasks>
+          <subtask>Get auth token từ chrome.storage (via Supabase client)</subtask>
+          <subtask>Call coin analysis API với token</subtask>
+          <subtask>Use API client từ Story 13.2</subtask>
+          <subtask>Handle API response</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="4">
+        <title>Send results back</title>
+        <subtasks>
+          <subtask>Format API response</subtask>
+          <subtask>Send response back to requester via `sendResponse()`</subtask>
+          <subtask>Handle async response correctly</subtask>
+          <subtask>Test results sent back correctly</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="5">
+        <title>Implement error handling và retry</title>
+        <subtasks>
+          <subtask>Handle API errors</subtask>
+          <subtask>Handle authentication errors</subtask>
+          <subtask>Implement retry logic for network errors</subtask>
+          <subtask>Send error messages back to requester</subtask>
+        </subtasks>
+      </task>
+      <task id="6" ac="6">
+        <title>Test end-to-end message passing</title>
+        <subtasks>
+          <subtask>Test message từ content script to background</subtask>
+          <subtask>Test message từ popup to background</subtask>
+          <subtask>Test API call và response</subtask>
+          <subtask>Test error handling</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1">Background worker listens for messages từ content script và popup</ac>
+    <ac id="2">Worker handles `ANALYZE_COIN` message type</ac>
+    <ac id="3">Worker calls API với proper authentication</ac>
+    <ac id="4">Worker sends results back to requester</ac>
+    <ac id="5">Error handling và retry logic implemented</ac>
+    <ac id="6">Message passing tested end-to-end</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/architecture-extension-suna.md</path>
+        <title>Browser Extension Architecture</title>
+        <section>Implementation Patterns - Message Passing</section>
+      </doc>
+      <doc>
+        <path>docs/stories/13-2-api-client-adaptation.md</path>
+        <title>Story 13.2: API Client Adaptation</title>
+        <snippet>API client ready với authentication. Can make API calls với JWT token.</snippet>
+      </doc>
+      <doc>
+        <path>docs/stories/11-3-analysis-button-injection.md</path>
+        <title>Story 11.3: Analysis Button Injection</title>
+        <snippet>Content script sends ANALYZE_COIN messages to background worker.</snippet>
+      </doc>
+    </docs>
+  </artifacts>
+
+  <dependencies>
+    <prerequisite>Story 13.2: API client adaptation must be complete</prerequisite>
+    <prerequisite>Story 11.3: Content script sends ANALYZE_COIN messages</prerequisite>
+  </dependencies>
+
+  <constraints>
+    <constraint>Message passing must handle async operations correctly</constraint>
+    <constraint>Error handling và retry logic must be implemented</constraint>
+    <constraint>API calls must include proper authentication</constraint>
+  </constraints>
+
+  <testing>
+    <test>Test message listener works</test>
+    <test>Test ANALYZE_COIN message handling</test>
+    <test>Test API call với authentication</test>
+    <test>Test results sent back</test>
+    <test>Test error handling và retry</test>
+    <test>Test end-to-end message passing</test>
+  </testing>
+</story-context>
+

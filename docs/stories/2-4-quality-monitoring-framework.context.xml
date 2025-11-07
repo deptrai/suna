@@ -1,0 +1,266 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>2.4</storyId>
+    <title>Quality Monitoring Framework</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-07</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/2-4-quality-monitoring-framework.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>system administrator</asA>
+    <iWant>to implement comprehensive quality monitoring framework</iWant>
+    <soThat>I can continuously assess the impact of optimizations on response quality và ensure safe deployment</soThat>
+    <tasks>
+      <task id="1" ac="1">
+        <title>Implement QualityMonitor class</title>
+        <subtasks>
+          <subtask>Create `backend/core/optimizations/quality_monitor.py`</subtask>
+          <subtask>Implement `QualityMonitor` class với metric tracking</subtask>
+          <subtask>Integrate với existing monitoring infrastructure</subtask>
+          <subtask>Test QualityMonitor class với sample metrics</subtask>
+          <subtask>Unit test QualityMonitor class</subtask>
+          <subtask>Integration test với monitoring infrastructure</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="2">
+        <title>Implement metric tracking</title>
+        <subtasks>
+          <subtask>Implement response_similarity tracking (semantic similarity)</subtask>
+          <subtask>Implement tool_success_rate tracking</subtask>
+          <subtask>Implement user_satisfaction tracking (if available)</subtask>
+          <subtask>Implement error_rate tracking</subtask>
+          <subtask>Implement response_completeness tracking</subtask>
+          <subtask>Test metric tracking với sample data</subtask>
+          <subtask>Unit test metric tracking</subtask>
+          <subtask>Integration test metrics collection</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="3">
+        <title>Integrate automated quality validation tests</title>
+        <subtasks>
+          <subtask>Create quality validation test suite</subtask>
+          <subtask>Integrate tests vào CI/CD pipeline</subtask>
+          <subtask>Set up test execution on each deployment</subtask>
+          <subtask>Test CI/CD integration</subtask>
+          <subtask>Unit test quality validation tests</subtask>
+          <subtask>Integration test CI/CD pipeline</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="4">
+        <title>Configure alerting mechanisms</title>
+        <subtasks>
+          <subtask>Set quality thresholds for each metric</subtask>
+          <subtask>Implement alerting logic (email, Slack, etc.)</subtask>
+          <subtask>Configure alert recipients</subtask>
+          <subtask>Test alerting với threshold breaches</subtask>
+          <subtask>Unit test alerting logic</subtask>
+          <subtask>Integration test alert delivery</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="5">
+        <title>Implement auto-rollback feature</title>
+        <subtasks>
+          <subtask>Add auto-rollback logic nếu quality thresholds breached</subtask>
+          <subtask>Revert to ORIGINAL mode automatically</subtask>
+          <subtask>Log rollback events</subtask>
+          <subtask>Test auto-rollback với quality degradation scenarios</subtask>
+          <subtask>Unit test auto-rollback logic</subtask>
+          <subtask>Integration test rollback mechanism</subtask>
+        </subtasks>
+      </task>
+      <task id="6" ac="6">
+        <title>Create quality dashboard</title>
+        <subtasks>
+          <subtask>Design quality dashboard layout</subtask>
+          <subtask>Implement dashboard với quality metrics visualization</subtask>
+          <subtask>Add real-time quality metrics display</subtask>
+          <subtask>Test dashboard với sample data</subtask>
+          <subtask>Unit test dashboard components</subtask>
+          <subtask>Integration test dashboard updates</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1">`QualityMonitor` class được implemented trong `backend/core/optimizations/quality_monitor.py`</ac>
+    <ac id="2">Metrics tracked include: response_similarity, tool_success_rate, user_satisfaction, error_rate, response_completeness</ac>
+    <ac id="3">Automated quality validation tests được integrated vào CI/CD pipeline</ac>
+    <ac id="4">Alerting mechanisms được configured để notify nếu quality metrics drop below thresholds</ac>
+    <ac id="5">Auto-rollback feature được integrated để revert to ORIGINAL mode nếu critical quality thresholds are breached</ac>
+    <ac id="6">Quality dashboard được created để visualize quality metrics</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/epics-optimization.md</path>
+        <title>ChainLens AI Worker - Epic Breakdown: LLM Optimization</title>
+        <section>Story 2.4: Quality Monitoring Framework</section>
+        <snippet>Story 2.4 defines requirements for implementing quality monitoring framework. Enables safe deployment of all Phase 2 optimizations. Effort: 4 hours. Prerequisites: Stories 2.1, 2.2, 2.3, Story 1.4.</snippet>
+      </doc>
+      <doc>
+        <path>docs/optimization-master-plan-v1.1.md</path>
+        <title>ChainLens AI Worker - Master Optimization Plan v1.1</title>
+        <section>Phase 2: Quality-Preserving Medium Optimizations - Task 2.4: Quality Monitoring Framework</section>
+        <snippet>Quality monitoring framework tracks multiple quality dimensions: response_similarity, tool_success_rate, user_satisfaction, error_rate, response_completeness. Automated quality validation tests integrated into CI/CD. Alerting mechanisms configured. Auto-rollback feature reverts to ORIGINAL mode if quality thresholds breached.</snippet>
+      </doc>
+      <doc>
+        <path>docs/research-prompt-optimization.md</path>
+        <title>Research Prompt: System Prompt Optimization</title>
+        <section>Quality Monitoring</section>
+        <snippet>Quality monitoring framework requirements: comprehensive metrics tracking, automated quality validation, alerting mechanisms, auto-rollback feature, quality dashboard. Quality thresholds must be configurable. Auto-rollback reverts to baseline if quality degrades.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>backend/core/optimizations/quality_monitor.py</path>
+        <kind>service</kind>
+        <symbol>QualityMonitor class</symbol>
+        <lines>1-300</lines>
+        <reason>New file to create. Implement QualityMonitor class với comprehensive metric tracking, automated quality validation, alerting mechanisms, auto-rollback feature, and quality dashboard integration.</reason>
+      </file>
+      <file>
+        <path>backend/core/run.py</path>
+        <kind>service</kind>
+        <symbol>PromptManager.build_system_prompt()</symbol>
+        <lines>326-491</lines>
+        <reason>Primary method to integrate quality monitoring. Need to track quality metrics during prompt building và LLM calls.</reason>
+      </file>
+      <file>
+        <path>backend/core/services/llm.py</path>
+        <kind>service</kind>
+        <symbol>make_llm_api_call()</symbol>
+        <lines>180-303</lines>
+        <reason>LLM API call handler. Need to integrate quality monitoring here to track response_similarity, error_rate, tool_success_rate.</reason>
+      </file>
+      <file>
+        <path>backend/core/utils/config.py</path>
+        <kind>config</kind>
+        <symbol>Configuration class</symbol>
+        <lines>73-200</lines>
+        <reason>Configuration management. Can add quality monitoring configuration (thresholds, alerting settings) here.</reason>
+      </file>
+      <file>
+        <path>backend/core/utils/config.py</path>
+        <kind>config</kind>
+        <symbol>OptimizationConfig class</symbol>
+        <lines>200-250</lines>
+        <reason>OptimizationConfig class (from Story 1.4). Need to integrate auto-rollback logic here to revert to ORIGINAL mode if quality thresholds breached.</reason>
+      </file>
+    </code>
+    <dependencies>
+      <ecosystem>Python</ecosystem>
+      <packages>
+        <package>prometheus-client</package>
+        <package>sentry-sdk</package>
+      </packages>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>
+      <type>Quality Requirement</type>
+      <description>Zero quality impact (monitoring only, no quality impact). Quality monitoring must be comprehensive và continuous. Quality thresholds must be configurable.</description>
+    </constraint>
+    <constraint>
+      <type>Architecture Pattern</type>
+      <description>Dual-mode architecture: Auto-rollback to ORIGINAL mode if quality degrades. Feature flags allow switching and rollback. Quality monitoring enables safe deployment.</description>
+    </constraint>
+    <constraint>
+      <type>Metrics Tracking</type>
+      <description>Comprehensive metrics: response_similarity, tool_success_rate, user_satisfaction, error_rate, response_completeness. Metrics must be tracked continuously và reported in real-time.</description>
+    </constraint>
+    <constraint>
+      <type>Automated Tests</type>
+      <description>Automated quality validation tests must be integrated into CI/CD pipeline. Tests should run on each deployment. Quality thresholds must be enforced.</description>
+    </constraint>
+    <constraint>
+      <type>Alerting</type>
+      <description>Alerting mechanisms must be configured to notify if quality metrics drop below thresholds. Alert recipients must be configurable. Alert delivery must be tested.</description>
+    </constraint>
+    <constraint>
+      <type>Auto-Rollback</type>
+      <description>Auto-rollback feature must revert to ORIGINAL mode if critical quality thresholds are breached. Rollback events must be logged. Rollback mechanism must be tested.</description>
+    </constraint>
+    <constraint>
+      <type>Dashboard</type>
+      <description>Quality dashboard must visualize quality metrics in real-time. Dashboard should be accessible và user-friendly. Dashboard updates must be tested.</description>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>QualityMonitor class</name>
+      <kind>class</kind>
+      <signature>class QualityMonitor: def __init__(self, thresholds: Dict[str, float]): ... async def track_metric(self, metric_name: str, value: float): ... async def check_quality_thresholds(self) -> bool: ... async def trigger_rollback(self): ...</signature>
+      <path>backend/core/optimizations/quality_monitor.py</path>
+    </interface>
+    <interface>
+      <name>OptimizationConfig class</name>
+      <kind>class</kind>
+      <signature>class OptimizationConfig: OPTIMIZATION_MODE: OptimizationMode = OptimizationMode.ORIGINAL ... async def auto_rollback_if_needed(self, quality_monitor: QualityMonitor): ...</signature>
+      <path>backend/core/utils/config.py</path>
+    </interface>
+    <interface>
+      <name>make_llm_api_call()</name>
+      <kind>function</kind>
+      <signature>async def make_llm_api_call(messages: List[Dict[str, Any]], model_name: str, ...) -> Union[Dict[str, Any], AsyncGenerator, ModelResponse]</signature>
+      <path>backend/core/services/llm.py</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing standards include: Quality validation (verify metrics are tracked correctly), Performance testing (monitoring overhead, dashboard performance), Integration testing (existing LLM calls, different models, agent configurations, CI/CD integration, alerting delivery, auto-rollback mechanism). Use comprehensive testing for all quality monitoring features.
+    </standards>
+    <locations>
+      <location>backend/tests/</location>
+      <location>backend/core/tests/</location>
+      <location>backend/core/optimizations/tests/</location>
+      <location>.github/workflows/</location>
+    </locations>
+    <ideas>
+      <test ac="1">
+        <idea>Unit test: Verify QualityMonitor class creation và initialization</idea>
+      </test>
+      <test ac="1">
+        <idea>Integration test: Test quality monitoring với monitoring infrastructure</idea>
+      </test>
+      <test ac="2">
+        <idea>Unit test: Verify metric tracking for all metrics (response_similarity, tool_success_rate, user_satisfaction, error_rate, response_completeness)</idea>
+      </test>
+      <test ac="2">
+        <idea>Integration test: Test metrics collection với sample data</idea>
+      </test>
+      <test ac="3">
+        <idea>Unit test: Verify quality validation test suite creation</idea>
+      </test>
+      <test ac="3">
+        <idea>Integration test: Test CI/CD pipeline integration với quality validation tests</idea>
+      </test>
+      <test ac="4">
+        <idea>Unit test: Verify alerting logic (threshold checking, alert generation)</idea>
+      </test>
+      <test ac="4">
+        <idea>Integration test: Test alert delivery với threshold breaches</idea>
+      </test>
+      <test ac="5">
+        <idea>Unit test: Verify auto-rollback logic (revert to ORIGINAL mode if quality thresholds breached)</idea>
+      </test>
+      <test ac="5">
+        <idea>Integration test: Test auto-rollback mechanism với quality degradation scenarios</idea>
+      </test>
+      <test ac="6">
+        <idea>Unit test: Verify quality dashboard components</idea>
+      </test>
+      <test ac="6">
+        <idea>Integration test: Test dashboard updates với real-time quality metrics</idea>
+      </test>
+    </ideas>
+  </tests>
+</story-context>
+

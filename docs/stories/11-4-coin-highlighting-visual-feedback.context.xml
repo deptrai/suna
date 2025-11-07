@@ -1,0 +1,138 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>11</epicId>
+    <storyId>11.4</storyId>
+    <title>Coin Highlighting & Visual Feedback</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-08</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/11-4-coin-highlighting-visual-feedback.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>detected coins highlighted trên page</iWant>
+    <soThat>I can easily see which coins can be analyzed</soThat>
+    <tasks>
+      <task id="1" ac="1">
+        <title>Implement highlight styling</title>
+        <subtasks>
+          <subtask>Create CSS classes cho coin highlight</subtask>
+          <subtask>Use subtle border hoặc background color</subtask>
+          <subtask>Ensure highlight is visible but not intrusive</subtask>
+          <subtask>Test highlight visibility on various backgrounds</subtask>
+          <subtask>Add highlight styles to content script CSS</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="2">
+        <title>Apply highlight on detection</title>
+        <subtasks>
+          <subtask>Add highlight class to detected coin elements</subtask>
+          <subtask>Apply highlight khi coin is detected</subtask>
+          <subtask>Store highlight state để track highlighted elements</subtask>
+          <subtask>Handle multiple highlights on same page</subtask>
+          <subtask>Test highlight appears correctly</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="3">
+        <title>Remove highlight on button click</title>
+        <subtasks>
+          <subtask>Add click handler to remove highlight</subtask>
+          <subtask>Remove highlight class khi button is clicked</subtask>
+          <subtask>Optional: keep highlight for better UX</subtask>
+          <subtask>Test highlight removal works</subtask>
+          <subtask>Test highlight persists if option disabled</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="4">
+        <title>Ensure non-intrusive styling</title>
+        <subtasks>
+          <subtask>Use subtle colors (low opacity)</subtask>
+          <subtask>Use thin borders instead of thick</subtask>
+          <subtask>Avoid changing element dimensions</subtask>
+          <subtask>Test highlight doesn't break page layout</subtask>
+          <subtask>Test highlight doesn't interfere với page interactions</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="5">
+        <title>Support dark mode</title>
+        <subtasks>
+          <subtask>Detect dark mode (prefers-color-scheme media query)</subtask>
+          <subtask>Use appropriate colors for dark mode</subtask>
+          <subtask>Test highlight visibility on dark backgrounds</subtask>
+          <subtask>Test highlight works on dark mode pages</subtask>
+          <subtask>Ensure contrast is sufficient</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1">Detected coins have visual highlight (subtle border hoặc background)</ac>
+    <ac id="2">Highlight appears khi coin is detected</ac>
+    <ac id="3">Highlight removed khi button is clicked (optional)</ac>
+    <ac id="4">Highlight styling không interfere với page design</ac>
+    <ac id="5">Highlight works với dark mode pages</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/stories/11-3-analysis-button-injection.md</path>
+        <title>Story 11.3: Analysis Button Injection</title>
+        <section>Dev Agent Record</section>
+        <snippet>Button injection implemented. Can apply highlight to same elements that get buttons. Can combine highlight với button injection.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>extension/src/content-script/injector.ts</path>
+        <kind>module</kind>
+        <symbol>injectAnalysisButton</symbol>
+        <lines>N/A</lines>
+        <reason>Can combine highlight với button injection. Apply highlight to same elements that get buttons.</reason>
+      </file>
+    </code>
+    <dependencies>
+      <ecosystem>CSS</ecosystem>
+      <packages></packages>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>
+      <type>Subtle Visual Feedback</type>
+      <description>Use subtle colors (low opacity), thin borders, avoid changing element dimensions. Ensure highlight is visible but not intrusive.</description>
+    </constraint>
+    <constraint>
+      <type>Dark Mode Support</type>
+      <description>Detect dark mode using prefers-color-scheme media query. Use appropriate colors for dark backgrounds. Ensure sufficient contrast.</description>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>Highlight CSS Class</name>
+      <kind>css</kind>
+      <signature>.suna-coin-highlight { border: 1px solid rgba(...); }</signature>
+      <path>extension/src/content-script/</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing standards: Test highlight appears on detected coins, test highlight styling is subtle và non-intrusive, test highlight removal on button click, test highlight doesn't break page layout, test highlight works với dark mode. Use Chrome DevTools để verify highlight styling.
+    </standards>
+    <locations>
+      <location>Crypto websites</location>
+    </locations>
+    <ideas>
+      <test ac="1">Test highlight appears on detected coins với subtle styling</test>
+      <test ac="2">Test highlight appears khi coin is detected</test>
+      <test ac="3">Test highlight removal on button click (if implemented)</test>
+      <test ac="4">Test highlight doesn't break page layout</test>
+      <test ac="5">Test highlight works với dark mode pages</test>
+    </ideas>
+  </tests>
+</story-context>
+

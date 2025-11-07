@@ -1,0 +1,236 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.3</storyId>
+    <title>Anthropic Explicit Caching</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-07</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/1-3-anthropic-explicit-caching.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>system administrator</asA>
+    <iWant>to enable Anthropic explicit caching với cache_control directives</iWant>
+    <soThat>Claude users có thể benefit từ 20-30% cost reduction cho cached tokens</soThat>
+    <tasks>
+      <task id="1" ac="1">
+        <title>Add cache_control directives for Claude models</title>
+        <subtasks>
+          <subtask>Review Anthropic caching documentation và cache_control format</subtask>
+          <subtask>Identify Claude models trong system (claude-haiku-4-5, claude-sonnet-4-5, etc.)</subtask>
+          <subtask>Add cache_control directives to system messages for Claude models</subtask>
+          <subtask>Verify cache_control format matches Anthropic requirements</subtask>
+          <subtask>Test cache_control với sample Claude API calls</subtask>
+          <subtask>Unit test cache_control directive generation</subtask>
+          <subtask>Integration test với actual Claude API calls</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="2">
+        <title>Configure cache TTL</title>
+        <subtasks>
+          <subtask>Set default cache TTL to 5 minutes (300 seconds)</subtask>
+          <subtask>Make TTL configurable via environment variable (up to 1 hour)</subtask>
+          <subtask>Document TTL configuration và best practices</subtask>
+          <subtask>Test cache expiration với different TTL values</subtask>
+          <subtask>Unit test TTL configuration</subtask>
+          <subtask>Integration test cache expiration</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="3">
+        <title>Track cache creation/read tokens</title>
+        <subtasks>
+          <subtask>Extract `cache_creation_input_tokens` từ Anthropic response usage</subtask>
+          <subtask>Extract `cache_read_input_tokens` từ Anthropic response usage</subtask>
+          <subtask>Log cache token metrics (creation, read, total cached tokens)</subtask>
+          <subtask>Calculate cache hit rate based on token metrics</subtask>
+          <subtask>Test token tracking với sample Claude calls</subtask>
+          <subtask>Unit test cache token extraction</subtask>
+          <subtask>Integration test token tracking</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="4">
+        <title>Implement cache metrics logging</title>
+        <subtasks>
+          <subtask>Log cache metrics (cache_creation_tokens, cache_read_tokens, cache_hit_rate)</subtask>
+          <subtask>Add cache metrics to monitoring dashboard</subtask>
+          <subtask>Create cache metrics reporting</subtask>
+          <subtask>Test metrics logging với sample requests</subtask>
+          <subtask>Unit test cache metrics extraction</subtask>
+          <subtask>Integration test metrics logging</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="5">
+        <title>Quality validation</title>
+        <subtasks>
+          <subtask>Compare cached vs non-cached responses</subtask>
+          <subtask>Verify 100% similarity (cached computation = same result)</subtask>
+          <subtask>Document quality validation results</subtask>
+          <subtask>Add quality checks to monitoring</subtask>
+          <subtask>Automated similarity testing (semantic similarity check)</subtask>
+          <subtask>A/B testing framework setup</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1">`cache_control` directives được add cho Claude models trong LLM calls</ac>
+    <ac id="2">Cache TTL được configured (default 5 minutes, configurable to 1 hour)</ac>
+    <ac id="3">Cache creation/read tokens được tracked trong response usage</ac>
+    <ac id="4">Cache metrics được logged và reported</ac>
+    <ac id="5">No quality degradation (cached computation = same result)</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/epics-optimization.md</path>
+        <title>ChainLens AI Worker - Epic Breakdown: LLM Optimization</title>
+        <section>Story 1.3: Anthropic Explicit Caching</section>
+        <snippet>Story 1.3 defines requirements for enabling Anthropic explicit caching. Expected savings: $3-6/month with zero quality impact. Effort: 1 hour. Prerequisites: Story 1.2.</snippet>
+      </doc>
+      <doc>
+        <path>docs/optimization-master-plan-v1.1.md</path>
+        <title>ChainLens AI Worker - Master Optimization Plan v1.1</title>
+        <section>Phase 1: Quality-Preserving Quick Wins - Task 1.3: Anthropic Explicit Caching</section>
+        <snippet>Anthropic explicit caching requires cache_control directives in messages. Cache TTL: Default 5 minutes, configurable to 1 hour. Cache creation/read tokens tracked in response usage.</snippet>
+      </doc>
+      <doc>
+        <path>docs/research-prompt-optimization.md</path>
+        <title>Research Prompt: System Prompt Optimization</title>
+        <section>5. Prompt Caching Implementation - 5.2 Anthropic Claude Caching</section>
+        <snippet>Anthropic provides explicit prompt caching với cache control directives. Cost reduction: Up to 90% for cached tokens. Latency reduction: Up to 85%. TTL: 5 minutes default, configurable to 1 hour.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>backend/core/services/llm.py</path>
+        <kind>service</kind>
+        <symbol>make_llm_api_call()</symbol>
+        <lines>180-303</lines>
+        <reason>Primary method to modify for adding cache_control directives to Claude models. Need to detect Claude models và add cache_control to system messages.</reason>
+      </file>
+      <file>
+        <path>backend/core/agentpress/prompt_caching.py</path>
+        <kind>service</kind>
+        <symbol>add_cache_control()</symbol>
+        <lines>312-337</lines>
+        <reason>Reference implementation for adding cache_control directives. Shows format: {"type": "text", "text": content, "cache_control": {"type": "ephemeral"}}. Can reference pattern but this story focuses on explicit cache_control in LLM calls.</reason>
+      </file>
+      <file>
+        <path>backend/core/agentpress/prompt_caching.py</path>
+        <kind>service</kind>
+        <symbol>apply_anthropic_caching_strategy()</symbol>
+        <lines>339-705</lines>
+        <reason>Advanced Anthropic caching implementation với token-based caching strategy. Can reference for patterns but this story focuses on explicit cache_control directives.</reason>
+      </file>
+      <file>
+        <path>backend/core/utils/config.py</path>
+        <kind>config</kind>
+        <symbol>Configuration class</symbol>
+        <lines>73-200</lines>
+        <reason>Configuration management. Can add cache TTL configuration here if needed. Environment variables are loaded here.</reason>
+      </file>
+    </code>
+    <dependencies>
+      <ecosystem>Python</ecosystem>
+      <packages>
+        <package>litellm</package>
+        <package>anthropic</package>
+      </packages>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>
+      <type>Quality Requirement</type>
+      <description>Zero quality impact required. Cached computation = same result (100% similarity).</description>
+    </constraint>
+    <constraint>
+      <type>Architecture Pattern</type>
+      <description>Dual-mode architecture: Original mode (baseline) + Optimized mode (with caching). Feature flags allow switching and rollback.</description>
+    </constraint>
+    <constraint>
+      <type>Anthropic API Format</type>
+      <description>Cache control directives must be in format: {"type": "text", "text": content, "cache_control": {"type": "ephemeral"}}. Only applies to Claude models (anthropic/*).</description>
+    </constraint>
+    <constraint>
+      <type>TTL Configuration</type>
+      <description>Default TTL: 5 minutes (300 seconds). Must be configurable via environment variable (up to 1 hour). Document configuration and best practices.</description>
+    </constraint>
+    <constraint>
+      <type>Token Tracking</type>
+      <description>Anthropic response usage includes cache_creation_input_tokens và cache_read_input_tokens. Must extract và track these metrics.</description>
+    </constraint>
+    <constraint>
+      <type>Backward Compatibility</type>
+      <description>Must not break existing LLM calls. Caching should be transparent to callers. Test with existing agent configurations.</description>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>make_llm_api_call()</name>
+      <kind>function</kind>
+      <signature>async def make_llm_api_call(messages: List[Dict[str, Any]], model_name: str, ...) -> Union[Dict[str, Any], AsyncGenerator, ModelResponse]</signature>
+      <path>backend/core/services/llm.py</path>
+    </interface>
+    <interface>
+      <name>Anthropic cache_control format</name>
+      <kind>message format</kind>
+      <signature>{"role": "system", "content": [{"type": "text", "text": content, "cache_control": {"type": "ephemeral"}}]}</signature>
+      <path>backend/core/services/llm.py</path>
+    </interface>
+    <interface>
+      <name>Anthropic response usage</name>
+      <kind>response attribute</kind>
+      <signature>response.usage.cache_creation_input_tokens, response.usage.cache_read_input_tokens</signature>
+      <path>backend/core/services/llm.py</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing standards include: Quality validation (100% similarity check for cached computation), Performance testing (cache hit rate based on token metrics, cost savings, latency), Integration testing (existing LLM calls, different Claude models, agent configurations, cache expiration). Use semantic similarity checking for quality validation. A/B testing framework for comparing original vs optimized modes.
+    </standards>
+    <locations>
+      <location>backend/tests/</location>
+      <location>backend/core/tests/</location>
+      <location>backend/core/services/tests/</location>
+    </locations>
+    <ideas>
+      <test ac="1">
+        <idea>Unit test: Verify cache_control directive generation for Claude models</idea>
+      </test>
+      <test ac="1">
+        <idea>Integration test: Test cache_control với actual Claude API calls</idea>
+      </test>
+      <test ac="2">
+        <idea>Unit test: Verify TTL configuration (default 5 minutes, configurable to 1 hour)</idea>
+      </test>
+      <test ac="2">
+        <idea>Integration test: Test cache expiration với different TTL values</idea>
+      </test>
+      <test ac="3">
+        <idea>Unit test: Extract cache_creation_input_tokens và cache_read_input_tokens từ Anthropic response usage</idea>
+      </test>
+      <test ac="3">
+        <idea>Integration test: Verify token tracking với sample Claude calls</idea>
+      </test>
+      <test ac="4">
+        <idea>Unit test: Verify cache metrics are logged và reported</idea>
+      </test>
+      <test ac="4">
+        <idea>Integration test: Verify cache metrics appear in monitoring dashboard</idea>
+      </test>
+      <test ac="5">
+        <idea>Automated test: Compare cached vs non-cached responses (target: 100% similarity)</idea>
+      </test>
+      <test ac="5">
+        <idea>A/B test: Run same queries with original and optimized modes, compare quality metrics</idea>
+      </test>
+    </ideas>
+  </tests>
+</story-context>
+

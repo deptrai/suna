@@ -1,0 +1,250 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>2.2</storyId>
+    <title>Message History Compression (Quality-Preserving)</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-07</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/2-2-message-history-compression-quality-preserving.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>system administrator</asA>
+    <iWant>to implement message history compression using sliding window và summarization</iWant>
+    <soThat>I can reduce prompt token count for long conversations while preserving critical context và quality</soThat>
+    <tasks>
+      <task id="1" ac="1">
+        <title>Implement MessageHistoryCompressor class</title>
+        <subtasks>
+          <subtask>Create `backend/core/optimizations/history_compressor.py`</subtask>
+          <subtask>Implement `MessageHistoryCompressor` class</subtask>
+          <subtask>Integrate với existing LLM calls for summarization</subtask>
+          <subtask>Test MessageHistoryCompressor class với sample conversations</subtask>
+          <subtask>Unit test MessageHistoryCompressor class</subtask>
+          <subtask>Integration test với LLM calls</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="2">
+        <title>Implement sliding window</title>
+        <subtasks>
+          <subtask>Define sliding window size (e.g., keep last 10 messages)</subtask>
+          <subtask>Implement logic to keep recent messages unchanged</subtask>
+          <subtask>Test sliding window với different conversation lengths</subtask>
+          <subtask>Unit test sliding window logic</subtask>
+          <subtask>Integration test với long conversations</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="3">
+        <title>Implement message summarization</title>
+        <subtasks>
+          <subtask>Create summarization prompt template</subtask>
+          <subtask>Use LLM to summarize older messages</subtask>
+          <subtask>Implement quality checks on summaries</subtask>
+          <subtask>Test summarization với sample conversations</subtask>
+          <subtask>Unit test summarization logic</subtask>
+          <subtask>Integration test summarization quality</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="4">
+        <title>Test context preservation</title>
+        <subtasks>
+          <subtask>Test conversation flow với compressed history</subtask>
+          <subtask>Verify critical context is preserved</subtask>
+          <subtask>Test với different conversation types</subtask>
+          <subtask>Document context preservation results</subtask>
+          <subtask>Integration test conversation flow</subtask>
+          <subtask>Quality validation tests</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="5">
+        <title>Measure token reduction</title>
+        <subtasks>
+          <subtask>Track token count before và after compression</subtask>
+          <subtask>Calculate token reduction percentage</subtask>
+          <subtask>Log token reduction metrics</subtask>
+          <subtask>Test với different conversation lengths</subtask>
+          <subtask>Unit test token counting</subtask>
+          <subtask>Integration test token reduction measurement</subtask>
+        </subtasks>
+      </task>
+      <task id="6" ac="6">
+        <title>Quality validation</title>
+        <subtasks>
+          <subtask>Compare compressed vs non-compressed responses</subtask>
+          <subtask>Verify 95-100% quality maintained (semantic similarity check)</subtask>
+          <subtask>Document quality validation results</subtask>
+          <subtask>Add quality checks to monitoring</subtask>
+          <subtask>Automated similarity testing (semantic similarity check)</subtask>
+          <subtask>A/B testing framework setup</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1">`MessageHistoryCompressor` class được implemented trong `backend/core/optimizations/history_compressor.py`</ac>
+    <ac id="2">Sliding window được implemented để keep recent messages</ac>
+    <ac id="3">Older messages được summarized using LLM với quality checks</ac>
+    <ac id="4">Context preservation được tested through conversation flow</ac>
+    <ac id="5">Token reduction for message history được measured</ac>
+    <ac id="6">Quality maintained at 95-100% (monitored)</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/epics-optimization.md</path>
+        <title>ChainLens AI Worker - Epic Breakdown: LLM Optimization</title>
+        <section>Story 2.2: Message History Compression (Quality-Preserving)</section>
+        <snippet>Story 2.2 defines requirements for implementing message history compression. Expected savings: $5-10/month with minimal quality impact (<5%). Effort: 3 hours. Prerequisites: Story 1.4.</snippet>
+      </doc>
+      <doc>
+        <path>docs/optimization-master-plan-v1.1.md</path>
+        <title>ChainLens AI Worker - Master Optimization Plan v1.1</title>
+        <section>Phase 2: Quality-Preserving Medium Optimizations - Task 2.2: Message History Compression</section>
+        <snippet>Message history compression uses sliding window to keep recent messages and LLM summarization for older messages. Quality checks on summaries required. Context preservation must be tested. Token reduction measured and tracked.</snippet>
+      </doc>
+      <doc>
+        <path>docs/research-prompt-optimization.md</path>
+        <title>Research Prompt: System Prompt Optimization</title>
+        <section>6. Message Compression</section>
+        <snippet>Message history compression techniques: sliding window (keep recent N messages), summarization (LLM-based), and context preservation. Quality checks required. Token reduction: 10-20% for long conversations.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>backend/core/optimizations/history_compressor.py</path>
+        <kind>service</kind>
+        <symbol>MessageHistoryCompressor class</symbol>
+        <lines>1-200</lines>
+        <reason>New file to create. Implement MessageHistoryCompressor class với sliding window logic, LLM summarization, and quality checks.</reason>
+      </file>
+      <file>
+        <path>backend/core/run.py</path>
+        <kind>service</kind>
+        <symbol>PromptManager.build_system_prompt()</symbol>
+        <lines>326-491</lines>
+        <reason>Primary method to modify for integrating message history compression. Need to compress message history before building system prompt.</reason>
+      </file>
+      <file>
+        <path>backend/core/services/llm.py</path>
+        <kind>service</kind>
+        <symbol>make_llm_api_call()</symbol>
+        <lines>180-303</lines>
+        <reason>LLM API call handler. Used for summarization of older messages. Can use existing LLM infrastructure for summarization.</reason>
+      </file>
+      <file>
+        <path>backend/core/utils/config.py</path>
+        <kind>config</kind>
+        <symbol>Configuration class</symbol>
+        <lines>73-200</lines>
+        <reason>Configuration management. Can add compression configuration (sliding window size, summarization settings) here.</reason>
+      </file>
+    </code>
+    <dependencies>
+      <ecosystem>Python</ecosystem>
+      <packages>
+        <package>litellm</package>
+      </packages>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>
+      <type>Quality Requirement</type>
+      <description>Minimal quality impact (<5%) acceptable. Quality maintained at 95-100% (monitored). Context preservation must be tested through conversation flow.</description>
+    </constraint>
+    <constraint>
+      <type>Architecture Pattern</type>
+      <description>Dual-mode architecture: Original mode (baseline) + Optimized mode (with compression). Feature flags allow switching and rollback. Quality monitoring required.</description>
+    </constraint>
+    <constraint>
+      <type>Sliding Window</type>
+      <description>Sliding window size: Configurable (default: last 10 messages). Recent messages kept unchanged. Older messages summarized using LLM.</description>
+    </constraint>
+    <constraint>
+      <type>Summarization</type>
+      <description>LLM summarization for older messages. Quality checks on summaries required. Can use same LLM or dedicated summarization model. Summarization adds latency but reduces tokens.</description>
+    </constraint>
+    <constraint>
+      <type>Context Preservation</type>
+      <description>Critical context must be preserved through compression. Context preservation must be tested through conversation flow. Test with different conversation types.</description>
+    </constraint>
+    <constraint>
+      <type>Backward Compatibility</type>
+      <description>Must not break existing LLM calls. Compression should be transparent to callers. Test with existing agent configurations.</description>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>MessageHistoryCompressor class</name>
+      <kind>class</kind>
+      <signature>class MessageHistoryCompressor: def __init__(self, sliding_window_size: int = 10): ... async def compress_history(self, messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]: ...</signature>
+      <path>backend/core/optimizations/history_compressor.py</path>
+    </interface>
+    <interface>
+      <name>PromptManager.build_system_prompt()</name>
+      <kind>method</kind>
+      <signature>async def build_system_prompt(model_name: str, agent_config: Optional[dict], thread_id: str, mcp_wrapper_instance: Optional[MCPToolWrapper], client=None, tool_registry=None, xml_tool_calling: bool = True) -> dict</signature>
+      <path>backend/core/run.py</path>
+    </interface>
+    <interface>
+      <name>make_llm_api_call()</name>
+      <kind>function</kind>
+      <signature>async def make_llm_api_call(messages: List[Dict[str, Any]], model_name: str, ...) -> Union[Dict[str, Any], AsyncGenerator, ModelResponse]</signature>
+      <path>backend/core/services/llm.py</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing standards include: Quality validation (95-100% similarity check for compressed vs non-compressed), Performance testing (token reduction, cost savings, latency impact), Integration testing (existing LLM calls, different models, agent configurations, long conversations, context preservation). Use semantic similarity checking for quality validation. A/B testing framework for comparing original vs optimized modes.
+    </standards>
+    <locations>
+      <location>backend/tests/</location>
+      <location>backend/core/tests/</location>
+      <location>backend/core/optimizations/tests/</location>
+    </locations>
+    <ideas>
+      <test ac="1">
+        <idea>Unit test: Verify MessageHistoryCompressor class creation và initialization</idea>
+      </test>
+      <test ac="1">
+        <idea>Integration test: Test message history compression với LLM calls</idea>
+      </test>
+      <test ac="2">
+        <idea>Unit test: Verify sliding window logic (keep last N messages unchanged)</idea>
+      </test>
+      <test ac="2">
+        <idea>Integration test: Test sliding window với different conversation lengths</idea>
+      </test>
+      <test ac="3">
+        <idea>Unit test: Verify message summarization logic và quality checks</idea>
+      </test>
+      <test ac="3">
+        <idea>Integration test: Test summarization quality với sample conversations</idea>
+      </test>
+      <test ac="4">
+        <idea>Integration test: Test conversation flow với compressed history và verify context preservation</idea>
+      </test>
+      <test ac="4">
+        <idea>Quality validation test: Test với different conversation types và verify critical context is preserved</idea>
+      </test>
+      <test ac="5">
+        <idea>Unit test: Verify token counting và reduction measurement</idea>
+      </test>
+      <test ac="5">
+        <idea>Integration test: Test token reduction với different conversation lengths</idea>
+      </test>
+      <test ac="6">
+        <idea>Automated test: Compare compressed vs non-compressed responses (target: 95-100% similarity)</idea>
+      </test>
+      <test ac="6">
+        <idea>A/B test: Run same conversations with original and optimized modes, compare quality metrics</idea>
+      </test>
+    </ideas>
+  </tests>
+</story-context>
+

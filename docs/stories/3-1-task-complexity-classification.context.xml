@@ -1,0 +1,260 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>3.1</storyId>
+    <title>Task Complexity Classification</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-07</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/3-1-task-complexity-classification.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>system administrator</asA>
+    <iWant>to implement task complexity classification system</iWant>
+    <soThat>I can route tasks to appropriate models based on complexity level và optimize cost/quality trade-offs</soThat>
+    <tasks>
+      <task id="1" ac="2">
+        <title>Define complexity levels</title>
+        <subtasks>
+          <subtask>Define complexity levels: simple, medium, complex, very_complex</subtask>
+          <subtask>Document criteria for each complexity level:
+            - simple: Short queries (&lt;50 words), single intent, no complex reasoning (e.g., "What is X?", "Explain Y briefly")
+            - medium: Moderate length (50-150 words), multiple intents, basic reasoning (e.g., "Explain X and Y", "Compare A with B")
+            - complex: Long queries (150-300 words), complex reasoning, multi-step tasks (e.g., "Analyze X, compare with Y, and provide recommendations")
+            - very_complex: Very long queries (&gt;300 words), advanced reasoning, multi-model workflows (e.g., "Research X, create plan, execute, synthesize")</subtask>
+          <subtask>Create examples for each complexity level</subtask>
+          <subtask>Test complexity level definitions với sample tasks</subtask>
+          <subtask>Unit test complexity level definitions</subtask>
+          <subtask>Integration test với sample tasks</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="1">
+        <title>Implement TaskClassifier class</title>
+        <subtasks>
+          <subtask>Create `backend/core/optimizations/task_classifier.py`</subtask>
+          <subtask>Implement `TaskClassifier` class với classification logic</subtask>
+          <subtask>Integrate với existing LLM calls for classification (if needed)</subtask>
+          <subtask>Test TaskClassifier class với sample tasks</subtask>
+          <subtask>Unit test TaskClassifier class</subtask>
+          <subtask>Integration test classification accuracy</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="3">
+        <title>Implement classification logic</title>
+        <subtasks>
+          <subtask>Analyze task characteristics (length, keywords, intent, etc.)</subtask>
+          <subtask>Implement classification algorithm (rule-based hoặc LLM-based)</subtask>
+          <subtask>Test classification logic với diverse task types</subtask>
+          <subtask>Unit test classification algorithm</subtask>
+          <subtask>Integration test classification logic</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="4">
+        <title>Test và validate classification accuracy</title>
+        <subtasks>
+          <subtask>Test classification với labeled dataset</subtask>
+          <subtask>Measure classification accuracy (target: &gt;85%)</subtask>
+          <subtask>Document classification accuracy results</subtask>
+          <subtask>Test với different task types</subtask>
+          <subtask>Unit test classification accuracy</subtask>
+          <subtask>Integration test với labeled dataset</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="5">
+        <title>Implement logging và monitoring</title>
+        <subtasks>
+          <subtask>Log classification results (complexity level, confidence score)</subtask>
+          <subtask>Add classification metrics to monitoring dashboard</subtask>
+          <subtask>Track classification distribution (simple/medium/complex/very_complex counts)</subtask>
+          <subtask>Test logging với sample tasks</subtask>
+          <subtask>Unit test logging logic</subtask>
+          <subtask>Integration test metrics tracking</subtask>
+        </subtasks>
+      </task>
+      <task id="6" ac="6">
+        <title>Integrate với model routing</title>
+        <subtasks>
+          <subtask>Ensure classification results can be used for model routing</subtask>
+          <subtask>Test integration với model router (Story 3.2)</subtask>
+          <subtask>Document integration approach</subtask>
+          <subtask>Integration test với model router</subtask>
+          <subtask>End-to-end test classification → routing → execution</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1">`TaskClassifier` class được implemented trong `backend/core/optimizations/task_classifier.py`</ac>
+    <ac id="2">Complexity levels được defined (simple, medium, complex, very_complex)</ac>
+    <ac id="3">Classification logic được implemented để analyze task complexity</ac>
+    <ac id="4">Classification accuracy được tested và validated</ac>
+    <ac id="5">Classification results được logged và monitored</ac>
+    <ac id="6">Classification can be used for model routing decisions</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/epics-optimization.md</path>
+        <title>ChainLens AI Worker - Epic Breakdown: LLM Optimization</title>
+        <section>Epic 3: Multi-Model Orchestration - Story 3.1: Task Complexity Classification</section>
+        <snippet>Story 3.1 defines requirements for implementing task complexity classification. Foundation for cost optimization (enables model routing). Effort: 3 hours. Quality Impact: ✅ ZERO (classification only, no quality impact). Prerequisites: Story 1.4 (Dual-mode architecture).</snippet>
+      </doc>
+      <doc>
+        <path>docs/optimization-master-plan-v1.1.md</path>
+        <title>ChainLens AI Worker - Master Optimization Plan v1.1</title>
+        <section>Phase 3: Multi-Model Orchestration - Task 3.1: Task Complexity Classification</section>
+        <snippet>Task complexity classification requires defining complexity levels (simple, medium, complex, very_complex) và implementing classification logic (rule-based hoặc LLM-based). Classification accuracy target: &gt;85%. Foundation for routing tasks to appropriate models.</snippet>
+      </doc>
+      <doc>
+        <path>docs/multi-model-orchestration-research-guidance.md</path>
+        <title>Research Guidance: Multi-Model Orchestration</title>
+        <section>Task Classification Methods</section>
+        <snippet>Task classification methods include rule-based (keywords, length, patterns) và LLM-based (use cheap model like gpt-4o-mini for classification). Complexity levels: simple, medium, complex, very_complex. Classification accuracy: &gt;85% target.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>backend/core/optimizations/task_classifier.py</path>
+        <kind>service</kind>
+        <symbol>TaskClassifier class</symbol>
+        <lines>1-200</lines>
+        <reason>New file to create. Implement TaskClassifier class với classification logic, complexity level definitions, và integration với model router.</reason>
+      </file>
+      <file>
+        <path>backend/core/run.py</path>
+        <kind>service</kind>
+        <symbol>run_agent()</symbol>
+        <lines>326-491</lines>
+        <reason>Agent execution flow. Need to integrate classification vào agent execution flow to classify task complexity before model selection.</reason>
+      </file>
+      <file>
+        <path>backend/core/ai_models/manager.py</path>
+        <kind>service</kind>
+        <symbol>get_default_model_for_user()</symbol>
+        <lines>204-244</lines>
+        <reason>Current model selection logic. Classification results will be used to override default model selection based on complexity.</reason>
+      </file>
+      <file>
+        <path>backend/core/services/llm.py</path>
+        <kind>service</kind>
+        <symbol>make_llm_api_call()</symbol>
+        <lines>180-303</lines>
+        <reason>LLM API call handler. Can be used for LLM-based classification (if using cheap model like gpt-4o-mini for classification).</reason>
+      </file>
+      <file>
+        <path>backend/core/utils/config.py</path>
+        <kind>config</kind>
+        <symbol>Configuration class</symbol>
+        <lines>73-200</lines>
+        <reason>Configuration management. Can add classification configuration (complexity thresholds, classification method) here.</reason>
+      </file>
+    </code>
+    <dependencies>
+      <ecosystem>Python</ecosystem>
+      <packages>
+        <package>litellm</package>
+      </packages>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>
+      <type>Quality Requirement</type>
+      <description>Zero quality impact required. Classification only (no quality impact). Classification accuracy target: &gt;85%.</description>
+    </constraint>
+    <constraint>
+      <type>Architecture Pattern</type>
+      <description>Dual-mode architecture: Original mode (baseline) + Optimized mode (with orchestration). Feature flags allow switching and rollback.</description>
+    </constraint>
+    <constraint>
+      <type>Complexity Levels</type>
+      <description>Four complexity levels: simple (&lt;50 words, single intent), medium (50-150 words, multiple intents), complex (150-300 words, multi-step), very_complex (&gt;300 words, multi-model workflows).</description>
+    </constraint>
+    <constraint>
+      <type>Classification Method</type>
+      <description>Can use rule-based (keywords, length, patterns) hoặc LLM-based (use cheap model like gpt-4o-mini for classification). Rule-based is faster, LLM-based is more accurate.</description>
+    </constraint>
+    <constraint>
+      <type>Integration</type>
+      <description>Classification results feed into model router (Story 3.2). Must provide complexity level và confidence score for routing decisions.</description>
+    </constraint>
+    <constraint>
+      <type>Backward Compatibility</type>
+      <description>Must not break existing LLM calls. Classification should be transparent to callers. Test with existing agent configurations.</description>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>TaskClassifier class</name>
+      <kind>class</kind>
+      <signature>class TaskClassifier: def __init__(self, classification_method: str = "rule-based"): ... async def classify(self, task: str) -> Dict[str, Any]: ... # Returns {"complexity": "simple|medium|complex|very_complex", "confidence": float}</signature>
+      <path>backend/core/optimizations/task_classifier.py</path>
+    </interface>
+    <interface>
+      <name>run_agent()</name>
+      <kind>function</kind>
+      <signature>async def run_agent(...) -> Dict[str, Any]</signature>
+      <path>backend/core/run.py</path>
+    </interface>
+    <interface>
+      <name>make_llm_api_call()</name>
+      <kind>function</kind>
+      <signature>async def make_llm_api_call(messages: List[Dict[str, Any]], model_name: str, ...) -> Union[Dict[str, Any], AsyncGenerator, ModelResponse]</signature>
+      <path>backend/core/services/llm.py</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing standards include: Quality validation (classification accuracy &gt;85%), Performance testing (classification latency, cost if using LLM), Integration testing (existing LLM calls, different models, agent configurations, model router integration). Use labeled dataset for accuracy validation.
+    </standards>
+    <locations>
+      <location>backend/tests/</location>
+      <location>backend/core/tests/</location>
+      <location>backend/core/optimizations/tests/</location>
+    </locations>
+    <ideas>
+      <test ac="1">
+        <idea>Unit test: Verify TaskClassifier class creation và initialization</idea>
+      </test>
+      <test ac="1">
+        <idea>Integration test: Test TaskClassifier class với sample tasks</idea>
+      </test>
+      <test ac="2">
+        <idea>Unit test: Verify complexity level definitions với criteria (simple, medium, complex, very_complex)</idea>
+      </test>
+      <test ac="2">
+        <idea>Integration test: Test complexity level definitions với sample tasks</idea>
+      </test>
+      <test ac="3">
+        <idea>Unit test: Verify classification algorithm (rule-based hoặc LLM-based)</idea>
+      </test>
+      <test ac="3">
+        <idea>Integration test: Test classification logic với diverse task types</idea>
+      </test>
+      <test ac="4">
+        <idea>Unit test: Verify classification accuracy với labeled dataset (target: &gt;85%)</idea>
+      </test>
+      <test ac="4">
+        <idea>Integration test: Test classification accuracy với different task types</idea>
+      </test>
+      <test ac="5">
+        <idea>Unit test: Verify logging logic (complexity level, confidence score)</idea>
+      </test>
+      <test ac="5">
+        <idea>Integration test: Verify classification metrics are logged và appear in monitoring dashboard</idea>
+      </test>
+      <test ac="6">
+        <idea>Integration test: Test integration với model router (Story 3.2)</idea>
+      </test>
+      <test ac="6">
+        <idea>End-to-end test: Test classification → routing → execution flow</idea>
+      </test>
+    </ideas>
+  </tests>
+</story-context>
+

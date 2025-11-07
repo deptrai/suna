@@ -1,0 +1,274 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.2</storyId>
+    <title>LiteLLM Redis Response Caching (Exact Matches)</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-07</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/1-2-litellm-redis-response-caching-exact-matches.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>system administrator</asA>
+    <iWant>to configure LiteLLM Redis caching for exact response matches</iWant>
+    <soThat>I can reduce API calls by 10-20% for duplicate queries without quality impact</soThat>
+    <tasks>
+      <task id="1" ac="1">
+        <title>Setup Redis instance và configuration</title>
+        <subtasks>
+          <subtask>Verify Redis is running và accessible</subtask>
+          <subtask>Check Redis connection configuration trong environment variables</subtask>
+          <subtask>Configure Redis connection parameters (host, port, password if needed)</subtask>
+          <subtask>Test Redis connectivity từ backend service</subtask>
+          <subtask>Unit test Redis connection</subtask>
+          <subtask>Integration test Redis availability</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="2">
+        <title>Configure LiteLLM Redis caching</title>
+        <subtasks>
+          <subtask>Review LiteLLM caching documentation và configuration options</subtask>
+          <subtask>Configure LiteLLM to use Redis for caching (exact match only, no semantic)</subtask>
+          <subtask>Set cache type to "redis" (not "redis-semantic")</subtask>
+          <subtask>Verify caching is enabled trong LiteLLM configuration</subtask>
+          <subtask>Test caching với sample LLM calls</subtask>
+          <subtask>Unit test LiteLLM cache configuration</subtask>
+          <subtask>Integration test cache hit/miss behavior</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="3">
+        <title>Implement cache key namespacing</title>
+        <subtasks>
+          <subtask>Design cache key namespace strategy (e.g., "litellm:cache:{model}:{hash}")</subtask>
+          <subtask>Implement cache key generation với namespace prefix</subtask>
+          <subtask>Ensure cache keys are unique và prevent cross-contamination</subtask>
+          <subtask>Test cache key generation với different models và queries</subtask>
+          <subtask>Unit test cache key generation</subtask>
+          <subtask>Integration test namespace isolation</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="4">
+        <title>Configure cache TTL</title>
+        <subtasks>
+          <subtask>Set default cache TTL to 1 hour (3600 seconds)</subtask>
+          <subtask>Make TTL configurable via environment variable</subtask>
+          <subtask>Document TTL configuration và best practices</subtask>
+          <subtask>Test cache expiration với TTL</subtask>
+          <subtask>Unit test TTL configuration</subtask>
+          <subtask>Integration test cache expiration</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="5">
+        <title>Implement cache metrics tracking</title>
+        <subtasks>
+          <subtask>Extract cache hit/miss information từ LiteLLM responses</subtask>
+          <subtask>Log cache metrics (cache_hits, cache_misses, cache_hit_rate)</subtask>
+          <subtask>Add cache metrics to monitoring dashboard</subtask>
+          <subtask>Create cache metrics reporting</subtask>
+          <subtask>Test metrics tracking với sample requests</subtask>
+          <subtask>Unit test cache metrics extraction</subtask>
+          <subtask>Integration test metrics logging</subtask>
+        </subtasks>
+      </task>
+      <task id="6" ac="6">
+        <title>Quality validation</title>
+        <subtasks>
+          <subtask>Compare cached vs non-cached responses</subtask>
+          <subtask>Verify 100% similarity (exact matches = same responses)</subtask>
+          <subtask>Document quality validation results</subtask>
+          <subtask>Add quality checks to monitoring</subtask>
+          <subtask>Automated similarity testing (exact match verification)</subtask>
+          <subtask>A/B testing framework setup</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1">Redis instance được setup và configured cho LiteLLM</ac>
+    <ac id="2">LiteLLM Redis caching được enable với exact match strategy (no semantic)</ac>
+    <ac id="3">Cache keys được namespaced để prevent cross-contamination</ac>
+    <ac id="4">Cache TTL được configured appropriately (default 1 hour)</ac>
+    <ac id="5">Cache hit/miss metrics được tracked và logged</ac>
+    <ac id="6">No quality degradation (exact matches = same responses)</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/epics-optimization.md</path>
+        <title>ChainLens AI Worker - Epic Breakdown: LLM Optimization</title>
+        <section>Story 1.2: LiteLLM Redis Response Caching (Exact Matches)</section>
+        <snippet>Story 1.2 defines requirements for configuring LiteLLM Redis caching. Expected savings: $5-10/month with zero quality impact. Effort: 2 hours. Prerequisites: Story 1.1.</snippet>
+      </doc>
+      <doc>
+        <path>docs/optimization-master-plan-v1.1.md</path>
+        <title>ChainLens AI Worker - Master Optimization Plan v1.1</title>
+        <section>Phase 1: Quality-Preserving Quick Wins - Task 1.2: LiteLLM Redis Response Caching</section>
+        <snippet>LiteLLM Redis caching requires Redis instance. Exact match strategy (no semantic) to ensure quality. Cache keys must be namespaced. Default TTL: 1 hour. Cache metrics must be tracked.</snippet>
+      </doc>
+      <doc>
+        <path>docs/research-prompt-optimization.md</path>
+        <title>Research Prompt: System Prompt Optimization</title>
+        <section>5. Prompt Caching Implementation - 5.3 LiteLLM Universal Caching</section>
+        <snippet>LiteLLM provides unified caching across all providers. Configuration via litellm_config.yaml or environment variables. Supports Redis caching with exact match or semantic matching. Cache TTL configurable.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>backend/core/services/llm.py</path>
+        <kind>service</kind>
+        <symbol>make_llm_api_call()</symbol>
+        <lines>180-303</lines>
+        <reason>Primary method to modify for LiteLLM Redis caching configuration. Currently uses LiteLLM router for API calls. Need to configure Redis caching in LiteLLM settings.</reason>
+      </file>
+      <file>
+        <path>backend/core/services/llm.py</path>
+        <kind>service</kind>
+        <symbol>setup_provider_router()</symbol>
+        <lines>70-120</lines>
+        <reason>Function that sets up LiteLLM router. Need to configure Redis caching here or in LiteLLM global settings.</reason>
+      </file>
+      <file>
+        <path>backend/core/services/llm.py</path>
+        <kind>service</kind>
+        <symbol>litellm configuration</symbol>
+        <lines>18-27</lines>
+        <reason>LiteLLM global configuration. Can set caching parameters here using litellm.cache or environment variables.</reason>
+      </file>
+      <file>
+        <path>backend/core/services/redis.py</path>
+        <kind>service</kind>
+        <symbol>initialize()</symbol>
+        <lines>19-56</lines>
+        <reason>Redis connection initialization. Redis instance should already be running and accessible. Connection configuration via environment variables (REDIS_HOST, REDIS_PORT, REDIS_PASSWORD).</reason>
+      </file>
+      <file>
+        <path>backend/core/services/redis.py</path>
+        <kind>service</kind>
+        <symbol>get_client()</symbol>
+        <lines>80-100</lines>
+        <reason>Function to get Redis client. Can be used to verify Redis connectivity and configure LiteLLM to use same Redis instance.</reason>
+      </file>
+      <file>
+        <path>backend/core/utils/config.py</path>
+        <kind>config</kind>
+        <symbol>Configuration class</symbol>
+        <lines>73-200</lines>
+        <reason>Configuration management. Can add cache TTL configuration here if needed. Environment variables are loaded here.</reason>
+      </file>
+    </code>
+    <dependencies>
+      <ecosystem>Python</ecosystem>
+      <packages>
+        <package>litellm</package>
+        <package>redis</package>
+      </packages>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>
+      <type>Quality Requirement</type>
+      <description>Zero quality impact required. Exact matches only (no semantic matching) to ensure 100% similarity with original responses.</description>
+    </constraint>
+    <constraint>
+      <type>Architecture Pattern</type>
+      <description>Dual-mode architecture: Original mode (baseline) + Optimized mode (with caching). Feature flags allow switching and rollback.</description>
+    </constraint>
+    <constraint>
+      <type>Redis Infrastructure</type>
+      <description>Redis instance should already be running (used for Dramatiq message broker). Connection configuration via environment variables. No additional Redis setup required.</description>
+    </constraint>
+    <constraint>
+      <type>Cache Strategy</type>
+      <description>Exact match only (no semantic). Use "redis" cache type, not "redis-semantic". Cache keys must be namespaced to prevent conflicts with other Redis keys.</description>
+    </constraint>
+    <constraint>
+      <type>TTL Configuration</type>
+      <description>Default TTL: 1 hour (3600 seconds). Must be configurable via environment variable. Document configuration and best practices.</description>
+    </constraint>
+    <constraint>
+      <type>Backward Compatibility</type>
+      <description>Must not break existing LLM calls. Caching should be transparent to callers. Test with existing agent configurations.</description>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>make_llm_api_call()</name>
+      <kind>function</kind>
+      <signature>async def make_llm_api_call(messages: List[Dict[str, Any]], model_name: str, response_format: Optional[Any] = None, temperature: float = 0, max_tokens: Optional[int] = None, tools: Optional[List[Dict[str, Any]]] = None, tool_choice: str = "auto", api_key: Optional[str] = None, api_base: Optional[str] = None, stream: bool = True, top_p: Optional[float] = None, model_id: Optional[str] = None, headers: Optional[Dict[str, str]] = None, extra_headers: Optional[Dict[str, str]] = None) -> Union[Dict[str, Any], AsyncGenerator, ModelResponse]</signature>
+      <path>backend/core/services/llm.py</path>
+    </interface>
+    <interface>
+      <name>setup_provider_router()</name>
+      <kind>function</kind>
+      <signature>def setup_provider_router(api_key: Optional[str] = None, api_base: Optional[str] = None) -> Router</signature>
+      <path>backend/core/services/llm.py</path>
+    </interface>
+    <interface>
+      <name>litellm.cache</name>
+      <kind>configuration</kind>
+      <signature>litellm.cache = litellm.Cache(cache_type="redis", host="localhost", port=6379, ttl=3600)</signature>
+      <path>backend/core/services/llm.py</path>
+    </interface>
+    <interface>
+      <name>Redis client</name>
+      <kind>service</kind>
+      <signature>redis.Redis(host, port, password, decode_responses=True)</signature>
+      <path>backend/core/services/redis.py</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing standards include: Quality validation (100% similarity check for exact matches), Performance testing (cache hit rate, cost savings, latency), Integration testing (existing LLM calls, different models, agent configurations, cache expiration). Use exact match verification for quality validation. A/B testing framework for comparing original vs optimized modes.
+    </standards>
+    <locations>
+      <location>backend/tests/</location>
+      <location>backend/core/tests/</location>
+      <location>backend/core/services/tests/</location>
+    </locations>
+    <ideas>
+      <test ac="1">
+        <idea>Unit test: Verify Redis connection và accessibility từ backend service</idea>
+      </test>
+      <test ac="1">
+        <idea>Integration test: Test Redis connectivity với actual Redis instance</idea>
+      </test>
+      <test ac="2">
+        <idea>Unit test: Verify LiteLLM cache configuration (cache type = "redis", not "redis-semantic")</idea>
+      </test>
+      <test ac="2">
+        <idea>Integration test: Test cache hit/miss behavior với sample LLM calls</idea>
+      </test>
+      <test ac="3">
+        <idea>Unit test: Verify cache key generation với namespace prefix</idea>
+      </test>
+      <test ac="3">
+        <idea>Integration test: Test namespace isolation (different models/queries generate different keys)</idea>
+      </test>
+      <test ac="4">
+        <idea>Unit test: Verify TTL configuration (default 1 hour, configurable via env var)</idea>
+      </test>
+      <test ac="4">
+        <idea>Integration test: Test cache expiration với TTL (wait for expiration và verify cache miss)</idea>
+      </test>
+      <test ac="5">
+        <idea>Unit test: Extract cache hit/miss information từ LiteLLM response metadata</idea>
+      </test>
+      <test ac="5">
+        <idea>Integration test: Verify cache metrics are logged và appear in monitoring dashboard</idea>
+      </test>
+      <test ac="6">
+        <idea>Automated test: Compare cached vs non-cached responses (exact match verification, target: 100% similarity)</idea>
+      </test>
+      <test ac="6">
+        <idea>A/B test: Run same queries with original and optimized modes, compare quality metrics</idea>
+      </test>
+    </ideas>
+  </tests>
+</story-context>
+

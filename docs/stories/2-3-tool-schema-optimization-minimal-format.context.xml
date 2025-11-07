@@ -1,0 +1,298 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>2.3</storyId>
+    <title>Tool Schema Optimization (Minimal Format)</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-07</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/2-3-tool-schema-optimization-minimal-format.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>system administrator</asA>
+    <iWant>to optimize tool schema representation in system prompt to minimal format</iWant>
+    <soThat>I can reduce prompt token count without negatively impacting tool calling accuracy</soThat>
+    <tasks>
+      <task id="1" ac="1">
+        <title>Analyze current tool schema format</title>
+        <subtasks>
+          <subtask>Review current tool schema formatting logic trong `backend/core/run.py::PromptManager.build_system_prompt()` (lines 442-477)</subtask>
+          <subtask>Identify current format components (full JSON schema với name, description, parameters, examples, etc.)</subtask>
+          <subtask>Measure current token count for tool schemas</subtask>
+          <subtask>Document current format structure</subtask>
+          <subtask>Unit test current tool schema format</subtask>
+          <subtask>Integration test current tool calling</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="2">
+        <title>Design minimal format</title>
+        <subtasks>
+          <subtask>Design minimal format: name + brief description only</subtask>
+          <subtask>Remove unnecessary fields (detailed parameters, examples, etc.)</subtask>
+          <subtask>Ensure essential information is preserved</subtask>
+          <subtask>Test minimal format với sample tools</subtask>
+          <subtask>Unit test minimal format generation</subtask>
+          <subtask>Integration test format validation</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="1,2">
+        <title>Implement minimal format</title>
+        <subtasks>
+          <subtask>Extract tool schema formatting logic từ `build_system_prompt()` into `_format_tools()` method (if needed)</subtask>
+          <subtask>Modify tool schema formatting to output minimal format (name + description only)</subtask>
+          <subtask>Ensure backward compatibility (can switch between formats)</subtask>
+          <subtask>Test minimal format với existing tools</subtask>
+          <subtask>Unit test minimal format implementation</subtask>
+          <subtask>Integration test với actual tool calls</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="3">
+        <title>Monitor tool calling success rate</title>
+        <subtasks>
+          <subtask>Track tool calling success rate (successful calls / total calls)</subtask>
+          <subtask>Set threshold: 95% success rate required</subtask>
+          <subtask>Log tool calling metrics</subtask>
+          <subtask>Add metrics to monitoring dashboard</subtask>
+          <subtask>Test monitoring với sample tool calls</subtask>
+          <subtask>Unit test tool calling metrics</subtask>
+          <subtask>Integration test metrics tracking</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="4">
+        <title>Implement rollback mechanism</title>
+        <subtasks>
+          <subtask>Add rollback logic nếu tool calling accuracy drops below 95%</subtask>
+          <subtask>Fallback to full format nếu minimal format fails</subtask>
+          <subtask>Log rollback events</subtask>
+          <subtask>Test rollback mechanism với degraded accuracy scenarios</subtask>
+          <subtask>Unit test rollback logic</subtask>
+          <subtask>Integration test rollback mechanism</subtask>
+        </subtasks>
+      </task>
+      <task id="6" ac="5">
+        <title>Measure token reduction</title>
+        <subtasks>
+          <subtask>Track token count before và after optimization</subtask>
+          <subtask>Calculate token reduction percentage</subtask>
+          <subtask>Log token reduction metrics</subtask>
+          <subtask>Test với different tool sets</subtask>
+          <subtask>Unit test token counting</subtask>
+          <subtask>Integration test token reduction measurement</subtask>
+        </subtasks>
+      </task>
+      <task id="7" ac="6">
+        <title>Quality validation</title>
+        <subtasks>
+          <subtask>Compare tool calling với minimal vs full format</subtask>
+          <subtask>Verify 95-100% tool calling accuracy maintained</subtask>
+          <subtask>Document quality validation results</subtask>
+          <subtask>Add quality checks to monitoring</subtask>
+          <subtask>Automated tool calling accuracy testing</subtask>
+          <subtask>A/B testing framework setup</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1">`_format_tools()` function trong `backend/core/run.py` được modified to output minimal format (or inline formatting logic in `build_system_prompt()` modified)</ac>
+    <ac id="2">Minimal format includes only: tool name + brief description</ac>
+    <ac id="3">Tool calling success rate được monitored và remains above 95%</ac>
+    <ac id="4">Rollback mechanism được implemented nếu tool calling accuracy drops</ac>
+    <ac id="5">Token reduction from tool schemas được measured</ac>
+    <ac id="6">Quality maintained at 95-100% (tool calling accuracy)</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/epics-optimization.md</path>
+        <title>ChainLens AI Worker - Epic Breakdown: LLM Optimization</title>
+        <section>Story 2.3: Tool Schema Optimization (Minimal Format)</section>
+        <snippet>Story 2.3 defines requirements for optimizing tool schema format. Expected savings: $3-6/month with minimal quality impact (<5%). Effort: 2 hours. Prerequisites: Story 1.4. Tool schema format changed from full JSON to minimal (name + description). Tool calling success rate must be ≥95%. Rollback mechanism required if success rate <95%.</snippet>
+      </doc>
+      <doc>
+        <path>docs/optimization-master-plan-v1.1.md</path>
+        <title>ChainLens AI Worker - Master Optimization Plan v1.1</title>
+        <section>Phase 2: Quality-Preserving Medium Optimizations - Task 2.3: Tool Schema Optimization</section>
+        <snippet>Tool schema optimization reduces format from full JSON to minimal format (name + description only). Tool calling success rate must remain ≥95%. Rollback mechanism required if accuracy drops. Token reduction: 15-25%. Code location: `backend/core/run.py::PromptManager._format_tools()` or inline in `build_system_prompt()`.</snippet>
+      </doc>
+      <doc>
+        <path>docs/research-prompt-optimization.md</path>
+        <title>Research Prompt: System Prompt Optimization</title>
+        <section>3. Tool Schema Optimization</section>
+        <snippet>Tool schema optimization techniques: minimal format (name + description), remove unnecessary fields, preserve essential information. Tool calling accuracy must be maintained. Token reduction: 15-25%. Current implementation uses full JSON schema with all parameters, examples, and type information.</snippet>
+      </doc>
+      <doc>
+        <path>docs/stories/2-3-tool-schema-optimization-minimal-format.md</path>
+        <title>Story 2.3: Tool Schema Optimization (Minimal Format)</title>
+        <section>Dev Notes</section>
+        <snippet>Detailed development notes for Story 2.3, including requirements context, project structure, architecture constraints, testing standards, and references. Current implementation: Tool schemas formatted inline in `build_system_prompt()` (lines 442-477) via `json.dumps(openapi_schemas, indent=2)`. May need to extract into separate `_format_tools()` method.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>backend/core/run.py</path>
+        <kind>service</kind>
+        <symbol>PromptManager.build_system_prompt() - Tool Schema Formatting Section</symbol>
+        <lines>442-477</lines>
+        <reason>Primary location to modify for tool schema optimization. Tool schemas are formatted inline here (lines 442-477). Current implementation: `openapi_schemas = tool_registry.get_openapi_schemas()` then `schemas_json = json.dumps(openapi_schemas, indent=2)` which includes full JSON schema. Need to modify to minimal format (name + description only). May need to extract this logic into separate `_format_tools()` method for optimization.</reason>
+      </file>
+      <file>
+        <path>backend/core/run.py</path>
+        <kind>service</kind>
+        <symbol>PromptManager.build_system_prompt()</symbol>
+        <lines>326-491</lines>
+        <reason>Method that contains tool schema formatting logic. Need to ensure tool schema optimization integrates correctly with prompt building. The tool schema formatting happens inline in this method around lines 442-477.</reason>
+      </file>
+      <file>
+        <path>backend/core/agentpress/tool_registry.py</path>
+        <kind>service</kind>
+        <symbol>ToolRegistry.get_openapi_schemas()</symbol>
+        <lines>1-150</lines>
+        <reason>Tool registry that provides OpenAPI schemas. The `get_openapi_schemas()` method returns full schemas. May need to add a method to get minimal schemas (name + description only) for optimization.</reason>
+      </file>
+      <file>
+        <path>backend/core/services/llm.py</path>
+        <kind>service</kind>
+        <symbol>make_llm_api_call()</symbol>
+        <lines>180-303</lines>
+        <reason>LLM API call handler. Tool calling happens here. Need to monitor tool calling success rate. Track successful tool calls vs failed tool calls to measure accuracy.</reason>
+      </file>
+      <file>
+        <path>backend/core/utils/config.py</path>
+        <kind>config</kind>
+        <symbol>Configuration class</symbol>
+        <lines>73-200</lines>
+        <reason>Configuration management. Can add tool schema format configuration (minimal vs full format) here. Environment variable to control format type.</reason>
+      </file>
+    </code>
+    <dependencies>
+      <ecosystem>Python</ecosystem>
+      <packages>
+        <package>litellm</package>
+        <package>json</package>
+      </packages>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>
+      <type>Quality Requirement</type>
+      <description>Minimal quality impact (<5%) acceptable. Tool calling success rate must remain ≥95%. Quality maintained at 95-100% (tool calling accuracy). Rollback mechanism required if accuracy drops below 95%.</description>
+    </constraint>
+    <constraint>
+      <type>Architecture Pattern</type>
+      <description>Dual-mode architecture: Original mode (baseline) + Optimized mode (with minimal format). Feature flags allow switching and rollback. Quality monitoring required.</description>
+    </constraint>
+    <constraint>
+      <type>Minimal Format</type>
+      <description>Minimal format: name + brief description only. Remove detailed parameters, examples, type information. Preserve essential information for tool selection. Format should be readable and clear for LLM to understand tool purpose.</description>
+    </constraint>
+    <constraint>
+      <type>Tool Calling Accuracy</type>
+      <description>Tool calling success rate must remain ≥95%. Rollback mechanism required if accuracy drops below 95%. Fallback to full format if minimal format fails. Monitor tool calling metrics continuously.</description>
+    </constraint>
+    <constraint>
+      <type>Backward Compatibility</type>
+      <description>Must not break existing LLM calls. Can switch between minimal and full formats. Test with existing agent configurations. Ensure backward compatibility during transition.</description>
+    </constraint>
+    <constraint>
+      <type>Token Reduction</type>
+      <description>Token reduction: 15-25% expected. Token reduction must be measured and tracked. Test with different tool sets. Monitor token count before and after optimization.</description>
+    </constraint>
+    <constraint>
+      <type>Code Location</type>
+      <description>Current implementation: Tool schemas formatted inline in `build_system_prompt()` (lines 442-477). May need to extract into separate `_format_tools()` method for better code organization and optimization control.</description>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>Tool Schema Formatting (inline in build_system_prompt)</name>
+      <kind>code section</kind>
+      <signature># In PromptManager.build_system_prompt(), lines 442-477: openapi_schemas = tool_registry.get_openapi_schemas(); schemas_json = json.dumps(openapi_schemas, indent=2); # Current: Full JSON schema. Need: Minimal format (name + description only)</signature>
+      <path>backend/core/run.py</path>
+    </interface>
+    <interface>
+      <name>_format_tools() (to be created, optional)</name>
+      <kind>method</kind>
+      <signature>def _format_tools(tool_registry, format_type: str = "minimal") -> str: # New method to extract from build_system_prompt(). Returns formatted tool schema string. format_type: "minimal" or "full". Minimal format: name + description only. Full format: complete JSON schema.</signature>
+      <path>backend/core/run.py</path>
+    </interface>
+    <interface>
+      <name>PromptManager.build_system_prompt()</name>
+      <kind>method</kind>
+      <signature>async def build_system_prompt(model_name: str, agent_config: Optional[dict], thread_id: str, mcp_wrapper_instance: Optional[MCPToolWrapper], client=None, tool_registry=None, xml_tool_calling: bool = True) -> dict</signature>
+      <path>backend/core/run.py</path>
+    </interface>
+    <interface>
+      <name>ToolRegistry.get_openapi_schemas()</name>
+      <kind>method</kind>
+      <signature>def get_openapi_schemas(self) -> List[Dict[str, Any]]: # Returns full OpenAPI schemas. May need to add get_minimal_schemas() method for optimization.</signature>
+      <path>backend/core/agentpress/tool_registry.py</path>
+    </interface>
+    <interface>
+      <name>make_llm_api_call()</name>
+      <kind>function</kind>
+      <signature>async def make_llm_api_call(messages: List[Dict[str, Any]], model_name: str, tools: Optional[List[Dict[str, Any]]] = None, ...) -> Union[Dict[str, Any], AsyncGenerator, ModelResponse]</signature>
+      <path>backend/core/services/llm.py</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing standards include: Quality validation (95-100% tool calling accuracy check for minimal vs full format), Performance testing (token reduction, cost savings, tool calling latency), Integration testing (existing LLM calls, different models, agent configurations, different tool sets, rollback mechanism). Use automated tool calling accuracy testing. A/B testing framework for comparing original vs optimized modes.
+    </standards>
+    <locations>
+      <location>backend/tests/</location>
+      <location>backend/core/tests/</location>
+      <location>backend/core/optimizations/tests/</location>
+    </locations>
+    <ideas>
+      <test ac="1">
+        <idea>Unit test: Analyze current tool schema format và measure token count. Verify current format structure (full JSON schema with all fields).</idea>
+      </test>
+      <test ac="1">
+        <idea>Integration test: Test current tool calling với full format to establish baseline accuracy.</idea>
+      </test>
+      <test ac="2">
+        <idea>Unit test: Verify minimal format generation (name + description only). Test format validation.</idea>
+      </test>
+      <test ac="2">
+        <idea>Integration test: Test minimal format với sample tools. Verify format is readable and clear.</idea>
+      </test>
+      <test ac="3,1,2">
+        <idea>Unit test: Verify tool schema formatting modification (inline or extracted method). Test minimal format implementation.</idea>
+      </test>
+      <test ac="3,1,2">
+        <idea>Integration test: Test tool calling với minimal format và verify success rate ≥95%. Compare with full format baseline.</idea>
+      </test>
+      <test ac="3">
+        <idea>Unit test: Verify tool calling success rate monitoring. Test metrics tracking.</idea>
+      </test>
+      <test ac="3">
+        <idea>Integration test: Test tool calling metrics tracking và dashboard updates. Verify metrics are logged correctly.</idea>
+      </test>
+      <test ac="4">
+        <idea>Unit test: Verify rollback logic (fallback to full format if accuracy <95%). Test rollback mechanism.</idea>
+      </test>
+      <test ac="4">
+        <idea>Integration test: Test rollback mechanism với degraded accuracy scenarios. Verify fallback works correctly.</idea>
+      </test>
+      <test ac="5">
+        <idea>Unit test: Verify token counting và reduction measurement. Test token reduction calculation.</idea>
+      </test>
+      <test ac="5">
+        <idea>Integration test: Test token reduction với different tool sets. Verify token reduction is 15-25%.</idea>
+      </test>
+      <test ac="6">
+        <idea>Automated test: Compare tool calling với minimal vs full format (target: 95-100% accuracy). Use automated tool calling accuracy testing.</idea>
+      </test>
+      <test ac="6">
+        <idea>A/B test: Run same queries with original and optimized modes, compare tool calling accuracy. Verify quality is maintained.</idea>
+      </test>
+    </ideas>
+  </tests>
+</story-context>

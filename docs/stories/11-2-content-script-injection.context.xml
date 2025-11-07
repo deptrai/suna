@@ -1,0 +1,191 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>11</epicId>
+    <storyId>11.2</storyId>
+    <title>Content Script Injection</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-08</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/11-2-content-script-injection.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>content script để run coin detection trên web pages</iWant>
+    <soThat>coins are detected khi user visits crypto websites</soThat>
+    <tasks>
+      <task id="1" ac="1">
+        <title>Create content-script.ts</title>
+        <subtasks>
+          <subtask>Create `extension/src/content-script/content-script.ts`</subtask>
+          <subtask>Import coin-detector từ shared module</subtask>
+          <subtask>Register content script in manifest.json (verify from Story 10.2)</subtask>
+          <subtask>Verify content script loads correctly</subtask>
+          <subtask>Test content script appears in Chrome DevTools</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="2">
+        <title>Implement page load detection</title>
+        <subtasks>
+          <subtask>Add DOMContentLoaded event listener</subtask>
+          <subtask>Add window load event listener (for dynamic pages)</subtask>
+          <subtask>Run coin detection khi page is ready</subtask>
+          <subtask>Handle different page load scenarios</subtask>
+          <subtask>Test với various page types</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="3">
+        <title>Implement DOM scanning</title>
+        <subtasks>
+          <subtask>Call `detectCoins()` function từ coin-detector module</subtask>
+          <subtask>Pass document.body as root element</subtask>
+          <subtask>Store detection results</subtask>
+          <subtask>Log detection results for debugging</subtask>
+          <subtask>Test detection finds coins on sample pages</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="4">
+        <title>Implement DOM mutation observer</title>
+        <subtasks>
+          <subtask>Create MutationObserver instance</subtask>
+          <subtask>Observe document.body for childList changes</subtask>
+          <subtask>Run detection on new content added</subtask>
+          <subtask>Debounce detection calls to avoid performance issues</subtask>
+          <subtask>Test với dynamically loaded content</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="5">
+        <title>Implement performance optimization</title>
+        <subtasks>
+          <subtask>Use `requestIdleCallback` for non-critical detection</subtask>
+          <subtask>Fallback to setTimeout if requestIdleCallback not available</subtask>
+          <subtask>Limit detection frequency (throttle/debounce)</subtask>
+          <subtask>Skip detection on hidden elements</subtask>
+          <subtask>Test performance impact on page load</subtask>
+        </subtasks>
+      </task>
+      <task id="6" ac="6">
+        <title>Test trên crypto websites</title>
+        <subtasks>
+          <subtask>Test trên CoinGecko (coingecko.com)</subtask>
+          <subtask>Test trên Binance (binance.com)</subtask>
+          <subtask>Test trên CoinMarketCap (coinmarketcap.com)</subtask>
+          <subtask>Verify detection works on each site</subtask>
+          <subtask>Document any site-specific issues</subtask>
+          <subtask>Test với different page sections (coin lists, detail pages, etc.)</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1">`content-script.ts` created và registered in manifest</ac>
+    <ac id="2">Content script runs on page load</ac>
+    <ac id="3">Content script scans page DOM cho coin names</ac>
+    <ac id="4">Detection runs on DOM mutations (new content loaded)</ac>
+    <ac id="5">Performance optimization: use `requestIdleCallback` cho non-critical detection</ac>
+    <ac id="6">Content script tested trên CoinGecko, Binance, CoinMarketCap</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/architecture-extension-suna.md</path>
+        <title>Browser Extension Architecture - Suna.so</title>
+        <section>Implementation Patterns - Pattern 1: Coin Detection</section>
+        <snippet>Content script pattern với detectCoins function. Content script runs in isolated world, can access DOM but not page JavaScript. Must be registered in manifest với matches patterns.</snippet>
+      </doc>
+      <doc>
+        <path>docs/stories/10-2-extension-manifest-configuration.md</path>
+        <title>Story 10.2: Extension Manifest Configuration</title>
+        <section>Dev Agent Record</section>
+        <snippet>Content script configuration in manifest.json với matches patterns for crypto websites. Content script registered với run_at: "document_idle".</snippet>
+      </doc>
+      <doc>
+        <path>docs/stories/11-1-coin-detection-algorithm.md</path>
+        <title>Story 11.1: Coin Detection Algorithm</title>
+        <section>Dev Agent Record</section>
+        <snippet>Coin detector module created với detectCoins function. Function signature: detectCoins(element: HTMLElement): CoinDetection[]. Can be imported và used in content script.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>extension/src/shared/coin-detector.ts</path>
+        <kind>module</kind>
+        <symbol>detectCoins</symbol>
+        <lines>N/A</lines>
+        <reason>Import detectCoins function từ shared module. Function signature: detectCoins(element: HTMLElement): CoinDetection[].</reason>
+      </file>
+      <file>
+        <path>extension/manifest.json</path>
+        <kind>config</kind>
+        <symbol>content_scripts</symbol>
+        <lines>N/A</lines>
+        <reason>Content script registration in manifest. Verify matches patterns include crypto websites. Verify run_at setting.</reason>
+      </file>
+      <file>
+        <path>extension/src/content-script/</path>
+        <kind>directory</kind>
+        <symbol>content-script.ts</symbol>
+        <lines>N/A</lines>
+        <reason>Main content script file location. Will be compiled to dist/content-script.js.</reason>
+      </file>
+    </code>
+    <dependencies>
+      <ecosystem>Chrome Extension</ecosystem>
+      <packages>
+        <package>@types/chrome</package>
+      </packages>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>
+      <type>Content Script Execution</type>
+      <description>Content script runs in isolated world (separate from page JavaScript). Can access DOM but not page's JavaScript variables. Must be registered in manifest.json với matches patterns.</description>
+    </constraint>
+    <constraint>
+      <type>Performance Optimization</type>
+      <description>Use requestIdleCallback for non-critical detection. Debounce/throttle detection calls. Skip detection on hidden elements. Limit detection frequency to avoid performance impact.</description>
+    </constraint>
+    <constraint>
+      <type>DOM Mutation Handling</type>
+      <description>Observe DOM mutations để detect new content. Use MutationObserver với childList changes. Debounce detection calls to avoid performance issues.</description>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>detectCoins Function</name>
+      <kind>function</kind>
+      <signature>function detectCoins(element: HTMLElement): CoinDetection[]</signature>
+      <path>extension/src/shared/coin-detector.ts</path>
+    </interface>
+    <interface>
+      <name>MutationObserver API</name>
+      <kind>browser-api</kind>
+      <signature>new MutationObserver(callback: MutationCallback)</signature>
+      <path>extension/src/content-script/content-script.ts</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing standards: Verify content script loads on target websites, test coin detection runs on page load, test detection runs on DOM mutations, test performance optimization works, test trên all target crypto websites, verify no console errors. Use Chrome DevTools để verify content script execution.
+    </standards>
+    <locations>
+      <location>extension/src/content-script/</location>
+      <location>Chrome DevTools Console</location>
+      <location>Crypto websites (CoinGecko, Binance, CoinMarketCap)</location>
+    </locations>
+    <ideas>
+      <test ac="1">Verify content script file exists và is registered in manifest</test>
+      <test ac="2">Test content script runs on page load (check DevTools Console)</test>
+      <test ac="3">Test detectCoins function is called và returns results</test>
+      <test ac="4">Test MutationObserver detects new content và runs detection</test>
+      <test ac="5">Test requestIdleCallback is used for non-critical detection</test>
+      <test ac="6">Test trên CoinGecko, Binance, CoinMarketCap và verify detection works</test>
+    </ideas>
+  </tests>
+</story-context>
+
