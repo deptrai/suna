@@ -22,9 +22,37 @@ def _is_anthropic_model(model_name: str) -> bool:
     Check if model is an Anthropic Claude model (Story 1.3).
     
     Supports both direct Anthropic API models and Bedrock-served Claude models.
+    
+    Detection strategy:
+    1. Check for Anthropic/Claude keywords in model name
+    2. Check model registry for aliases (for Bedrock ARNs)
     """
+    if not model_name:
+        return False
+    
     resolved_model = model_name.lower()
-    return any(keyword in resolved_model for keyword in ['anthropic', 'claude', 'sonnet', 'haiku', 'opus'])
+    
+    # Direct keyword check (works for resolved model names)
+    if any(keyword in resolved_model for keyword in ['anthropic', 'claude', 'sonnet', 'haiku', 'opus']):
+        return True
+    
+    # Check model registry for Bedrock ARNs (more robust)
+    try:
+        from core.ai_models import registry
+        model = registry.get(model_name)
+        if model:
+            # Check if the resolved model ID contains Anthropic keywords
+            resolved_id = model.id.lower()
+            if any(keyword in resolved_id for keyword in ['anthropic', 'claude', 'sonnet', 'haiku', 'opus']):
+                return True
+            # Check if provider is Anthropic
+            if hasattr(model, 'provider') and str(model.provider).lower() == 'anthropic':
+                return True
+    except Exception as e:
+        # If registry lookup fails, fall back to keyword detection only
+        logger.debug(f"Model registry lookup failed for {model_name}: {e}")
+    
+    return False
 
 
 def _add_anthropic_cache_control(messages: List[Dict[str, Any]], model_name: str) -> List[Dict[str, Any]]:
@@ -66,9 +94,17 @@ def _add_anthropic_cache_control(messages: List[Dict[str, Any]], model_name: str
                         text_content += item.get('text', '')
                 content = text_content
             
-            # Estimate token count (rough estimate: ~4 chars per token)
-            # For accurate counting, we'd need to use Anthropic's tokenizer, but this is sufficient for minimum check
-            estimated_tokens = len(str(content)) / 4
+            # Accurate token counting for Anthropic models (Story 1.3 - Minor Recommendation)
+            # Use litellm.token_counter for accurate token counting
+            try:
+                from litellm import token_counter
+                # Use the model name for accurate token counting
+                estimated_tokens = token_counter(model=model_name, text=str(content))
+                logger.debug(f"Token count for system message: {estimated_tokens} tokens (accurate)")
+            except Exception as e:
+                # Fallback to rough estimation if token counting fails
+                logger.debug(f"Accurate token counting failed, using fallback: {e}")
+                estimated_tokens = len(str(content)) / 4  # Rough estimate: ~4 chars per token
             
             if estimated_tokens >= 1024:  # Anthropic's minimum cacheable size
                 # Add cache_control directive

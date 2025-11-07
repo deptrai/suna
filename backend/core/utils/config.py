@@ -331,6 +331,8 @@ class Configuration:
     LITELLM_CACHE_ENABLED: Optional[bool] = True  # Enable LiteLLM Redis caching
     
     # Anthropic Explicit Caching configuration (Story 1.3)
+    # Note: TTL is managed server-side by Anthropic (ephemeral cache doesn't support TTL in cache_control directive)
+    # This configuration is for documentation/reference purposes only
     ANTHROPIC_CACHE_TTL: Optional[int] = 300  # Default 5 minutes (300 seconds), configurable up to 1 hour (3600 seconds)
     ANTHROPIC_CACHE_ENABLED: Optional[bool] = True  # Enable Anthropic explicit caching
     

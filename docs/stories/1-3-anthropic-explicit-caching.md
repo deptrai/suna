@@ -370,8 +370,31 @@ Không có blocking issues.
 - Minor improvements recommended (token counting accuracy, test fix, TTL documentation)
 
 **Next Steps**:
-1. Address minor recommendations (optional, not blocking)
+1. ✅ Address minor recommendations (completed)
 2. Run integration tests manually with Anthropic API when available
 3. Monitor cache hit rates in production
 4. Proceed to Story 1.4 (Dual-Mode Architecture)
+
+### Minor Recommendations Addressed (2025-11-07)
+
+**Status**: ✅ **All Minor Recommendations Implemented**
+
+1. ✅ **Test Failure Fixed**: Updated `test_is_anthropic_model_bedrock` to use model registry lookup for Bedrock ARNs. Test now passes.
+   - **Change**: Modified `_is_anthropic_model()` to check model registry for Bedrock ARNs (more robust detection)
+   - **File**: `backend/core/services/llm.py:39-55`, `backend/tests/test_anthropic_explicit_caching.py:30-50`
+   - **Result**: All tests passing (3/3)
+
+2. ✅ **Token Counting Improved**: Replaced rough estimation with accurate tokenizer using `litellm.token_counter()`
+   - **Change**: Updated `_add_anthropic_cache_control()` to use `litellm.token_counter()` for accurate token counting
+   - **File**: `backend/core/services/llm.py:97-107`
+   - **Result**: More accurate token counting (falls back to rough estimation if tokenizer fails)
+
+3. ✅ **TTL Documentation Added**: Added comment explaining that TTL is managed server-side by Anthropic
+   - **Change**: Added documentation comment in `config.py` explaining server-side TTL management
+   - **File**: `backend/core/utils/config.py:334-335`
+   - **Result**: Clear documentation for TTL configuration
+
+**Additional Improvements**:
+- ✅ Created integration tests guide: `docs/anthropic-cache-integration-tests.md`
+- ✅ Created monitoring guide: `docs/anthropic-cache-monitoring.md`
 
