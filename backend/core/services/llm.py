@@ -407,9 +407,92 @@ async def make_llm_api_call(
     model_id: Optional[str] = None,
     headers: Optional[Dict[str, str]] = None,
     extra_headers: Optional[Dict[str, str]] = None,
+    thread_id: Optional[str] = None,  # Added for semantic cache context (Story 2.1)
 ) -> Union[Dict[str, Any], AsyncGenerator, ModelResponse]:
     """Make an API call to a language model using LiteLLM."""
     logger.info(f"Making LLM API call to model: {model_name} with {len(messages)} messages")
+    
+    # Story 2.1: Semantic Response Caching (only in OPTIMIZED mode)
+    semantic_cache_hit = False
+    cached_response_data = None
+    user_query_for_cache = None
+    try:
+        from core.utils.config import OptimizationConfig, OptimizationMode
+        
+        # Only use semantic caching in OPTIMIZED mode
+        if OptimizationConfig.OPTIMIZATION_MODE == OptimizationMode.OPTIMIZED:
+            from core.optimizations.semantic_cache import get_semantic_cache
+            
+            semantic_cache = get_semantic_cache()
+            
+            # Extract user query from messages (last user message)
+            user_query_for_cache = None
+            for message in reversed(messages):
+                if isinstance(message, dict) and message.get("role") == "user":
+                    content = message.get("content", "")
+                    if isinstance(content, str):
+                        user_query_for_cache = content
+                    elif isinstance(content, list):
+                        # Extract text from content array
+                        texts = []
+                        for item in content:
+                            if isinstance(item, dict) and "text" in item:
+                                texts.append(item["text"])
+                            elif isinstance(item, str):
+                                texts.append(item)
+                        user_query_for_cache = " ".join(texts) if texts else None
+                    break
+            
+            # Only check cache if we have a user query and not streaming
+            # Note: For streaming, we'll cache after the response is complete
+            if user_query_for_cache and semantic_cache.enabled and not stream:
+                # Build context for cache key
+                # Note: Exclude temperature and max_tokens from context as they don't affect
+                # semantic similarity. This improves cache hit rate for semantically identical
+                # queries with different parameters.
+                context = {
+                    "model_name": model_name,
+                    "thread_id": thread_id,
+                    # temperature and max_tokens excluded - they don't affect semantic similarity
+                    "tools_count": len(tools) if tools else 0
+                }
+                
+                # Check semantic cache
+                cached_result = await semantic_cache.get_cached_response(user_query_for_cache, context)
+                
+                if cached_result and cached_result.get("cache_hit"):
+                    semantic_cache_hit = True
+                    cached_response_data = cached_result
+                    
+                    logger.info(
+                        f"✅ Semantic cache HIT for query: '{user_query_for_cache[:50]}...' "
+                        f"(similarity={cached_result.get('similarity_score', 0):.3f})"
+                    )
+                    
+                    # Track metrics in quality monitor
+                    try:
+                        from core.optimizations.quality_monitor import get_quality_monitor
+                        quality_monitor = get_quality_monitor()
+                        await quality_monitor.track_metric(
+                            "semantic_cache_hit_rate",
+                            value=1.0,
+                            metadata={
+                                "model": model_name,
+                                "similarity_score": cached_result.get("similarity_score", 0),
+                                "thread_id": thread_id,
+                                "cache_key": cached_result.get("cache_key", "")
+                            }
+                        )
+                    except Exception as e:
+                        logger.debug(f"Failed to track semantic cache hit in quality monitor: {e}")
+                    
+                    # Return cached response
+                    # Note: May need format conversion based on caller expectations
+                    cached_response = cached_result.get("response", {})
+                    return cached_response
+    except Exception as e:
+        logger.debug(f"Semantic cache lookup failed (non-critical): {e}")
+        # Continue with normal LLM call
     
     # Prepare parameters using centralized model configuration
     from core.ai_models import model_manager
@@ -552,6 +635,106 @@ async def make_llm_api_call(
         except Exception as e:
             logger.debug(f"Anthropic cache token tracking error (non-critical): {e}")
         
+        # Story 2.1: Cache response in semantic cache (only in OPTIMIZED mode)
+        try:
+            from core.utils.config import OptimizationConfig, OptimizationMode
+            
+            if (
+                OptimizationConfig.OPTIMIZATION_MODE == OptimizationMode.OPTIMIZED
+                and user_query_for_cache
+                and not semantic_cache_hit
+            ):
+                from core.optimizations.semantic_cache import get_semantic_cache
+                
+                semantic_cache = get_semantic_cache()
+                
+                if semantic_cache.enabled:
+                    # Build context for cache key
+                    # Note: Exclude temperature and max_tokens from context as they don't affect
+                    # semantic similarity. This improves cache hit rate for semantically identical
+                    # queries with different parameters.
+                    context = {
+                        "model_name": model_name,
+                        "thread_id": thread_id,
+                        # temperature and max_tokens excluded - they don't affect semantic similarity
+                        "tools_count": len(tools) if tools else 0
+                    }
+                    
+                    # Convert response to dictionary format for caching
+                    response_dict = None
+                    if isinstance(response, ModelResponse):
+                        # Convert ModelResponse to dict
+                        response_dict = {
+                            "id": getattr(response, 'id', None),
+                            "object": getattr(response, 'object', None),
+                            "created": getattr(response, 'created', None),
+                            "model": getattr(response, 'model', None),
+                            "choices": [
+                                {
+                                    "index": getattr(choice, 'index', None),
+                                    "message": {
+                                        "role": getattr(choice.message, 'role', None) if hasattr(choice, 'message') else None,
+                                        "content": getattr(choice.message, 'content', None) if hasattr(choice, 'message') else None,
+                                    } if hasattr(choice, 'message') else {},
+                                    "finish_reason": getattr(choice, 'finish_reason', None),
+                                }
+                                for choice in (getattr(response, 'choices', []) or [])
+                            ],
+                            "usage": {
+                                "prompt_tokens": getattr(response.usage, 'prompt_tokens', None) if hasattr(response, 'usage') and response.usage else None,
+                                "completion_tokens": getattr(response.usage, 'completion_tokens', None) if hasattr(response, 'usage') and response.usage else None,
+                                "total_tokens": getattr(response.usage, 'total_tokens', None) if hasattr(response, 'usage') and response.usage else None,
+                            } if hasattr(response, 'usage') and response.usage else {},
+                        }
+                    elif isinstance(response, dict):
+                        response_dict = response
+                    elif hasattr(response, '__dict__'):
+                        # Try to convert object to dict
+                        import json
+                        try:
+                            response_dict = json.loads(json.dumps(response, default=str))
+                        except:
+                            response_dict = {"response": str(response)}
+                    
+                    # Cache response if we have a valid response dictionary
+                    if response_dict:
+                        # Validate cache quality if we had a previous cache hit
+                        quality_score = None
+                        if cached_response_data:
+                            quality_score = await semantic_cache.validate_cache_quality(
+                                cached_response_data.get("response", {}),
+                                response_dict
+                            )
+                            logger.info(
+                                f"Cache quality validation: quality_score={quality_score:.3f} "
+                                f"(threshold={semantic_cache.quality_threshold:.3f})"
+                            )
+                        
+                        # Cache the response
+                        await semantic_cache.cache_response(
+                            user_query_for_cache,
+                            response_dict,
+                            context,
+                            quality_score=quality_score
+                        )
+                        
+                        # Track cache miss in quality monitor
+                        try:
+                            from core.optimizations.quality_monitor import get_quality_monitor
+                            quality_monitor = get_quality_monitor()
+                            await quality_monitor.track_metric(
+                                "semantic_cache_miss",
+                                value=1.0,
+                                metadata={
+                                    "model": model_name,
+                                    "thread_id": thread_id
+                                }
+                            )
+                        except Exception as e:
+                            logger.debug(f"Failed to track semantic cache miss in quality monitor: {e}")
+        except Exception as e:
+            logger.debug(f"Semantic cache storage failed (non-critical): {e}")
+        
         # Track LiteLLM cache metrics (Story 1.2 - Redis Response Caching)
         # Minor Recommendation: Cache Metrics Aggregation
         cache_hit = False
@@ -649,9 +832,16 @@ async def make_llm_api_call(
             # Don't fail LLM calls if quality monitoring fails
             logger.debug(f"Quality monitoring error (non-critical): {e}")
         
-        # For streaming responses, we need to handle errors that occur during iteration
+        # Story 2.1: Cache streaming responses after completion
+        # For streaming responses, wrap to collect and cache the complete response
         if hasattr(response, '__aiter__') and stream:
-            return _wrap_streaming_response(response)
+            return _wrap_streaming_response_with_cache(
+                response,
+                user_query_for_cache,
+                model_name,
+                thread_id,
+                tools
+            )
         
         return response
         
@@ -661,8 +851,90 @@ async def make_llm_api_call(
         ErrorProcessor.log_error(processed_error)
         raise LLMError(processed_error.message)
 
+async def _wrap_streaming_response_with_cache(
+    response: AsyncGenerator,
+    user_query: Optional[str],
+    model_name: str,
+    thread_id: Optional[str],
+    tools: Optional[List[Dict[str, Any]]]
+) -> AsyncGenerator:
+    """
+    Wrap streaming response to collect complete response and cache it.
+    
+    Story 2.1: Cache streaming responses after completion for future cache hits.
+    """
+    from core.utils.config import OptimizationConfig, OptimizationMode
+    
+    # Only cache in OPTIMIZED mode
+    should_cache = (
+        OptimizationConfig.OPTIMIZATION_MODE == OptimizationMode.OPTIMIZED
+        and user_query
+    )
+    
+    collected_chunks = []
+    complete_content = ""
+    
+    try:
+        async for chunk in response:
+            collected_chunks.append(chunk)
+            yield chunk
+            
+            # Extract content from chunk (OpenAI-style streaming)
+            if isinstance(chunk, dict):
+                choices = chunk.get("choices", [])
+                if choices and len(choices) > 0:
+                    delta = choices[0].get("delta", {})
+                    content = delta.get("content", "")
+                    if content:
+                        complete_content += content
+        
+        # After streaming completes, cache the response
+        if should_cache and complete_content:
+            try:
+                from core.optimizations.semantic_cache import get_semantic_cache
+                
+                semantic_cache = get_semantic_cache()
+                
+                if semantic_cache.enabled:
+                    # Build complete response from collected content
+                    complete_response = {
+                        "choices": [
+                            {
+                                "message": {
+                                    "role": "assistant",
+                                    "content": complete_content
+                                },
+                                "finish_reason": "stop"
+                            }
+                        ]
+                    }
+                    
+                    # Build context for cache key
+                    context = {
+                        "model_name": model_name,
+                        "thread_id": thread_id,
+                        "tools_count": len(tools) if tools else 0
+                    }
+                    
+                    # Cache the complete response
+                    await semantic_cache.cache_response(
+                        user_query,
+                        complete_response,
+                        context
+                    )
+                    
+                    logger.debug(f"Cached streaming response for query: '{user_query[:50]}...'")
+            except Exception as e:
+                logger.debug(f"Failed to cache streaming response (non-critical): {e}")
+    
+    except Exception as e:
+        # Convert streaming errors to processed errors
+        processed_error = ErrorProcessor.process_llm_error(e)
+        ErrorProcessor.log_error(processed_error)
+        raise LLMError(processed_error.message)
+
 async def _wrap_streaming_response(response) -> AsyncGenerator:
-    """Wrap streaming response to handle errors during iteration."""
+    """Wrap streaming response to handle errors during iteration (legacy wrapper)."""
     try:
         async for chunk in response:
             yield chunk

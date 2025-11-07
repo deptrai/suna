@@ -332,22 +332,54 @@ class PromptManager:
                                   tool_registry=None,
                                   xml_tool_calling: bool = True) -> dict:
         """
-        Build system prompt with optimized structure for OpenAI prompt caching.
+        Build system prompt with dual-mode support (Story 1.4).
         
-        Structure (for OpenAI caching):
-        1. STATIC sections first (cached):
-           - Default system prompt
-           - Builder prompt (if enabled)
-           - Tool schemas (if available)
-        2. DYNAMIC sections last (not cached):
-           - Agent-specific prompt
-           - Knowledge base context
-           - MCP tools info
-           - Datetime info
-        
-        This ordering enables OpenAI automatic prompt caching for prompts ≥1,024 tokens.
+        Switches between ORIGINAL and OPTIMIZED modes based on OptimizationConfig.
+        - ORIGINAL mode: Preserves current implementation exactly (baseline)
+        - OPTIMIZED mode: Applies quality-preserving optimizations (Stories 1.1, 1.2, 1.3)
+        - AUTO mode: Auto-selects based on metrics (future enhancement)
         """
+        from core.utils.config import OptimizationConfig, OptimizationMode
         
+        mode = OptimizationConfig.OPTIMIZATION_MODE
+        
+        if mode == OptimizationMode.ORIGINAL:
+            # Original flow - preserve current implementation
+            return await PromptManager._build_original_prompt(
+                model_name, agent_config, thread_id,
+                mcp_wrapper_instance, client, tool_registry, xml_tool_calling
+            )
+        elif mode == OptimizationMode.OPTIMIZED:
+            # Optimized flow - apply quality-preserving optimizations
+            return await PromptManager._build_optimized_prompt(
+                model_name, agent_config, thread_id,
+                mcp_wrapper_instance, client, tool_registry, xml_tool_calling
+            )
+        else:  # AUTO
+            # Auto-select based on metrics (future enhancement)
+            # For now, default to OPTIMIZED
+            logger.debug(f"AUTO mode not yet implemented, defaulting to OPTIMIZED")
+            return await PromptManager._build_optimized_prompt(
+                model_name, agent_config, thread_id,
+                mcp_wrapper_instance, client, tool_registry, xml_tool_calling
+            )
+    
+    @staticmethod
+    async def _build_original_prompt(model_name: str, agent_config: Optional[dict], 
+                                      thread_id: str, 
+                                      mcp_wrapper_instance: Optional[MCPToolWrapper],
+                                      client=None,
+                                      tool_registry=None,
+                                      xml_tool_calling: bool = True) -> dict:
+        """
+        Build system prompt using original implementation (Story 1.4 - AC #4).
+        
+        This method preserves the current implementation exactly (no changes).
+        Used as baseline for ORIGINAL mode.
+        
+        Note: Current implementation already has Story 1.1 optimizations (static/dynamic separation),
+        so this method preserves that structure as the "original" baseline.
+        """
         # ============================================
         # PHASE 1: STATIC CONTENT (Cached by OpenAI)
         # ============================================
@@ -536,6 +568,32 @@ IMPORTANT: Always reference and utilize the knowledge base information above whe
         
         system_message = {"role": "system", "content": system_content}
         return system_message
+    
+    @staticmethod
+    async def _build_optimized_prompt(model_name: str, agent_config: Optional[dict], 
+                                      thread_id: str, 
+                                      mcp_wrapper_instance: Optional[MCPToolWrapper],
+                                      client=None,
+                                      tool_registry=None,
+                                      xml_tool_calling: bool = True) -> dict:
+        """
+        Build system prompt with quality-preserving optimizations (Story 1.4 - AC #5).
+        
+        Applies optimizations from Stories 1.1, 1.2, 1.3:
+        - Story 1.1: Restructure prompt with static content first (OpenAI caching)
+        - Story 1.2: LiteLLM Redis caching enabled (configured at LLM service level)
+        - Story 1.3: Anthropic cache_control directives (applied at LLM service level)
+        
+        Note: Prompt structure is the same as ORIGINAL (static/dynamic separation),
+        but this method is explicitly designed for OPTIMIZED mode with all caching enabled.
+        """
+        # Use the same structure as _build_original_prompt (Story 1.1 optimization already applied)
+        # The optimizations from Stories 1.2 and 1.3 are applied at the LLM service level,
+        # not in the prompt building logic itself
+        return await PromptManager._build_original_prompt(
+            model_name, agent_config, thread_id,
+            mcp_wrapper_instance, client, tool_registry, xml_tool_calling
+        )
 
 
 

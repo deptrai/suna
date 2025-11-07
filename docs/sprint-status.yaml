@@ -65,7 +65,7 @@ development_status:
   extension-epic-1-retrospective: optional
 
   extension-epic-2: backlog
-  11-1-coin-detection-algorithm: ready-for-dev
+  11-1-coin-detection-algorithm: in-progress
   11-2-content-script-injection: ready-for-dev
   11-3-analysis-button-injection: ready-for-dev
   11-4-coin-highlighting-visual-feedback: ready-for-dev

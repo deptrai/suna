@@ -18,6 +18,7 @@ import os
 from enum import Enum
 from re import S
 from typing import Dict, Any, Optional, get_type_hints, Union
+from datetime import datetime, timezone
 from dotenv import load_dotenv
 import logging
 import secrets
@@ -69,6 +70,7 @@ class EnvMode(Enum):
     LOCAL = "local"
     STAGING = "staging"
     PRODUCTION = "production"
+
 
 class Configuration:
     """
@@ -335,6 +337,13 @@ class Configuration:
     # This configuration is for documentation/reference purposes only
     ANTHROPIC_CACHE_TTL: Optional[int] = 300  # Default 5 minutes (300 seconds), configurable up to 1 hour (3600 seconds)
     ANTHROPIC_CACHE_ENABLED: Optional[bool] = True  # Enable Anthropic explicit caching
+    
+    # Semantic Response Caching configuration (Story 2.1)
+    SEMANTIC_CACHE_SIMILARITY_THRESHOLD: Optional[float] = 0.95  # Default 0.95 (95% similarity required)
+    SEMANTIC_CACHE_QUALITY_THRESHOLD: Optional[float] = 0.95  # Default 0.95 (95% quality required)
+    SEMANTIC_CACHE_TTL: Optional[int] = 3600  # Default 1 hour (3600 seconds)
+    SEMANTIC_CACHE_ENABLED: Optional[bool] = True  # Enable semantic response caching
+    SEMANTIC_CACHE_AUTO_DISABLE_ENABLED: Optional[bool] = True  # Enable auto-disable on quality degradation
     
     # Daytona sandbox configuration (optional - sandbox features disabled if not configured)
     DAYTONA_API_KEY: Optional[str] = None
@@ -632,10 +641,18 @@ class OptimizationConfig:
     Optimization configuration for dual-mode architecture (Story 1.4, 2.4).
     
     Manages optimization mode switching and auto-rollback functionality.
+    Configuration is loaded from environment variables with safe defaults.
     """
     
     # Current optimization mode (default: ORIGINAL for safety)
     OPTIMIZATION_MODE: OptimizationMode = OptimizationMode.ORIGINAL
+    
+    # Previous optimization mode (for tracking mode switches)
+    _PREVIOUS_MODE: Optional[OptimizationMode] = None
+    
+    # Mode switching tracking (for metrics)
+    _MODE_SWITCH_COUNT: int = 0
+    _LAST_MODE_SWITCH_TIME: Optional[datetime] = None
     
     # Auto-rollback enabled (Story 2.4)
     AUTO_ROLLBACK_ENABLED: bool = True
@@ -644,10 +661,184 @@ class OptimizationConfig:
     QUALITY_MONITORING_ENABLED: bool = True
     
     @classmethod
+    def load_from_env(cls):
+        """
+        Load optimization configuration from environment variables (Story 1.4).
+        
+        Environment variables:
+        - OPTIMIZATION_MODE: "original", "optimized", or "auto" (default: "original")
+        
+        Returns:
+            OptimizationConfig class (for method chaining)
+        """
+        mode_str = os.getenv("OPTIMIZATION_MODE", "original").lower()
+        previous_mode = cls.OPTIMIZATION_MODE
+        
+        try:
+            new_mode = OptimizationMode(mode_str)
+            cls.OPTIMIZATION_MODE = new_mode
+        except ValueError:
+            logger.warning(
+                f"Invalid OPTIMIZATION_MODE value: {mode_str}. "
+                f"Valid values: {[e.value for e in OptimizationMode]}. "
+                f"Using default: {OptimizationMode.ORIGINAL.value}"
+            )
+            new_mode = OptimizationMode.ORIGINAL
+            cls.OPTIMIZATION_MODE = new_mode
+        
+        # Track mode switch if mode changed
+        if previous_mode != new_mode:
+            cls._track_mode_switch(previous_mode, new_mode, source="environment")
+        
+        logger.info(
+            f"Optimization mode loaded: {cls.OPTIMIZATION_MODE.value} "
+            f"(from OPTIMIZATION_MODE={os.getenv('OPTIMIZATION_MODE', 'not set')})"
+        )
+        
+        return cls
+    
+    @classmethod
     def set_mode(cls, mode: OptimizationMode) -> None:
-        """Set optimization mode."""
-        cls.OPTIMIZATION_MODE = mode
-        logger.info(f"Optimization mode set to: {mode.value}")
+        """
+        Set optimization mode with metrics tracking.
+        
+        Args:
+            mode: New optimization mode to set
+        """
+        previous_mode = cls.OPTIMIZATION_MODE
+        
+        if previous_mode != mode:
+            cls._track_mode_switch(previous_mode, mode, source="manual")
+            cls.OPTIMIZATION_MODE = mode
+            logger.info(
+                f"🔄 Optimization mode switched: {previous_mode.value} → {mode.value} "
+                f"(switch_count={cls._MODE_SWITCH_COUNT})"
+            )
+        else:
+            logger.debug(f"Optimization mode unchanged: {mode.value}")
+    
+    @classmethod
+    def _track_mode_switch(
+        cls,
+        previous_mode: OptimizationMode,
+        new_mode: OptimizationMode,
+        source: str = "unknown"
+    ) -> None:
+        """
+        Track mode switching for metrics (Story 1.4 - Minor Recommendation).
+        
+        Args:
+            previous_mode: Previous optimization mode
+            new_mode: New optimization mode
+            source: Source of mode switch ("environment", "manual", "auto_rollback", etc.)
+        """
+        cls._PREVIOUS_MODE = previous_mode
+        cls._MODE_SWITCH_COUNT += 1
+        cls._LAST_MODE_SWITCH_TIME = datetime.now(timezone.utc)
+        
+        # Structured logging for mode switch
+        logger.info(
+            f"📊 Mode switch tracked: {previous_mode.value} → {new_mode.value}",
+            extra={
+                "event_type": "optimization_mode_switch",
+                "previous_mode": previous_mode.value,
+                "new_mode": new_mode.value,
+                "source": source,
+                "switch_count": cls._MODE_SWITCH_COUNT,
+                "timestamp": cls._LAST_MODE_SWITCH_TIME.isoformat()
+            }
+        )
+        
+        # Track mode switch metrics in quality monitor (async, non-blocking)
+        if cls.QUALITY_MONITORING_ENABLED:
+            try:
+                # Import here to avoid circular dependency
+                from core.optimizations.quality_monitor import get_quality_monitor
+                import asyncio
+                
+                # Try to get running event loop (Python 3.7+)
+                # If we're in an async context, schedule the task
+                try:
+                    loop = asyncio.get_running_loop()
+                    # We're in an async context, schedule the task (fire-and-forget)
+                    loop.create_task(cls._track_mode_switch_async(previous_mode, new_mode, source))
+                    logger.debug(
+                        f"Mode switch metrics tracking scheduled (async context): "
+                        f"{previous_mode.value} → {new_mode.value} (source: {source})"
+                    )
+                except RuntimeError:
+                    # No running event loop - we're in a sync context
+                    # For sync contexts, we can't easily schedule async work without blocking
+                    # Log the metrics for now (non-blocking)
+                    # In production, consider using a background task queue (e.g., Dramatiq) for sync contexts
+                    logger.info(
+                        f"Mode switch metrics tracking deferred (sync context): "
+                        f"{previous_mode.value} → {new_mode.value} (source: {source}). "
+                        f"Consider using background task queue for sync context metrics tracking."
+                    )
+                    # Optionally: Schedule via background task queue if available
+                    # This would require Dramatiq or similar background task system
+                    # from core.services.background_tasks import track_mode_switch_metric
+                    # track_mode_switch_metric.delay(previous_mode.value, new_mode.value, source)
+            except Exception as e:
+                # Don't fail mode switching if metrics tracking fails
+                logger.debug(f"Mode switch metrics tracking error (non-critical): {e}", exc_info=True)
+    
+    @classmethod
+    async def _track_mode_switch_async(
+        cls,
+        previous_mode: OptimizationMode,
+        new_mode: OptimizationMode,
+        source: str
+    ) -> None:
+        """
+        Async helper to track mode switch metrics in quality monitor.
+        
+        Args:
+            previous_mode: Previous optimization mode
+            new_mode: New optimization mode
+            source: Source of mode switch
+        """
+        try:
+            from core.optimizations.quality_monitor import get_quality_monitor
+            
+            quality_monitor = get_quality_monitor()
+            
+            # Track mode switch as a custom metric
+            # Use mode switch count as the value, metadata contains details
+            await quality_monitor.track_metric(
+                "optimization_mode_switch",
+                value=float(cls._MODE_SWITCH_COUNT),
+                metadata={
+                    "previous_mode": previous_mode.value,
+                    "new_mode": new_mode.value,
+                    "source": source,
+                    "switch_count": cls._MODE_SWITCH_COUNT,
+                    "timestamp": cls._LAST_MODE_SWITCH_TIME.isoformat() if cls._LAST_MODE_SWITCH_TIME else None
+                }
+            )
+            
+            logger.debug(
+                f"✅ Mode switch metrics tracked in quality monitor: "
+                f"{previous_mode.value} → {new_mode.value} (source: {source})"
+            )
+        except Exception as e:
+            logger.debug(f"Mode switch metrics tracking error (non-critical): {e}")
+    
+    @classmethod
+    def get_mode_switch_stats(cls) -> Dict[str, Any]:
+        """
+        Get mode switching statistics (Story 1.4 - Minor Recommendation).
+        
+        Returns:
+            Dictionary containing mode switching statistics
+        """
+        return {
+            "current_mode": cls.OPTIMIZATION_MODE.value,
+            "previous_mode": cls._PREVIOUS_MODE.value if cls._PREVIOUS_MODE else None,
+            "switch_count": cls._MODE_SWITCH_COUNT,
+            "last_switch_time": cls._LAST_MODE_SWITCH_TIME.isoformat() if cls._LAST_MODE_SWITCH_TIME else None
+        }
     
     @classmethod
     async def auto_rollback_if_needed(cls, quality_monitor) -> bool:
@@ -674,10 +865,13 @@ class OptimizationConfig:
         thresholds_met = await quality_monitor.check_quality_thresholds()
         
         if not thresholds_met:
+            previous_mode = cls.OPTIMIZATION_MODE
             logger.critical(
-                f"🚨 Quality thresholds not met, triggering auto-rollback from {cls.OPTIMIZATION_MODE.value} to ORIGINAL"
+                f"🚨 Quality thresholds not met, triggering auto-rollback from {previous_mode.value} to ORIGINAL"
             )
-            cls.set_mode(OptimizationMode.ORIGINAL)
+            # Track rollback as mode switch with source="auto_rollback"
+            cls._track_mode_switch(previous_mode, OptimizationMode.ORIGINAL, source="auto_rollback")
+            cls.OPTIMIZATION_MODE = OptimizationMode.ORIGINAL
             return True
         
         return False
@@ -700,6 +894,9 @@ def get_config():
             
             # Update the wrapper with the actual config
             config._config = actual_config
+            
+            # Load optimization configuration from environment (Story 1.4)
+            OptimizationConfig.load_from_env()
             
             logger.info("Configuration loaded successfully")
         except Exception as e:

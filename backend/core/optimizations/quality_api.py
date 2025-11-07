@@ -11,6 +11,7 @@ from datetime import datetime
 from core.optimizations.quality_monitor import get_quality_monitor
 from core.utils.logger import logger
 from core.utils.auth_utils import verify_and_get_user_id_from_jwt
+from core.utils.config import OptimizationConfig
 
 router = APIRouter(prefix="/api/quality", tags=["Quality Monitoring"])
 
@@ -119,4 +120,47 @@ async def get_quality_status(
     except Exception as e:
         logger.error(f"Failed to get quality status: {e}")
         raise HTTPException(status_code=500, detail="Failed to retrieve quality status")
+
+
+@router.get("/optimization-mode/stats", summary="Get Optimization Mode Switching Statistics", operation_id="get_optimization_mode_stats")
+async def get_optimization_mode_stats(
+    user_id: str = Depends(verify_and_get_user_id_from_jwt)
+) -> Dict[str, Any]:
+    """
+    Get optimization mode switching statistics (Story 1.4 - Minor Recommendation).
+    
+    Returns:
+        Mode switching statistics including current mode, switch count, and last switch time
+    """
+    try:
+        stats = OptimizationConfig.get_mode_switch_stats()
+        
+        # Also get mode switch metrics from quality monitor if available
+        try:
+            quality_monitor = get_quality_monitor()
+            if "optimization_mode_switch" in quality_monitor.metric_history:
+                switch_history = list(quality_monitor.metric_history["optimization_mode_switch"])[-10:]  # Last 10 switches
+                stats["switch_history"] = [
+                    {
+                        "value": metric.value,
+                        "timestamp": metric.timestamp.isoformat(),
+                        "metadata": metric.metadata
+                    }
+                    for metric in switch_history
+                ]
+            else:
+                stats["switch_history"] = []
+        except Exception as e:
+            logger.info(f"Failed to get mode switch history from quality monitor: {e}", exc_info=True)
+            stats["switch_history"] = []
+            stats["switch_history_error"] = str(e)  # Include error in response for debugging
+        
+        return {
+            "success": True,
+            "data": stats,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Failed to get optimization mode stats: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve optimization mode stats")
 
