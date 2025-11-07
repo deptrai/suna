@@ -540,22 +540,22 @@ start_wave_services() {
 
             # Wait for service to be ready (skip for external services like Redis)
             if [[ "$service" != "redis" ]]; then
-                local timeout=$(get_service_value "SERVICE_STARTUP_TIMEOUTS" "$service" "30")
-                local readiness_check=$(get_service_value "SERVICE_READINESS_CHECKS" "$service")
+            local timeout=$(get_service_value "SERVICE_STARTUP_TIMEOUTS" "$service" "30")
+            local readiness_check=$(get_service_value "SERVICE_READINESS_CHECKS" "$service")
 
-                # Monitor is optional - skip readiness check if it fails
-                if [[ "$service" == "monitor" ]]; then
-                    # Give it a brief moment, but don't fail if not ready
-                    sleep 2
-                    set_service_value "SERVICE_STATUS" "$service" "$SERVICE_READY"
-                    log_structured "INFO" "parallel_start" "Service $service started (optional)"
-                elif wait_for_service_ready "$service" "$timeout" "$readiness_check"; then
-                    set_service_value "SERVICE_STATUS" "$service" "$SERVICE_READY"
-                    log_structured "INFO" "parallel_start" "Service $service started successfully"
-                else
-                    set_service_value "SERVICE_STATUS" "$service" "$SERVICE_FAILED"
-                    log_structured "ERROR" "parallel_start" "Service $service failed to start"
-                    exit 1
+            # Monitor is optional - skip readiness check if it fails
+            if [[ "$service" == "monitor" ]]; then
+                # Give it a brief moment, but don't fail if not ready
+                sleep 2
+                set_service_value "SERVICE_STATUS" "$service" "$SERVICE_READY"
+                log_structured "INFO" "parallel_start" "Service $service started (optional)"
+            elif wait_for_service_ready "$service" "$timeout" "$readiness_check"; then
+                set_service_value "SERVICE_STATUS" "$service" "$SERVICE_READY"
+                log_structured "INFO" "parallel_start" "Service $service started successfully"
+            else
+                set_service_value "SERVICE_STATUS" "$service" "$SERVICE_FAILED"
+                log_structured "ERROR" "parallel_start" "Service $service failed to start"
+                exit 1
                 fi
             fi
         ) &

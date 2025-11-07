@@ -3,7 +3,7 @@
     <epicId>11</epicId>
     <storyId>11.3</storyId>
     <title>Analysis Button Injection</title>
-    <status>drafted</status>
+    <status>ready-for-dev</status>
     <generatedAt>2025-11-08</generatedAt>
     <generator>BMAD Story Context Workflow</generator>
     <sourceStoryPath>docs/stories/11-3-analysis-button-injection.md</sourceStoryPath>

@@ -3,7 +3,7 @@
     <epicId>11</epicId>
     <storyId>11.4</storyId>
     <title>Coin Highlighting & Visual Feedback</title>
-    <status>drafted</status>
+    <status>ready-for-dev</status>
     <generatedAt>2025-11-08</generatedAt>
     <generator>BMAD Story Context Workflow</generator>
     <sourceStoryPath>docs/stories/11-4-coin-highlighting-visual-feedback.md</sourceStoryPath>

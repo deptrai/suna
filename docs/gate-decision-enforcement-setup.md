@@ -75,11 +75,26 @@ python3 scripts/enforce-gate-decision.py docs/gate-decision-story-1.1.yaml --ver
 python3 scripts/enforce-gate-decision.py docs/gate-decision-story-1.1.yaml --strict
 ```
 
-### CI/CD Integration
+### Pre-commit Hook (Primary)
 
-The workflow automatically runs on:
-- Pull requests with gate decision files
+The pre-commit hook runs automatically before commits:
+- ✅ Validates gate decision files before commit
+- ✅ Blocks commits with FAIL decisions
+- ✅ Warns on CONCERNS/WAIVED (but allows commit)
+- ✅ Fast feedback (<5 seconds)
+
+**Setup:**
+```bash
+./scripts/setup-pre-commit-hook.sh
+```
+
+### CI/CD Integration (Backup)
+
+The GitHub Actions workflow runs on:
+- Pull requests with gate decision files (backup validation)
 - Manual trigger: `gh workflow run gate-decision-check.yml -f story_id=1.1`
+
+**Note:** Pre-commit hook is the primary validation. CI/CD provides backup validation and PR visibility.
 
 ### Expected Output
 
@@ -183,10 +198,11 @@ python3 scripts/enforce-gate-decision.py docs/gate-decision-story-1.1.yaml --str
 ## 🎯 Next Steps
 
 1. ✅ **Script Created** - Gate decision enforcer script ready
-2. ✅ **CI/CD Integrated** - GitHub Actions workflow active
-3. ✅ **Status Tracking** - Workflow status document created
-4. 📋 **Monitor Production** - Validate Story 1.1 deployment
-5. 📋 **Story 2.4** - Ensure dashboard integration tests included
+2. ✅ **Pre-commit Hook** - Local validation before commit (primary)
+3. ✅ **CI/CD Integrated** - GitHub Actions workflow active (backup validation)
+4. ✅ **Status Tracking** - Workflow status document created
+5. 📋 **Monitor Production** - Validate Story 1.1 deployment
+6. 📋 **Story 2.4** - Ensure dashboard integration tests included
 
 ---
 

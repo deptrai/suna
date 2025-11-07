@@ -361,11 +361,11 @@ enhanced_parallel_cleanup() {
     for log_file in "$LOG_DIR"/*.log; do
         [[ ! -f "$log_file" ]] && continue
         log_count=$((log_count + 1))
-        # Keep file but truncate if too large (>100MB)
-        local size=$(stat -f%z "$log_file" 2>/dev/null || stat -c%s "$log_file" 2>/dev/null || echo 0)
-        if [[ $size -gt 104857600 ]]; then
+            # Keep file but truncate if too large (>100MB)
+            local size=$(stat -f%z "$log_file" 2>/dev/null || stat -c%s "$log_file" 2>/dev/null || echo 0)
+            if [[ $size -gt 104857600 ]]; then
             tail -n 1000 "$log_file" > "${log_file}.tmp" && mv "${log_file}.tmp" "$log_file" 2>/dev/null || true
-            echo -e "   ✅ Truncated large log file: $(basename "$log_file")"
+                echo -e "   ✅ Truncated large log file: $(basename "$log_file")"
         fi
     done
     echo -e "   ✅ Log files checked ($log_count files)"
