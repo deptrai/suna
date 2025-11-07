@@ -21,6 +21,7 @@ except ImportError:
         cache_metrics_router = None
 
 from .api.semantic_cache_api import router as semantic_cache_router
+from .api.task_classifier_api import router as task_classifier_router
 
 router = APIRouter()
 
@@ -38,6 +39,7 @@ router.include_router(quality_monitoring_router)  # Story 2.4 - Quality Monitori
 if cache_metrics_router:
     router.include_router(cache_metrics_router)  # Story 1.2 - Cache Metrics (Minor Recommendations)
 router.include_router(semantic_cache_router)  # Story 2.1 - Semantic Cache Metrics
+router.include_router(task_classifier_router)  # Story 3.1 - Task Complexity Classification
 
 # Re-export the initialize and cleanup functions
 __all__ = ['router', 'initialize', 'cleanup']

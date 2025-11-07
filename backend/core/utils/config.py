@@ -345,6 +345,11 @@ class Configuration:
     SEMANTIC_CACHE_ENABLED: Optional[bool] = True  # Enable semantic response caching
     SEMANTIC_CACHE_AUTO_DISABLE_ENABLED: Optional[bool] = True  # Enable auto-disable on quality degradation
     
+    # Task Complexity Classification configuration (Story 3.1)
+    TASK_CLASSIFICATION_METHOD: Optional[str] = "rule-based"  # "rule-based" or "llm-based"
+    TASK_CLASSIFICATION_LLM_MODEL: Optional[str] = "openai-compatible/gpt-4o-mini"  # LLM model for LLM-based classification
+    TASK_CLASSIFICATION_ENABLED: Optional[bool] = True  # Enable task complexity classification
+    
     # Daytona sandbox configuration (optional - sandbox features disabled if not configured)
     DAYTONA_API_KEY: Optional[str] = None
     DAYTONA_SERVER_URL: Optional[str] = None

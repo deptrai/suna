@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coin Detector Test - Suna Extension</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    .test-section h2 {
+      margin-top: 0;
+    }
+    .detected {
+      background-color: #e8f5e9;
+      padding: 2px 4px;
+      border-radius: 2px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Coin Detector Test Page</h1>
+  <p>This page contains various coin formats để test the coin detection algorithm.</p>
+  
+  <div class="test-section">
+    <h2>Test 1: Coin Names</h2>
+    <p>Bitcoin is the first cryptocurrency.</p>
+    <p>Ethereum is a popular blockchain platform.</p>
+    <p>Solana is known for its fast transactions.</p>
+    <p>Cardano focuses on sustainability.</p>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test 2: Coin Symbols</h2>
+    <p>BTC is the symbol for Bitcoin.</p>
+    <p>$ETH is Ethereum's symbol.</p>
+    <p>SOL represents Solana.</p>
+    <p>ADA is Cardano's symbol.</p>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test 3: Symbols với Prices</h2>
+    <p>BTC $45,000</p>
+    <p>ETH 3,500 USD</p>
+    <p>SOL 150k</p>
+    <p>ADA €0.50</p>
+    <p>MATIC $0.75</p>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test 4: Combined Formats</h2>
+    <p>Bitcoin (BTC) is trading at $45,000</p>
+    <p>Ethereum (ETH) price: 3,500 USD</p>
+    <p>Solana SOL is at 150k</p>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test 5: Multiple Coins</h2>
+    <p>Bitcoin, Ethereum, and Solana are top cryptocurrencies.</p>
+    <p>BTC, ETH, and SOL are their symbols.</p>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test 6: Nested Elements</h2>
+    <article>
+      <header>
+        <h3>Cryptocurrency News</h3>
+      </header>
+      <section>
+        <p>Bitcoin (BTC) is trending today.</p>
+        <div>
+          <span>Current price: $45,000</span>
+        </div>
+      </section>
+    </article>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test 7: Edge Cases</h2>
+    <p>Regular text without coins.</p>
+    <script>const btc = "BTC $45,000";</script>
+    <style>.coin { color: red; }</style>
+    <p>Bitcoin mentioned again.</p>
+  </div>
+  
+  <script type="module">
+    // Note: This test file is for manual verification
+    // To test the detector, load this page in a browser với the extension
+    // và verify that coins are detected correctly
+    console.log('Coin Detector Test Page loaded');
+    console.log('To test: Load extension và verify coin detection works');
+  </script>
+</body>
+</html>
+

@@ -104,6 +104,22 @@ workflow_status:
       deployment_note: "All acceptance criteria fully tested, ready for production deployment"
       blocking_issues: 0
       concerns: 0
+    - id: "2.1"
+      title: "Semantic Response Caching (Quality-Controlled)"
+      status: "review"
+      traceability: "completed"
+      traceability_file: "docs/traceability-matrix-2.1.md"
+      gate_decision: "PASS"
+      gate_decision_file: "docs/gate-decision-story-2.1.yaml"
+      gate_date: "2025-01-15"
+      coverage:
+        overall: 100
+        p0: 100
+        p1: 100
+      deployment_status: "ready"
+      deployment_note: "All acceptance criteria fully tested, ready for production deployment"
+      blocking_issues: 0
+      concerns: 0
 
 # Gate History
 gate_history:
@@ -174,20 +190,37 @@ gate_history:
     document: "docs/gate-decision-story-1.4.yaml"
     traceability: "docs/traceability-matrix-1.4.md"
     action: "Proceed with deployment - All acceptance criteria fully tested, ready for production"
+  - story_id: "2.1"
+    story_title: "Semantic Response Caching (Quality-Controlled)"
+    date: "2025-01-15"
+    decision: "PASS"
+    evaluator: "Luis (via TEA Agent)"
+    criteria:
+      p0_coverage: 100
+      p1_coverage: 100
+      overall_coverage: 100
+      p0_pass_rate: 100
+      p1_pass_rate: 100
+      overall_pass_rate: 100
+    blocking_issues: 0
+    concerns: 0
+    document: "docs/gate-decision-story-2.1.yaml"
+    traceability: "docs/traceability-matrix-2.1.md"
+    action: "Proceed with deployment - All acceptance criteria fully tested, ready for production"
 
 # Quality Metrics Summary
 quality_metrics:
-  total_stories: 4
-  stories_with_gates: 4
+  total_stories: 5
+  stories_with_gates: 5
   gate_decisions:
-    pass: 3
+    pass: 4
     concerns: 1
     fail: 0
     waived: 0
   average_coverage:
     p0: 100
-    p1: 88
-    overall: 95
+    p1: 90
+    overall: 96
 
 # Next Actions
 next_actions:

@@ -51,7 +51,7 @@ development_status:
          epic-2-retrospective: optional
 
          epic-3: backlog
-         3-1-task-complexity-classification: ready-for-dev
+         3-1-task-complexity-classification: review
          3-2-model-selection-rules: ready-for-dev
          3-3-sequential-model-execution: ready-for-dev
          epic-3-retrospective: optional
