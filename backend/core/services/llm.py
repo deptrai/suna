@@ -16,6 +16,83 @@ from core.utils.logger import logger
 from core.utils.config import config
 from core.agentpress.error_processor import ErrorProcessor
 
+# Story 1.3: Anthropic Explicit Caching
+def _is_anthropic_model(model_name: str) -> bool:
+    """
+    Check if model is an Anthropic Claude model (Story 1.3).
+    
+    Supports both direct Anthropic API models and Bedrock-served Claude models.
+    """
+    resolved_model = model_name.lower()
+    return any(keyword in resolved_model for keyword in ['anthropic', 'claude', 'sonnet', 'haiku', 'opus'])
+
+
+def _add_anthropic_cache_control(messages: List[Dict[str, Any]], model_name: str) -> List[Dict[str, Any]]:
+    """
+    Add cache_control directives to system messages for Claude models (Story 1.3).
+    
+    Anthropic explicit caching requires cache_control in message content format:
+    {"type": "text", "text": content, "cache_control": {"type": "ephemeral"}}
+    
+    Only applies to system messages with ≥1024 tokens (Anthropic's minimum cacheable size).
+    """
+    if not _is_anthropic_model(model_name):
+        return messages
+    
+    # Check if caching is enabled
+    cache_enabled = getattr(config, 'ANTHROPIC_CACHE_ENABLED', True)
+    if not cache_enabled:
+        logger.debug(f"Anthropic caching disabled for {model_name}")
+        return messages
+    
+    # Process messages to add cache_control to system messages
+    processed_messages = []
+    for message in messages:
+        role = message.get('role', '')
+        content = message.get('content', '')
+        
+        # Only add cache_control to system messages
+        if role == 'system':
+            # Check if already has cache_control
+            if isinstance(content, list):
+                if content and isinstance(content[0], dict) and 'cache_control' in content[0]:
+                    # Already has cache_control, keep as-is
+                    processed_messages.append(message)
+                    continue
+                # Extract text content from list format
+                text_content = ""
+                for item in content:
+                    if isinstance(item, dict) and item.get('type') == 'text':
+                        text_content += item.get('text', '')
+                content = text_content
+            
+            # Estimate token count (rough estimate: ~4 chars per token)
+            # For accurate counting, we'd need to use Anthropic's tokenizer, but this is sufficient for minimum check
+            estimated_tokens = len(str(content)) / 4
+            
+            if estimated_tokens >= 1024:  # Anthropic's minimum cacheable size
+                # Add cache_control directive
+                processed_messages.append({
+                    "role": role,
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": str(content),
+                            "cache_control": {"type": "ephemeral"}
+                        }
+                    ]
+                })
+                logger.debug(f"✅ Added cache_control to system message for {model_name} ({estimated_tokens:.0f} estimated tokens)")
+            else:
+                # System message too small for caching
+                processed_messages.append(message)
+                logger.debug(f"System message too small for caching: {estimated_tokens:.0f} estimated tokens")
+        else:
+            # Non-system messages: keep as-is
+            processed_messages.append(message)
+    
+    return processed_messages
+
 # Configure LiteLLM
 # os.environ['LITELLM_LOG'] = 'DEBUG'
 # litellm.set_verbose = True  # Enable verbose logging
@@ -334,6 +411,10 @@ async def make_llm_api_call(
     _configure_openai_compatible(params, model_name, api_key, api_base)
     _add_tools_config(params, tools, tool_choice)
     
+    # Story 1.3: Add Anthropic cache_control directives to system messages
+    if _is_anthropic_model(resolved_model_name):
+        params["messages"] = _add_anthropic_cache_control(params["messages"], resolved_model_name)
+    
     try:
         # Log the complete parameters being sent to LiteLLM
         # logger.debug(f"Calling LiteLLM acompletion for {resolved_model_name}")
@@ -359,6 +440,81 @@ async def make_llm_api_call(
         # logger.debug(f"LiteLLM parameters saved to: {filename}")
         
         response = await provider_router.acompletion(**params)
+        
+        # Story 1.3: Track Anthropic cache creation/read tokens
+        cache_creation_tokens = 0
+        cache_read_tokens = 0
+        try:
+            if _is_anthropic_model(resolved_model_name):
+                # Extract cache token metrics from Anthropic response usage
+                if hasattr(response, 'usage') and response.usage:
+                    usage = response.usage
+                    # Anthropic response usage includes cache_creation_input_tokens and cache_read_input_tokens
+                    cache_creation_tokens = getattr(usage, 'cache_creation_input_tokens', 0) or 0
+                    cache_read_tokens = getattr(usage, 'cache_read_input_tokens', 0) or 0
+                    
+                    if cache_creation_tokens > 0 or cache_read_tokens > 0:
+                        total_cached_tokens = cache_creation_tokens + cache_read_tokens
+                        total_input_tokens = getattr(usage, 'input_tokens', 0) or 0
+                        cache_hit_rate = (cache_read_tokens / total_input_tokens * 100) if total_input_tokens > 0 else 0.0
+                        
+                        logger.info(
+                            f"📊 Anthropic Cache Metrics - model={resolved_model_name}, "
+                            f"cache_creation_tokens={cache_creation_tokens}, "
+                            f"cache_read_tokens={cache_read_tokens}, "
+                            f"total_cached_tokens={total_cached_tokens}, "
+                            f"cache_hit_rate={cache_hit_rate:.2f}%"
+                        )
+                elif hasattr(response, '_hidden_params') and response._hidden_params:
+                    # Try alternative response format (LiteLLM wrapped)
+                    usage = response._hidden_params.get('usage', {})
+                    if usage:
+                        cache_creation_tokens = usage.get('cache_creation_input_tokens', 0) or 0
+                        cache_read_tokens = usage.get('cache_read_input_tokens', 0) or 0
+                        
+                        if cache_creation_tokens > 0 or cache_read_tokens > 0:
+                            total_cached_tokens = cache_creation_tokens + cache_read_tokens
+                            total_input_tokens = usage.get('input_tokens', 0) or 0
+                            cache_hit_rate = (cache_read_tokens / total_input_tokens * 100) if total_input_tokens > 0 else 0.0
+                            
+                            logger.info(
+                                f"📊 Anthropic Cache Metrics - model={resolved_model_name}, "
+                                f"cache_creation_tokens={cache_creation_tokens}, "
+                                f"cache_read_tokens={cache_read_tokens}, "
+                                f"total_cached_tokens={total_cached_tokens}, "
+                                f"cache_hit_rate={cache_hit_rate:.2f}%"
+                            )
+                
+                # Story 1.3: Track Anthropic cache metrics in quality monitor (Task 4)
+                try:
+                    from core.optimizations.quality_monitor import get_quality_monitor
+                    quality_monitor = get_quality_monitor()
+                    
+                    if cache_read_tokens > 0 or cache_creation_tokens > 0:
+                        # Get total input tokens for cache hit rate calculation
+                        total_input_tokens = 0
+                        if hasattr(response, 'usage') and response.usage:
+                            total_input_tokens = getattr(response.usage, 'input_tokens', 0) or 0
+                        elif hasattr(response, '_hidden_params') and response._hidden_params:
+                            usage = response._hidden_params.get('usage', {})
+                            total_input_tokens = usage.get('input_tokens', 0) or 0
+                        
+                        if total_input_tokens > 0:
+                            cache_hit_rate_percentage = (cache_read_tokens / total_input_tokens) * 100.0
+                            await quality_monitor.track_metric(
+                                "anthropic_cache_hit_rate",
+                                value=cache_hit_rate_percentage,
+                                metadata={
+                                    "model": resolved_model_name,
+                                    "cache_creation_tokens": cache_creation_tokens,
+                                    "cache_read_tokens": cache_read_tokens,
+                                    "total_input_tokens": total_input_tokens
+                                }
+                            )
+                except Exception as e:
+                    logger.debug(f"Quality monitor tracking error (non-critical): {e}")
+        except Exception as e:
+            logger.debug(f"Anthropic cache token tracking error (non-critical): {e}")
         
         # Track LiteLLM cache metrics (Story 1.2 - Redis Response Caching)
         # Minor Recommendation: Cache Metrics Aggregation

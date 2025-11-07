@@ -1,0 +1,144 @@
+name: Quality Gate Decision Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'docs/gate-decision-story-*.yaml'
+      - 'docs/stories/*.md'
+      - 'backend/tests/**'
+  workflow_dispatch:
+    inputs:
+      story_id:
+        description: 'Story ID to check (e.g., 1.1)'
+        required: true
+        type: string
+
+jobs:
+  check-gate-decision:
+    name: Check Quality Gate Decision
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyyaml
+      
+      - name: Detect gate decision files
+        id: detect-gates
+        run: |
+          echo "Detecting gate decision files..."
+          GATE_FILES=$(find docs -name "gate-decision-story-*.yaml" -type f || true)
+          
+          if [ -z "$GATE_FILES" ]; then
+            echo "No gate decision files found"
+            echo "found=false" >> $GITHUB_OUTPUT
+          else
+            echo "Found gate decision files:"
+            echo "$GATE_FILES"
+            echo "found=true" >> $GITHUB_OUTPUT
+            echo "files<<EOF" >> $GITHUB_OUTPUT
+            echo "$GATE_FILES" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Check specific story gate (manual trigger)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          STORY_ID="${{ github.event.inputs.story_id }}"
+          GATE_FILE="docs/gate-decision-story-${STORY_ID}.yaml"
+          
+          if [ ! -f "$GATE_FILE" ]; then
+            echo "❌ Gate decision file not found: $GATE_FILE"
+            exit 1
+          fi
+          
+          python scripts/enforce-gate-decision.py "$GATE_FILE" --verbose
+      
+      - name: Check all gate decisions (PR trigger)
+        if: github.event_name == 'pull_request' && steps.detect-gates.outputs.found == 'true'
+        continue-on-error: true
+        run: |
+          echo "Checking all gate decision files in PR..."
+          FAILED=0
+          
+          while IFS= read -r GATE_FILE; do
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "Checking: $GATE_FILE"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            
+            if python scripts/enforce-gate-decision.py "$GATE_FILE" --verbose; then
+              echo "✅ $GATE_FILE: PASS"
+            else
+              EXIT_CODE=$?
+              if [ $EXIT_CODE -eq 1 ]; then
+                echo "❌ $GATE_FILE: FAIL (blocking)"
+                FAILED=1
+              elif [ $EXIT_CODE -eq 2 ]; then
+                echo "⚠️  $GATE_FILE: CONCERNS (non-blocking)"
+              elif [ $EXIT_CODE -eq 3 ]; then
+                echo "🔓 $GATE_FILE: WAIVED (non-blocking)"
+              else
+                echo "❌ $GATE_FILE: ERROR (exit code: $EXIT_CODE)"
+                FAILED=1
+              fi
+            fi
+          done <<< "${{ steps.detect-gates.outputs.files }}"
+          
+          if [ $FAILED -eq 1 ]; then
+            echo ""
+            echo "❌ One or more gate decisions are FAIL - blocking merge"
+            exit 1
+          fi
+      
+      - name: Generate gate decision summary
+        if: always() && steps.detect-gates.outputs.found == 'true'
+        run: |
+          echo "## Quality Gate Decision Summary 🚦" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          while IFS= read -r GATE_FILE; do
+            STORY_ID=$(basename "$GATE_FILE" | sed 's/gate-decision-story-//; s/.yaml//')
+            
+            echo "### Story $STORY_ID" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            # Extract decision from YAML (simple grep for now)
+            DECISION=$(grep -A 1 "decision:" "$GATE_FILE" | grep -v "decision:" | tr -d ' "')
+            COVERAGE=$(grep -A 1 "overall:" "$GATE_FILE" | head -2 | tail -1 | tr -d ' "')
+            
+            if [ "$DECISION" = "PASS" ]; then
+              echo "✅ **Decision:** PASS" >> $GITHUB_STEP_SUMMARY
+            elif [ "$DECISION" = "CONCERNS" ]; then
+              echo "⚠️  **Decision:** CONCERNS (non-blocking)" >> $GITHUB_STEP_SUMMARY
+            elif [ "$DECISION" = "FAIL" ]; then
+              echo "❌ **Decision:** FAIL (blocking)" >> $GITHUB_STEP_SUMMARY
+            elif [ "$DECISION" = "WAIVED" ]; then
+              echo "🔓 **Decision:** WAIVED" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "❓ **Decision:** $DECISION" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            if [ -n "$COVERAGE" ]; then
+              echo "- **Coverage:** $COVERAGE%" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            echo "- **File:** \`$GATE_FILE\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          done <<< "${{ steps.detect-gates.outputs.files }}"
+          
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Note:** Only FAIL decisions block merge. CONCERNS and WAIVED are non-blocking." >> $GITHUB_STEP_SUMMARY
+

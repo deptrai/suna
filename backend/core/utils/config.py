@@ -330,6 +330,10 @@ class Configuration:
     LITELLM_CACHE_TTL: Optional[int] = 3600  # Default 1 hour (3600 seconds)
     LITELLM_CACHE_ENABLED: Optional[bool] = True  # Enable LiteLLM Redis caching
     
+    # Anthropic Explicit Caching configuration (Story 1.3)
+    ANTHROPIC_CACHE_TTL: Optional[int] = 300  # Default 5 minutes (300 seconds), configurable up to 1 hour (3600 seconds)
+    ANTHROPIC_CACHE_ENABLED: Optional[bool] = True  # Enable Anthropic explicit caching
+    
     # Daytona sandbox configuration (optional - sandbox features disabled if not configured)
     DAYTONA_API_KEY: Optional[str] = None
     DAYTONA_SERVER_URL: Optional[str] = None

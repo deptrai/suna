@@ -62,6 +62,16 @@ traceability_and_gate:
       - "Monitor production cache metrics and cost savings"
       - "Ensure Story 2.4 includes dashboard integration tests"
     waiver: null
+    deployment:
+      recommendation: "PROCEED"
+      blocking_issues: 0
+      concerns: 1
+      monitoring:
+        - "Monitor cache metrics in application logs"
+        - "Verify cache hit rates (target: 30-50%)"
+        - "Validate cost savings (target: 30-50% reduction for cached tokens)"
+      follow_up_stories:
+        - "Story 2.4: Dashboard integration for cache metrics"
 
   # Acceptance Criteria Coverage Details
   acceptance_criteria:
@@ -131,15 +141,4 @@ traceability_and_gate:
         mitigation: "Manual verification of cache metrics in logs, dashboard integration in Story 2.4"
         remediation: "Story 2.4 will add dashboard integration tests"
 
-  # Deployment Recommendation
-  deployment:
-    recommendation: "PROCEED"
-    blocking_issues: 0
-    concerns: 1
-    monitoring:
-      - "Monitor cache metrics in application logs"
-      - "Verify cache hit rates (target: 30-50%)"
-      - "Validate cost savings (target: 30-50% reduction for cached tokens)"
-    follow_up_stories:
-      - "Story 2.4: Dashboard integration for cache metrics"
 
