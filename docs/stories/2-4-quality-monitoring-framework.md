@@ -1,6 +1,6 @@
 # Story 2.4: Quality Monitoring Framework
 
-Status: ready-for-dev
+Status: in-progress
 
 ## Story
 
@@ -19,23 +19,23 @@ so that I can continuously assess the impact of optimizations on response qualit
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Implement QualityMonitor class (AC: #1)
-  - [ ] Create `backend/core/optimizations/quality_monitor.py`
-  - [ ] Implement `QualityMonitor` class với metric tracking
-  - [ ] Integrate với existing monitoring infrastructure
-  - [ ] Test QualityMonitor class với sample metrics
-  - [ ] **Testing:** Unit test QualityMonitor class
-  - [ ] **Testing:** Integration test với monitoring infrastructure
+- [x] Task 1: Implement QualityMonitor class (AC: #1)
+  - [x] Create `backend/core/optimizations/quality_monitor.py`
+  - [x] Implement `QualityMonitor` class với metric tracking
+  - [x] Integrate với existing monitoring infrastructure
+  - [x] Test QualityMonitor class với sample metrics
+  - [x] **Testing:** Unit test QualityMonitor class
+  - [x] **Testing:** Integration test với monitoring infrastructure
 
-- [ ] Task 2: Implement metric tracking (AC: #2)
-  - [ ] Implement response_similarity tracking (semantic similarity)
-  - [ ] Implement tool_success_rate tracking
-  - [ ] Implement user_satisfaction tracking (if available)
-  - [ ] Implement error_rate tracking
-  - [ ] Implement response_completeness tracking
-  - [ ] Test metric tracking với sample data
-  - [ ] **Testing:** Unit test metric tracking
-  - [ ] **Testing:** Integration test metrics collection
+- [x] Task 2: Implement metric tracking (AC: #2)
+  - [x] Implement response_similarity tracking (semantic similarity với fallback to text similarity)
+  - [x] Implement tool_success_rate tracking
+  - [x] Implement user_satisfaction tracking (if available)
+  - [x] Implement error_rate tracking
+  - [x] Implement response_completeness tracking
+  - [x] Test metric tracking với sample data
+  - [x] **Testing:** Unit test metric tracking
+  - [ ] **Testing:** Integration test metrics collection (in progress)
 
 - [ ] Task 3: Integrate automated quality validation tests (AC: #3)
   - [ ] Create quality validation test suite
@@ -187,13 +187,36 @@ so that I can continuously assess the impact of optimizations on response qualit
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Auto (via dev-story workflow)
 
 ### Debug Log References
 
+- QualityMonitor class implemented in `backend/core/optimizations/quality_monitor.py`
+- Quality metrics helpers implemented in `backend/core/optimizations/quality_metrics.py`
+- Basic integration added to `backend/core/services/llm.py` (error_rate tracking)
+
 ### Completion Notes List
 
+✅ **Task 1 Complete:** QualityMonitor class implemented với comprehensive metric tracking, threshold breach detection, alerting mechanisms, và auto-rollback feature. Class supports all 5 metrics (response_similarity, tool_success_rate, user_satisfaction, error_rate, response_completeness) với configurable thresholds.
+
+✅ **Task 2 Complete:** Metric tracking helpers implemented trong `quality_metrics.py`. Includes response_similarity (semantic với text fallback), tool_success_rate, error_rate, response_completeness, và user_satisfaction extraction. Basic integration added to LLM calls for error_rate tracking.
+
+**In Progress:**
+- Full metric tracking integration vào response processing
+- CI/CD integration
+- Alerting mechanisms configuration
+- Auto-rollback integration với OptimizationConfig (Story 1.4)
+- Quality dashboard
+
 ### File List
+
+**Created:**
+- `backend/core/optimizations/quality_monitor.py` - QualityMonitor class với comprehensive monitoring
+- `backend/core/optimizations/quality_metrics.py` - Quality metrics calculation helpers
+- `backend/tests/test_quality_monitoring.py` - Comprehensive test suite
+
+**Modified:**
+- `backend/core/services/llm.py` - Added error_rate tracking integration (lines 261-275)
 
 ## Change Log
 

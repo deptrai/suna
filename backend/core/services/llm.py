@@ -258,6 +258,22 @@ async def make_llm_api_call(
         
         response = await provider_router.acompletion(**params)
         
+        # Track quality metrics (Story 2.4 - Quality Monitoring Framework)
+        try:
+            from core.optimizations.quality_monitor import get_quality_monitor
+            quality_monitor = get_quality_monitor()
+            
+            # Track error rate (if response indicates error)
+            if isinstance(response, dict) and response.get("status") == "error":
+                await quality_monitor.track_metric(
+                    "error_rate",
+                    value=1.0,  # 100% error for this call
+                    metadata={"model": model_name, "error": str(response.get("message", "unknown"))}
+                )
+        except Exception as e:
+            # Don't fail LLM calls if quality monitoring fails
+            logger.debug(f"Quality monitoring error (non-critical): {e}")
+        
         # For streaming responses, we need to handle errors that occur during iteration
         if hasattr(response, '__aiter__') and stream:
             return _wrap_streaming_response(response)
