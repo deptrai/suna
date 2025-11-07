@@ -605,6 +605,73 @@ class Configuration:
 # Create a singleton instance with safe wrapper
 config = SafeConfigWrapper()
 
+
+# ============================================
+# Optimization Configuration (Story 1.4, 2.4)
+# ============================================
+
+class OptimizationMode(Enum):
+    """Optimization mode enumeration (Story 1.4 - Dual-mode architecture)."""
+    ORIGINAL = "original"
+    OPTIMIZED = "optimized"
+    AUTO = "auto"
+
+
+class OptimizationConfig:
+    """
+    Optimization configuration for dual-mode architecture (Story 1.4, 2.4).
+    
+    Manages optimization mode switching and auto-rollback functionality.
+    """
+    
+    # Current optimization mode (default: ORIGINAL for safety)
+    OPTIMIZATION_MODE: OptimizationMode = OptimizationMode.ORIGINAL
+    
+    # Auto-rollback enabled (Story 2.4)
+    AUTO_ROLLBACK_ENABLED: bool = True
+    
+    # Quality monitoring enabled (Story 2.4)
+    QUALITY_MONITORING_ENABLED: bool = True
+    
+    @classmethod
+    def set_mode(cls, mode: OptimizationMode) -> None:
+        """Set optimization mode."""
+        cls.OPTIMIZATION_MODE = mode
+        logger.info(f"Optimization mode set to: {mode.value}")
+    
+    @classmethod
+    async def auto_rollback_if_needed(cls, quality_monitor) -> bool:
+        """
+        Check quality metrics and auto-rollback if needed (Story 2.4).
+        
+        Args:
+            quality_monitor: QualityMonitor instance
+        
+        Returns:
+            True if rollback was triggered, False otherwise
+        """
+        if not cls.AUTO_ROLLBACK_ENABLED:
+            return False
+        
+        if not cls.QUALITY_MONITORING_ENABLED:
+            return False
+        
+        # Check if we're in OPTIMIZED mode (no need to rollback if already ORIGINAL)
+        if cls.OPTIMIZATION_MODE == OptimizationMode.ORIGINAL:
+            return False
+        
+        # Check quality thresholds
+        thresholds_met = await quality_monitor.check_quality_thresholds()
+        
+        if not thresholds_met:
+            logger.critical(
+                f"🚨 Quality thresholds not met, triggering auto-rollback from {cls.OPTIMIZATION_MODE.value} to ORIGINAL"
+            )
+            cls.set_mode(OptimizationMode.ORIGINAL)
+            return True
+        
+        return False
+
 def get_config():
     """Get the configuration instance, creating it if it doesn't exist."""
     global config

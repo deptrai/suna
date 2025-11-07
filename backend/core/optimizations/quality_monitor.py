@@ -22,12 +22,16 @@ import json
 
 from core.utils.logger import logger
 
-
-class OptimizationMode(Enum):
-    """Optimization mode enumeration (from Story 1.4 - Dual-mode architecture)."""
-    ORIGINAL = "original"
-    OPTIMIZED = "optimized"
-    AUTO = "auto"
+# Import OptimizationMode from config (Story 1.4)
+try:
+    from core.utils.config import OptimizationMode
+except ImportError:
+    # Fallback if OptimizationConfig not yet implemented (should not happen after Story 1.4)
+    class OptimizationMode(Enum):
+        """Optimization mode enumeration (from Story 1.4 - Dual-mode architecture)."""
+        ORIGINAL = "original"
+        OPTIMIZED = "optimized"
+        AUTO = "auto"
 
 
 @dataclass
@@ -234,10 +238,6 @@ class QualityMonitor:
         Args:
             reason: Reason for rollback
         """
-        if not self.rollback_callback:
-            logger.warning("Rollback callback not configured, cannot trigger rollback")
-            return
-        
         async with self._lock:
             self.rollback_count += 1
             self.last_rollback_time = datetime.now(timezone.utc)
@@ -247,13 +247,23 @@ class QualityMonitor:
                 f"Rollback count: {self.rollback_count}"
             )
             
+            # Try to use OptimizationConfig if available (Story 1.4)
             try:
-                if asyncio.iscoroutinefunction(self.rollback_callback):
-                    await self.rollback_callback(reason)
-                else:
-                    self.rollback_callback(reason)
+                from core.utils.config import OptimizationConfig, OptimizationMode
+                OptimizationConfig.set_mode(OptimizationMode.ORIGINAL)
+                logger.info("✅ Auto-rollback: Optimization mode set to ORIGINAL via OptimizationConfig")
             except Exception as e:
-                logger.error(f"Error in rollback callback: {e}")
+                logger.debug(f"OptimizationConfig not available: {e}")
+            
+            # Also call rollback callback if provided
+            if self.rollback_callback:
+                try:
+                    if asyncio.iscoroutinefunction(self.rollback_callback):
+                        await self.rollback_callback(reason)
+                    else:
+                        self.rollback_callback(reason)
+                except Exception as e:
+                    logger.error(f"Error in rollback callback: {e}")
     
     async def check_quality_thresholds(self) -> bool:
         """
