@@ -40,7 +40,7 @@ development_status:
   1-1-enable-openai-prompt-caching: done
   1-2-litellm-redis-response-caching-exact-matches: done
   1-3-anthropic-explicit-caching: done
-  1-4-dual-mode-architecture-implementation: ready-for-dev
+  1-4-dual-mode-architecture-implementation: done
   epic-1-retrospective: optional
 
   epic-2: backlog
@@ -58,8 +58,8 @@ development_status:
 
   # Extension Project Stories (Epic 10-14)
   extension-epic-1: backlog
-  10-1-extension-project-structure-setup: ready-for-dev
-  10-2-extension-manifest-configuration: ready-for-dev
+  10-1-extension-project-structure-setup: review
+  10-2-extension-manifest-configuration: review
   10-3-build-configuration-shared-code-setup: ready-for-dev
   10-4-basic-popup-skeleton: ready-for-dev
   extension-epic-1-retrospective: optional

@@ -1,0 +1,71 @@
+{
+  "manifest_version": 3,
+  "name": "Suna Coin Analysis",
+  "version": "1.0.0",
+  "description": "Instant coin analysis directly from any cryptocurrency website. Click on coin names to generate AI-powered analysis reports.",
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://*.supabase.co/*",
+    "https://*.supabase.in/*",
+    "https://api.suna.so/*",
+    "https://*.suna.so/*",
+    "http://localhost:*/*",
+    "http://127.0.0.1:*/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.coingecko.com/*",
+        "*://*.binance.com/*",
+        "*://*.coinmarketcap.com/*",
+        "*://*.cryptocompare.com/*",
+        "*://*.crypto.com/*",
+        "*://*.kraken.com/*",
+        "*://*.coinbase.com/*",
+        "*://*.gemini.com/*",
+        "*://*.bitfinex.com/*",
+        "*://*.okx.com/*",
+        "*://*.bybit.com/*"
+      ],
+      "js": [
+        "content-script.js"
+      ],
+      "run_at": "document_idle",
+      "css": [
+        "content-script.css"
+      ]
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Suna Coin Analysis",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icons/*.png"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
+}
+
