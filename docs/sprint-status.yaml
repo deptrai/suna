@@ -59,9 +59,9 @@ development_status:
   # Extension Project Stories (Epic 10-14)
   extension-epic-1: backlog
   10-1-extension-project-structure-setup: done
-  10-2-extension-manifest-configuration: review
+  10-2-extension-manifest-configuration: done
   10-3-build-configuration-shared-code-setup: done
-  10-4-basic-popup-skeleton: ready-for-dev
+  10-4-basic-popup-skeleton: done
   extension-epic-1-retrospective: optional
 
   extension-epic-2: backlog
