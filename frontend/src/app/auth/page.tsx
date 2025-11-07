@@ -16,7 +16,7 @@ import {
   AlertCircle,
   MailCheck,
 } from 'lucide-react';
-import { EpsilonLoader } from '@/components/ui/epsilon-loader';
+import { EpsilonLoader } from '@/components/ui/chainlens-loader';
 import { useAuth } from '@/components/AuthProvider';
 import { useAuthMethodTracking } from '@/lib/stores/auth-tracking';
 import { toast } from 'sonner';
@@ -30,7 +30,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import GitHubSignIn from '@/components/GithubSignIn';
-import { EpsilonLogo } from '@/components/sidebar/epsilon-logo';
+import { EpsilonLogo } from '@/components/sidebar/chainlens-logo';
 import { AnimatedBg } from '@/components/home/ui/AnimatedBg';
 import { ReleaseBadge } from '@/components/auth/release-badge';
 

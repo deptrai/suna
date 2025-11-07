@@ -5,7 +5,7 @@ import { ArrowLeft, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { AnimatedBg } from '@/components/home/ui/AnimatedBg';
-import { EpsilonLogo } from '@/components/sidebar/epsilon-logo';
+import { EpsilonLogo } from '@/components/sidebar/chainlens-logo';
 
 export default function NotFound() {
   return (

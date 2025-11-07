@@ -10,7 +10,7 @@ import { NavAgentsView } from '@/components/sidebar/nav-agents-view';
 import { NavGlobalConfig } from '@/components/sidebar/nav-global-config';
 import { NavTriggerRuns } from '@/components/sidebar/nav-trigger-runs';
 import { NavUserWithTeams } from '@/components/sidebar/nav-user-with-teams';
-import { EpsilonLogo } from '@/components/sidebar/epsilon-logo';
+import { EpsilonLogo } from '@/components/sidebar/chainlens-logo';
 import { CTACard } from '@/components/sidebar/cta';
 import { siteConfig } from '@/lib/home';
 import {
@@ -68,7 +68,7 @@ import { useSubscriptionData } from '@/contexts/SubscriptionContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Image from 'next/image';
 import { isLocalMode } from '@/lib/config';
-import { EpsilonProcessModal } from './epsilon-enterprise-modal';
+import { ChainLensProcessModal } from '@/components/sidebar/chainlens-enterprise-modal';
 
 // Helper function to get plan icon - maps frontend tier names from cloudPricingItems
 function getPlanIcon(planName: string, isLocal: boolean = false) {
@@ -490,11 +490,11 @@ export function SidebarLeft({
               <p className="text-xs text-muted-foreground mb-4">
                 Request custom AI Workers implementation
               </p>
-              <EpsilonProcessModal>
+              <ChainLensProcessModal>
                 <Button size="sm" className="w-full text-xs h-8">
                   Learn More
                 </Button>
-              </EpsilonProcessModal>
+              </ChainLensProcessModal>
             </div>
           </div>
         )

@@ -598,20 +598,26 @@ export function useAgentStream(
         }
 
         const errorMessage = err instanceof Error ? err.message : String(err);
-        console.error(
-          `[useAgentStream] Error checking agent status for ${runId} after stream close: ${errorMessage}`,
-        );
-
-        const isNotFoundError =
+        
+        // Check if this is an "agent not running" error - this is expected when agent has completed/stopped
+        const isNotRunningError =
+          errorMessage.includes('is not running') ||
           errorMessage.includes('not found') ||
           errorMessage.includes('404') ||
           errorMessage.includes('does not exist');
 
-        if (isNotFoundError) {
-          // Revert to agent_not_running for this specific case
+        if (isNotRunningError) {
+          // This is expected behavior when agent has completed/stopped
+          // Don't log as error, just finalize gracefully
+          console.log(
+            `[useAgentStream] Agent run ${runId} is not running (expected after completion/stop), finalizing gracefully`,
+          );
           finalizeStream('agent_not_running', runId);
         } else {
-          // For other errors checking status, finalize with generic error
+          // For other unexpected errors checking status, log and finalize with error
+          console.error(
+            `[useAgentStream] Error checking agent status for ${runId} after stream close: ${errorMessage}`,
+          );
           finalizeStream('error', runId);
         }
       });
@@ -654,10 +660,59 @@ export function useAgentStream(
 
       try {
         // *** Crucial check: Verify agent is running BEFORE cleaning up previous stream ***
+        // For newly created agents, there might be a brief delay before status becomes "running"
+        // Retry a few times with exponential backoff
         console.log(`[useAgentStream] Checking status for run ID: ${runId}`);
-        const agentStatus = await getAgentStatus(runId);
-        if (!isMountedRef.current) return; // Check mount status after async call
-
+        let agentStatus: AgentRun | null = null;
+        let retries = 3;
+        let retryDelay = 500; // Start with 500ms
+        
+        while (retries > 0) {
+          try {
+            agentStatus = await getAgentStatus(runId);
+            if (!isMountedRef.current) return; // Check mount status after async call
+            
+            if (agentStatus.status === 'running') {
+              break; // Agent is running, proceed
+            }
+            
+            // If agent is in a terminal state (completed/stopped/failed), don't retry
+            if (['completed', 'stopped', 'failed', 'error'].includes(agentStatus.status)) {
+              break; // Terminal state, no need to retry
+            }
+            
+            // Agent might still be starting, retry
+            retries--;
+            if (retries > 0) {
+              console.log(
+                `[useAgentStream] Agent run ${runId} status is "${agentStatus.status}", retrying in ${retryDelay}ms (${retries} retries left)`,
+              );
+              await new Promise(resolve => setTimeout(resolve, retryDelay));
+              retryDelay *= 2; // Exponential backoff
+            }
+          } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : String(err);
+            // If it's a "not running" error and we have retries left, retry
+            if (errorMessage.includes('is not running') && retries > 0) {
+              retries--;
+              if (retries > 0) {
+                console.log(
+                  `[useAgentStream] Agent run ${runId} not ready yet, retrying in ${retryDelay}ms (${retries} retries left)`,
+                );
+                await new Promise(resolve => setTimeout(resolve, retryDelay));
+                retryDelay *= 2;
+                continue;
+              }
+            }
+            // Re-throw if no retries left or unexpected error
+            throw err;
+          }
+        }
+        
+        if (!agentStatus) {
+          throw new Error(`Failed to get agent status for ${runId} after retries`);
+        }
+        
         if (agentStatus.status !== 'running') {
           // Expected when opening an old conversation; don't surface as error/toast
           console.info(

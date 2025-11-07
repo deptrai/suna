@@ -19,7 +19,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ArrowUp, X, Image as ImageIcon, Presentation, BarChart3, FileText, Search, Users, Code2, Sparkles, Brain as BrainIcon, MessageSquare, CornerDownLeft, Plug } from 'lucide-react';
-import { EpsilonLoader } from '@/components/ui/epsilon-loader';
+import { EpsilonLoader } from '@/components/ui/chainlens-loader';
 import { VoiceRecorder } from './voice-recorder';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { UnifiedConfigMenu } from './unified-config-menu';

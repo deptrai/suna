@@ -225,3 +225,8 @@ apps/mobile/.env*.local
 apps/mobile/app-example
 # Docker-specific env files
 *.env.docker
+
+# Playwright test artifacts
+test-results/
+playwright-report/
+playwright/.cache/

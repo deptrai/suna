@@ -88,9 +88,23 @@ class DirectLiteLLMStrategy(LLMStrategy):
                 # Extract actual model name (remove openai-compatible/ prefix)
                 actual_model = model.replace('openai-compatible/', '')
 
-                # Get API configuration
+                # Get API configuration from params or config
                 api_key = params.get('api_key')
                 api_base = params.get('api_base')
+                
+                # Fallback to config if not in params
+                if not api_key:
+                    from core.utils.config import config
+                    api_key = getattr(config, 'OPENAI_COMPATIBLE_API_KEY', None)
+                if not api_base:
+                    from core.utils.config import config
+                    api_base = getattr(config, 'OPENAI_COMPATIBLE_API_BASE', None)
+                
+                if not api_key or not api_base:
+                    raise ValueError(
+                        "OPENAI_COMPATIBLE_API_KEY and OPENAI_COMPATIBLE_API_BASE are required for openai-compatible models"
+                    )
+                
                 extra_headers = params.get('extra_headers', {})
 
                 # Create OpenAI client with custom base URL

@@ -959,6 +959,14 @@ async def get_subscription_commitment(
 async def get_trial_status(
     account_id: str = Depends(verify_and_get_user_id_from_jwt)
 ) -> Dict:
+    if config.ENV_MODE == EnvMode.LOCAL:
+        return {
+            'has_trial': True,
+            'trial_status': 'active',
+            'can_start_trial': False,
+            'message': 'Local development mode - trial bypassed'
+        }
+    
     try:
         from core.utils.ensure_chainlens import ensure_chainlens_installed
         await ensure_chainlens_installed(account_id)

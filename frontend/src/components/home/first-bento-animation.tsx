@@ -9,7 +9,7 @@ import {
 } from '@/components/home/ui/reasoning';
 import { AnimatePresence, motion, useInView } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
-import { EpsilonLogo } from '@/components/sidebar/epsilon-logo';
+import { EpsilonLogo } from '@/components/sidebar/chainlens-logo';
 
 export function FirstBentoAnimation() {
   const ref = useRef(null);

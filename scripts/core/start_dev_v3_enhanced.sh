@@ -139,33 +139,55 @@ enhanced_phase1_environment_validation() {
         fi
     fi
 
-    # Additional cleanup with error tracking
+    # Additional cleanup with error tracking - comprehensive process cleanup
     echo -e "🔨 Additional cleanup patterns..."
-    pkill -KILL -f "python.*dramatiq" 2>/dev/null || record_error "cleanup" "process" "Failed to kill dramatiq processes" "medium"
-    pkill -KILL -f "node.*next" 2>/dev/null || record_error "cleanup" "process" "Failed to kill next processes" "medium"
-    pkill -KILL -f "bash.*monitor" 2>/dev/null || record_error "cleanup" "process" "Failed to kill monitor processes" "low"
+    
+    # Kill all related processes
+    pkill -KILL -f "python.*dramatiq" 2>/dev/null || true
+    pkill -KILL -f "dramatiq.*run_agent_background" 2>/dev/null || true
+    pkill -KILL -f "uvicorn.*api" 2>/dev/null || true
+    pkill -KILL -f "node.*next" 2>/dev/null || true
+    pkill -KILL -f "next.*dev" 2>/dev/null || true
+    pkill -KILL -f "pnpm.*dev" 2>/dev/null || true
+    pkill -KILL -f "npm.*dev" 2>/dev/null || true
+    pkill -KILL -f "bash.*monitor" 2>/dev/null || true
+    pkill -KILL -f "enhanced_monitor" 2>/dev/null || true
+    pkill -KILL -f "enhanced_dashboard_monitor" 2>/dev/null || true
+    
+    # Kill tmux monitoring session if exists
+    tmux kill-session -t "chainlens-monitor" 2>/dev/null || true
 
     sleep 2
 
     # Enhanced verification with health checks
     echo -e "🔍 ENHANCED CLEANUP VERIFICATION..."
 
-    local dramatiq_processes=$(ps aux | grep -E "dramatiq" | grep -v grep | wc -l)
-    local worker_processes=$(ps aux | grep -E "spawn_main" | grep -v grep | wc -l)
-    local backend_processes=$(ps aux | grep -E "uvicorn.*api" | grep -v grep | wc -l)
-    local frontend_processes=$(ps aux | grep -E "next.*dev" | grep -v grep | wc -l)
-    local total_processes=$((dramatiq_processes + worker_processes + backend_processes + frontend_processes))
+    local dramatiq_processes=$(ps aux | grep -E "dramatiq" | grep -v grep | wc -l | tr -d ' ')
+    local worker_processes=$(ps aux | grep -E "spawn_main|run_agent_background" | grep -v grep | wc -l | tr -d ' ')
+    local backend_processes=$(ps aux | grep -E "uvicorn.*api" | grep -v grep | wc -l | tr -d ' ')
+    local frontend_processes=$(ps aux | grep -E "next.*dev|pnpm.*dev|npm.*dev" | grep -v grep | wc -l | tr -d ' ')
+    local monitor_processes=$(ps aux | grep -E "enhanced_monitor|enhanced_dashboard_monitor" | grep -v grep | wc -l | tr -d ' ')
+    local tmux_sessions=$(tmux ls -F "#{session_name}" 2>/dev/null | grep -c "chainlens-monitor" || echo "0")
+    local total_processes=$((dramatiq_processes + worker_processes + backend_processes + frontend_processes + monitor_processes))
 
     echo -e "📊 Enhanced process cleanup verification:"
     echo -e "   Dramatiq processes: $dramatiq_processes"
     echo -e "   Worker processes: $worker_processes"
     echo -e "   Backend processes: $backend_processes"
     echo -e "   Frontend processes: $frontend_processes"
+    echo -e "   Monitor processes: $monitor_processes"
+    echo -e "   Tmux sessions: $tmux_sessions"
     echo -e "   Total processes: $total_processes"
 
-    if [[ $total_processes -gt 0 ]]; then
+    if [[ $total_processes -gt 0 ]] || [[ $tmux_sessions -gt 0 ]]; then
         record_error "cleanup" "verification" "Processes still running after cleanup" "medium"
-        echo -e "${YELLOW}⚠️ Warning: $total_processes application processes still running${NC}"
+        echo -e "${YELLOW}⚠️ Warning: $total_processes application processes and $tmux_sessions tmux sessions still running${NC}"
+        echo -e "${YELLOW}⚠️ Attempting additional cleanup...${NC}"
+        sleep 1
+        # One more aggressive cleanup attempt
+        pkill -9 -f "dramatiq\|uvicorn\|next\|pnpm\|npm.*dev" 2>/dev/null || true
+        tmux kill-session -t "chainlens-monitor" 2>/dev/null || true
+        sleep 1
     else
         echo -e "${GREEN}✅ ALL APPLICATION PROCESSES CLEANED UP${NC}"
     fi
@@ -430,12 +452,26 @@ display_enhanced_summary() {
     echo -e "${CYAN}======================================${NC}"
     echo -e "${GREEN}🚀 Launching Enhanced Multi-Panel Monitoring Dashboard...${NC}"
     echo -e "${PURPLE}✨ Features: 4-panel tmux layout with Backend/Frontend maximized, real-time monitoring${NC}"
+    echo -e "${PURPLE}✨ Real-time logs: Backend, Frontend, Worker, Redis${NC}"
     echo ""
+    
+    # Check if monitoring script exists
+    local monitoring_script="$SCRIPT_DIR/../monitoring/enhanced_dashboard_monitor.sh"
+    if [[ ! -f "$monitoring_script" ]]; then
+        echo -e "${YELLOW}⚠️ Monitoring script not found at $monitoring_script${NC}"
+        echo -e "${YELLOW}⚠️ Services are running, but monitoring dashboard cannot be started${NC}"
+        return 0
+    fi
+    
+    if [[ ! -x "$monitoring_script" ]]; then
+        chmod +x "$monitoring_script"
+    fi
     
     sleep 2
     
-    # Execute the optimized monitoring dashboard v3.0
-    exec "$SCRIPT_DIR/../monitoring/enhanced_dashboard_monitor.sh"
+    # Execute the optimized monitoring dashboard v3.0 (enhanced_dashboard_monitor.sh is the most complete)
+    echo -e "${GREEN}✅ Launching monitoring dashboard...${NC}"
+    exec "$monitoring_script"
 }
 
 # Main execution with enhanced error handling
@@ -450,12 +486,20 @@ main_enhanced() {
     # Setup monitoring script before services start
     setup_enhanced_monitor_script
     
-    # Execute smart startup sequence
+    # Execute smart startup sequence (services will be started here)
+    echo -e "${CYAN}🚀 Starting all services after cleanup...${NC}"
     if ! enhanced_startup_sequence; then
         echo -e "${RED}❌ Enhanced startup sequence failed${NC}"
         record_error "startup" "sequence" "Startup sequence failed completely" "critical"
         exit 1
     fi
+    
+    echo -e "${GREEN}✅ All services started successfully${NC}"
+    echo ""
+    
+    # Wait a moment for services to fully initialize
+    echo -e "${CYAN}⏳ Waiting for services to stabilize...${NC}"
+    sleep 3
     
     # Display enhanced monitoring status
     enhanced_monitoring

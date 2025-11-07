@@ -24,7 +24,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
-import { EpsilonLogo } from '@/components/sidebar/epsilon-logo';
+import { EpsilonLogo } from '@/components/sidebar/chainlens-logo';
 import { AgentAvatar } from '@/components/thread/content/agent-avatar';
 import { useComposioToolkitIcon } from '@/hooks/react-query/composio/use-composio';
 

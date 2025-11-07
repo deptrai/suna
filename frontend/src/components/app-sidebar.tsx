@@ -26,7 +26,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { ThemeToggle } from "./home/theme-toggle"
-import { EpsilonLogo } from "./sidebar/epsilon-logo"
+import { EpsilonLogo } from "@/components/sidebar/chainlens-logo""
 import Image from "next/image"
 import { useEffect } from "react"
 import { useTheme } from "next-themes"

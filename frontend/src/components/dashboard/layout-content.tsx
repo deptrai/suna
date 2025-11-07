@@ -7,7 +7,7 @@ import { useAccounts } from '@/hooks/use-accounts';
 import { useAuth } from '@/components/AuthProvider';
 import { useMaintenanceNoticeQuery } from '@/hooks/react-query/edge-flags';
 import { useRouter } from 'next/navigation';
-import { EpsilonLoader } from '@/components/ui/epsilon-loader';
+import { EpsilonLoader } from '@/components/ui/chainlens-loader';
 import { useApiHealth } from '@/hooks/react-query';
 import { MaintenancePage } from '@/components/maintenance/maintenance-page';
 import { DeleteOperationProvider } from '@/contexts/DeleteOperationContext';

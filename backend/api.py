@@ -95,6 +95,73 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+# Define allowed origins based on environment
+allowed_origins = ["https://www.epsilon.com", "https://epsilon.com", "https://www.chainlens.net", "https://chainlens.net"]
+allow_origin_regex = None
+
+# Add staging-specific origins
+if config.ENV_MODE == EnvMode.LOCAL:
+    allowed_origins.append("http://localhost:3000")
+    allowed_origins.append("http://127.0.0.1:3000")
+
+# Add staging-specific origins
+if config.ENV_MODE == EnvMode.STAGING:
+    allowed_origins.append("https://staging.chainlens.net")
+    allowed_origins.append("http://localhost:3000")
+    # Allow Vercel preview deployments for both legacy and new project names
+    allow_origin_regex = r"https://(chainlens|epsiloncom)-.*-prjcts\.vercel\.app"
+
+# Add localhost for production mode local testing (for master password login)
+if config.ENV_MODE == EnvMode.PRODUCTION:
+    allowed_origins.append("http://localhost:3000")
+    allowed_origins.append("http://127.0.0.1:3000")
+
+# Handle OPTIONS requests FIRST (add this middleware LAST so it runs FIRST in reverse order)
+@app.middleware("http")
+async def options_cors_middleware(request: Request, call_next):
+    """Handle OPTIONS requests before routing to avoid 405 errors"""
+    if request.method == "OPTIONS":
+        logger.debug(f"[OPTIONS] Intercepted OPTIONS request: {request.url.path}")
+        from fastapi.responses import Response
+        import re
+        origin = request.headers.get("origin")
+        if origin:
+            origin_allowed = origin in allowed_origins
+            if not origin_allowed and allow_origin_regex:
+                pattern = re.compile(allow_origin_regex)
+                origin_allowed = bool(pattern.match(origin))
+            
+            if origin_allowed:
+                logger.debug(f"[OPTIONS] Returning 200 OK with CORS headers for origin: {origin}")
+                return Response(
+                    status_code=200,
+                    headers={
+                        "Access-Control-Allow-Origin": origin,
+                        "Access-Control-Allow-Credentials": "true",
+                        "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+                        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Project-Id, X-MCP-URL, X-MCP-Type, X-MCP-Headers, X-Refresh-Token, X-API-Key",
+                        "Access-Control-Max-Age": "600",
+                    }
+                )
+        # Return 200 even if origin not allowed (let CORSMiddleware handle validation)
+        logger.debug(f"[OPTIONS] Returning 200 OK (origin not allowed or no origin)")
+        return Response(status_code=200, headers={"Access-Control-Max-Age": "600"})
+    
+    return await call_next(request)
+
+# Add CORS middleware AFTER options handler (runs BEFORE in reverse order)
+# CORSMiddleware adds CORS headers to all responses (including errors)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_origin_regex=allow_origin_regex,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Project-Id", "X-MCP-URL", "X-MCP-Type", "X-MCP-Headers", "X-Refresh-Token", "X-API-Key"],
+    expose_headers=["*"],  # Expose all headers
+    max_age=600,  # Cache preflight for 10 minutes
+)
+
 @app.middleware("http")
 async def log_requests_middleware(request: Request, call_next):
     structlog.contextvars.clear_contextvars()
@@ -130,36 +197,6 @@ async def log_requests_middleware(request: Request, call_next):
             error_str = f"Error of type {type(e).__name__}"
         logger.error(f"Request failed: {method} {path} | Error: {error_str} | Time: {process_time:.2f}s")
         raise
-
-# Define allowed origins based on environment
-allowed_origins = ["https://www.epsilon.com", "https://epsilon.com", "https://www.chainlens.net", "https://chainlens.net"]
-allow_origin_regex = None
-
-# Add staging-specific origins
-if config.ENV_MODE == EnvMode.LOCAL:
-    allowed_origins.append("http://localhost:3000")
-    allowed_origins.append("http://127.0.0.1:3000")
-
-# Add staging-specific origins
-if config.ENV_MODE == EnvMode.STAGING:
-    allowed_origins.append("https://staging.chainlens.net")
-    allowed_origins.append("http://localhost:3000")
-    # Allow Vercel preview deployments for both legacy and new project names
-    allow_origin_regex = r"https://(chainlens|epsiloncom)-.*-prjcts\.vercel\.app"
-
-# Add localhost for production mode local testing (for master password login)
-if config.ENV_MODE == EnvMode.PRODUCTION:
-    allowed_origins.append("http://localhost:3000")
-    allowed_origins.append("http://127.0.0.1:3000")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_origin_regex=allow_origin_regex,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "X-Project-Id", "X-MCP-URL", "X-MCP-Type", "X-MCP-Headers", "X-Refresh-Token", "X-API-Key"],
-)
 
 # Create a main API router
 api_router = APIRouter()

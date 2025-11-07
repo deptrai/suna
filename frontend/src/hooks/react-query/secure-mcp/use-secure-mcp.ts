@@ -501,7 +501,7 @@ export function useEpsilonTeamTemplates() {
         throw new Error('You must be logged in to view Epsilon templates');
       }
 
-      const response = await fetch(`${API_URL}/templates/epsilon-all`, {
+      const response = await fetch(`${API_URL}/templates/chainlens-all`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },

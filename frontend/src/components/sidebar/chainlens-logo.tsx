@@ -6,12 +6,12 @@ import { useEffect, useState } from 'react';
 import { isLocalMode, isStagingMode } from '@/lib/config';
 import { cn } from '@/lib/utils';
 
-interface EpsilonLogoProps {
+interface ChainLensLogoProps {
   size?: number;
   variant?: 'symbol' | 'logomark';
   className?: string;
 }
-export function EpsilonLogo({ size = 24, variant = 'symbol', className }: EpsilonLogoProps) {
+export function ChainLensLogo({ size = 24, variant = 'symbol', className }: ChainLensLogoProps) {
   const { theme, systemTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -30,7 +30,7 @@ export function EpsilonLogo({ size = 24, variant = 'symbol', className }: Epsilo
     return (
       <Image
         src="/logomark-white.svg"
-        alt="Epsilon"
+        alt="ChainLens"
         width={size}
         height={size}
         className={cn(`${shouldInvert ? '' : 'invert'} flex-shrink-0`, className)}
@@ -43,7 +43,7 @@ export function EpsilonLogo({ size = 24, variant = 'symbol', className }: Epsilo
   return (
     <Image
       src="/epsilon-symbol.svg"
-      alt="Epsilon"
+      alt="ChainLens"
       width={size}
       height={size}
       className={cn(`${shouldInvert ? 'invert' : ''} flex-shrink-0`, className)}
@@ -51,3 +51,6 @@ export function EpsilonLogo({ size = 24, variant = 'symbol', className }: Epsilo
     />
   );
 }
+
+// Re-export as EpsilonLogo for backward compatibility
+export const EpsilonLogo = ChainLensLogo;

@@ -30,7 +30,7 @@ import { ChainLensModesPanel } from './chainlens-modes-panel';
 import { AIWorkerTemplates } from './ai-worker-templates';
 import { useThreadQuery } from '@/hooks/react-query/threads/use-threads';
 import { normalizeFilenameToNFC } from '@/lib/utils/unicode';
-import { EpsilonLogo } from '../sidebar/epsilon-logo';
+import { EpsilonLogo } from '@/components/sidebar/chainlens-logo';
 import { AgentRunLimitDialog } from '@/components/thread/agent-run-limit-dialog';
 import { CustomAgentsSection } from './custom-agents-section';
 import { toast } from 'sonner';
@@ -142,7 +142,7 @@ export function DashboardContent() {
     : null;
   const displayName = selectedAgent?.name || 'Chainlens';
   const agentAvatar = undefined;
-  const isChainlensAgent = selectedAgent?.metadata?.is_chainlens_default || false;
+  const isChainLensAgent = selectedAgent?.metadata?.is_chainlens_default || false;
 
   const threadQuery = useThreadQuery(initiatedThreadId || '');
 

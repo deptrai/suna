@@ -3,7 +3,7 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { EpsilonLoader } from '@/components/ui/epsilon-loader';
+import { EpsilonLoader } from '@/components/ui/chainlens-loader';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import Script from 'next/script';
 

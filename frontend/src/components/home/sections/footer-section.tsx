@@ -8,7 +8,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
-import { EpsilonLogo } from '@/components/sidebar/epsilon-logo';
+import { EpsilonLogo } from '@/components/sidebar/chainlens-logo';
 
 export function FooterSection() {
   const tablet = useMediaQuery('(max-width: 1024px)');

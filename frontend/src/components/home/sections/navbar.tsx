@@ -13,7 +13,7 @@ import { useTheme } from 'next-themes';
 import { useAuth } from '@/components/AuthProvider';
 import { useGitHubStars } from '@/hooks/use-github-stars';
 import { useRouter, usePathname } from 'next/navigation';
-import { EpsilonLogo } from '@/components/sidebar/epsilon-logo';
+import { EpsilonLogo } from '@/components/sidebar/chainlens-logo';
 
 const INITIAL_WIDTH = '70rem';
 const MAX_WIDTH = '1000px';

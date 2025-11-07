@@ -3,7 +3,7 @@
 import { motion, useInView, AnimatePresence } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 import { Icons } from '@/components/home/icons';
-import { EpsilonLogo } from '@/components/sidebar/epsilon-logo';
+import { EpsilonLogo } from '@/components/sidebar/chainlens-logo';
 
 interface TaskConfig {
   title: string;

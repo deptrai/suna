@@ -1,0 +1,6 @@
+ide: auggie
+configured_date: '2025-11-02T07:30:42.250Z'
+last_updated: '2025-11-02T07:30:42.250Z'
+configuration:
+  auggieLocations:
+    - .augment/commands

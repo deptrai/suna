@@ -108,11 +108,11 @@ init_parallel_dependency_system() {
     set_service_value "SERVICE_READINESS_CHECKS" "frontend" "enhanced_check_frontend_health"
     set_service_value "SERVICE_READINESS_CHECKS" "monitor" "check_monitor_health"
     
-    # Define startup timeouts (seconds)
+    # Define startup timeouts (seconds) - increased for Next.js compilation
     set_service_value "SERVICE_STARTUP_TIMEOUTS" "redis" "10"
     set_service_value "SERVICE_STARTUP_TIMEOUTS" "backend" "30"
     set_service_value "SERVICE_STARTUP_TIMEOUTS" "worker" "20"
-    set_service_value "SERVICE_STARTUP_TIMEOUTS" "frontend" "45"
+    set_service_value "SERVICE_STARTUP_TIMEOUTS" "frontend" "120"  # Increased for Next.js compilation
     set_service_value "SERVICE_STARTUP_TIMEOUTS" "monitor" "5"
     
     # Initialize all services as pending
@@ -289,9 +289,9 @@ verify_kill_completion() {
 
 # Calculate dependency waves for parallel startup
 calculate_dependency_waves() {
-    log_structured "INFO" "parallel_dependency_manager" "Calculating dependency waves for parallel startup"
-
+    # Suppress logging to stdout - only use stderr/log
     local services=("redis" "backend" "worker" "frontend" "monitor")
+    log_structured "INFO" "parallel_dependency_manager" "Calculating dependency waves for parallel startup" >&2
     local waves=()
     local processed=()
     local wave_num=0
@@ -346,12 +346,12 @@ calculate_dependency_waves() {
         waves[$wave_num]="${current_wave[*]}"
     done
 
-    # Output waves
+    # Output waves to stdout (filtered from stderr)
     for i in "${!waves[@]}"; do
-        echo "wave_$i:${waves[$i]}"
+        echo "wave_$i:${waves[$i]}" >&1
     done
 
-    log_structured "INFO" "parallel_dependency_manager" "Calculated $((wave_num + 1)) dependency waves"
+    log_structured "INFO" "parallel_dependency_manager" "Calculated $((wave_num + 1)) dependency waves" >&2
 }
 
 # Start services in a wave (parallel)
@@ -380,46 +380,183 @@ start_wave_services() {
                         set_service_value "SERVICE_STATUS" "$service" "$SERVICE_FAILED"
                         exit 1
                     fi
+                    # Redis is external - mark as ready immediately after verification
+                    set_service_value "SERVICE_STATUS" "$service" "$SERVICE_READY"
+                    log_structured "INFO" "parallel_start" "Redis verified and ready"
+                    echo "     ✅ Redis verified and ready"
+                    # Skip the wait_for_service_ready for external services
+                    exit 0
                     ;;
                 "backend")
-                    cd "$PROJECT_ROOT/../backend" || exit 1
-                    nohup python3 api.py > "$PROJECT_ROOT/../logs/backend.log" 2>&1 &
+                    # Check if backend directory exists
+                    if [[ ! -d "$PROJECT_ROOT/backend" ]]; then
+                        log_structured "ERROR" "parallel_start" "Backend directory not found: $PROJECT_ROOT/backend"
+                        set_service_value "SERVICE_STATUS" "$service" "$SERVICE_FAILED"
+                        exit 1
+                    fi
+                    
+                    # Ensure logs directory exists
+                    mkdir -p "$PROJECT_ROOT/logs" 2>/dev/null || true
+                    
+                    cd "$PROJECT_ROOT/backend" || {
+                        log_structured "ERROR" "parallel_start" "Failed to cd to backend directory: $PROJECT_ROOT/backend"
+                        set_service_value "SERVICE_STATUS" "$service" "$SERVICE_FAILED"
+                        exit 1
+                    }
+                    
+                    # Start backend service
+                    if [[ -f ".venv/bin/activate" ]]; then
+                        nohup bash -c 'source .venv/bin/activate && python3 -m uvicorn api:app --host 0.0.0.0 --port 8000 --reload' > "$PROJECT_ROOT/logs/backend.log" 2>&1 &
+                    else
+                        nohup uv run uvicorn api:app --host 0.0.0.0 --port 8000 --reload > "$PROJECT_ROOT/logs/backend.log" 2>&1 &
+                    fi
                     local backend_pid=$!
+                    
+                    # Wait a moment for process to initialize
+                    sleep 1
+                    
+                    if [[ -z "$backend_pid" ]] || ! kill -0 "$backend_pid" 2>/dev/null; then
+                        log_structured "ERROR" "parallel_start" "Failed to start backend service (PID: $backend_pid)"
+                        # Check log for errors
+                        if [[ -f "$PROJECT_ROOT/logs/backend.log" ]]; then
+                            log_structured "ERROR" "parallel_start" "Backend log tail: $(tail -n 5 "$PROJECT_ROOT/logs/backend.log" 2>/dev/null || echo 'log not readable')"
+                        fi
+                        set_service_value "SERVICE_STATUS" "$service" "$SERVICE_FAILED"
+                        exit 1
+                    fi
+                    
                     set_service_value "SERVICE_PIDS" "$service" "$backend_pid"
+                    log_structured "INFO" "parallel_start" "Backend started with PID: $backend_pid"
                     ;;
                 "worker")
-                    cd "$PROJECT_ROOT/../backend" || exit 1
-                    nohup uv run dramatiq --processes 4 --threads 4 run_agent_background > "$PROJECT_ROOT/../logs/worker.log" 2>&1 &
+                    # Check if backend directory exists (worker runs from backend)
+                    if [[ ! -d "$PROJECT_ROOT/backend" ]]; then
+                        log_structured "ERROR" "parallel_start" "Backend directory not found for worker: $PROJECT_ROOT/backend"
+                        set_service_value "SERVICE_STATUS" "$service" "$SERVICE_FAILED"
+                        exit 1
+                    fi
+                    
+                    # Ensure logs directory exists
+                    mkdir -p "$PROJECT_ROOT/logs" 2>/dev/null || true
+                    
+                    cd "$PROJECT_ROOT/backend" || {
+                        log_structured "ERROR" "parallel_start" "Failed to cd to backend directory for worker: $PROJECT_ROOT/backend"
+                        set_service_value "SERVICE_STATUS" "$service" "$SERVICE_FAILED"
+                        exit 1
+                    }
+                    
+                    # Start worker service
+                    if [[ -f ".venv/bin/activate" ]]; then
+                        nohup bash -c 'source .venv/bin/activate && python3 -m dramatiq --processes 4 --threads 4 run_agent_background' > "$PROJECT_ROOT/logs/worker.log" 2>&1 &
+                    else
+                        nohup uv run dramatiq --processes 4 --threads 4 run_agent_background > "$PROJECT_ROOT/logs/worker.log" 2>&1 &
+                    fi
                     local worker_pid=$!
+                    
+                    # Wait a moment for process to initialize
+                    sleep 1
+                    
+                    if [[ -z "$worker_pid" ]] || ! kill -0 "$worker_pid" 2>/dev/null; then
+                        log_structured "ERROR" "parallel_start" "Failed to start worker service (PID: $worker_pid)"
+                        # Check log for errors
+                        if [[ -f "$PROJECT_ROOT/logs/worker.log" ]]; then
+                            log_structured "ERROR" "parallel_start" "Worker log tail: $(tail -n 5 "$PROJECT_ROOT/logs/worker.log" 2>/dev/null || echo 'log not readable')"
+                        fi
+                        set_service_value "SERVICE_STATUS" "$service" "$SERVICE_FAILED"
+                        exit 1
+                    fi
+                    
                     set_service_value "SERVICE_PIDS" "$service" "$worker_pid"
+                    log_structured "INFO" "parallel_start" "Worker started with PID: $worker_pid"
                     ;;
                 "frontend")
-                    cd "$PROJECT_ROOT/../frontend" || exit 1
-                    nohup npm run dev > "$PROJECT_ROOT/../logs/frontend.log" 2>&1 &
+                    # Check if frontend directory exists
+                    if [[ ! -d "$PROJECT_ROOT/frontend" ]]; then
+                        log_structured "ERROR" "parallel_start" "Frontend directory not found: $PROJECT_ROOT/frontend"
+                        set_service_value "SERVICE_STATUS" "$service" "$SERVICE_FAILED"
+                        exit 1
+                    fi
+                    
+                    # Ensure logs directory exists
+                    mkdir -p "$PROJECT_ROOT/logs" 2>/dev/null || true
+                    
+                    cd "$PROJECT_ROOT/frontend" || {
+                        log_structured "ERROR" "parallel_start" "Failed to cd to frontend directory: $PROJECT_ROOT/frontend"
+                        set_service_value "SERVICE_STATUS" "$service" "$SERVICE_FAILED"
+                        exit 1
+                    }
+                    
+                    # Check if pnpm is available
+                    if ! command -v pnpm >/dev/null 2>&1; then
+                        log_structured "ERROR" "parallel_start" "pnpm command not found"
+                        set_service_value "SERVICE_STATUS" "$service" "$SERVICE_FAILED"
+                        exit 1
+                    fi
+                    
+                    # Check if node_modules exists, if not install dependencies
+                    if [[ ! -d "node_modules" ]]; then
+                        log_structured "INFO" "parallel_start" "Installing frontend dependencies..."
+                        pnpm install --silent > "$PROJECT_ROOT/logs/frontend_install.log" 2>&1 || {
+                            log_structured "ERROR" "parallel_start" "Failed to install frontend dependencies"
+                            set_service_value "SERVICE_STATUS" "$service" "$SERVICE_FAILED"
+                            exit 1
+                        }
+                    fi
+                    
+                    # Start frontend service
+                    nohup pnpm dev > "$PROJECT_ROOT/logs/frontend.log" 2>&1 &
                     local frontend_pid=$!
+                    
+                    # Wait a moment for process to initialize
+                    sleep 1
+                    
+                    if [[ -z "$frontend_pid" ]] || ! kill -0 "$frontend_pid" 2>/dev/null; then
+                        log_structured "ERROR" "parallel_start" "Failed to start frontend service (PID: $frontend_pid)"
+                        # Check log for errors
+                        if [[ -f "$PROJECT_ROOT/logs/frontend.log" ]]; then
+                            log_structured "ERROR" "parallel_start" "Frontend log tail: $(tail -n 5 "$PROJECT_ROOT/logs/frontend.log" 2>/dev/null || echo 'log not readable')"
+                        fi
+                        set_service_value "SERVICE_STATUS" "$service" "$SERVICE_FAILED"
+                        exit 1
+                    fi
+                    
                     set_service_value "SERVICE_PIDS" "$service" "$frontend_pid"
+                    log_structured "INFO" "parallel_start" "Frontend started with PID: $frontend_pid"
                     ;;
                 "monitor")
-                    if [[ -x "$PROJECT_ROOT/../logs/enhanced_monitor.sh" ]]; then
-                        nohup "$PROJECT_ROOT/../logs/enhanced_monitor.sh" > "$PROJECT_ROOT/../logs/enhanced_monitor_output.log" 2>&1 &
+                    # Monitor is optional - don't fail if it can't start
+                    if [[ -x "$PROJECT_ROOT/logs/enhanced_monitor.sh" ]]; then
+                        nohup "$PROJECT_ROOT/logs/enhanced_monitor.sh" > "$PROJECT_ROOT/logs/enhanced_monitor_output.log" 2>&1 &
                         local monitor_pid=$!
                         set_service_value "SERVICE_PIDS" "$service" "$monitor_pid"
-                        echo "$monitor_pid" > "$PROJECT_ROOT/../logs/enhanced_monitor.pid"
+                        echo "$monitor_pid" > "$PROJECT_ROOT/logs/enhanced_monitor.pid"
+                        log_structured "INFO" "parallel_start" "Monitor started (optional service)"
+                    else
+                        log_structured "WARN" "parallel_start" "Monitor script not found, skipping (optional)"
+                        set_service_value "SERVICE_STATUS" "$service" "$SERVICE_READY"  # Mark as ready anyway
                     fi
                     ;;
             esac
 
-            # Wait for service to be ready
-            local timeout=$(get_service_value "SERVICE_STARTUP_TIMEOUTS" "$service" "30")
-            local readiness_check=$(get_service_value "SERVICE_READINESS_CHECKS" "$service")
+            # Wait for service to be ready (skip for external services like Redis)
+            if [[ "$service" != "redis" ]]; then
+                local timeout=$(get_service_value "SERVICE_STARTUP_TIMEOUTS" "$service" "30")
+                local readiness_check=$(get_service_value "SERVICE_READINESS_CHECKS" "$service")
 
-            if wait_for_service_ready "$service" "$readiness_check" "$timeout"; then
-                set_service_value "SERVICE_STATUS" "$service" "$SERVICE_READY"
-                log_structured "INFO" "parallel_start" "Service $service started successfully"
-            else
-                set_service_value "SERVICE_STATUS" "$service" "$SERVICE_FAILED"
-                log_structured "ERROR" "parallel_start" "Service $service failed to start"
-                exit 1
+                # Monitor is optional - skip readiness check if it fails
+                if [[ "$service" == "monitor" ]]; then
+                    # Give it a brief moment, but don't fail if not ready
+                    sleep 2
+                    set_service_value "SERVICE_STATUS" "$service" "$SERVICE_READY"
+                    log_structured "INFO" "parallel_start" "Service $service started (optional)"
+                elif wait_for_service_ready "$service" "$timeout" "$readiness_check"; then
+                    set_service_value "SERVICE_STATUS" "$service" "$SERVICE_READY"
+                    log_structured "INFO" "parallel_start" "Service $service started successfully"
+                else
+                    set_service_value "SERVICE_STATUS" "$service" "$SERVICE_FAILED"
+                    log_structured "ERROR" "parallel_start" "Service $service failed to start"
+                    exit 1
+                fi
             fi
         ) &
 
@@ -450,14 +587,75 @@ start_wave_services() {
 # Wait for service to be ready
 wait_for_service_ready() {
     local service="$1"
-    local readiness_check="$2"
-    local timeout="$3"
+    local timeout="$2"
+    local readiness_check="$3"
 
     local elapsed=0
+    local last_status=""
+    
+    echo "   ⏳ Waiting for $service to be ready (timeout: ${timeout}s)..."
+    
     while [[ $elapsed -lt $timeout ]]; do
-        if [[ -n "$readiness_check" ]] && command -v "$readiness_check" >/dev/null 2>&1; then
-            if "$readiness_check" >/dev/null 2>&1; then
+        if [[ -n "$readiness_check" ]]; then
+            # Inline health checks since functions may not be available in subshells
+            local health_status="FAIL"
+            case "$service" in
+                "redis")
+                    if redis-cli ping >/dev/null 2>&1; then
+                        health_status="HEALTH_OK"
+                    fi
+                    ;;
+                "backend")
+                    if curl -s http://localhost:8000/api/health >/dev/null 2>&1; then
+                        health_status="HEALTH_OK"
+                    fi
+                    ;;
+                "worker")
+                    if pgrep -f "dramatiq.*run_agent_background" >/dev/null 2>&1; then
+                        health_status="HEALTH_OK"
+                    fi
+                    ;;
+                "frontend")
+                    if curl -s --max-time 5 http://localhost:3000 >/dev/null 2>&1; then
+                        health_status="HEALTH_OK"
+                    fi
+                    ;;
+                *)
+                    # Try to call the function if it exists
+                    if declare -f "$readiness_check" >/dev/null 2>&1; then
+                        health_status=$("$readiness_check" 2>/dev/null || echo "FAIL")
+                    fi
+                    ;;
+            esac
+            
+            # Show progress for frontend (Next.js takes time)
+            if [[ "$service" == "frontend" && "$health_status" != "$last_status" ]]; then
+                case "$health_status" in
+                    "HEALTH_OK"|"OK") 
+                        echo "     ✅ Frontend is ready!"
+                        return 0
+                        ;;
+                    "HEALTH_DEGRADED"|"DEGRADED")
+                        echo "     🔄 Frontend is compiling..."
+                        ;;
+                    *)
+                        echo "     ⏳ Frontend starting... (${elapsed}s/${timeout}s)"
+                        ;;
+                esac
+                last_status="$health_status"
+            fi
+            
+            if [[ "$health_status" =~ HEALTH_OK|OK ]]; then
                 return 0
+            fi
+            
+            # Accept degraded state for frontend (compiling)
+            if [[ "$service" == "frontend" && "$health_status" =~ HEALTH_DEGRADED|DEGRADED ]]; then
+                # Give it more time to finish compiling
+                if [[ $elapsed -gt 30 ]]; then
+                    echo "     ✅ Frontend is ready (compiling state accepted)"
+                    return 0
+                fi
             fi
         fi
 
@@ -465,6 +663,7 @@ wait_for_service_ready() {
         elapsed=$((elapsed + PROCESS_CHECK_INTERVAL))
     done
 
+    echo "     ❌ $service readiness timeout after ${timeout}s"
     return 1
 }
 
@@ -483,18 +682,23 @@ execute_parallel_startup_sequence() {
     fi
 
     # Execute each wave
+    local wave_count=0
     while IFS= read -r wave_line; do
-        if [[ -n "$wave_line" ]]; then
+        # Filter out log messages - only process wave lines
+        if [[ "$wave_line" =~ ^wave_[0-9]+: ]]; then
             local wave_num=$(echo "$wave_line" | cut -d: -f1 | sed 's/wave_//')
-            local wave_services=$(echo "$wave_line" | cut -d: -f2)
+            local wave_services=$(echo "$wave_line" | cut -d: -f2- | xargs)  # Remove leading/trailing spaces
 
-            if ! start_wave_services "$wave_services" "$wave_num"; then
-                log_structured "ERROR" "parallel_startup" "Wave $wave_num failed, aborting startup"
-                return 1
+            if [[ -n "$wave_services" ]]; then
+                if ! start_wave_services "$wave_services" "$wave_num"; then
+                    log_structured "ERROR" "parallel_startup" "Wave $wave_num failed, aborting startup"
+                    return 1
+                fi
+
+                # Brief pause between waves
+                sleep 2
+                wave_count=$((wave_count + 1))
             fi
-
-            # Brief pause between waves
-            sleep 2
         fi
     done <<< "$waves_output"
 

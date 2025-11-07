@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Cpu, Search, Check, ChevronDown, Plus, ExternalLink, Loader2, Plug, Brain, LibraryBig, Zap, Workflow } from 'lucide-react';
 import { useAgents } from '@/hooks/react-query/agents/use-agents';
-import { EpsilonLogo } from '@/components/sidebar/epsilon-logo';
+import { EpsilonLogo } from '@/components/sidebar/chainlens-logo';
 import type { ModelOption } from '@/hooks/use-model-selection';
 import { ModelProviderIcon } from '@/lib/model-provider-icons';
 import { SpotlightCard } from '@/components/ui/spotlight-card';

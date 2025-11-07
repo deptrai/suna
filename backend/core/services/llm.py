@@ -148,16 +148,22 @@ def _configure_openai_compatible(params: Dict[str, Any], model_name: str, api_ke
     config_openai_key = getattr(config, 'OPENAI_COMPATIBLE_API_KEY', None) if config else None
     config_openai_base = getattr(config, 'OPENAI_COMPATIBLE_API_BASE', None) if config else None
     
+    # Use provided values or fallback to config
+    final_api_key = api_key or config_openai_key
+    final_api_base = api_base or config_openai_base
+    
     # Check if have required config either from parameters or environment
-    if (not api_key and not config_openai_key) or (
-        not api_base and not config_openai_base
-    ):
+    if not final_api_key or not final_api_base:
         raise LLMError(
             "OPENAI_COMPATIBLE_API_KEY and OPENAI_COMPATIBLE_API_BASE is required for openai-compatible models. If just updated the environment variables, wait a few minutes or restart the service to ensure they are loaded."
         )
     
-    setup_provider_router(api_key, api_base)
-    logger.debug(f"Configured OpenAI-compatible provider with custom API base")
+    # Inject API key and base into params for DirectLiteLLMStrategy
+    params["api_key"] = final_api_key
+    params["api_base"] = final_api_base
+    
+    setup_provider_router(final_api_key, final_api_base)
+    logger.debug(f"Configured OpenAI-compatible provider with custom API base: {final_api_base}")
 
 def _add_tools_config(params: Dict[str, Any], tools: Optional[List[Dict[str, Any]]], tool_choice: str) -> None:
     """Add tools configuration to parameters."""

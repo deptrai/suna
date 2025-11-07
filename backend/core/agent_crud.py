@@ -508,8 +508,18 @@ async def get_agents(
         )
         
     except Exception as e:
-        logger.error(f"Error fetching agents for user {user_id}: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to fetch agents: {str(e)}")
+        try:
+            error_msg = str(e) if e else f"Error of type {type(e).__name__}"
+        except Exception:
+            error_msg = f"Error of type {type(e).__name__}"
+        import traceback
+        try:
+            logger.error(f"Error fetching agents for user {user_id}: {error_msg}")
+            logger.debug(f"Exception traceback: {traceback.format_exc()}")
+        except Exception as log_err:
+            # Fallback if logging fails
+            logger.error(f"Error fetching agents for user {user_id}: {error_msg} (logging error: {log_err})")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch agents: {error_msg}")
 
 @router.get("/agents/{agent_id}", response_model=AgentResponse, summary="Get Agent", operation_id="get_agent")
 async def get_agent(agent_id: str, user_id: str = Depends(verify_and_get_user_id_from_jwt)):

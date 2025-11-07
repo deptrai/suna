@@ -13,7 +13,7 @@ import { safeJsonParse } from '@/components/thread/utils';
 import Link from 'next/link';
 import { parseXmlToolCalls } from '../tool-views/xml-parser';
 import { HIDE_STREAMING_XML_TAGS } from '@/components/thread/utils';
-import { EpsilonLogo } from '@/components/sidebar/epsilon-logo';
+import { EpsilonLogo } from '@/components/sidebar/chainlens-logo';
 
 export interface PlaybackControlsProps {
   messages: UnifiedMessage[];

@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
 
-interface EpsilonLoaderProps {
+interface ChainLensLoaderProps {
   /**
    * Size preset for the loader
    * @default 'medium'
@@ -52,7 +52,7 @@ const SIZE_MAP = {
 } as const;
 
 /**
- * EpsilonLoader - A unified loading animation component
+ * ChainLensLoader - A unified loading animation component
  * 
  * Uses the Lottie animation for consistent loading indicators across the app.
  * Automatically adapts to light/dark mode with appropriate colors.
@@ -65,19 +65,19 @@ const SIZE_MAP = {
  * @example
  * ```tsx
  * // Simple usage (auto-themed)
- * <EpsilonLoader />
+ * <ChainLensLoader />
  * 
  * // Custom size
- * <EpsilonLoader size="large" />
+ * <ChainLensLoader size="large" />
  * 
  * // Force dark theme (white loader)
- * <EpsilonLoader forceTheme="dark" />
+ * <ChainLensLoader forceTheme="dark" />
  * 
  * // With custom styling
- * <EpsilonLoader className="my-4" customSize={60} />
+ * <ChainLensLoader className="my-4" customSize={60} />
  * ```
  */
-export function EpsilonLoader({
+export function ChainLensLoader({
   size = 'medium',
   speed = 1.2,
   customSize,
@@ -86,7 +86,7 @@ export function EpsilonLoader({
   autoPlay = true,
   loop = true,
   forceTheme,
-}: EpsilonLoaderProps) {
+}: ChainLensLoaderProps) {
   const { resolvedTheme } = useTheme();
   const loaderSize = customSize || SIZE_MAP[size];
   
@@ -198,4 +198,7 @@ function LottieAnimation({
     />
   );
 }
+
+// Re-export as EpsilonLoader for backward compatibility
+export const EpsilonLoader = ChainLensLoader;
 

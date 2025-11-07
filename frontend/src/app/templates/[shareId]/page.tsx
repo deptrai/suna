@@ -26,7 +26,7 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
-import { EpsilonLoader } from '@/components/ui/epsilon-loader';
+import { EpsilonLoader } from '@/components/ui/chainlens-loader';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -38,7 +38,7 @@ import Image from 'next/image';
 import { useTheme } from 'next-themes';
 import ColorThief from 'colorthief';
 import { AgentAvatar } from '@/components/thread/content/agent-avatar';
-import { EpsilonLogo } from '@/components/sidebar/epsilon-logo';
+import { EpsilonLogo } from '@/components/sidebar/chainlens-logo';
 
 interface MarketplaceTemplate {
   template_id: string;

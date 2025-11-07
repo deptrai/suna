@@ -205,6 +205,13 @@ class ModelManager:
         try:
             from core.utils.config import config, EnvMode
             if config.ENV_MODE == EnvMode.LOCAL:
+                # In LOCAL mode, prefer gpt-4o-mini if OPENAI_COMPATIBLE is configured
+                if hasattr(config, 'OPENAI_COMPATIBLE_API_KEY') and config.OPENAI_COMPATIBLE_API_KEY:
+                    if hasattr(config, 'OPENAI_COMPATIBLE_API_BASE') and config.OPENAI_COMPATIBLE_API_BASE:
+                        gpt4o_mini = self.registry.get("openai-compatible/gpt-4o-mini")
+                        if gpt4o_mini and gpt4o_mini.enabled:
+                            logger.debug("Using gpt-4o-mini as default model in LOCAL mode (OPENAI_COMPATIBLE configured)")
+                            return "openai-compatible/gpt-4o-mini"
                 return PREMIUM_MODEL_ID
                 
             from core.billing.subscription_service import subscription_service

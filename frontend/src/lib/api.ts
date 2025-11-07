@@ -894,7 +894,37 @@ export const stopAgent = async (agentRunId: string): Promise<void> => {
 };
 
 export const getAgentStatus = async (agentRunId: string): Promise<AgentRun> => {
+  // Only throw error if we've confirmed the agent is not running AND it's not in a terminal state
+  // This prevents throwing errors for agents that have completed/stopped normally
   if (nonRunningAgentRuns.has(agentRunId)) {
+    // Try to get fresh status to see if it's a terminal state
+    try {
+      const supabase = createClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session?.access_token) {
+        const url = `${API_URL}/agent-run/${agentRunId}`;
+        const response = await fetch(url, {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          cache: 'no-store',
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          // If agent is in a terminal state, return it instead of throwing
+          if (['completed', 'stopped', 'failed', 'error'].includes(data.status)) {
+            return data;
+          }
+        }
+      }
+    } catch {
+      // If we can't get fresh status, continue with throwing error
+    }
+    
     throw new Error(`Agent run ${agentRunId} is not running`);
   }
 
@@ -935,7 +965,9 @@ export const getAgentStatus = async (agentRunId: string): Promise<AgentRun> => {
     }
 
     const data = await response.json();
-    if (data.status !== 'running') {
+    // Only add to nonRunningAgentRuns if status is not running AND not in a terminal state
+    // Terminal states (completed/stopped/failed/error) are valid states, not errors
+    if (data.status !== 'running' && !['completed', 'stopped', 'failed', 'error'].includes(data.status)) {
       nonRunningAgentRuns.add(agentRunId);
     }
 
@@ -1101,9 +1133,60 @@ export const streamAgent = (
   try {
     const setupStream = async () => {
       try {
-        const status = await getAgentStatus(agentRunId);
+        // Retry logic for newly created agents that might not be ready yet
+        let status: AgentRun | null = null;
+        let retries = 3;
+        let retryDelay = 500;
+        
+        while (retries > 0) {
+          try {
+            status = await getAgentStatus(agentRunId);
+            if (status.status === 'running') {
+              break; // Agent is running, proceed
+            }
+            
+            // If agent is in a terminal state, don't retry
+            if (['completed', 'stopped', 'failed', 'error'].includes(status.status)) {
+              break;
+            }
+            
+            // Agent might still be starting, retry
+            retries--;
+            if (retries > 0) {
+              console.log(
+                `[STREAM] Agent run ${agentRunId} status is "${status.status}", retrying in ${retryDelay}ms (${retries} retries left)`,
+              );
+              await new Promise(resolve => setTimeout(resolve, retryDelay));
+              retryDelay *= 2;
+            }
+          } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : String(err);
+            // If it's a "not running" error and we have retries left, retry
+            if (errorMessage.includes('is not running') && retries > 0) {
+              retries--;
+              if (retries > 0) {
+                console.log(
+                  `[STREAM] Agent run ${agentRunId} not ready yet, retrying in ${retryDelay}ms (${retries} retries left)`,
+                );
+                await new Promise(resolve => setTimeout(resolve, retryDelay));
+                retryDelay *= 2;
+                continue;
+              }
+            }
+            // Re-throw if no retries left or unexpected error
+            throw err;
+          }
+        }
+        
+        if (!status) {
+          throw new Error(`Failed to get agent status for ${agentRunId} after retries`);
+        }
+        
         if (status.status !== 'running') {
-          nonRunningAgentRuns.add(agentRunId);
+          // Only add to nonRunningAgentRuns if not in a terminal state
+          if (!['completed', 'stopped', 'failed', 'error'].includes(status.status)) {
+            nonRunningAgentRuns.add(agentRunId);
+          }
           callbacks.onError(
             `Agent run ${agentRunId} is not running (status: ${status.status})`,
           );

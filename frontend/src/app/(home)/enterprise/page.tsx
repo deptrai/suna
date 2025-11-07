@@ -20,8 +20,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { EpsilonEnterpriseModal } from '@/components/sidebar/epsilon-enterprise-modal';
-import { EpsilonLogo } from '@/components/sidebar/epsilon-logo';
+import { ChainLensEnterpriseModal } from "@/components/sidebar/chainlens-enterprise-modal';
+import { EpsilonLogo } from '@/components/sidebar/chainlens-logo';
 
 // Hero Section Component
 const CustomHeroSection = () => {
@@ -51,13 +51,13 @@ const CustomHeroSection = () => {
             </p>
             
             <div className="flex flex-col items-center gap-6 pt-6">
-              <EpsilonEnterpriseModal>
+              <ChainLensEnterpriseModal>
                 <Button size="lg">
                   <Calendar className="w-4 h-4 mr-2" />
                   Schedule Strategy Call
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
-              </EpsilonEnterpriseModal>
+              </ChainLensEnterpriseModal>
               <div className="flex flex-col sm:flex-row items-center gap-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-primary"></div>
@@ -409,13 +409,13 @@ const FinalCTASection = () => {
             <div className="text-center space-y-6">
               <div className="space-y-4">
                 <div className="space-y-6">
-                  <EpsilonEnterpriseModal>
+                  <ChainLensEnterpriseModal>
                     <Button size="lg">
                       <Calendar className="w-4 h-4 mr-2" />
                       Book Your Strategy Session
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
-                  </EpsilonEnterpriseModal>
+                  </ChainLensEnterpriseModal>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center max-w-2xl mx-auto">
                     <div className="flex flex-col items-center gap-2 p-4 rounded-lg bg-accent/20">
                       <Shield className="w-6 h-6 text-primary" />

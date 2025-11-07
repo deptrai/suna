@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
-import { EpsilonLoader } from '@/components/ui/epsilon-loader';
+import { EpsilonLoader } from '@/components/ui/chainlens-loader';
 import { useApiHealth } from '@/hooks/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { isLocalMode } from '@/lib/config';
 import { AnimatedBg } from '@/components/home/ui/AnimatedBg';
-import { EpsilonLogo } from '@/components/sidebar/epsilon-logo';
+import { EpsilonLogo } from '@/components/sidebar/chainlens-logo';
 
 export function MaintenancePage() {
   const [lastChecked, setLastChecked] = useState<Date | null>(null);

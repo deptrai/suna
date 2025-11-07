@@ -10,7 +10,7 @@ import Image from 'next/image';
 import Cal, { getCalApi } from '@calcom/embed-react';
 import { useTheme } from 'next-themes';
 import { Check, Calendar } from 'lucide-react';
-import { EpsilonLogo } from './epsilon-logo';
+import { ChainLensLogo } from '@/components/sidebar/chainlens-logo';
 
 interface EnterpriseModalProps {
   children: React.ReactNode;
@@ -18,7 +18,7 @@ interface EnterpriseModalProps {
   onOpenChange?: (open: boolean) => void;
 }
 
-export function EpsilonEnterpriseModal({
+export function ChainLensEnterpriseModal({
   children,
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange
@@ -64,7 +64,7 @@ export function EpsilonEnterpriseModal({
           <div className="p-6 lg:p-8 flex flex-col bg-white dark:bg-black relative h-full overflow-y-auto border-r border-gray-200 dark:border-gray-800">
             <div className="relative z-10 flex flex-col h-full">
               <div className="mb-6 flex-shrink-0">
-                <EpsilonLogo size={30} variant="logomark" />
+                <ChainLensLogo size={30} variant="logomark" />
               </div>
 
               <div className="mb-6 flex-shrink-0">
@@ -130,4 +130,7 @@ export function EpsilonEnterpriseModal({
 }
 
 // Export with original name for backwards compatibility
-export const EpsilonProcessModal = EpsilonEnterpriseModal;
+export const ChainLensProcessModal = ChainLensEnterpriseModal;
+// Re-export ChainLensEnterpriseModal as EpsilonEnterpriseModal for backward compatibility
+export const EpsilonEnterpriseModal = ChainLensEnterpriseModal;
+export const EpsilonProcessModal = ChainLensEnterpriseModal;

@@ -85,23 +85,25 @@ async def _load_agent_config(client, agent_id: Optional[str], account_id: str, u
         # For new threads, ensure ChainLens is installed
         if is_new_thread:
             from core.utils.ensure_chainlens import ensure_chainlens_installed
-            await ensure_chainlens_installed(account_id)
+            await ensure_chainlens_installed(account_id, db=utils.db)
             
             # Try to find the default agent (ChainLens)
-            default_agent = await client.table('agents').select('agent_id').eq('account_id', account_id).eq('metadata->>is_chainlens_default', 'true').maybe_single().execute()
+            # Use limit(1) instead of maybe_single() to avoid "Missing response" error
+            default_agent_result = await client.table('agents').select('agent_id').eq('account_id', account_id).eq('metadata->>is_chainlens_default', 'true').limit(1).execute()
             
-            if default_agent and default_agent.data:
-                agent_data = await loader.load_agent(default_agent.data['agent_id'], user_id, load_config=True)
+            if default_agent_result.data and len(default_agent_result.data) > 0:
+                agent_data = await loader.load_agent(default_agent_result.data[0]['agent_id'], user_id, load_config=True)
                 logger.debug(f"Using default agent: {agent_data.name} ({agent_data.agent_id}) version {agent_data.version_name}")
             else:
                 logger.warning(f"[AGENT LOAD] No default agent found for account {account_id}")
                 raise HTTPException(status_code=404, detail="No default agent available. Please contact support.")
         else:
             # For existing threads, try to load default agent (is_default flag)
-            default_agent = await client.table('agents').select('agent_id').eq('account_id', account_id).eq('is_default', True).maybe_single().execute()
+            # Use limit(1) instead of maybe_single() to avoid "Missing response" error
+            default_agent_result = await client.table('agents').select('agent_id').eq('account_id', account_id).eq('is_default', True).limit(1).execute()
             
-            if default_agent and default_agent.data:
-                agent_data = await loader.load_agent(default_agent.data['agent_id'], user_id, load_config=True)
+            if default_agent_result.data and len(default_agent_result.data) > 0:
+                agent_data = await loader.load_agent(default_agent_result.data[0]['agent_id'], user_id, load_config=True)
                 logger.debug(f"Using default agent: {agent_data.name} ({agent_data.agent_id}) version {agent_data.version_name}")
             else:
                 logger.warning(f"[AGENT LOAD] No default agent found for account {account_id}")
@@ -450,7 +452,19 @@ async def unified_agent_start(
         raise HTTPException(status_code=500, detail="Agent API not initialized with instance ID")
     
     client = await utils.db.client
-    account_id = user_id  # In Basejump, personal account_id is the same as user_id
+    # Get account_id from user_id using basejump schema
+    try:
+        account_result = await client.schema('basejump').table('accounts').select('id').eq('primary_owner_user_id', user_id).eq('personal_account', True).limit(1).execute()
+        if account_result.data and len(account_result.data) > 0:
+            account_id = account_result.data[0]['id']
+        else:
+            # Fallback: use user_id as account_id (for backward compatibility)
+            account_id = user_id
+            logger.warning(f"No personal account found for user {user_id}, using user_id as account_id")
+    except Exception as e:
+        # Fallback on error
+        account_id = user_id
+        logger.warning(f"Error getting account_id for user {user_id}: {e}, using user_id as account_id")
     
     # Resolve and validate model name
     if model_name is None:

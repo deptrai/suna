@@ -65,7 +65,7 @@ class AgentService:
         needs_post_processing = (
             filters.has_mcp_tools is not None or 
             filters.has_agentpress_tools is not None or 
-            len(filters.tools) > 0 or
+            (filters.tools is not None and len(filters.tools) > 0) or
             filters.sort_by == "tools_count"
         )
         

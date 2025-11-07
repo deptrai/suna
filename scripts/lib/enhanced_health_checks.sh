@@ -387,7 +387,7 @@ enhanced_check_backend_health() {
     
     local host=$(get_config_value "services.application.backend.host" "127.0.0.1")
     local port=$(get_config_value "services.application.backend.port" "8000")
-    local health_endpoint=$(get_config_value "services.application.backend.health_endpoint" "/health")
+    local health_endpoint=$(get_config_value "services.application.backend.health_endpoint" "/api/health")
     local base_timeout=$(get_config_value "timeouts.api_health_check" "5")
     local timeout=$(smart_timeout "$service" "$base_timeout")
     
@@ -482,6 +482,63 @@ enhanced_check_supabase_health() {
     else
         log_structured "WARN" "health_check" "Supabase not available (optional service)"
         echo "$HEALTH_SKIP"
+        return 1
+    fi
+}
+
+# Enhanced Supabase Realtime health check (WebSocket endpoint)
+enhanced_check_supabase_realtime_health() {
+    local service="supabase_realtime"
+    
+    # Get Supabase port from status or config
+    local supabase_port=$(get_config_value "services.infrastructure.supabase.port" "54321")
+    
+    # Try to get actual port from supabase status if available
+    if command -v supabase >/dev/null 2>&1 || command -v npx >/dev/null 2>&1; then
+        local supabase_cmd="supabase"
+        [[ ! -x "$(command -v supabase)" ]] && supabase_cmd="npx supabase"
+        
+        local status_output=$(cd "$PROJECT_ROOT/backend" 2>/dev/null && $supabase_cmd status 2>/dev/null || echo "")
+        if [[ -n "$status_output" ]]; then
+            # Extract API URL port from status (e.g., "API URL: http://127.0.0.1:54341")
+            local api_line=$(echo "$status_output" | grep -E "API URL:" || echo "")
+            if [[ -n "$api_line" ]]; then
+                local extracted_port=$(echo "$api_line" | grep -oE ":[0-9]+" | head -1 | tr -d ':')
+                if [[ -n "$extracted_port" && "$extracted_port" =~ ^[0-9]+$ ]]; then
+                    supabase_port="$extracted_port"
+                    log_structured "DEBUG" "health_check" "Detected Supabase port from status: $supabase_port"
+                fi
+            fi
+        fi
+    fi
+    
+    log_structured "DEBUG" "health_check" "Checking Supabase Realtime WebSocket (port: $supabase_port)"
+    
+    # Check if Realtime WebSocket endpoint is accessible
+    # We check the HTTP endpoint first (realtime usually responds to HTTP GET)
+    local realtime_endpoint="http://localhost:${supabase_port}/realtime/v1/websocket"
+    
+    # Try to connect to realtime endpoint 
+    # WebSocket endpoints typically return:
+    # - 400: Bad Request (expected for HTTP GET on WebSocket endpoint)
+    # - 403: Forbidden (service is running but requires proper WebSocket handshake)
+    # - 101: Switching Protocols (if connection upgrades to WebSocket)
+    # - 503: Service Unavailable (service not running)
+    local response_code=$(curl -s --max-time 3 -o /dev/null -w "%{http_code}" "$realtime_endpoint" 2>/dev/null || echo "000")
+    
+    # Accept 400, 403 (expected responses), 200, 101 (switching protocols)
+    # These all indicate the service is running
+    if [[ "$response_code" =~ ^(101|200|400|403)$ ]]; then
+        log_structured "INFO" "health_check" "Supabase Realtime WebSocket endpoint is accessible (code: $response_code)"
+        echo "$HEALTH_OK"
+        return 0
+    elif [[ "$response_code" == "503" ]]; then
+        log_structured "WARN" "health_check" "Supabase Realtime service unavailable (503) - may need restart"
+        echo "$HEALTH_FAIL"
+        return 1
+    else
+        log_structured "WARN" "health_check" "Supabase Realtime not responding (code: $response_code)"
+        echo "$HEALTH_FAIL"
         return 1
     fi
 }

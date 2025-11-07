@@ -274,6 +274,114 @@ class ModelRegistry:
         #     enabled=False  # Currently disabled
         # ))
         
+        # OpenAI Compatible Models (v98store)
+        self.register(Model(
+            id="openai-compatible/gpt-4o-mini",
+            name="GPT-4o Mini",
+            provider=ModelProvider.OPENAI_COMPATIBLE,
+            aliases=["gpt-4o-mini", "GPT-4o Mini", "gpt-4o-mini-2024-07-18"],
+            context_window=128_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.VISION,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=0.15,
+                output_cost_per_million_tokens=0.60
+            ),
+            tier_availability=["free", "paid"],
+            priority=95,
+            recommended=True,
+            enabled=True,
+            config=ModelConfig()
+        ))
+        
+        self.register(Model(
+            id="openai-compatible/qwen3-30b-a3b-instruct-2507",
+            name="Qwen3 30B A3B Instruct",
+            provider=ModelProvider.OPENAI_COMPATIBLE,
+            aliases=["qwen3-30b-a3b-instruct-2507", "Qwen3 30B", "qwen3-30b"],
+            context_window=128_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=0.10,
+                output_cost_per_million_tokens=0.50
+            ),
+            tier_availability=["free", "paid"],
+            priority=94,
+            recommended=True,
+            enabled=True,
+            config=ModelConfig()
+        ))
+        
+        self.register(Model(
+            id="openai-compatible/deepseek-v3-1",
+            name="DeepSeek V3.1",
+            provider=ModelProvider.OPENAI_COMPATIBLE,
+            aliases=["deepseek-v3-1", "DeepSeek V3.1", "deepseek-v3"],
+            context_window=128_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=0.27,
+                output_cost_per_million_tokens=1.10
+            ),
+            tier_availability=["free", "paid"],
+            priority=93,
+            recommended=True,
+            enabled=True,
+            config=ModelConfig()
+        ))
+        
+        self.register(Model(
+            id="openai-compatible/qwen3-235b-a22b",
+            name="Qwen3 235B A22B",
+            provider=ModelProvider.OPENAI_COMPATIBLE,
+            aliases=["qwen3-235b-a22b", "Qwen3 235B", "qwen3-235b"],
+            context_window=128_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=0.13,
+                output_cost_per_million_tokens=0.60
+            ),
+            tier_availability=["free", "paid"],
+            priority=92,
+            recommended=True,
+            enabled=True,
+            config=ModelConfig()
+        ))
+        
+        self.register(Model(
+            id="openai-compatible/claude-haiku-4-5-20251001",
+            name="Claude Haiku 4.5",
+            provider=ModelProvider.OPENAI_COMPATIBLE,
+            aliases=["claude-haiku-4-5-20251001", "Claude Haiku 4.5", "claude-haiku-4.5"],
+            context_window=200_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.VISION,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=1.00,
+                output_cost_per_million_tokens=5.00
+            ),
+            tier_availability=["free", "paid"],
+            priority=91,
+            recommended=True,
+            enabled=True,
+            config=ModelConfig()
+        ))
+        
         # # Qwen Models
         # self.register(Model(
         #     id="openrouter/qwen/qwen3-235b-a22b",

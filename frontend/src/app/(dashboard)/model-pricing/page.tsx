@@ -1,7 +1,7 @@
 'use client';
 
 import { AlertCircle, Zap, Server, Globe } from 'lucide-react';
-import { EpsilonLoader } from '@/components/ui/epsilon-loader';
+import { EpsilonLoader } from '@/components/ui/chainlens-loader';
 import { Button } from '@/components/ui/button';
 import {
   Card,

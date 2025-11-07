@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { EpsilonProcessModal } from '@/components/sidebar/epsilon-enterprise-modal';
+import { ChainLensProcessModal } from "@/components/sidebar/chainlens-enterprise-modal';
 
 export function CTACard() {
   return (
@@ -15,11 +15,11 @@ export function CTACard() {
         </div>
 
         <div>
-          <EpsilonProcessModal>
+          <ChainLensProcessModal>
             <Button className="w-full">
               Learn more
             </Button>
-          </EpsilonProcessModal>
+          </ChainLensProcessModal>
         </div>
 
       </div>

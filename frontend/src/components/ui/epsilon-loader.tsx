@@ -1,3 +1,3 @@
-// Re-export EpsilonLoader from kortix-loader for backward compatibility
-export { EpsilonLoader } from './kortix-loader';
+// Re-export ChainLensLoader as EpsilonLoader for backward compatibility
+export { ChainLensLoader as EpsilonLoader } from './chainlens-loader';
 

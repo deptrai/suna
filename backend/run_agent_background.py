@@ -64,7 +64,7 @@ async def run_agent_background(
     thread_id: str,
     instance_id: str,
     project_id: str,
-    model_name: str = "openai/gpt-5-mini",
+    model_name: str = "openai-compatible/gpt-4o-mini",  # Default to gpt-4o-mini for v98store
     agent_config: Optional[dict] = None,
     request_id: Optional[str] = None
 ):
@@ -151,6 +151,11 @@ async def run_agent_background(
 
     trace = langfuse.trace(name="agent_run", id=agent_run_id, session_id=thread_id, metadata={"project_id": project_id, "instance_id": instance_id})
 
+    # Initialize pending_redis_operations early to avoid UnboundLocalError
+    pending_redis_operations = []
+    final_status = "running"
+    error_message = None
+    
     try:
         # Setup Pub/Sub listener for control signals
         pubsub = await redis.create_pubsub()
@@ -167,18 +172,12 @@ async def run_agent_background(
         await redis.set(instance_active_key, "running", ex=redis.REDIS_KEY_TTL)
 
         # Initialize agent generator
-        logger.info(f"🔧 OPTIMIZATION DEBUG: enable_context_manager={enable_context_manager}")
         agent_gen = run_agent(
             thread_id=thread_id, project_id=project_id,
             model_name=effective_model,
             agent_config=agent_config,
             trace=trace,
         )
-
-        final_status = "running"
-        error_message = None
-
-        pending_redis_operations = []
 
         async for response in agent_gen:
             if stop_signal_received:
@@ -285,10 +284,13 @@ async def run_agent_background(
         await _cleanup_redis_run_lock(agent_run_id)
 
         # Wait for all pending redis operations to complete, with timeout
-        try:
-            await asyncio.wait_for(asyncio.gather(*pending_redis_operations), timeout=30.0)
-        except asyncio.TimeoutError:
-            logger.warning(f"Timeout waiting for pending Redis operations for {agent_run_id}")
+        if pending_redis_operations:
+            try:
+                await asyncio.wait_for(asyncio.gather(*pending_redis_operations), timeout=30.0)
+            except asyncio.TimeoutError:
+                logger.warning(f"Timeout waiting for pending Redis operations for {agent_run_id}")
+            except Exception as e:
+                logger.warning(f"Error waiting for pending Redis operations: {e}")
 
         logger.debug(f"Agent run background task fully completed for: {agent_run_id} (Instance: {instance_id}) with final status: {final_status}")
 

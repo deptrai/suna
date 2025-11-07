@@ -7,7 +7,7 @@ from core.utils.chainlens_default_agent_service import ChainLensDefaultAgentServ
 _installation_cache = set()
 _installation_in_progress = set()
 
-async def ensure_chainlens_installed(account_id: str) -> None:
+async def ensure_chainlens_installed(account_id: str, db: Optional[DBConnection] = None) -> None:
     if account_id in _installation_cache:
         return
     
@@ -17,11 +17,14 @@ async def ensure_chainlens_installed(account_id: str) -> None:
     try:
         _installation_in_progress.add(account_id)
         
-        db = DBConnection()
-        await db.initialize()
+        # Use provided db connection or create a new one
+        if db is None:
+            db = DBConnection()
+            await db.initialize()
+        
         client = await db.client
         
-        existing = await client.from_('agents').select('agent_id').eq(
+        existing = await client.table('agents').select('agent_id').eq(
             'account_id', account_id
         ).eq('metadata->>is_chainlens_default', 'true').limit(1).execute()
         
@@ -41,7 +44,7 @@ async def ensure_chainlens_installed(account_id: str) -> None:
             logger.warning(f"Failed to install ChainLens agent for account {account_id}")
             
     except Exception as e:
-        logger.error(f"Error ensuring ChainLens installation for {account_id}: {e}")
+        logger.error(f"Error ensuring ChainLens installation for {account_id}: {e}", exc_info=True)
     finally:
         _installation_in_progress.discard(account_id)
 

@@ -53,7 +53,7 @@ class AgentConfig:
     project_id: str
     native_max_auto_continues: int = 25
     max_iterations: int = 100
-    model_name: str = "openai/gpt-5-mini"
+    model_name: str = "openai-compatible/gpt-4o-mini"  # Default to gpt-4o-mini for v98store
     agent_config: Optional[dict] = None
     trace: Optional[StatefulTraceClient] = None
 
@@ -828,7 +828,7 @@ async def run_agent(
     thread_manager: Optional[ThreadManager] = None,
     native_max_auto_continues: int = 25,
     max_iterations: int = 100,
-    model_name: str = "openai/gpt-5-mini",
+    model_name: str = "openai-compatible/gpt-4o-mini",  # Default to gpt-4o-mini for v98store
     agent_config: Optional[dict] = None,    
     trace: Optional[StatefulTraceClient] = None
 ):

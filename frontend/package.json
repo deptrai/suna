@@ -8,7 +8,15 @@
     "start": "next start",
     "lint": "next lint",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:report": "playwright show-report playwright-report",
+    "test:e2e:p0": "playwright test --grep '\\[P0\\]'",
+    "test:e2e:p1": "playwright test --grep '\\[P0\\]|\\[P1\\]'",
+    "test:api": "playwright test tests/api"
   },
   "dependencies": {
     "@calcom/embed-react": "^1.5.2",
@@ -186,6 +194,8 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@faker-js/faker": "^9.3.0",
+    "@playwright/test": "^1.49.0",
     "@tailwindcss/postcss": "^4.1.4",
     "@types/color": "^4.2.0",
     "@types/colorthief": "^2.6.0",
@@ -196,6 +206,7 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "@types/turndown": "^5.0.5",
+    "dotenv": "^17.2.3",
     "encoding": "^0.1.13",
     "eslint": "^9",
     "eslint-config-next": "15.2.2",

@@ -24,8 +24,16 @@ readonly CYAN='\033[0;36m'
 readonly PURPLE='\033[0;35m'
 readonly NC='\033[0m' # No Color
 
-# Source required libraries
+# Source required libraries (preserve PROJECT_ROOT)
+export PROJECT_ROOT
+
 source "$SCRIPTS_ROOT/lib/utils.sh"
+
+# Ensure PROJECT_ROOT is still set after sourcing utils
+if [[ -z "$PROJECT_ROOT" ]]; then
+    PROJECT_ROOT="$(cd "$SCRIPTS_ROOT/.." && pwd)"
+    export PROJECT_ROOT
+fi
 
 # Check if enhanced_health_checks.sh exists, if not create a minimal version
 if [[ ! -f "$SCRIPTS_ROOT/lib/enhanced_health_checks.sh" ]]; then
@@ -33,10 +41,42 @@ if [[ ! -f "$SCRIPTS_ROOT/lib/enhanced_health_checks.sh" ]]; then
     cat > "$SCRIPTS_ROOT/lib/enhanced_health_checks.sh" << 'EOF'
 #!/bin/bash
 # Minimal enhanced health checks
-enhanced_check_redis_health() { redis-cli ping >/dev/null 2>&1; }
-enhanced_check_backend_health() { curl -s http://localhost:8000/health >/dev/null 2>&1; }
-enhanced_check_worker_health() { pgrep -f "dramatiq.*run_agent_background" >/dev/null 2>&1; }
-enhanced_check_frontend_health() { curl -s http://localhost:3000 >/dev/null 2>&1; }
+enhanced_check_redis_health() { 
+    if redis-cli ping >/dev/null 2>&1; then
+        echo "HEALTH_OK"
+        return 0
+    else
+        echo "HEALTH_FAIL"
+        return 1
+    fi
+}
+enhanced_check_backend_health() { 
+    if curl -s http://localhost:8000/api/health >/dev/null 2>&1; then
+        echo "HEALTH_OK"
+        return 0
+    else
+        echo "HEALTH_FAIL"
+        return 1
+    fi
+}
+enhanced_check_worker_health() { 
+    if pgrep -f "dramatiq.*run_agent_background" >/dev/null 2>&1; then
+        echo "HEALTH_OK"
+        return 0
+    else
+        echo "HEALTH_FAIL"
+        return 1
+    fi
+}
+enhanced_check_frontend_health() { 
+    if curl -s --max-time 5 http://localhost:3000 >/dev/null 2>&1; then
+        echo "HEALTH_OK"
+        return 0
+    else
+        echo "HEALTH_FAIL"
+        return 1
+    fi
+}
 check_monitor_health() { pgrep -f "enhanced_monitor.sh" >/dev/null 2>&1; }
 EOF
 fi
@@ -44,7 +84,13 @@ fi
 source "$SCRIPTS_ROOT/lib/enhanced_health_checks.sh"
 source "$SCRIPTS_ROOT/lib/parallel_dependency_manager.sh"
 
-set -euo pipefail
+# Ensure PROJECT_ROOT is still set after sourcing all libraries
+if [[ -z "$PROJECT_ROOT" ]]; then
+    PROJECT_ROOT="$(cd "$SCRIPTS_ROOT/.." && pwd)"
+    export PROJECT_ROOT
+fi
+
+set -uo pipefail  # Allow commands to return non-zero (remove -e temporarily)
 
 # Configuration
 readonly CONFIG_FILE="$PROJECT_ROOT/.env"
@@ -141,6 +187,77 @@ check_system_requirements() {
     fi
 }
 
+# Check and start Supabase if needed
+check_and_start_supabase() {
+    log_structured "INFO" "startup_v3.1" "Checking Supabase status"
+    
+    echo -e "${CYAN}🗄️  CHECKING SUPABASE${NC}"
+    echo -e "${CYAN}=======================${NC}"
+    
+    # Check if supabase CLI is available
+    if ! command -v supabase >/dev/null 2>&1 && ! command -v npx >/dev/null 2>&1; then
+        echo -e "   ⚠️  Supabase CLI not found (optional)"
+        log_structured "WARN" "startup_v3.1" "Supabase CLI not found"
+        return 0
+    fi
+    
+    local supabase_cmd=""
+    if command -v supabase >/dev/null 2>&1; then
+        supabase_cmd="supabase"
+    else
+        supabase_cmd="npx supabase"
+    fi
+    
+    # Check if we're in backend directory with supabase config
+    local supabase_dir="$PROJECT_ROOT/backend"
+    if [[ ! -f "$supabase_dir/supabase/config.toml" ]]; then
+        echo -e "   ⚠️  Supabase config not found at $supabase_dir/supabase/config.toml"
+        log_structured "WARN" "startup_v3.1" "Supabase config not found"
+        return 0
+    fi
+    
+    # Check Supabase status
+    cd "$supabase_dir" || return 0
+    
+    if $supabase_cmd status >/dev/null 2>&1; then
+        echo -e "   ✅ Supabase is running"
+        
+        # Check Realtime health
+        local realtime_health=$(enhanced_check_supabase_realtime_health 2>/dev/null || echo "HEALTH_FAIL")
+        if [[ "$realtime_health" == "HEALTH_OK" ]]; then
+            echo -e "   ✅ Supabase Realtime is healthy"
+            log_structured "INFO" "startup_v3.1" "Supabase Realtime is healthy"
+        else
+            echo -e "   ⚠️  Supabase Realtime not available (may need restart)"
+            echo -e "   💡 Try: cd backend && supabase stop && supabase start"
+            log_structured "WARN" "startup_v3.1" "Supabase Realtime not available"
+        fi
+    else
+        echo -e "   🔄 Starting Supabase..."
+        if $supabase_cmd start; then
+            echo -e "   ✅ Supabase started successfully"
+            log_structured "INFO" "startup_v3.1" "Supabase started successfully"
+            
+            # Wait a moment for services to initialize
+            sleep 3
+            
+            # Check Realtime health
+            local realtime_health=$(enhanced_check_supabase_realtime_health 2>/dev/null || echo "HEALTH_FAIL")
+            if [[ "$realtime_health" == "HEALTH_OK" ]]; then
+                echo -e "   ✅ Supabase Realtime is healthy"
+            else
+                echo -e "   ⚠️  Supabase Realtime may need a moment to start"
+            fi
+        else
+            echo -e "   ⚠️  Failed to start Supabase (optional service)"
+            log_structured "WARN" "startup_v3.1" "Failed to start Supabase"
+        fi
+    fi
+    
+    echo ""
+    cd "$PROJECT_ROOT" || true
+}
+
 # Enhanced environment validation
 validate_environment() {
     log_structured "INFO" "startup_v3.1" "Validating environment configuration"
@@ -148,16 +265,28 @@ validate_environment() {
     echo -e "${CYAN}🔧 ENVIRONMENT VALIDATION${NC}"
     echo -e "${CYAN}=========================${NC}"
     
-    # Check .env file
+    # Check .env file - try multiple locations
+    local env_file=""
     if [[ -f "$CONFIG_FILE" ]]; then
-        echo -e "   ✅ Configuration file found: $CONFIG_FILE"
+        env_file="$CONFIG_FILE"
+    elif [[ -f "$PROJECT_ROOT/backend/.env" ]]; then
+        env_file="$PROJECT_ROOT/backend/.env"
+    else
+        echo -e "   ⚠️ Configuration file not found: $CONFIG_FILE"
+        echo -e "   ℹ️  Continuing without .env validation (using environment variables)"
+        log_structured "WARN" "startup_v3.1" "Configuration file not found, continuing anyway"
+        return 0  # Continue anyway - env vars might be set externally
+    fi
+    
+    if [[ -n "$env_file" ]]; then
+        echo -e "   ✅ Configuration file found: $env_file"
         
         # Check critical environment variables
         local critical_vars=("OPENAI_API_KEY" "ANTHROPIC_API_KEY" "SUPABASE_URL" "SUPABASE_ANON_KEY")
         local missing_vars=()
         
         for var in "${critical_vars[@]}"; do
-            if grep -q "^${var}=" "$CONFIG_FILE" && [[ -n "$(grep "^${var}=" "$CONFIG_FILE" | cut -d= -f2-)" ]]; then
+            if grep -q "^${var}=" "$env_file" && [[ -n "$(grep "^${var}=" "$env_file" | cut -d= -f2-)" ]]; then
                 echo -e "   ✅ $var: Configured"
             else
                 echo -e "   ⚠️ $var: Missing or empty"
@@ -174,10 +303,6 @@ validate_environment() {
             log_structured "WARN" "startup_v3.1" "Environment validation partial - missing vars: ${missing_vars[*]}"
             return 0  # Continue anyway
         fi
-    else
-        echo -e "   ❌ Configuration file not found: $CONFIG_FILE"
-        log_structured "ERROR" "startup_v3.1" "Configuration file not found"
-        return 1
     fi
 }
 
@@ -212,22 +337,50 @@ enhanced_parallel_cleanup() {
         echo -e "   ✅ PID files cleaned"
     fi
     
-    # Clean up temporary files
-    find "$PROJECT_ROOT/.." -name "*.tmp" -type f -delete 2>/dev/null || true
-    echo -e "   ✅ Temporary files cleaned"
+    # Clean up temporary files (limit to project directory to avoid long scans)
+    echo -e "   🔍 Cleaning temporary files..."
+    local tmp_count=0
+    if [[ -d "$PROJECT_ROOT" ]]; then
+        # Only search within project directory, not parent - limit depth to avoid long scans
+        while IFS= read -r tmp_file && [[ $tmp_count -lt 50 ]]; do
+            [[ -f "$tmp_file" ]] && rm -f "$tmp_file" 2>/dev/null && tmp_count=$((tmp_count + 1)) || true
+        done < <(find "$PROJECT_ROOT" -maxdepth 5 -name "*.tmp" -type f 2>/dev/null)
+        # Also check common temp locations
+        [[ -d "$LOG_DIR" ]] && rm -f "$LOG_DIR"/*.tmp 2>/dev/null || true
+        [[ -d "$PID_DIR" ]] && rm -f "$PID_DIR"/*.tmp 2>/dev/null || true
+    fi
+    if [[ $tmp_count -gt 0 ]]; then
+        echo -e "   ✅ Temporary files cleaned ($tmp_count files)"
+    else
+        echo -e "   ✅ Temporary files cleaned (none found)"
+    fi
     
     # Clean up old log files (keep last 5)
+    echo -e "   🔍 Checking log files..."
+    local log_count=0
     for log_file in "$LOG_DIR"/*.log; do
-        if [[ -f "$log_file" ]]; then
-            # Keep file but truncate if too large (>100MB)
-            local size=$(stat -f%z "$log_file" 2>/dev/null || stat -c%s "$log_file" 2>/dev/null || echo 0)
-            if [[ $size -gt 104857600 ]]; then
-                tail -n 1000 "$log_file" > "${log_file}.tmp" && mv "${log_file}.tmp" "$log_file"
-                echo -e "   ✅ Truncated large log file: $(basename "$log_file")"
-            fi
+        [[ ! -f "$log_file" ]] && continue
+        log_count=$((log_count + 1))
+        # Keep file but truncate if too large (>100MB)
+        local size=$(stat -f%z "$log_file" 2>/dev/null || stat -c%s "$log_file" 2>/dev/null || echo 0)
+        if [[ $size -gt 104857600 ]]; then
+            tail -n 1000 "$log_file" > "${log_file}.tmp" && mv "${log_file}.tmp" "$log_file" 2>/dev/null || true
+            echo -e "   ✅ Truncated large log file: $(basename "$log_file")"
         fi
     done
+    echo -e "   ✅ Log files checked ($log_count files)"
     
+    # Clean up old tmux monitoring sessions
+    if command -v tmux >/dev/null 2>&1; then
+        tmux kill-session -t "chainlens-monitor" 2>/dev/null || true
+        echo -e "   ✅ Old monitoring tmux sessions cleaned"
+    fi
+    
+    # Kill any running monitoring dashboard processes
+    pkill -f "enhanced_dashboard_monitor" 2>/dev/null || true
+    echo -e "   ✅ Monitoring dashboard processes cleaned"
+    
+    echo -e "${GREEN}✅ Additional cleanup completed${NC}"
     log_structured "INFO" "startup_v3.1" "Enhanced cleanup completed"
 }
 
@@ -491,6 +644,50 @@ enhanced_monitoring_display() {
     log_structured "INFO" "startup_v3.1" "Enhanced monitoring display completed"
 }
 
+# Launch enhanced monitoring dashboard
+launch_monitoring_dashboard() {
+    log_structured "INFO" "startup_v3.1" "Launching enhanced monitoring dashboard"
+    
+    echo ""
+    echo -e "${CYAN}📊 ENHANCED MONITORING DASHBOARD v3.0${NC}"
+    echo -e "${CYAN}======================================${NC}"
+    echo -e "${GREEN}🚀 Launching Enhanced Multi-Panel Monitoring Dashboard...${NC}"
+    echo -e "${PURPLE}✨ Features: 4-panel tmux layout with Backend/Frontend maximized, real-time monitoring${NC}"
+    echo -e "${PURPLE}✨ Real-time logs: Backend, Frontend, Worker, Redis${NC}"
+    echo ""
+    
+    # Determine monitoring script path
+    local monitoring_script="$SCRIPTS_ROOT/monitoring/enhanced_dashboard_monitor.sh"
+    
+    # Check if monitoring script exists
+    if [[ ! -f "$monitoring_script" ]]; then
+        echo -e "${YELLOW}⚠️ Monitoring script not found at $monitoring_script${NC}"
+        echo -e "${YELLOW}⚠️ Services are running, but monitoring dashboard cannot be started${NC}"
+        echo -e "${YELLOW}💡 You can manually start monitoring: ./scripts/monitoring/enhanced_dashboard_monitor.sh${NC}"
+        log_structured "WARN" "startup_v3.1" "Monitoring dashboard script not found" "{\"path\":\"$monitoring_script\"}"
+        return 0
+    fi
+    
+    # Ensure script is executable
+    if [[ ! -x "$monitoring_script" ]]; then
+        chmod +x "$monitoring_script"
+        echo -e "   🔧 Made monitoring script executable"
+    fi
+    
+    # Wait a moment for services to fully stabilize
+    echo -e "${CYAN}⏳ Waiting for services to fully stabilize...${NC}"
+    sleep 2
+    
+    echo -e "${GREEN}✅ Launching monitoring dashboard...${NC}"
+    echo -e "${CYAN}💡 Tip: Press Ctrl+B then 'd' to detach from dashboard (services keep running)${NC}"
+    echo ""
+    
+    log_structured "INFO" "startup_v3.1" "Executing monitoring dashboard" "{\"script\":\"$monitoring_script\"}"
+    
+    # Execute the monitoring dashboard (this will take over the terminal)
+    exec "$monitoring_script"
+}
+
 # Main execution function
 main() {
     # Setup error handling
@@ -514,6 +711,9 @@ main() {
         exit 1
     fi
 
+    # Check and start Supabase if needed
+    check_and_start_supabase
+
     # Setup enhanced monitoring script before cleanup
     setup_enhanced_monitor_script
 
@@ -532,7 +732,7 @@ main() {
     # Enhanced monitoring display
     enhanced_monitoring_display
 
-    # Final status
+    # Final status summary
     echo
     echo -e "${GREEN}🎉 ChainLens Development Environment v3.1 is ready!${NC}"
     echo -e "${CYAN}📊 Access points:${NC}"
@@ -549,6 +749,9 @@ main() {
     echo
     
     log_structured "INFO" "startup_v3.1" "ChainLens Development Environment v3.1 startup completed successfully"
+    
+    # Launch enhanced monitoring dashboard with real-time logs
+    launch_monitoring_dashboard
 }
 
 # Execute main function

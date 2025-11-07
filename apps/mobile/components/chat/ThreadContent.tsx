@@ -392,7 +392,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
   onToolPress,
   streamHookStatus = "idle",
   sandboxId,
-  agentName = 'Suna',
+  agentName = 'ChainLens',
 }) => {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';

@@ -45,7 +45,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { EpsilonLogo } from '@/components/sidebar/epsilon-logo';
+import { EpsilonLogo } from '@/components/sidebar/chainlens-logo';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 import { useAgentVersionData } from '@/hooks/use-agent-version-data';

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useAgentFromCache } from '@/hooks/react-query/agents/use-agents';
-import { EpsilonLogo } from '@/components/sidebar/epsilon-logo';
+import { EpsilonLogo } from '@/components/sidebar/chainlens-logo';
 import { DynamicIcon } from 'lucide-react/dynamic';
 import { cn } from '@/lib/utils';
 import type { Agent } from '@/hooks/react-query/agents/utils';

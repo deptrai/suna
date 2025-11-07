@@ -376,6 +376,7 @@ class MarketplaceTemplatesResponse(BaseModel):
     pagination: MarketplacePaginationInfo
 
 @router.get("/epsilon-all", response_model=MarketplaceTemplatesResponse)
+@router.get("/chainlens-all", response_model=MarketplaceTemplatesResponse)
 async def get_all_epsilon_templates(
     request: Request = None
 ):

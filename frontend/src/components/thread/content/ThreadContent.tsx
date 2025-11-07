@@ -11,7 +11,7 @@ import {
     getUserFriendlyToolName,
     safeJsonParse,
 } from '@/components/thread/utils';
-import { EpsilonLogo } from '@/components/sidebar/epsilon-logo';
+import { EpsilonLogo } from '@/components/sidebar/chainlens-logo';
 import { AgentLoader } from './loader';
 import { AgentAvatar, AgentName } from './agent-avatar';
 import { parseXmlToolCalls, isNewXmlFormat } from '@/components/thread/tool-views/xml-parser';

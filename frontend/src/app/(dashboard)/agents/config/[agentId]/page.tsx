@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAgent } from '@/hooks/react-query/agents/use-agents';
 import { ChevronLeft, Brain, BookOpen, Zap, Wrench, Server, Pencil, MessageCircle } from 'lucide-react';
-import { EpsilonLoader } from '@/components/ui/epsilon-loader';
+import { EpsilonLoader } from '@/components/ui/chainlens-loader';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { SpotlightCard } from '@/components/ui/spotlight-card';

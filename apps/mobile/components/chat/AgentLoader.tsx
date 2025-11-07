@@ -12,7 +12,7 @@ import Animated, {
   FadeIn,
   FadeOut
 } from 'react-native-reanimated';
-import { KortixLoader } from '../ui';
+import { EpsilonLoader } from '../ui';
 
 const loadingMessages = [
   "Initializing neural pathways...",
@@ -76,7 +76,7 @@ export const AgentLoader = React.memo(function AgentLoader() {
   return (
     <View className="flex-row py-2 items-center gap-3 w-full">
       <View className="flex-row items-center gap-1">
-        <KortixLoader size="small" />
+        <EpsilonLoader size="small" />
       </View>
       <View className="flex-1">
         <Animated.View
