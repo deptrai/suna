@@ -68,7 +68,7 @@ development_status:
   11-1-coin-detection-algorithm: done
   11-2-content-script-injection: done
   11-3-analysis-button-injection: review
-  11-4-coin-highlighting-visual-feedback: ready-for-dev
+  11-4-coin-highlighting-visual-feedback: review
   extension-epic-2-retrospective: optional
 
   extension-epic-3: backlog

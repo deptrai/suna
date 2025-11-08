@@ -1,20 +1,18 @@
 import { test as base } from '@playwright/test';
 import { APIRequestContext } from '@playwright/test';
-import { UserFactory } from './factories/user-factory';
 
 /**
- * Custom Test Fixtures
+ * Authentication Fixture
  * 
- * This file composes multiple fixtures using the extend pattern.
- * Each fixture provides isolated capability (auth, API, factories).
+ * Provides authenticated API requests for testing protected endpoints.
+ * Supports both JWT tokens and API keys for authentication.
  * 
- * Pattern: Pure function → Fixture → Composition via extend
+ * Pattern: Pure function → Fixture → Auto-cleanup
  * 
  * Reference: bmad/bmm/testarch/knowledge/fixture-architecture.md
  */
 
-type TestFixtures = {
-  userFactory: UserFactory;
+type AuthFixtures = {
   authenticatedRequest: APIRequestContext;
   authToken: string;
   userId: string;
@@ -46,13 +44,7 @@ function generateTestJWT(userId: string = 'test-user-id'): string {
   return 'test-jwt-token-placeholder';
 }
 
-export const test = base.extend<TestFixtures>({
-  userFactory: async ({}, use) => {
-    const factory = new UserFactory();
-    await use(factory);
-    await factory.cleanup(); // Auto-cleanup after test
-  },
-
+export const test = base.extend<AuthFixtures>({
   authToken: async ({}, use) => {
     const token = generateTestJWT();
     await use(token);
@@ -89,10 +81,4 @@ export const test = base.extend<TestFixtures>({
     await authenticatedContext.dispose();
   },
 });
-
-export { expect } from '@playwright/test';
-
-
-
-
 

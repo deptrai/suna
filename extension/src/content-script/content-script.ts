@@ -1,11 +1,12 @@
 /**
- * Content Script - Coin Detection và Button Injection
+ * Content Script - Coin Detection, Button Injection, và Highlighting
  * 
  * This script runs on crypto websites và detects coin names,
  * symbols, và prices using the coin-detector module.
  * 
  * Story 11.2: Coin detection implemented
  * Story 11.3: Button injection implemented
+ * Story 11.4: Coin highlighting implemented
  */
 
 import './content-script.css';
@@ -13,6 +14,7 @@ import { testSharedCodeImport } from '../shared/test-import';
 import { detectCoins, detectCoinsInDocument, type CoinDetection } from '../shared/coin-detector';
 import { logger } from '../shared/logger';
 import { injectAnalysisButtons, removeAllInjectedButtons } from './injector';
+import { applyHighlights, removeAllHighlights, setupHighlightRemoval } from './highlighter';
 
 // ============================================
 // Content Script Initialization
@@ -139,6 +141,13 @@ function runCoinDetection(): void {
         })));
       }
 
+      // Apply highlights to detected coins (Story 11.4)
+      try {
+        applyHighlights(detections);
+      } catch (error) {
+        logger.error('Error applying highlights:', error);
+      }
+
       // Inject analysis buttons next to detected coins (Story 11.3)
       try {
         injectAnalysisButtons(detections);
@@ -203,11 +212,16 @@ if (document.readyState === 'loading') {
 // Listen for page visibility changes
 document.addEventListener('visibilitychange', visibilityChangeHandler);
 
+// Setup highlight removal on button click (optional, configurable)
+setupHighlightRemoval();
+
 // Cleanup on page unload
 const beforeUnloadHandler = () => {
   cleanupTimeouts();
   // Remove all injected buttons on page unload
   removeAllInjectedButtons();
+  // Remove all highlights on page unload (optional - can keep for better UX)
+  // removeAllHighlights(); // Commented out to keep highlights visible
   document.removeEventListener('DOMContentLoaded', domContentLoadedHandler);
   document.removeEventListener('visibilitychange', visibilityChangeHandler);
 };
