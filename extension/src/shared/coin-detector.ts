@@ -156,8 +156,9 @@ const PRICE_PATTERNS = [
  * Match Coin Name trong Text
  * @param text Text content to search
  * @returns Array of matched coin names
+ * @internal - Internal function, used internally by detectCoins
  */
-function matchCoinNames(text: string): string[] {
+function _matchCoinNames(text: string): string[] {
   const pattern = createCoinNamePattern();
   const matches: string[] = [];
   let match;
@@ -179,8 +180,9 @@ function matchCoinNames(text: string): string[] {
  * Match Coin Symbols trong Text
  * @param text Text content to search
  * @returns Array of { symbol, name } objects
+ * @internal - Internal function, used internally by detectCoins
  */
-function matchCoinSymbols(text: string): Array<{ symbol: string; name: string }> {
+function _matchCoinSymbols(text: string): Array<{ symbol: string; name: string }> {
   const matches: Array<{ symbol: string; name: string }> = [];
   let match;
   
@@ -226,7 +228,7 @@ function extractPriceNearSymbol(text: string, symbolIndex: number): number | nul
     const match = pattern.exec(searchText);
     
     if (match) {
-      let priceStr = match[1].replace(/,/g, ''); // Remove commas
+      const priceStr = match[1].replace(/,/g, ''); // Remove commas
       
       // Handle "k" suffix (e.g., 45k = 45000)
       const kMatch = searchText.match(new RegExp(`${priceStr.replace(/\./g, '\\.')}\\s*k\\b`, 'i'));
@@ -280,10 +282,12 @@ export function detectCoins(element: HTMLElement): CoinDetection[] {
   let textNode;
   while ((textNode = walker.nextNode()) !== null) {
     const text = textNode.textContent || '';
-    if (!text.trim()) continue;
+    if (!text.trim()) {continue;}
     
     const parentElement = textNode.parentElement;
-    if (!parentElement || processedElements.has(parentElement)) continue;
+    if (!parentElement || processedElements.has(parentElement)) {
+      continue;
+    }
     
     // Match coin names (reuse pattern created outside loop)
     coinNamePattern.lastIndex = 0;

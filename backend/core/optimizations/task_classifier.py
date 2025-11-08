@@ -78,6 +78,7 @@ class TaskClassifier:
     SIMPLE_MAX_WORDS = 50
     MEDIUM_MAX_WORDS = 150
     COMPLEX_MAX_WORDS = 300
+    MAX_TASK_LENGTH = 10000  # Maximum task length in words to prevent DoS
     
     # Keywords for complexity detection
     SIMPLE_KEYWORDS = [
@@ -87,7 +88,7 @@ class TaskClassifier:
     
     MEDIUM_KEYWORDS = [
         "explain", "compare", "describe", "list", "summarize",
-        "analyze", "discuss", "outline"
+        "discuss", "outline"
     ]
     
     COMPLEX_KEYWORDS = [
@@ -313,31 +314,61 @@ class TaskClassifier:
             "requires_complex_reasoning": requires_complex_reasoning,
         }
         
+        # Improved classification algorithm for better accuracy
         # Very complex: >300 words OR (very_complex keywords + (multi-step OR complex reasoning))
         if word_count > self.COMPLEX_MAX_WORDS:
             complexity = ComplexityLevel.VERY_COMPLEX
-            confidence = 0.9
+            confidence = 0.95  # High confidence for very long tasks
         elif very_complex_score > 0 and (is_multi_step or requires_complex_reasoning):
             complexity = ComplexityLevel.VERY_COMPLEX
-            confidence = 0.85
+            confidence = 0.9  # High confidence when keywords match indicators
         elif very_complex_score >= 2:  # Multiple very_complex keywords
             complexity = ComplexityLevel.VERY_COMPLEX
+            confidence = 0.85
+        
+        # Complex: 150-300 words OR (complex keywords + (multi-step OR reasoning)) OR high complex keyword score
+        elif word_count > self.MEDIUM_MAX_WORDS:
+            # Long tasks are more likely to be complex
+            if complex_score > 0 or requires_complex_reasoning:
+                complexity = ComplexityLevel.COMPLEX
+                confidence = 0.9  # Higher confidence when indicators match
+            elif is_multi_step:
+                complexity = ComplexityLevel.COMPLEX
+                confidence = 0.85
+            else:
+                complexity = ComplexityLevel.COMPLEX
+                confidence = 0.8  # Default for long tasks
+        elif complex_score > 0 and (is_multi_step or requires_complex_reasoning):
+            complexity = ComplexityLevel.COMPLEX
+            confidence = 0.85
+        elif complex_score >= 2:  # Multiple complex keywords
+            complexity = ComplexityLevel.COMPLEX
             confidence = 0.8
         
-        # Complex: 150-300 words OR complex keywords + multi-step/reasoning
-        elif word_count > self.MEDIUM_MAX_WORDS or (complex_score > 0 and (is_multi_step or requires_complex_reasoning)):
-            complexity = ComplexityLevel.COMPLEX
-            confidence = 0.85 if word_count > self.MEDIUM_MAX_WORDS else 0.75
-        
-        # Medium: 50-150 words OR medium keywords
-        elif word_count > self.SIMPLE_MAX_WORDS or medium_score > 0:
+        # Medium: 50-150 words OR (medium keywords AND (not simple keywords OR multi-intent indicators))
+        elif word_count > self.SIMPLE_MAX_WORDS:
+            # Medium-length tasks
+            if medium_score > 0:
+                complexity = ComplexityLevel.MEDIUM
+                confidence = 0.85  # Higher confidence when keywords match
+            elif complex_score > 0:
+                # Some complex keywords but not enough indicators -> medium
+                complexity = ComplexityLevel.MEDIUM
+                confidence = 0.75
+            else:
+                complexity = ComplexityLevel.MEDIUM
+                confidence = 0.8
+        elif medium_score > 0:
             complexity = ComplexityLevel.MEDIUM
-            confidence = 0.8 if word_count > self.SIMPLE_MAX_WORDS else 0.7
+            confidence = 0.8
         
         # Simple: <50 words, simple keywords, single intent
         else:
             complexity = ComplexityLevel.SIMPLE
-            confidence = 0.85 if simple_score > 0 else 0.75
+            if simple_score > 0:
+                confidence = 0.95  # Very high confidence when simple keywords match
+            else:
+                confidence = 0.85  # High confidence for short tasks
         
         # Adjust confidence based on keyword matches
         if simple_score > 0 and complexity == ComplexityLevel.SIMPLE:
@@ -407,20 +438,52 @@ Respond with JSON format:
             else:
                 content = str(response)
             
-            # Extract JSON from response
+            # Extract JSON from response - improved parsing for nested JSON
             import json
-            # Try to find JSON in response
-            json_match = re.search(r'\{[^}]+\}', content, re.DOTALL)
-            if json_match:
-                result_data = json.loads(json_match.group())
+            
+            # Try to parse entire response as JSON first
+            result_data = None
+            try:
+                result_data = json.loads(content)
+            except json.JSONDecodeError:
+                # If entire response is not JSON, try to find JSON object in response
+                # Find the first { and last } to extract JSON object (handles nested braces)
+                json_start = content.find('{')
+                json_end = content.rfind('}') + 1
+                
+                if json_start >= 0 and json_end > json_start:
+                    try:
+                        json_content = content[json_start:json_end]
+                        result_data = json.loads(json_content)
+                    except json.JSONDecodeError:
+                        # Try to find JSON with balanced braces
+                        brace_count = 0
+                        json_start = -1
+                        for i, char in enumerate(content):
+                            if char == '{':
+                                if json_start == -1:
+                                    json_start = i
+                                brace_count += 1
+                            elif char == '}':
+                                brace_count -= 1
+                                if brace_count == 0 and json_start >= 0:
+                                    try:
+                                        json_content = content[json_start:i+1]
+                                        result_data = json.loads(json_content)
+                                        break
+                                    except json.JSONDecodeError:
+                                        json_start = -1
+                                        brace_count = 0
+            
+            # Parse result data
+            if result_data and isinstance(result_data, dict):
                 complexity_str = result_data.get("complexity", "simple")
                 confidence = float(result_data.get("confidence", 0.8))
                 reasoning = result_data.get("reasoning", "")
             else:
-                # Fallback: try to parse complexity from text
-                complexity_str = "simple"
-                confidence = 0.7
-                reasoning = "Failed to parse LLM response"
+                # Fallback: try to parse complexity from text or use rule-based
+                logger.warning(f"Failed to parse LLM JSON response, falling back to rule-based: {content[:100]}")
+                return self._rule_based_classify(task)
             
             # Map string to ComplexityLevel
             complexity_map = {
@@ -481,6 +544,18 @@ Respond with JSON format:
                 timestamp=datetime.now(timezone.utc)
             )
         
+        # Input validation: Check maximum task length to prevent DoS
+        word_count = len(task.split())
+        if word_count > self.MAX_TASK_LENGTH:
+            logger.warning(
+                f"Task exceeds maximum length: {word_count} words (max: {self.MAX_TASK_LENGTH}). "
+                f"Truncating for classification."
+            )
+            # Truncate to maximum length
+            words = task.split()[:self.MAX_TASK_LENGTH]
+            task = " ".join(words)
+            word_count = self.MAX_TASK_LENGTH
+        
         # Classify based on method
         if self.classification_method == "llm-based":
             result = await self._llm_based_classify(task)
@@ -515,7 +590,7 @@ Respond with JSON format:
                 }
             )
         except Exception as e:
-            logger.debug(f"Failed to track classification in quality monitor: {e}")
+            logger.warning(f"Failed to track classification in quality monitor: {e}", exc_info=True)
         
         return result
     

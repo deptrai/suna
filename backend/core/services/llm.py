@@ -412,6 +412,41 @@ async def make_llm_api_call(
     """Make an API call to a language model using LiteLLM."""
     logger.info(f"Making LLM API call to model: {model_name} with {len(messages)} messages")
     
+    # Story 2.2: Message History Compression (only in OPTIMIZED mode)
+    compression_metadata = None
+    try:
+        from core.utils.config import OptimizationConfig, OptimizationMode
+        
+        # Only use history compression in OPTIMIZED mode
+        if OptimizationConfig.OPTIMIZATION_MODE == OptimizationMode.OPTIMIZED:
+            from core.optimizations.history_compressor import get_history_compressor
+            
+            history_compressor = get_history_compressor()
+            
+            # Compress message history if enabled
+            if history_compressor.enabled and len(messages) >= (history_compressor.sliding_window_size + 5):
+                # Only compress if we have enough messages (sliding window + some older messages)
+                min_messages = config.HISTORY_COMPRESSION_MIN_MESSAGES if hasattr(config, 'HISTORY_COMPRESSION_MIN_MESSAGES') else 15
+                compressed_messages, compression_metadata = await history_compressor.compress_history(
+                    messages,
+                    model_name,
+                    min_messages_to_compress=min_messages
+                )
+                
+                if compression_metadata.get("compressed"):
+                    logger.info(
+                        f"✅ Message history compressed: "
+                        f"{compression_metadata.get('original_message_count')} → "
+                        f"{compression_metadata.get('compressed_message_count')} messages, "
+                        f"{compression_metadata.get('tokens_before')} → "
+                        f"{compression_metadata.get('tokens_after')} tokens "
+                        f"({compression_metadata.get('reduction_percentage', 0):.1f}% reduction)"
+                    )
+                    messages = compressed_messages
+    except Exception as e:
+        logger.debug(f"Message history compression failed (non-critical): {e}")
+        # Continue with original messages
+    
     # Story 2.1: Semantic Response Caching (only in OPTIMIZED mode)
     semantic_cache_hit = False
     cached_response_data = None

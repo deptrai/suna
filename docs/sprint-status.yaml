@@ -45,14 +45,14 @@ development_status:
 
   epic-2: backlog
   2-1-semantic-response-caching-quality-controlled: done
-  2-2-message-history-compression-quality-preserving: ready-for-dev
+  2-2-message-history-compression-quality-preserving: review
   2-3-tool-schema-optimization-minimal-format: ready-for-dev
   2-4-quality-monitoring-framework: done
          epic-2-retrospective: optional
 
          epic-3: backlog
          3-1-task-complexity-classification: done
-         3-2-model-selection-rules: ready-for-dev
+         3-2-model-selection-rules: in-progress
          3-3-sequential-model-execution: ready-for-dev
          epic-3-retrospective: optional
 
@@ -66,7 +66,7 @@ development_status:
 
   extension-epic-2: backlog
   11-1-coin-detection-algorithm: done
-  11-2-content-script-injection: ready-for-dev
+  11-2-content-script-injection: done
   11-3-analysis-button-injection: ready-for-dev
   11-4-coin-highlighting-visual-feedback: ready-for-dev
   extension-epic-2-retrospective: optional

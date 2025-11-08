@@ -345,10 +345,22 @@ class Configuration:
     SEMANTIC_CACHE_ENABLED: Optional[bool] = True  # Enable semantic response caching
     SEMANTIC_CACHE_AUTO_DISABLE_ENABLED: Optional[bool] = True  # Enable auto-disable on quality degradation
     
+    # Message History Compression (Story 2.2)
+    HISTORY_COMPRESSION_SLIDING_WINDOW_SIZE: Optional[int] = 10  # Default: keep last 10 messages
+    HISTORY_COMPRESSION_QUALITY_THRESHOLD: Optional[float] = 0.95  # Default 0.95 (95% quality required)
+    HISTORY_COMPRESSION_ENABLED: Optional[bool] = True  # Enable message history compression
+    HISTORY_COMPRESSION_AUTO_DISABLE_ENABLED: Optional[bool] = True  # Enable auto-disable on quality degradation
+    HISTORY_COMPRESSION_MIN_MESSAGES: Optional[int] = 15  # Minimum messages before compression kicks in
+    
     # Task Complexity Classification configuration (Story 3.1)
     TASK_CLASSIFICATION_METHOD: Optional[str] = "rule-based"  # "rule-based" or "llm-based"
     TASK_CLASSIFICATION_LLM_MODEL: Optional[str] = "openai-compatible/gpt-4o-mini"  # LLM model for LLM-based classification
     TASK_CLASSIFICATION_ENABLED: Optional[bool] = True  # Enable task complexity classification
+    
+    # Model Selection Rules configuration (Story 3.2)
+    MODEL_ROUTING_ENABLED: Optional[bool] = True  # Enable model routing based on complexity
+    MODEL_ROUTING_PREFER_CHEAPER: Optional[bool] = True  # Prefer cheaper models when multiple models match
+    MODEL_ROUTING_FALLBACK_ENABLED: Optional[bool] = True  # Enable fallback mechanism if selected model fails
     
     # Daytona sandbox configuration (optional - sandbox features disabled if not configured)
     DAYTONA_API_KEY: Optional[str] = None

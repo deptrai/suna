@@ -4,34 +4,35 @@ Task Complexity Classification API Endpoints (Story 3.1).
 API endpoints for task complexity classification and metrics.
 """
 
-from fastapi import APIRouter, HTTPException, Depends, Query
-from typing import Dict, Any, Optional
+from fastapi import APIRouter, HTTPException, Depends
+from typing import Dict, Any
 from datetime import datetime
 
 from core.optimizations.task_classifier import get_task_classifier, TaskClassifier
 from core.utils.logger import logger
 from core.utils.auth_utils import verify_and_get_user_id_from_jwt
+from core.api.models.task_classifier_models import ClassificationRequest, ClassificationResponse
 
 router = APIRouter(prefix="/api/task-classifier", tags=["Task Classification"])
 
 
-@router.post("/classify", summary="Classify Task Complexity", operation_id="classify_task")
+@router.post("/classify", summary="Classify Task Complexity", operation_id="classify_task", response_model=Dict[str, Any])
 async def classify_task(
-    task: str = Query(..., description="Task text to classify"),
+    request: ClassificationRequest,
     user_id: str = Depends(verify_and_get_user_id_from_jwt)
 ) -> Dict[str, Any]:
     """
     Classify task complexity.
     
     Args:
-        task: Task text to classify
+        request: Classification request with task text
     
     Returns:
         Classification result with complexity level and confidence
     """
     try:
         classifier = get_task_classifier()
-        result = await classifier.classify(task)
+        result = await classifier.classify(request.task)
         
         return {
             "success": True,

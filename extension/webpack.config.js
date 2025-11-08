@@ -3,6 +3,7 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const ESLintPlugin = require('eslint-webpack-plugin');
 const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
+const webpack = require('webpack');
 
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
@@ -66,6 +67,11 @@ module.exports = (env, argv) => {
 
     // Plugins
     plugins: [
+      // Define environment variables
+      new webpack.DefinePlugin({
+        'process.env.NODE_ENV': JSON.stringify(isProduction ? 'production' : 'development'),
+      }),
+
       // HTML plugin for popup
       new HtmlWebpackPlugin({
         template: './src/popup/popup.html',
@@ -138,4 +144,3 @@ module.exports = (env, argv) => {
     },
   };
 };
-

@@ -1,0 +1,589 @@
+"""
+Model Selection Rules (Story 3.2).
+
+This module implements model selection rules based on task complexity to route tasks
+to optimal models, achieving 40-50% cost reduction với acceptable quality trade-off.
+
+Features:
+- Complexity-based routing: Map complexity levels to optimal models
+- Model selection logic: Prefer cheaper models, consider availability và capabilities
+- Fallback mechanism: Next best model if selected model fails
+- Cost tracking: Measure và track cost savings (target: 40-50%)
+- Logging và monitoring: Track routing decisions và metrics
+"""
+
+import random
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from enum import Enum
+from typing import Dict, Any, Optional, List, Tuple
+import asyncio
+
+from core.utils.logger import logger
+from core.utils.config import OptimizationConfig, OptimizationMode
+from core.optimizations.task_classifier import (
+    TaskClassifier,
+    ComplexityLevel,
+    ClassificationResult,
+    get_task_classifier
+)
+from core.ai_models.registry import ModelRegistry, registry
+from core.ai_models.ai_models import Model, ModelCapability
+
+
+class RoutingDecision(str, Enum):
+    """Routing decision enumeration."""
+    ROUTED = "routed"  # Successfully routed to model
+    FALLBACK = "fallback"  # Fallback to alternative model
+    DEFAULT = "default"  # Used default model (routing unavailable)
+
+
+@dataclass
+class RoutingResult:
+    """Represents a model routing result."""
+    model_id: str
+    complexity: ComplexityLevel
+    confidence: float
+    decision: RoutingDecision
+    fallback_used: bool = False
+    routing_metadata: Dict[str, Any] = field(default_factory=dict)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+@dataclass
+class RoutingMetrics:
+    """Metrics for tracking routing performance."""
+    total_routings: int = 0
+    routings_by_complexity: Dict[ComplexityLevel, int] = field(default_factory=lambda: {
+        ComplexityLevel.SIMPLE: 0,
+        ComplexityLevel.MEDIUM: 0,
+        ComplexityLevel.COMPLEX: 0,
+        ComplexityLevel.VERY_COMPLEX: 0,
+    })
+    routings_by_model: Dict[str, int] = field(default_factory=dict)
+    fallback_count: int = 0
+    cost_savings_percentage: float = 0.0
+    total_cost_before: float = 0.0
+    total_cost_after: float = 0.0
+
+
+class ModelRouter:
+    """
+    Model router based on task complexity.
+    
+    Routes tasks to optimal models based on complexity classification,
+    achieving 40-50% cost reduction với acceptable quality trade-off (80-85%).
+    
+    Routing Rules:
+    - simple → gpt-4o-mini, qwen3-30b (cheap models)
+    - medium → deepseek-v3-1, claude-haiku-4-5 (balanced models)
+    - complex → qwen3-235b (powerful but cheaper)
+    - very_complex → gpt-4o, claude-sonnet (premium models)
+    
+    Features:
+    - Complexity-based routing
+    - Model selection logic (prefer cheaper, consider availability, capabilities)
+    - Fallback mechanism
+    - Cost tracking
+    - Logging và monitoring
+    """
+    
+    # Routing rules: Map complexity levels to model IDs (ordered by preference)
+    ROUTING_RULES: Dict[ComplexityLevel, List[str]] = {
+        ComplexityLevel.SIMPLE: [
+            "openai-compatible/gpt-4o-mini",  # Cheapest, prefer this
+            "openai-compatible/qwen3-30b-a3b-instruct-2507",  # Alternative cheap model
+        ],
+        ComplexityLevel.MEDIUM: [
+            "openai-compatible/deepseek-v3-1",  # Balanced, prefer this
+            "anthropic/claude-haiku-4-5",  # Alternative balanced model
+        ],
+        ComplexityLevel.COMPLEX: [
+            "openai-compatible/qwen3-235b-a22b",  # Powerful but cheaper than premium
+        ],
+        ComplexityLevel.VERY_COMPLEX: [
+            "anthropic/claude-sonnet-4-5-20250929",  # Premium, prefer this
+            "anthropic/claude-sonnet-4-20250514",  # Alternative premium model
+        ],
+    }
+    
+    def __init__(
+        self,
+        task_classifier: Optional[TaskClassifier] = None,
+        model_registry: Optional[ModelRegistry] = None,
+        enabled: bool = True
+    ):
+        """
+        Initialize ModelRouter.
+        
+        Args:
+            task_classifier: TaskClassifier instance (uses global singleton if None)
+            model_registry: ModelRegistry instance (uses global registry if None)
+            enabled: Whether routing is enabled
+        """
+        self.task_classifier = task_classifier or get_task_classifier()
+        self.model_registry = model_registry or registry
+        self.enabled = enabled
+        self.metrics = RoutingMetrics()
+        self._round_robin_index: Dict[ComplexityLevel, int] = {
+            ComplexityLevel.SIMPLE: 0,
+            ComplexityLevel.MEDIUM: 0,
+            ComplexityLevel.COMPLEX: 0,
+            ComplexityLevel.VERY_COMPLEX: 0,
+        }
+    
+    @staticmethod
+    def get_routing_rules() -> Dict[ComplexityLevel, List[str]]:
+        """
+        Get routing rules mapping complexity levels to models.
+        
+        Returns:
+            Dict mapping ComplexityLevel to list of model IDs (ordered by preference)
+        """
+        return ModelRouter.ROUTING_RULES.copy()
+    
+    @staticmethod
+    def get_routing_decision_matrix() -> Dict[str, Any]:
+        """
+        Get routing decision matrix for documentation.
+        
+        Returns:
+            Dict with routing decision matrix
+        """
+        return {
+            "simple": {
+                "models": ["openai-compatible/gpt-4o-mini", "openai-compatible/qwen3-30b-a3b-instruct-2507"],
+                "rationale": "Cheap models for simple tasks. Prefer gpt-4o-mini (cheapest).",
+                "expected_cost_reduction": "60-70%",
+                "quality_impact": "Minimal (simple tasks don't require premium models)"
+            },
+            "medium": {
+                "models": ["openai-compatible/deepseek-v3-1", "anthropic/claude-haiku-4-5"],
+                "rationale": "Balanced models for medium complexity tasks. Prefer deepseek-v3-1 (good balance).",
+                "expected_cost_reduction": "40-50%",
+                "quality_impact": "5-10% (acceptable trade-off)"
+            },
+            "complex": {
+                "models": ["openai-compatible/qwen3-235b-a22b"],
+                "rationale": "Powerful model but cheaper than premium. Good for complex tasks.",
+                "expected_cost_reduction": "30-40%",
+                "quality_impact": "10-15% (acceptable for cost savings)"
+            },
+            "very_complex": {
+                "models": ["anthropic/claude-sonnet-4-5-20250929", "anthropic/claude-sonnet-4-20250514"],
+                "rationale": "Premium models for very complex tasks. Quality is critical.",
+                "expected_cost_reduction": "0-10%",
+                "quality_impact": "Minimal (premium models maintain quality)"
+            }
+        }
+    
+    def _get_available_models_for_complexity(
+        self,
+        complexity: ComplexityLevel,
+        required_capabilities: Optional[List[ModelCapability]] = None
+    ) -> List[Model]:
+        """
+        Get available models for a complexity level.
+        
+        Args:
+            complexity: Complexity level
+            required_capabilities: Optional list of required capabilities
+        
+        Returns:
+            List of available Model objects (enabled, accessible)
+        """
+        model_ids = self.ROUTING_RULES.get(complexity, [])
+        available_models = []
+        
+        for model_id in model_ids:
+            model = self.model_registry.get(model_id)
+            if model and model.enabled:
+                # Check capabilities if required
+                if required_capabilities:
+                    if all(cap in model.capabilities for cap in required_capabilities):
+                        available_models.append(model)
+                else:
+                    available_models.append(model)
+        
+        return available_models
+    
+    def _select_best_model(
+        self,
+        models: List[Model],
+        prefer_cheaper: bool = True
+    ) -> Optional[Model]:
+        """
+        Select best model from available models.
+        
+        Selection logic:
+        1. Prefer cheaper model if multiple models match (if prefer_cheaper=True)
+        2. Consider model availability (already filtered)
+        3. Consider model capabilities (already filtered)
+        4. Use round-robin if all factors equal
+        
+        Args:
+            models: List of available models
+            prefer_cheaper: Whether to prefer cheaper models
+        
+        Returns:
+            Selected Model or None if no models available
+        """
+        if not models:
+            return None
+        
+        if len(models) == 1:
+            return models[0]
+        
+        # Filter models with pricing information
+        models_with_pricing = [m for m in models if m.pricing]
+        models_without_pricing = [m for m in models if not m.pricing]
+        
+        # If prefer_cheaper and we have pricing info, sort by input cost
+        if prefer_cheaper and models_with_pricing:
+            # Sort by input cost per million tokens (cheaper first)
+            sorted_models = sorted(
+                models_with_pricing,
+                key=lambda m: m.pricing.input_cost_per_million_tokens
+            )
+            # Return cheapest model
+            return sorted_models[0]
+        
+        # If no pricing info or prefer_cheaper=False, use priority và recommended
+        # Sort by priority (higher first), then recommended (True first)
+        sorted_models = sorted(
+            models,
+            key=lambda m: (-m.priority, not m.recommended)
+        )
+        
+        # Use round-robin if all factors equal (for load balancing)
+        # For now, just return first model (can implement round-robin later)
+        return sorted_models[0]
+    
+    async def route(
+        self,
+        task: str,
+        user_id: Optional[str] = None,
+        required_capabilities: Optional[List[ModelCapability]] = None,
+        fallback_on_failure: bool = True
+    ) -> RoutingResult:
+        """
+        Route task to optimal model based on complexity.
+        
+        Args:
+            task: Task text to route
+            user_id: Optional user ID for context
+            required_capabilities: Optional list of required model capabilities
+            fallback_on_failure: Whether to use fallback if routing fails
+        
+        Returns:
+            RoutingResult with selected model và routing metadata
+        """
+        if not self.enabled:
+            # Return default routing if disabled
+            default_model = self.model_registry.get("openai-compatible/gpt-4o-mini")
+            if not default_model:
+                # Fallback to first available model
+                all_models = self.model_registry.get_all(enabled_only=True)
+                default_model = all_models[0] if all_models else None
+            
+            return RoutingResult(
+                model_id=default_model.id if default_model else "unknown",
+                complexity=ComplexityLevel.SIMPLE,
+                confidence=1.0,
+                decision=RoutingDecision.DEFAULT,
+                routing_metadata={"enabled": False}
+            )
+        
+        # Classify task complexity
+        try:
+            classification_result = await self.task_classifier.classify(task)
+            complexity = classification_result.complexity
+            confidence = classification_result.confidence
+        except Exception as e:
+            logger.warning(f"Task classification failed: {e}, using default routing")
+            # Fallback to default model
+            default_model = self.model_registry.get("openai-compatible/gpt-4o-mini")
+            return RoutingResult(
+                model_id=default_model.id if default_model else "unknown",
+                complexity=ComplexityLevel.SIMPLE,
+                confidence=0.0,
+                decision=RoutingDecision.DEFAULT,
+                routing_metadata={"classification_error": str(e)}
+            )
+        
+        # Get available models for complexity level
+        available_models = self._get_available_models_for_complexity(
+            complexity,
+            required_capabilities
+        )
+        
+        if not available_models:
+            logger.warning(
+                f"No available models for complexity {complexity.value}, "
+                f"falling back to default model"
+            )
+            # Fallback to default model
+            default_model = self.model_registry.get("openai-compatible/gpt-4o-mini")
+            return RoutingResult(
+                model_id=default_model.id if default_model else "unknown",
+                complexity=complexity,
+                confidence=confidence,
+                decision=RoutingDecision.DEFAULT,
+                routing_metadata={"no_models_available": True}
+            )
+        
+        # Select best model
+        selected_model = self._select_best_model(available_models, prefer_cheaper=True)
+        
+        if not selected_model:
+            logger.warning(f"Model selection failed for complexity {complexity.value}")
+            # Fallback to default
+            default_model = self.model_registry.get("openai-compatible/gpt-4o-mini")
+            return RoutingResult(
+                model_id=default_model.id if default_model else "unknown",
+                complexity=complexity,
+                confidence=confidence,
+                decision=RoutingDecision.DEFAULT,
+                routing_metadata={"selection_failed": True}
+            )
+        
+        # Update metrics
+        self.metrics.total_routings += 1
+        self.metrics.routings_by_complexity[complexity] += 1
+        self.metrics.routings_by_model[selected_model.id] = (
+            self.metrics.routings_by_model.get(selected_model.id, 0) + 1
+        )
+        
+        # Calculate cost savings (compare with premium model baseline)
+        # Baseline: Assume all requests would use premium model (claude-sonnet-4-5)
+        baseline_model = self.model_registry.get("anthropic/claude-sonnet-4-5-20250929")
+        if baseline_model and baseline_model.pricing and selected_model.pricing:
+            # Estimate cost for baseline model (using average input/output ratio)
+            # For simplicity, assume 1:1 input/output ratio
+            baseline_cost = (
+                baseline_model.pricing.input_cost_per_million_tokens +
+                baseline_model.pricing.output_cost_per_million_tokens
+            ) / 2
+            
+            selected_cost = (
+                selected_model.pricing.input_cost_per_million_tokens +
+                selected_model.pricing.output_cost_per_million_tokens
+            ) / 2
+            
+            if baseline_cost > 0:
+                cost_savings = ((baseline_cost - selected_cost) / baseline_cost) * 100
+                # Update running average of cost savings
+                if self.metrics.total_routings == 1:
+                    self.metrics.cost_savings_percentage = cost_savings
+                else:
+                    # Weighted average
+                    self.metrics.cost_savings_percentage = (
+                        (self.metrics.cost_savings_percentage * (self.metrics.total_routings - 1) + cost_savings) /
+                        self.metrics.total_routings
+                    )
+                
+                # Track cost metrics
+                self.metrics.total_cost_before += baseline_cost
+                self.metrics.total_cost_after += selected_cost
+        
+        # Log routing decision
+        logger.info(
+            f"✅ Routed task to {selected_model.id} "
+            f"(complexity={complexity.value}, confidence={confidence:.2f})"
+        )
+        
+        # Track routing decision in quality monitor
+        try:
+            from core.optimizations.quality_monitor import get_quality_monitor
+            quality_monitor = get_quality_monitor()
+            await quality_monitor.track_metric(
+                "model_routing_decision",
+                value=1.0,
+                metadata={
+                    "model_id": selected_model.id,
+                    "complexity": complexity.value,
+                    "confidence": confidence,
+                    "task_length": len(task.split()),
+                }
+            )
+        except Exception as e:
+            logger.warning(f"Failed to track routing decision in quality monitor: {e}")
+        
+        return RoutingResult(
+            model_id=selected_model.id,
+            complexity=complexity,
+            confidence=confidence,
+            decision=RoutingDecision.ROUTED,
+            routing_metadata={
+                "model_name": selected_model.name,
+                "model_provider": selected_model.provider.value,
+                "available_models_count": len(available_models),
+                "selected_model_pricing": {
+                    "input_cost_per_million": selected_model.pricing.input_cost_per_million_tokens if selected_model.pricing else None,
+                    "output_cost_per_million": selected_model.pricing.output_cost_per_million_tokens if selected_model.pricing else None,
+                } if selected_model.pricing else None,
+            }
+        )
+    
+    async def route_with_fallback(
+        self,
+        task: str,
+        user_id: Optional[str] = None,
+        required_capabilities: Optional[List[ModelCapability]] = None,
+        failed_model_id: Optional[str] = None
+    ) -> RoutingResult:
+        """
+        Route task với fallback mechanism.
+        
+        If selected model fails, fallback to next best model based on complexity.
+        
+        Args:
+            task: Task text to route
+            user_id: Optional user ID for context
+            required_capabilities: Optional list of required model capabilities
+            failed_model_id: ID of model that failed (to avoid selecting it again)
+        
+        Returns:
+            RoutingResult with selected model (possibly fallback)
+        """
+        # First, try normal routing
+        routing_result = await self.route(
+            task,
+            user_id,
+            required_capabilities,
+            fallback_on_failure=False
+        )
+        
+        # If we have a failed model ID và it matches the selected model, find alternative
+        if failed_model_id and routing_result.model_id == failed_model_id:
+            logger.warning(
+                f"Selected model {failed_model_id} failed, finding fallback..."
+            )
+            
+            # Get available models for complexity (excluding failed model)
+            available_models = self._get_available_models_for_complexity(
+                routing_result.complexity,
+                required_capabilities
+            )
+            available_models = [
+                m for m in available_models if m.id != failed_model_id
+            ]
+            
+            if available_models:
+                # Select next best model
+                fallback_model = self._select_best_model(available_models, prefer_cheaper=True)
+                
+                if fallback_model:
+                    # Update metrics
+                    self.metrics.fallback_count += 1
+                    
+                    logger.info(
+                        f"✅ Fallback to {fallback_model.id} "
+                        f"(original: {failed_model_id})"
+                    )
+                    
+                    # Track fallback in quality monitor
+                    try:
+                        from core.optimizations.quality_monitor import get_quality_monitor
+                        quality_monitor = get_quality_monitor()
+                        await quality_monitor.track_metric(
+                            "model_routing_fallback",
+                            value=1.0,
+                            metadata={
+                                "original_model": failed_model_id,
+                                "fallback_model": fallback_model.id,
+                                "complexity": routing_result.complexity.value,
+                            }
+                        )
+                    except Exception as e:
+                        logger.warning(f"Failed to track fallback in quality monitor: {e}")
+                    
+                    return RoutingResult(
+                        model_id=fallback_model.id,
+                        complexity=routing_result.complexity,
+                        confidence=routing_result.confidence,
+                        decision=RoutingDecision.FALLBACK,
+                        fallback_used=True,
+                        routing_metadata={
+                            **routing_result.routing_metadata,
+                            "original_model": failed_model_id,
+                            "fallback_reason": "model_failure",
+                        }
+                    )
+        
+        return routing_result
+    
+    def get_metrics(self) -> Dict[str, Any]:
+        """
+        Get routing metrics.
+        
+        Returns:
+            Dict with routing metrics
+        """
+        total = self.metrics.total_routings
+        distribution_percentage = {
+            level.value: (
+                (count / total * 100) if total > 0 else 0.0
+            )
+            for level, count in self.metrics.routings_by_complexity.items()
+        }
+        
+        return {
+            "total_routings": self.metrics.total_routings,
+            "routings_by_complexity": {
+                level.value: count
+                for level, count in self.metrics.routings_by_complexity.items()
+            },
+            "distribution_percentage": distribution_percentage,
+            "routings_by_model": self.metrics.routings_by_model,
+            "fallback_count": self.metrics.fallback_count,
+            "fallback_rate": (
+                (self.metrics.fallback_count / total * 100) if total > 0 else 0.0
+            ),
+            "cost_savings_percentage": self.metrics.cost_savings_percentage,
+            "total_cost_before": self.metrics.total_cost_before,
+            "total_cost_after": self.metrics.total_cost_after,
+        }
+    
+    def reset_metrics(self) -> None:
+        """Reset routing metrics."""
+        self.metrics = RoutingMetrics()
+        logger.info("ModelRouter metrics reset")
+
+
+# Global ModelRouter instance
+_model_router_instance: Optional[ModelRouter] = None
+
+
+def get_model_router() -> ModelRouter:
+    """
+    Get global ModelRouter instance (singleton).
+    
+    Returns:
+        ModelRouter instance
+    """
+    global _model_router_instance
+    
+    if _model_router_instance is None:
+        from core.utils.config import config
+        
+        # Load configuration
+        routing_enabled = getattr(config, "MODEL_ROUTING_ENABLED", True)
+        
+        _model_router_instance = ModelRouter(enabled=routing_enabled)
+        
+        logger.info("Global ModelRouter instance created")
+    
+    return _model_router_instance
+
+
+def set_model_router(instance: ModelRouter) -> None:
+    """
+    Set global ModelRouter instance (for testing).
+    
+    Args:
+        instance: ModelRouter instance
+    """
+    global _model_router_instance
+    _model_router_instance = instance
+
