@@ -55,7 +55,7 @@ Architecture đã được thiết kế để reuse ~95-98% code từ frontend N
 
 **FR008:** Extension phải store authentication tokens securely trong chrome.storage
 
-**FR009:** Extension background worker phải coordinate messages giữa content script và popup
+**FR009:** Extension background worker phải coordinate messages giữa content script và side panel
 
 **FR010:** Extension phải handle errors gracefully với same error handling patterns như frontend
 
@@ -73,7 +73,7 @@ Architecture đã được thiết kế để reuse ~95-98% code từ frontend N
 
 **NFR001:** Extension bundle size phải < 2MB để ensure fast load time
 
-**NFR002:** Extension popup phải load và display results trong < 2 seconds
+**NFR002:** Extension side panel phải load và display chat interface trong < 2 seconds
 
 **NFR003:** Content script coin detection phải không impact page performance (use requestIdleCallback)
 
@@ -153,8 +153,9 @@ Architecture đã được thiết kế để reuse ~95-98% code từ frontend N
 - Estimated Stories: 3-4
 
 **Epic 12: Side Panel UI & Shared Components Integration**
-- Goal: Create extension side panel UI reusing frontend components
+- Goal: Create extension side panel UI (mở bên phải trình duyệt) reusing frontend components
 - Estimated Stories: 4-5
+- Key Features: Side panel layout, shared UI components, chat interface setup
 
 **Epic 13: API Integration & Authentication**
 - Goal: Integrate backend APIs với authentication using chrome.storage adapter
@@ -164,9 +165,10 @@ Architecture đã được thiết kế để reuse ~95-98% code từ frontend N
 - Goal: Implement full report generation, error handling, và final polish
 - Estimated Stories: 3-4
 
-**Epic 15: Chat Integration (NEW)**
-- Goal: Integrate chat functionality vào extension với agent creation
-- Estimated Stories: 4-5
+**Epic 15: Chat Integration**
+- Goal: Integrate chat functionality vào extension với agent creation để allow user chat về coin analysis
+- Estimated Stories: 5 (Chat Interface Setup, Coin Context Integration, Agent Creation, Message Streaming, Continue Chatting)
+- Key Features: Chat interface trong side panel, pre-filled prompts, agent creation, real-time streaming, message persistence
 
 > **Note:** Detailed epic breakdown with full story specifications is available in [epics-extension.md](./epics-extension.md)
 
@@ -180,7 +182,7 @@ Architecture đã được thiết kế để reuse ~95-98% code từ frontend N
 - Advanced coin detection với ML/AI (using pattern matching for MVP)
 - Extension analytics/tracking (can add later)
 - Multi-language support (English only for MVP)
-- Extension settings page (basic settings in popup only)
+- Extension settings page (basic settings in side panel only)
 
 **Future Considerations:**
 - Firefox-specific optimizations
@@ -192,5 +194,6 @@ Architecture đã được thiết kế để reuse ~95-98% code từ frontend N
 ---
 
 _Generated: 2025-11-07_  
+_Updated: 2025-01-15 (Added Side Panel & Chat Integration)_  
 _Product Manager: John (BMAD PM Agent)_
 

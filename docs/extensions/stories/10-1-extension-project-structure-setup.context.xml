@@ -19,7 +19,7 @@
         <subtasks>
           <subtask>Create `extension/` directory at project root</subtask>
           <subtask>Create `extension/src/content-script/` folder</subtask>
-          <subtask>Create `extension/src/popup/` folder</subtask>
+          <subtask>Create `extension/src/sidepanel/` folder</subtask>
           <subtask>Create `extension/src/background/` folder</subtask>
           <subtask>Create `extension/src/shared/` folder</subtask>
           <subtask>Create `extension/public/` folder for static assets</subtask>
@@ -72,7 +72,7 @@
   </story>
 
   <acceptanceCriteria>
-    <ac id="1">Extension directory structure created với folders: `src/content-script/`, `src/popup/`, `src/background/`, `src/shared/`</ac>
+    <ac id="1">Extension directory structure created với folders: `src/content-script/`, `src/sidepanel/`, `src/background/`, `src/shared/`</ac>
     <ac id="2">TypeScript configuration với path aliases to frontend (`@/*` → `../frontend/src/*`)</ac>
     <ac id="3">Package.json với dependencies matching frontend (React, TypeScript, Tailwind, etc.)</ac>
     <ac id="4">Basic README với setup instructions</ac>
@@ -84,7 +84,7 @@
         <path>docs/architecture-extension-suna.md</path>
         <title>Browser Extension Architecture - Suna.so</title>
         <section>Project Structure</section>
-        <snippet>Recommended structure: extension/ với src/content-script/, src/popup/, src/background/, src/shared/. Alternative simpler structure uses direct import với path aliases.</snippet>
+        <snippet>Recommended structure: extension/ với src/content-script/, src/sidepanel/, src/background/, src/shared/. Alternative simpler structure uses direct import với path aliases.</snippet>
       </doc>
       <doc>
         <path>docs/architecture-extension-suna.md</path>
@@ -175,7 +175,7 @@
     </constraint>
     <constraint>
       <type>Directory Structure</type>
-      <description>Extension directory structure must match architecture spec: `extension/src/` với subdirectories cho content-script, popup, background, và shared code.</description>
+      <description>Extension directory structure must match architecture spec: `extension/src/` với subdirectories cho content-script, sidepanel, background, và shared code.</description>
     </constraint>
     <constraint>
       <type>Documentation Requirement</type>
@@ -207,7 +207,7 @@
     </locations>
     <ideas>
       <test ac="1">
-        <idea>Verify all required folders exist: src/content-script/, src/popup/, src/background/, src/shared/, public/</idea>
+        <idea>Verify all required folders exist: src/content-script/, src/sidepanel/, src/background/, src/shared/, public/</idea>
       </test>
       <test ac="2">
         <idea>Test TypeScript path alias: Create test file importing from `@/lib/utils` và verify it resolves correctly</idea>

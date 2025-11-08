@@ -5,12 +5,12 @@ Status: ready-for-dev
 ## Story
 
 As a developer,  
-I want React Query setup trong popup,  
+I want React Query setup trong side panel,  
 So that data fetching và caching works như main app.
 
 ## Acceptance Criteria
 
-1. QueryClient provider setup trong popup
+1. QueryClient provider setup trong side panel
 2. React Query hooks imported từ frontend (`@/hooks/react-query/`)
 3. Analysis query hook created hoặc reused
 4. Caching strategy matches frontend (staleTime, gcTime)
@@ -22,7 +22,7 @@ So that data fetching và caching works như main app.
 - [ ] Task 1: Setup QueryClient provider (AC: 1)
   - [ ] Import QueryClient và QueryClientProvider từ React Query
   - [ ] Create QueryClient instance với configuration
-  - [ ] Wrap popup app với QueryClientProvider
+  - [ ] Wrap side panel app với QueryClientProvider
   - [ ] Configure QueryClient với caching settings
   - [ ] Test provider setup works
 
@@ -30,7 +30,7 @@ So that data fetching và caching works như main app.
   - [ ] Import hooks từ `@/hooks/react-query/` (if available)
   - [ ] Or create hooks locally trong extension
   - [ ] Test hooks import correctly
-  - [ ] Verify hooks work trong popup context
+  - [ ] Verify hooks work trong side panel context
   - [ ] Test hook usage
 
 - [ ] Task 3: Create analysis query hook (AC: 3)

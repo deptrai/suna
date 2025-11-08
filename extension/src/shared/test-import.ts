@@ -1,20 +1,23 @@
 /**
- * Test Shared Code Import
- * Tests importing cn() utility từ frontend using path alias
+ * Test file to verify shared code import from frontend
  * 
- * This file verifies that path aliases work correctly trong build process
+ * This file tests that we can successfully import và use
+ * frontend utilities via path aliases.
  */
 
-// Import cn() utility từ frontend using path alias
 import { cn } from '@/lib/utils';
 
-// Test function to verify import works
+/**
+ * Test function using cn() utility from frontend
+ */
 export function testSharedCodeImport(): string {
-  // Use cn() function to merge class names
-  const className = cn('test', 'class', 'names');
+  // Test cn() function from frontend
+  const className = cn('test', 'class', 'from', 'frontend');
+  console.log('✅ Shared code import test:', className);
   return className;
 }
 
-// Export cn để có thể use trong other files if needed
-export { cn };
+// Export test result
+export const sharedCodeTestResult = testSharedCodeImport();
+
 

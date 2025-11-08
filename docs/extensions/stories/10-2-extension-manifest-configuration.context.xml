@@ -5,6 +5,7 @@
     <title>Extension Manifest Configuration</title>
     <status>ready-for-dev</status>
     <generatedAt>2025-11-08</generatedAt>
+    <updatedAt>2025-01-15</updatedAt>
     <generator>BMAD Story Context Workflow</generator>
     <sourceStoryPath>docs/stories/10-2-extension-manifest-configuration.md</sourceStoryPath>
   </metadata>
@@ -29,7 +30,7 @@
           <subtask>Add `name`: "Suna Extension" hoặc "Suna Coin Analysis"</subtask>
           <subtask>Add `version`: "1.0.0" (initial version)</subtask>
           <subtask>Add `description`: Brief description of extension functionality</subtask>
-          <subtask>Add `permissions`: ["storage", "activeTab"]</subtask>
+          <subtask>Add `permissions`: ["storage", "activeTab", "side_panel"]</subtask>
           <subtask>Add `host_permissions` if needed for API calls</subtask>
           <subtask>Verify permissions are minimal và necessary</subtask>
         </subtasks>
@@ -54,13 +55,14 @@
         </subtasks>
       </task>
       <task id="5" ac="5">
-        <title>Configure popup và action</title>
+        <title>Configure side panel</title>
         <subtasks>
-          <subtask>Add `action` section</subtask>
-          <subtask>Set `default_popup`: "popup.html" (will be built)</subtask>
-          <subtask>Set `default_title`: "Suna Coin Analysis"</subtask>
-          <subtask>Add `default_icon` configuration</subtask>
-          <subtask>Verify popup opens khi clicking extension icon</subtask>
+          <subtask>Add `side_panel` section</subtask>
+          <subtask>Set `side_panel.default_path`: "sidepanel.html" (will be built)</subtask>
+          <subtask>Configure background worker to open side panel on action click</subtask>
+          <subtask>Set `action.default_title`: "Suna Coin Analysis"</subtask>
+          <subtask>Add `action.default_icon` configuration</subtask>
+          <subtask>Verify side panel opens khi clicking extension icon</subtask>
         </subtasks>
       </task>
       <task id="6" ac="6">
@@ -81,7 +83,7 @@
           <subtask>Verify manifest.json parses without errors</subtask>
           <subtask>Verify content script loads on crypto websites</subtask>
           <subtask>Verify background service worker registers</subtask>
-          <subtask>Verify popup opens correctly</subtask>
+          <subtask>Verify side panel opens correctly</subtask>
           <subtask>Verify icons display in extension management page</subtask>
           <subtask>Test extension loads without errors</subtask>
         </subtasks>
@@ -91,10 +93,10 @@
 
   <acceptanceCriteria>
     <ac id="1">`manifest.json` created với Manifest V3 format</ac>
-    <ac id="2">Manifest includes: name, version, description, permissions (storage, activeTab)</ac>
+    <ac id="2">Manifest includes: name, version, description, permissions (storage, activeTab, side_panel)</ac>
     <ac id="3">Content script configuration với matches pattern for crypto websites</ac>
     <ac id="4">Background service worker configuration</ac>
-    <ac id="5">Popup HTML và action configuration</ac>
+    <ac id="5">Side panel configuration (`side_panel.default_path`)</ac>
     <ac id="6">Extension icons (16x16, 48x48, 128x128) placeholder</ac>
   </acceptanceCriteria>
 
@@ -116,7 +118,7 @@
         <path>docs/epics-extension.md</path>
         <title>Suna.so Browser Extension - Epic Breakdown</title>
         <section>Story 10.2: Extension Manifest Configuration</section>
-        <snippet>As a developer, I want Chrome Extension Manifest V3 configuration, So that extension can be loaded và run in browser. Acceptance criteria include manifest format, permissions, content script, background worker, popup, và icons.</snippet>
+        <snippet>As a developer, I want Chrome Extension Manifest V3 configuration, So that extension can be loaded và run in browser. Acceptance criteria include manifest format, permissions (storage, activeTab, side_panel), content script, background worker, side panel, và icons.</snippet>
       </doc>
       <doc>
         <path>docs/PRD-extension.md</path>
@@ -128,7 +130,7 @@
         <path>docs/stories/10-1-extension-project-structure-setup.md</path>
         <title>Story 10.1: Extension Project Structure Setup</title>
         <section>Dev Agent Record</section>
-        <snippet>Previous story established extension directory structure at `extension/` với folders: `src/content-script/`, `src/popup/`, `src/background/`, `src/shared/`. TypeScript config và package.json created.</snippet>
+        <snippet>Previous story established extension directory structure at `extension/` với folders: `src/content-script/`, `src/sidepanel/`, `src/background/`, `src/shared/`. TypeScript config và package.json created.</snippet>
       </doc>
     </docs>
     <code>
@@ -156,9 +158,9 @@
       <file>
         <path>extension/public/</path>
         <kind>directory</kind>
-        <symbol>popup.html, icons/</symbol>
+        <symbol>sidepanel.html, icons/</symbol>
         <lines>N/A</lines>
-        <reason>Public assets location. Popup HTML và extension icons will be placed here.</reason>
+        <reason>Public assets location. Side panel HTML và extension icons will be placed here.</reason>
       </file>
     </code>
     <dependencies>
@@ -176,7 +178,7 @@
     </constraint>
     <constraint>
       <type>Permissions Strategy</type>
-      <description>Permissions must be minimal và necessary. `storage` for chrome.storage API, `activeTab` for tab interaction. `host_permissions` may be needed for API calls.</description>
+      <description>Permissions must be minimal và necessary. `storage` for chrome.storage API, `activeTab` for tab interaction, `side_panel` for side panel API. `host_permissions` may be needed for API calls.</description>
     </constraint>
     <constraint>
       <type>Content Script Matches</type>
@@ -184,7 +186,7 @@
     </constraint>
     <constraint>
       <type>Build Output References</type>
-      <description>Manifest references built files (content-script.js, background.js, popup.html). These will be generated by build process in Story 10.3. For now, create placeholder references.</description>
+      <description>Manifest references built files (content-script.js, background.js, sidepanel.html). These will be generated by build process in Story 10.3. For now, create placeholder references.</description>
     </constraint>
     <constraint>
       <type>Icon Requirements</type>
@@ -216,16 +218,16 @@
       <path>extension/manifest.json</path>
     </interface>
     <interface>
-      <name>Action/Popup Configuration</name>
+      <name>Side Panel Configuration</name>
       <kind>configuration</kind>
-      <signature>action: { default_popup: string, default_title: string, default_icon: object }</signature>
+      <signature>side_panel: { default_path: string }, action: { default_title: string, default_icon: object }</signature>
       <path>extension/manifest.json</path>
     </interface>
   </interfaces>
 
   <tests>
     <standards>
-      Testing standards: Load extension in Chrome Developer mode, verify manifest.json parses without errors, verify content script loads on crypto websites, verify background service worker registers, verify popup opens correctly, verify icons display. Use Chrome extension management page để verify configuration.
+      Testing standards: Load extension in Chrome Developer mode, verify manifest.json parses without errors, verify content script loads on crypto websites, verify background service worker registers, verify side panel opens correctly, verify icons display. Use Chrome extension management page để verify configuration.
     </standards>
     <locations>
       <location>extension/</location>
@@ -254,10 +256,13 @@
         <idea>Verify background service worker registers without errors (check DevTools Service Worker panel)</idea>
       </test>
       <test ac="5">
-        <idea>Click extension icon và verify popup opens correctly</idea>
+        <idea>Click extension icon và verify side panel opens correctly</idea>
       </test>
       <test ac="5">
-        <idea>Verify popup title displays correctly when hovering over extension icon</idea>
+        <idea>Verify side panel title displays correctly when hovering over extension icon</idea>
+      </test>
+      <test ac="5">
+        <idea>Verify side panel persists (doesn't close when clicking outside)</idea>
       </test>
       <test ac="6">
         <idea>Check extension management page displays icons correctly (16x16, 48x48, 128x128)</idea>

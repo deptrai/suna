@@ -1,185 +1,172 @@
 # Suna.so Browser Extension
 
-Browser extension for Suna.so that enables instant coin analysis directly from any cryptocurrency website.
-
-## Overview
-
-This extension allows users to click on coin names while browsing crypto websites and instantly generate analysis reports using Suna.so's AI-powered analysis engine.
+Browser extension cho phép user click vào tên coin trên bất kỳ website crypto và tạo agent chat mới để analyze coin.
 
 ## Project Structure
 
 ```
 extension/
 ├── src/
-│   ├── content-script/    # Content script for coin detection và UI injection
-│   ├── popup/             # Extension popup UI (React components)
-│   ├── background/        # Background service worker
+│   ├── content-script/    # Content script cho coin detection và button injection
+│   ├── sidepanel/         # Side panel UI với chat interface
+│   ├── background/        # Background service worker cho message coordination
 │   └── shared/            # Shared utilities và modules
-├── public/                # Static assets (icons, images)
-├── package.json           # Dependencies và scripts
+├── public/                # Static assets (icons, etc.)
 ├── tsconfig.json          # TypeScript configuration với path aliases
+├── package.json           # Dependencies và scripts
 └── README.md              # This file
 ```
-
-## Architecture
-
-The extension uses a **code reuse strategy** to maximize sharing with the frontend Next.js application:
-
-- **Path Aliases:** TypeScript path aliases (`@/*` → `../frontend/src/*`) allow importing components, utilities, và types directly from the frontend codebase
-- **Shared Components:** UI components (Button, Card, Dialog) are imported from `@/components/ui/`
-- **Shared API Client:** API client logic is reused from `@/lib/api`
-- **Shared State Management:** Zustand stores và React Query hooks are reused from frontend
-
-See [docs/architecture-extension-suna.md](../../docs/architecture-extension-suna.md) for detailed architecture documentation.
 
 ## Setup Instructions
 
 ### Prerequisites
 
-- Node.js 18+ và pnpm (matching frontend setup)
-- Chrome/Edge browser (Manifest V3 compatible)
+- Node.js 18+ và npm/pnpm
+- Frontend project đã được setup (dependencies cần thiết)
 
 ### Installation
 
 1. **Install dependencies:**
    ```bash
    cd extension
+   npm install
+   # hoặc
    pnpm install
    ```
 
-2. **Build configuration:**
-   Build configuration will be set up in Story 10.3. For now, the basic structure is ready.
+2. **Verify path aliases work:**
+   ```bash
+   # Test TypeScript compilation
+   npx tsc --noEmit
+   ```
 
-3. **Load extension in browser:**
-   - Open Chrome/Edge
-   - Navigate to `chrome://extensions/` (or `edge://extensions/`)
-   - Enable "Developer mode"
-   - Click "Load unpacked"
-   - Select the `extension/` directory
+3. **Build extension:**
+   ```bash
+   npm run build
+   ```
+
+## Build Process
+
+Extension sử dụng webpack để bundle code:
+
+- **Development mode:**
+  ```bash
+  npm run dev
+  ```
+  - Watch mode enabled
+  - Source maps included
+  - Faster rebuild times
+
+- **Production mode:**
+  ```bash
+  npm run build
+  ```
+  - Optimized bundle
+  - Minified code
+  - Tree-shaking enabled
 
 ## Development Workflow
 
-### Current Status
+1. **Make changes** trong `src/` directory
+2. **Run dev build** với `npm run dev` (watch mode)
+3. **Load extension** vào Chrome:
+   - Open Chrome → Extensions (chrome://extensions/)
+   - Enable "Developer mode"
+   - Click "Load unpacked"
+   - Select `extension/dist/` directory
+4. **Test changes** trên crypto websites (CoinGecko, Binance, etc.)
+5. **Rebuild** khi cần với `npm run build`
 
-- ✅ **Story 10.1:** Project structure setup (complete - review)
-- ⏳ **Story 10.2:** Manifest configuration (ready-for-dev)
-- ⏳ **Story 10.3:** Build configuration (ready-for-dev)
-- ⏳ **Story 10.4:** Basic popup skeleton (ready-for-dev)
+## Code Reuse Strategy
 
-### Development Steps
-
-1. **Story 10.1 (Current):** Setup project structure với directories, TypeScript config, package.json, và README
-2. **Story 10.2:** Configure `manifest.json` với permissions, content scripts, background worker
-3. **Story 10.3:** Setup build tool (Webpack/Vite) với path alias resolution và bundling
-4. **Story 10.4:** Create basic popup HTML và React entry point
-
-## Path Aliases
-
-The extension uses TypeScript path aliases to import from the frontend:
+Extension sử dụng TypeScript path aliases để import trực tiếp từ frontend:
 
 ```typescript
-// Import UI components
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-
-// Import utilities
-import { cn } from '@/lib/utils';
-
-// Import API client
-import { analyzeCoin } from '@/lib/api';
+// Extension code
+import { Button } from '@/components/ui/button';  // From frontend
+import { unifiedAgentStart } from '@/lib/api';    // From frontend
+import { cn } from '@/lib/utils';                 // From frontend
 ```
 
-Path alias configuration is in `tsconfig.json`:
-```json
-{
-  "paths": {
-    "@/*": ["../frontend/src/*"]
-  }
-}
-```
+Path alias `@/*` maps to `../frontend/src/*` trong `tsconfig.json`.
 
-## Dependencies
-
-Extension dependencies are aligned with frontend to ensure compatibility:
+## Key Dependencies
 
 - **React 18+** - UI framework (matches frontend)
 - **TypeScript 5+** - Type safety (matches frontend)
 - **Tailwind CSS 4+** - Styling (matches frontend)
-- **Radix UI** - Component primitives (matches frontend)
+- **Radix UI** - UI components (matches frontend)
 - **Zustand** - State management (matches frontend)
 - **React Query** - Server state management (matches frontend)
-- **Supabase JS** - Authentication và API client (matches frontend)
+- **Supabase** - Authentication và backend (matches frontend)
 
-See `package.json` for complete dependency list.
+## Architecture
 
-## Build Process
+Extension được thiết kế để:
+- ✅ Maximize code reuse từ frontend (~95-98%)
+- ✅ Provide consistent UI/UX với main app
+- ✅ Support side panel UI (không phải popup)
+- ✅ Enable coin detection và analysis từ bất kỳ website crypto
 
-Build configuration is implemented in Story 10.3. The build process:
-
-1. Bundles content script, popup, và background worker
-2. Processes TypeScript và React code
-3. Extracts CSS for content scripts
-4. Copies static assets (icons, manifest.json)
-5. Runs ESLint during build (with caching)
-6. Shows build progress automatically
-
-### Build Scripts
-
-- `pnpm run build` - Production build
-- `pnpm run dev` - Development build với watch mode
-- `pnpm run analyze` - Production build với bundle analyzer (opens browser)
-- `pnpm run lint` - Run ESLint manually
-- `pnpm run lint:fix` - Run ESLint và auto-fix issues
-
-### Bundle Analysis
-
-Use `pnpm run analyze` để analyze bundle sizes. This will:
-- Open a browser với interactive bundle visualization
-- Generate `bundle-report.html` và `bundle-stats.json` trong dist/
-- Show which modules contribute to bundle size
-
-### ESLint Integration
-
-ESLint runs automatically during build:
-- **Development**: Shows warnings và errors, doesn't fail build
-- **Production**: Fails build on errors, shows warnings
-- **Caching**: Enabled for faster subsequent builds
-- **Cache location**: `node_modules/.cache/.eslintcache`
+Xem thêm architecture details trong:
+- [Architecture Document](../../docs/extensions/epic-prd-architecture/architecture-extension-suna.md)
+- [PRD](../../docs/extensions/epic-prd-architecture/PRD-extension.md)
+- [Epics](../../docs/extensions/epic-prd-architecture/epics-extension.md)
 
 ## Testing
 
-Testing strategy:
+### Manual Testing
 
-- **Unit tests:** Test utilities và shared modules
-- **Integration tests:** Test extension components với frontend code
-- **E2E tests:** Test extension functionality in browser
+1. **Path alias resolution:**
+   ```bash
+   # Verify TypeScript can resolve imports
+   npx tsc --noEmit
+   ```
 
-Test setup will be configured in later stories.
+2. **Folder structure:**
+   ```bash
+   # Verify all required folders exist
+   ls -la src/
+   # Should show: content-script/, sidepanel/, background/, shared/
+   ```
 
-## Documentation
+3. **Dependencies:**
+   ```bash
+   # Verify all dependencies install correctly
+   npm install
+   ```
 
-- **Architecture:** [docs/architecture-extension-suna.md](../../docs/architecture-extension-suna.md)
-- **PRD:** [docs/PRD-extension.md](../../docs/PRD-extension.md)
-- **Epics:** [docs/epics-extension.md](../../docs/epics-extension.md)
+## Troubleshooting
 
-## Code Reuse
+### Path alias không resolve
 
-The extension maximizes code reuse from the frontend:
+- Verify `tsconfig.json` có path alias `@/*` → `../frontend/src/*`
+- Verify frontend `src/` directory exists
+- Check TypeScript version matches frontend
 
-- **Target:** 95-98% code reuse
-- **Strategy:** Path aliases + shared packages
-- **Benefits:** Consistent UI/UX, faster development, easier maintenance
+### Dependencies không match
+
+- Check `package.json` versions match `frontend/package.json`
+- Verify React, TypeScript, Tailwind versions match
+
+### Build fails
+
+- Check webpack configuration
+- Verify all required dependencies installed
+- Check for TypeScript errors với `npx tsc --noEmit`
 
 ## Next Steps
 
-1. Complete Story 10.1 setup
-2. Configure manifest.json (Story 10.2)
-3. Setup build configuration (Story 10.3)
-4. Create basic popup skeleton (Story 10.4)
+1. ✅ Story 10.1: Project structure setup (Complete)
+2. ⏳ Story 10.2: Manifest configuration
+3. ⏳ Story 10.3: Build configuration
+4. ⏳ Story 10.4: Basic side panel skeleton
 
-## Support
+## Links
 
-For questions or issues, refer to:
-- Architecture documentation: `docs/architecture-extension-suna.md`
-- Story context: `docs/stories/10-1-extension-project-structure-setup.context.xml`
+- [Architecture Document](../../docs/extensions/epic-prd-architecture/architecture-extension-suna.md)
+- [PRD](../../docs/extensions/epic-prd-architecture/PRD-extension.md)
+- [Epics](../../docs/extensions/epic-prd-architecture/epics-extension.md)
+- [Stories](../../docs/extensions/stories/)
+
 

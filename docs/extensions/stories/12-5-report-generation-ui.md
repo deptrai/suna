@@ -5,12 +5,12 @@ Status: ready-for-dev
 ## Story
 
 As a user,  
-I want generate full report từ popup,  
+I want generate full report từ side panel,  
 So that I can get comprehensive analysis.
 
 ## Acceptance Criteria
 
-1. "Generate Full Report" button trong popup
+1. "Generate Full Report" button trong side panel
 2. Button click opens new tab với report URL
 3. Report URL includes coin context (query params)
 4. Report page (frontend) loads với correct coin data
@@ -19,7 +19,7 @@ So that I can get comprehensive analysis.
 ## Tasks / Subtasks
 
 - [ ] Task 1: Add Generate Report button (AC: 1)
-  - [ ] Add "Generate Full Report" button trong popup footer
+  - [ ] Add "Generate Full Report" button trong side panel footer
   - [ ] Style button appropriately
   - [ ] Position button in footer layout
   - [ ] Test button displays correctly

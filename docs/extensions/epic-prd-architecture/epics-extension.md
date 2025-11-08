@@ -42,7 +42,7 @@ Each epic includes:
 **So that** code is maintainable và follows best practices.
 
 **Acceptance Criteria:**
-1. Extension directory structure created với folders: `src/content-script/`, `src/popup/`, `src/background/`, `src/shared/`
+1. Extension directory structure created với folders: `src/content-script/`, `src/sidepanel/`, `src/background/`, `src/shared/`
 2. TypeScript configuration với path aliases to frontend (`@/*` → `../frontend/src/*`)
 3. Package.json với dependencies matching frontend (React, TypeScript, Tailwind, etc.)
 4. Basic README với setup instructions
@@ -59,10 +59,10 @@ Each epic includes:
 
 **Acceptance Criteria:**
 1. `manifest.json` created với Manifest V3 format
-2. Manifest includes: name, version, description, permissions (storage, activeTab)
+2. Manifest includes: name, version, description, permissions (storage, activeTab, side_panel)
 3. Content script configuration với matches pattern for crypto websites
 4. Background service worker configuration
-5. Popup HTML và action configuration
+5. Side panel configuration (`side_panel.default_path`)
 6. Extension icons (16x16, 48x48, 128x128) placeholder
 
 **Prerequisites:** Story 10.1
@@ -80,24 +80,25 @@ Each epic includes:
 2. Build script outputs to `dist/` directory
 3. Path aliases configured để import từ frontend (`@/components`, `@/lib`, etc.)
 4. Shared code import test: successfully import `cn()` utility từ frontend
-5. Build produces: `content-script.js`, `background.js`, `popup.js`, `popup.html`
+5. Build produces: `content-script.js`, `background.js`, `sidepanel.js`, `sidepanel.html`
 
 **Prerequisites:** Story 10.1, Story 10.2
 
 ---
 
-### Story 10.4: Basic Popup Skeleton
+### Story 10.4: Basic Side Panel Skeleton
 
 **As a** developer,  
-**I want** basic popup HTML và React entry point,  
-**So that** popup UI can be developed.
+**I want** basic side panel HTML và React entry point,  
+**So that** side panel UI can be developed.
 
 **Acceptance Criteria:**
-1. `popup.html` created với React root element
-2. `popup.tsx` entry point với React setup
-3. Basic "Hello Extension" component renders in popup
-4. Popup opens khi clicking extension icon
-5. Popup displays correctly (400x600px recommended size)
+1. `sidepanel.html` created với React root element
+2. `sidepanel.tsx` entry point với React setup
+3. Basic "Hello Extension" component renders in side panel
+4. Side panel opens khi clicking extension icon (chrome.sidePanel API)
+5. Side panel displays correctly (400-600px width, full height)
+6. Background worker configured để open side panel on action click
 
 **Prerequisites:** Story 10.3
 
@@ -182,11 +183,11 @@ Each epic includes:
 
 ---
 
-## Epic 12: Popup UI & Shared Components Integration
+## Epic 12: Side Panel UI & Shared Components Integration
 
-**Goal:** Create extension popup UI reusing frontend components và display analysis results.
+**Goal:** Create extension side panel UI (mở bên phải trình duyệt) reusing frontend components và setup chat interface.
 
-**Value Proposition:** Consistent UI/UX với main app, fast development through code reuse.
+**Value Proposition:** Persistent side panel với better UX than popup, consistent UI/UX với main app, fast development through code reuse.
 
 **Story Breakdown:**
 
@@ -194,13 +195,13 @@ Each epic includes:
 
 **As a** developer,  
 **I want** import và use UI components từ frontend,  
-**So that** popup UI matches main app design.
+**So that** side panel UI matches main app design.
 
 **Acceptance Criteria:**
 1. Successfully import `Button` component từ `@/components/ui/button`
 2. Successfully import `Card` component từ `@/components/ui/card`
 3. Successfully import `Dialog` component từ `@/components/ui/dialog`
-4. Components render correctly trong extension popup
+4. Components render correctly trong extension side panel
 5. Tailwind CSS styles applied correctly
 6. Components tested với various props
 
@@ -208,19 +209,19 @@ Each epic includes:
 
 ---
 
-### Story 12.2: Popup Layout & Structure
+### Story 12.2: Side Panel Layout & Structure
 
 **As a** user,  
-**I want** well-organized popup layout,  
-**So that** I can easily view analysis results.
+**I want** well-organized side panel layout (mở bên phải trình duyệt),  
+**So that** I have more space và persistent view for chat interface.
 
 **Acceptance Criteria:**
-1. Popup layout với header, content area, và footer
-2. Header shows extension name/logo
-3. Content area ready for analysis results display
-4. Footer với action buttons (Generate Report, etc.)
-5. Responsive layout works với different content sizes
-6. Layout matches main app design patterns
+1. Side panel layout với header, content area, và footer (full height, resizable)
+2. Header shows extension name/logo với close button
+3. Content area ready for analysis results display (scrollable, full height)
+4. Responsive layout works với different panel widths (400-600px resizable)
+5. Side panel opens when clicking extension icon (chrome.sidePanel API)
+6. Side panel persists (doesn't close when clicking outside)
 
 **Prerequisites:** Story 12.1
 
@@ -229,12 +230,14 @@ Each epic includes:
 ### Story 12.3: Analysis Results Display Component
 
 **As a** user,  
-**I want** see analysis results trong popup,  
+**I want** see analysis results trong side panel,  
 **So that** I can review coin analysis quickly.
 
+**Note:** This story is optional/legacy. With Epic 15 (Chat Integration), analysis results are displayed through chat interface instead of static results. This story may be removed or simplified.
+
 **Acceptance Criteria:**
-1. `coin-analysis.tsx` component created
-2. Component displays: coin name, price, sentiment, risk score
+1. Message display component created for chat interface (prepares for Epic 15)
+2. Component ready for chat messages display
 3. Component uses shared UI components (Card, Button, etc.)
 4. Loading state displayed while analysis in progress
 5. Error state displayed nếu analysis fails
@@ -247,11 +250,11 @@ Each epic includes:
 ### Story 12.4: React Query Integration
 
 **As a** developer,  
-**I want** React Query setup trong popup,  
+**I want** React Query setup trong side panel,  
 **So that** data fetching và caching works như main app.
 
 **Acceptance Criteria:**
-1. QueryClient provider setup trong popup
+1. QueryClient provider setup trong side panel
 2. React Query hooks imported từ frontend (`@/hooks/react-query/`)
 3. Analysis query hook created hoặc reused
 4. Caching strategy matches frontend (staleTime, gcTime)
@@ -265,11 +268,11 @@ Each epic includes:
 ### Story 12.5: Report Generation UI
 
 **As a** user,  
-**I want** generate full report từ popup,  
+**I want** generate full report từ side panel,  
 **So that** I can get comprehensive analysis.
 
 **Acceptance Criteria:**
-1. "Generate Full Report" button trong popup
+1. "Generate Full Report" button trong side panel
 2. Button click opens new tab với report URL
 3. Report URL includes coin context (query params)
 4. Report page (frontend) loads với correct coin data
@@ -323,17 +326,17 @@ Each epic includes:
 
 ---
 
-### Story 13.3: Authentication Flow in Popup
+### Story 13.3: Authentication Flow in Side Panel
 
 **As a** user,  
-**I want** login trong extension popup,  
+**I want** login trong extension side panel,  
 **So that** I can access authenticated features.
 
 **Acceptance Criteria:**
-1. Login UI trong popup (reuse frontend auth components)
+1. Login UI trong side panel (reuse frontend auth components)
 2. Login form submits credentials
 3. Auth token stored in chrome.storage after login
-4. Popup shows logged-in state
+4. Side panel shows logged-in state
 5. Logout functionality works
 6. Auth state persists across browser sessions
 
@@ -344,16 +347,17 @@ Each epic includes:
 ### Story 13.4: Background Worker API Coordination
 
 **As a** developer,  
-**I want** background worker coordinate API calls,  
-**So that** content script và popup can request analysis.
+**I want** background worker coordinate API calls và side panel opening,  
+**So that** content script và side panel can request analysis và open chat.
 
 **Acceptance Criteria:**
-1. Background worker listens for messages từ content script và popup
-2. Worker handles `ANALYZE_COIN` message type
-3. Worker calls API với proper authentication
-4. Worker sends results back to requester
-5. Error handling và retry logic implemented
-6. Message passing tested end-to-end
+1. Background worker listens for messages từ content script và side panel
+2. Worker handles `ANALYZE_COIN` và `OPEN_SIDE_PANEL_WITH_COIN` message types
+3. Worker stores coin info trong chrome.storage khi opening side panel
+4. Worker calls API với proper authentication
+5. Worker sends results back to requester
+6. Error handling và retry logic implemented
+7. Message passing tested end-to-end
 
 **Prerequisites:** Story 13.2
 
@@ -411,10 +415,10 @@ Each epic includes:
 
 **Acceptance Criteria:**
 1. Extension bundle size < 2MB (analyze với bundle analyzer)
-2. Popup loads trong < 2 seconds
+2. Side panel loads trong < 2 seconds
 3. Content script detection doesn't slow page
 4. Lazy loading implemented cho heavy components
-5. Code splitting cho popup vs content script
+5. Code splitting cho side panel vs content script
 6. Performance tested trên various websites
 
 **Prerequisites:** Story 14.1
@@ -572,6 +576,6 @@ So that [benefit/value].
 ---
 
 _Generated: 2025-11-07_  
-_Updated: 2025-01-15 (Added Epic 15: Chat Integration)_  
+_Updated: 2025-01-15 (Added Epic 15: Chat Integration, Updated Epic 12: Side Panel UI)_  
 _Product Manager: John (BMAD PM Agent)_
 

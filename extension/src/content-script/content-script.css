@@ -1,63 +1,30 @@
-/* Content Script Styles */
-/* These styles will be injected into crypto websites */
+/**
+ * Content Script Styles
+ * 
+ * Styles for injected "Analyze with Suna" buttons và coin highlights
+ */
 
 .suna-analyze-btn {
   display: inline-block;
   padding: 4px 8px;
   margin-left: 8px;
-  background-color: #4a90e2;
+  background-color: #6366f1;
   color: white;
   border: none;
   border-radius: 4px;
-  cursor: pointer;
   font-size: 12px;
-  font-weight: 500;
+  cursor: pointer;
   transition: background-color 0.2s;
 }
 
 .suna-analyze-btn:hover {
-  background-color: #357abd;
+  background-color: #4f46e5;
 }
-
-.suna-analyze-btn:active {
-  background-color: #2a5f8f;
-}
-
-/* Coin Highlight Styles */
-/* Subtle visual feedback for detected coins */
 
 .suna-coin-highlight {
-  /* Use box-shadow instead of border to avoid layout shifts */
-  box-shadow: 0 0 0 1px rgba(74, 144, 226, 0.4) inset;
-  /* Subtle background with low opacity */
-  background-color: rgba(74, 144, 226, 0.08);
-  /* Smooth transition */
-  transition: box-shadow 0.2s ease, background-color 0.2s ease;
-  /* Ensure no dimension changes */
-  box-sizing: border-box;
-  /* Border radius for subtle rounded corners */
-  border-radius: 3px;
+  background-color: rgba(99, 102, 241, 0.1);
+  border-radius: 2px;
+  padding: 2px 4px;
 }
 
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  .suna-coin-highlight {
-    /* Lighter blue for dark mode with better contrast */
-    box-shadow: 0 0 0 1px rgba(100, 180, 255, 0.5) inset;
-    background-color: rgba(100, 180, 255, 0.12);
-  }
-}
-
-/* Hover state for better UX (optional) */
-.suna-coin-highlight:hover {
-  box-shadow: 0 0 0 1px rgba(74, 144, 226, 0.6) inset;
-  background-color: rgba(74, 144, 226, 0.12);
-}
-
-@media (prefers-color-scheme: dark) {
-  .suna-coin-highlight:hover {
-    box-shadow: 0 0 0 1px rgba(100, 180, 255, 0.7) inset;
-    background-color: rgba(100, 180, 255, 0.18);
-  }
-}
 

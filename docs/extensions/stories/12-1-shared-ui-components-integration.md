@@ -6,49 +6,49 @@ Status: in-progress
 
 As a developer,  
 I want import và use UI components từ frontend,  
-So that popup UI matches main app design.
+So that side panel UI matches main app design.
 
 ## Acceptance Criteria
 
 1. Successfully import `Button` component từ `@/components/ui/button`
 2. Successfully import `Card` component từ `@/components/ui/card`
 3. Successfully import `Dialog` component từ `@/components/ui/dialog`
-4. Components render correctly trong extension popup
+4. Components render correctly trong extension side panel
 5. Tailwind CSS styles applied correctly
 6. Components tested với various props
 
 ## Tasks / Subtasks
 
 - [x] Task 1: Import Button component (AC: 1)
-  - [x] Import Button từ `@/components/ui/button` trong popup component
+  - [x] Import Button từ `@/components/ui/button` trong side panel component
   - [x] Test import resolves correctly (no build errors)
-  - [x] Render Button component trong popup
+  - [x] Render Button component trong side panel
   - [x] Test Button với different variants và sizes
   - [x] Verify Button styles apply correctly
 
 - [x] Task 2: Import Card component (AC: 2)
   - [x] Import Card components từ `@/components/ui/card` (Card, CardHeader, CardTitle, CardContent)
   - [x] Test import resolves correctly
-  - [x] Render Card component trong popup
+  - [x] Render Card component trong side panel
   - [x] Test Card với different content
   - [x] Verify Card styles apply correctly
 
 - [x] Task 3: Import Dialog component (AC: 3)
   - [x] Import Dialog components từ `@/components/ui/dialog` (Dialog, DialogContent, DialogTrigger)
   - [x] Test import resolves correctly
-  - [x] Render Dialog component trong popup
+  - [x] Render Dialog component trong side panel
   - [x] Test Dialog open/close functionality
   - [x] Verify Dialog styles apply correctly
 
 - [x] Task 4: Verify components render correctly (AC: 4)
-  - [x] Test all components render trong popup
+  - [x] Test all components render trong side panel
   - [x] Verify no console errors
   - [x] Test components với different props
   - [x] Verify components are interactive (buttons clickable, dialogs open)
-  - [x] Test components on popup open/close
+  - [x] Test components on side panel open/close
 
 - [x] Task 5: Verify Tailwind CSS styles (AC: 5)
-  - [x] Verify Tailwind CSS is loaded trong popup
+  - [x] Verify Tailwind CSS is loaded trong side panel
   - [x] Test Tailwind classes work correctly
   - [x] Verify component styles match frontend
   - [x] Test với dark mode (if applicable)

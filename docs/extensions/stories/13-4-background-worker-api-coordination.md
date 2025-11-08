@@ -6,63 +6,68 @@ Status: ready-for-dev
 
 As a developer,  
 I want background worker coordinate API calls,  
-So that content script và popup can request analysis.
+So that content script và side panel can request analysis và open chat.
 
 ## Acceptance Criteria
 
-1. Background worker listens for messages từ content script và popup
-2. Worker handles `ANALYZE_COIN` message type
-3. Worker calls API với proper authentication
-4. Worker sends results back to requester
-5. Error handling và retry logic implemented
-6. Message passing tested end-to-end
+1. Background worker listens for messages từ content script và side panel
+2. Worker handles `ANALYZE_COIN` và `OPEN_SIDE_PANEL_WITH_COIN` message types
+3. Worker stores coin info trong chrome.storage khi opening side panel
+4. Worker calls API với proper authentication
+5. Worker sends results back to requester
+6. Error handling và retry logic implemented
+7. Message passing tested end-to-end
 
 ## Tasks / Subtasks
 
 - [ ] Task 1: Setup message listener (AC: 1)
   - [ ] Create `extension/src/background/background.ts`
   - [ ] Add `chrome.runtime.onMessage.addListener()`
-  - [ ] Listen for messages từ content script và popup
+  - [ ] Listen for messages từ content script và side panel
   - [ ] Route messages to appropriate handlers
   - [ ] Test message listener works
 
-- [ ] Task 2: Handle ANALYZE_COIN message (AC: 2)
+- [ ] Task 2: Handle message types (AC: 2, 3)
   - [ ] Create handler for `ANALYZE_COIN` message type
-  - [ ] Extract coin name từ message
+  - [ ] Create handler for `OPEN_SIDE_PANEL_WITH_COIN` message type
+  - [ ] Extract coin info (name, symbol, price) từ message
+  - [ ] Store coin info trong chrome.storage khi opening side panel
+  - [ ] Open side panel using chrome.sidePanel.open()
   - [ ] Validate message format
-  - [ ] Route to analysis handler
+  - [ ] Route to appropriate handlers
   - [ ] Test message handling works
 
-- [ ] Task 3: Call API với authentication (AC: 3)
+- [ ] Task 3: Call API với authentication (AC: 4)
   - [ ] Get auth token từ chrome.storage (via Supabase client)
   - [ ] Call coin analysis API với token
   - [ ] Use API client từ Story 13.2
   - [ ] Handle API response
   - [ ] Test API call works
 
-- [ ] Task 4: Send results back (AC: 4)
+- [ ] Task 4: Send results back (AC: 5)
   - [ ] Format API response
   - [ ] Send response back to requester via `sendResponse()`
   - [ ] Handle async response correctly
   - [ ] Test results sent back correctly
   - [ ] Verify requester receives results
 
-- [ ] Task 5: Implement error handling và retry (AC: 5)
+- [ ] Task 5: Implement error handling và retry (AC: 6)
   - [ ] Handle API errors
   - [ ] Handle authentication errors
   - [ ] Implement retry logic for network errors
   - [ ] Send error messages back to requester
   - [ ] Test error handling works
 
-- [ ] Task 6: Test end-to-end message passing (AC: 6)
+- [ ] Task 6: Test end-to-end message passing (AC: 7)
   - [ ] Test message từ content script to background
-  - [ ] Test message từ popup to background
+  - [ ] Test message từ side panel to background
+  - [ ] Test side panel opening với coin info
   - [ ] Test API call và response
   - [ ] Test error handling
   - [ ] Test retry logic
   - [ ] Verify end-to-end flow works
 
-- [ ] Testing (AC: 1, 2, 3, 4, 5, 6)
+- [ ] Testing (AC: 1, 2, 3, 4, 5, 6, 7)
   - [ ] Test message listener works
   - [ ] Test ANALYZE_COIN message handling
   - [ ] Test API call với authentication
@@ -75,8 +80,9 @@ So that content script và popup can request analysis.
 ### Architecture Patterns and Constraints
 
 **Message Passing:**
-- Content script và popup send messages to background
+- Content script và side panel send messages to background
 - Background worker handles messages
+- Worker opens side panel với coin info (OPEN_SIDE_PANEL_WITH_COIN)
 - Worker calls API và sends results back
 - Use chrome.runtime.sendMessage() và onMessage
 
@@ -101,7 +107,7 @@ So that content script và popup can request analysis.
 
 **Message Types:**
 - Define message types trong shared types file
-- Message format: `{ type: 'ANALYZE_COIN', coin: string }`
+- Message format: `{ type: 'ANALYZE_COIN', coin: string }` hoặc `{ type: 'OPEN_SIDE_PANEL_WITH_COIN', coinInfo: { name, symbol, price? } }`
 - Response format: `{ success: boolean, data?: any, error?: string }`
 
 ### References

@@ -2,18 +2,19 @@
   "manifest_version": 3,
   "name": "Suna Coin Analysis",
   "version": "1.0.0",
-  "description": "Instant coin analysis directly from any cryptocurrency website. Click on coin names to generate AI-powered analysis reports.",
+  "description": "Browser extension để analyze crypto coins từ bất kỳ website nào. Click vào coin name để tạo agent chat mới với Suna AI.",
   "permissions": [
     "storage",
-    "activeTab"
+    "activeTab",
+    "sidePanel"
   ],
   "host_permissions": [
     "https://*.supabase.co/*",
     "https://*.supabase.in/*",
     "https://api.suna.so/*",
     "https://*.suna.so/*",
-    "http://localhost:*/*",
-    "http://127.0.0.1:*/*"
+    "http://localhost/*",
+    "http://127.0.0.1/*"
   ],
   "background": {
     "service_worker": "background.js",
@@ -37,20 +38,22 @@
       "js": [
         "content-script.js"
       ],
-      "run_at": "document_idle",
       "css": [
         "content-script.css"
-      ]
+      ],
+      "run_at": "document_idle"
     }
   ],
   "action": {
-    "default_popup": "popup.html",
     "default_title": "Suna Coin Analysis",
     "default_icon": {
       "16": "icons/icon-16.png",
       "48": "icons/icon-48.png",
       "128": "icons/icon-128.png"
     }
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
   },
   "icons": {
     "16": "icons/icon-16.png",
@@ -68,4 +71,5 @@
     }
   ]
 }
+
 

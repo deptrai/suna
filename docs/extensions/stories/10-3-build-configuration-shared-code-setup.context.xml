@@ -5,6 +5,7 @@
     <title>Build Configuration & Shared Code Setup</title>
     <status>ready-for-dev</status>
     <generatedAt>2025-11-08</generatedAt>
+    <updatedAt>2025-01-15</updatedAt>
     <generator>BMAD Story Context Workflow</generator>
     <sourceStoryPath>docs/stories/10-3-build-configuration-shared-code-setup.md</sourceStoryPath>
   </metadata>
@@ -19,7 +20,7 @@
         <subtasks>
           <subtask>Choose build tool: Webpack hoặc Vite (recommend Webpack for extension)</subtask>
           <subtask>Create `extension/webpack.config.js` hoặc `extension/vite.config.ts`</subtask>
-          <subtask>Configure entry points: content-script, background, popup</subtask>
+          <subtask>Configure entry points: content-script, background, sidepanel</subtask>
           <subtask>Configure output directory: `dist/`</subtask>
           <subtask>Configure build mode (development/production)</subtask>
           <subtask>Test build command runs successfully</subtask>
@@ -29,8 +30,8 @@
         <title>Configure build output directory</title>
         <subtasks>
           <subtask>Set output path to `extension/dist/`</subtask>
-          <subtask>Configure output filenames: `content-script.js`, `background.js`, `popup.js`</subtask>
-          <subtask>Configure HTML output: `popup.html` (if using HTML plugin)</subtask>
+          <subtask>Configure output filenames: `content-script.js`, `background.js`, `sidepanel.js`</subtask>
+          <subtask>Configure HTML output: `sidepanel.html` (if using HTML plugin)</subtask>
           <subtask>Ensure dist directory structure matches manifest requirements</subtask>
           <subtask>Test build outputs files correctly</subtask>
         </subtasks>
@@ -62,8 +63,8 @@
           <subtask>Run build command</subtask>
           <subtask>Verify `dist/content-script.js` exists</subtask>
           <subtask>Verify `dist/background.js` exists</subtask>
-          <subtask>Verify `dist/popup.js` exists</subtask>
-          <subtask>Verify `dist/popup.html` exists</subtask>
+          <subtask>Verify `dist/sidepanel.js` exists</subtask>
+          <subtask>Verify `dist/sidepanel.html` exists</subtask>
           <subtask>Verify all files are properly bundled (check file sizes)</subtask>
           <subtask>Test loading extension với built files</subtask>
         </subtasks>
@@ -87,7 +88,7 @@
     <ac id="2">Build script outputs to `dist/` directory</ac>
     <ac id="3">Path aliases configured để import từ frontend (`@/components`, `@/lib`, etc.)</ac>
     <ac id="4">Shared code import test: successfully import `cn()` utility từ frontend</ac>
-    <ac id="5">Build produces: `content-script.js`, `background.js`, `popup.js`, `popup.html`</ac>
+    <ac id="5">Build produces: `content-script.js`, `background.js`, `sidepanel.js`, `sidepanel.html`</ac>
   </acceptanceCriteria>
 
   <artifacts>
@@ -102,7 +103,7 @@
         <path>docs/architecture-extension-suna.md</path>
         <title>Browser Extension Architecture - Suna.so</title>
         <section>Project Structure</section>
-        <snippet>Build output structure: `dist/content-script.js`, `dist/background.js`, `dist/popup.js`, `dist/popup.html`. Build tool must support multiple entry points và path alias resolution.</snippet>
+        <snippet>Build output structure: `dist/content-script.js`, `dist/background.js`, `dist/sidepanel.js`, `dist/sidepanel.html`. Build tool must support multiple entry points và path alias resolution.</snippet>
       </doc>
       <doc>
         <path>docs/epics-extension.md</path>
@@ -120,7 +121,7 @@
         <path>docs/stories/10-2-extension-manifest-configuration.md</path>
         <title>Story 10.2: Extension Manifest Configuration</title>
         <section>Dev Agent Record</section>
-        <snippet>Manifest references built files: `content-script.js`, `background.js`, `popup.html`. Build process must produce these files matching manifest references exactly.</snippet>
+        <snippet>Manifest references built files: `content-script.js`, `background.js`, `sidepanel.html`. Build process must produce these files matching manifest references exactly.</snippet>
       </doc>
     </docs>
     <code>
@@ -143,7 +144,7 @@
         <kind>config</kind>
         <symbol>content_scripts, background, action</symbol>
         <lines>N/A</lines>
-        <reason>Manifest references built files. Build output must match these references: content-script.js, background.js, popup.html.</reason>
+        <reason>Manifest references built files. Build output must match these references: content-script.js, background.js, sidepanel.html.</reason>
       </file>
       <file>
         <path>frontend/src/lib/utils.ts</path>
@@ -185,11 +186,11 @@
     </constraint>
     <constraint>
       <type>Output Directory Structure</type>
-      <description>Build outputs to `extension/dist/` directory. Files must match manifest.json references exactly: content-script.js, background.js, popup.js, popup.html.</description>
+      <description>Build outputs to `extension/dist/` directory. Files must match manifest.json references exactly: content-script.js, background.js, sidepanel.js, sidepanel.html.</description>
     </constraint>
     <constraint>
       <type>Multiple Entry Points</type>
-      <description>Build tool must support multiple entry points: content-script, background, popup. Each entry point produces separate output file.</description>
+      <description>Build tool must support multiple entry points: content-script, background, sidepanel. Each entry point produces separate output file.</description>
     </constraint>
     <constraint>
       <type>Shared Code Import Test</type>
@@ -197,7 +198,7 @@
     </constraint>
     <constraint>
       <type>Build Output Validation</type>
-      <description>Build must produce all required files: content-script.js, background.js, popup.js, popup.html. Files must be valid và loadable in Chrome extension.</description>
+      <description>Build must produce all required files: content-script.js, background.js, sidepanel.js, sidepanel.html. Files must be valid và loadable in Chrome extension.</description>
     </constraint>
   </constraints>
 
@@ -268,10 +269,10 @@
         <idea>Verify `dist/background.js` exists và has content</idea>
       </test>
       <test ac="5">
-        <idea>Verify `dist/popup.js` exists và has content</idea>
+        <idea>Verify `dist/sidepanel.js` exists và has content</idea>
       </test>
       <test ac="5">
-        <idea>Verify `dist/popup.html` exists và references popup.js correctly</idea>
+        <idea>Verify `dist/sidepanel.html` exists và references sidepanel.js correctly</idea>
       </test>
       <test ac="5">
         <idea>Load extension trong Chrome với built files và verify it loads without errors</idea>

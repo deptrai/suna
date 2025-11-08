@@ -2,91 +2,97 @@
   <metadata>
     <epicId>10</epicId>
     <storyId>10.4</storyId>
-    <title>Basic Popup Skeleton</title>
+    <title>Basic Side Panel Skeleton</title>
     <status>ready-for-dev</status>
     <generatedAt>2025-11-08</generatedAt>
+    <updatedAt>2025-01-15</updatedAt>
     <generator>BMAD Story Context Workflow</generator>
     <sourceStoryPath>docs/stories/10-4-basic-popup-skeleton.md</sourceStoryPath>
   </metadata>
 
   <story>
     <asA>developer</asA>
-    <iWant>basic popup HTML và React entry point</iWant>
-    <soThat>popup UI can be developed</soThat>
+    <iWant>basic side panel HTML và React entry point</iWant>
+    <soThat>side panel UI can be developed</soThat>
     <tasks>
       <task id="1" ac="1">
-        <title>Create popup.html</title>
+        <title>Create sidepanel.html</title>
         <subtasks>
-          <subtask>Create `extension/public/popup.html`</subtask>
+          <subtask>Create `extension/src/sidepanel/sidepanel.html`</subtask>
           <subtask>Add HTML structure với DOCTYPE, html, head, body</subtask>
           <subtask>Add React root element: `<div id="extension-root"></div>`</subtask>
-          <subtask>Add script tag để load popup.js (will be built)</subtask>
-          <subtask>Add basic CSS for popup sizing (400x600px)</subtask>
+          <subtask>Add script tag automatically injected by webpack HtmlWebpackPlugin</subtask>
+          <subtask>Add basic CSS for side panel sizing (full height, 400-600px width)</subtask>
           <subtask>Verify HTML structure is valid</subtask>
         </subtasks>
       </task>
       <task id="2" ac="2">
-        <title>Create popup.tsx entry point</title>
+        <title>Create sidepanel.tsx entry point</title>
         <subtasks>
-          <subtask>Create `extension/src/popup/popup.tsx`</subtask>
-          <subtask>Import React và ReactDOM</subtask>
+          <subtask>Create `extension/src/sidepanel/sidepanel.tsx`</subtask>
+          <subtask>Import React và createRoot từ react-dom/client</subtask>
           <subtask>Create root element reference: `document.getElementById('extension-root')`</subtask>
-          <subtask>Setup React root: `ReactDOM.createRoot(rootElement)`</subtask>
-          <subtask>Render basic component vào root</subtask>
-          <subtask>Verify React setup works</subtask>
+          <subtask>Setup React root: `createRoot(rootElement)`</subtask>
+          <subtask>Render HelloExtension component vào root</subtask>
+          <subtask>Verify React setup works (build successful)</subtask>
         </subtasks>
       </task>
       <task id="3" ac="3">
         <title>Create basic Hello Extension component</title>
         <subtasks>
-          <subtask>Create `extension/src/popup/components/HelloExtension.tsx`</subtask>
+          <subtask>Create `extension/src/sidepanel/components/HelloExtension.tsx`</subtask>
           <subtask>Create simple component: displays "Hello Extension" text</subtask>
-          <subtask>Import và render component trong popup.tsx</subtask>
-          <subtask>Add basic styling (use Tailwind classes if available)</subtask>
-          <subtask>Verify component renders correctly</subtask>
+          <subtask>Import và render component trong sidepanel.tsx</subtask>
+          <subtask>Add basic styling (inline styles for now, Tailwind can be added later)</subtask>
+          <subtask>Verify component renders correctly (build successful)</subtask>
         </subtasks>
       </task>
       <task id="4" ac="4">
-        <title>Test popup opens correctly</title>
+        <title>Configure side panel opening</title>
         <subtasks>
+          <subtask>Update manifest.json với `side_panel` permission và `side_panel.default_path`</subtask>
+          <subtask>Configure background worker to open side panel on action click</subtask>
+          <subtask>Use `chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })`</subtask>
           <subtask>Build extension (using build config từ Story 10.3)</subtask>
-          <subtask>Load extension in Chrome Developer mode</subtask>
-          <subtask>Click extension icon trong browser toolbar</subtask>
-          <subtask>Verify popup opens</subtask>
-          <subtask>Verify popup displays content</subtask>
-          <subtask>Test popup closes khi clicking outside</subtask>
+          <subtask>Load extension in Chrome Developer mode (build outputs ready for testing)</subtask>
+          <subtask>Click extension icon trong browser toolbar (requires manual verification by user)</subtask>
+          <subtask>Verify side panel opens (requires manual verification by user)</subtask>
+          <subtask>Verify side panel displays content (build outputs verified, requires manual verification by user)</subtask>
         </subtasks>
       </task>
-      <task id="5" ac="5">
-        <title>Verify popup sizing</title>
+      <task id="5" ac="5,6">
+        <title>Verify side panel sizing và persistence</title>
         <subtasks>
-          <subtask>Add CSS để set popup size: width 400px, height 600px</subtask>
-          <subtask>Verify popup displays at correct size</subtask>
-          <subtask>Test với different content sizes</subtask>
-          <subtask>Verify popup is scrollable nếu content exceeds size</subtask>
-          <subtask>Test popup sizing on different screen resolutions</subtask>
+          <subtask>Add CSS để set side panel size: full height (100vh), width 400-600px (resizable)</subtask>
+          <subtask>Verify side panel displays at correct size (CSS configured)</subtask>
+          <subtask>Test với different content sizes (scrollable container configured)</subtask>
+          <subtask>Verify side panel is scrollable nếu content exceeds size (overflow-y: auto)</subtask>
+          <subtask>Verify side panel persists (doesn't close when clicking outside)</subtask>
+          <subtask>Test side panel sizing on different screen resolutions (CSS configured, requires manual verification by user)</subtask>
         </subtasks>
       </task>
-      <task id="6" ac="1,2,3,4,5">
+      <task id="6" ac="1,2,3,4,5,6">
         <title>Testing</title>
         <subtasks>
-          <subtask>Verify popup.html structure is valid</subtask>
-          <subtask>Test React entry point renders without errors</subtask>
-          <subtask>Verify Hello Extension component displays</subtask>
-          <subtask>Test popup opens khi clicking extension icon</subtask>
-          <subtask>Verify popup size is correct (400x600px)</subtask>
-          <subtask>Test popup functionality (open, close, display)</subtask>
+          <subtask>Verify sidepanel.html structure is valid</subtask>
+          <subtask>Test React entry point renders without errors (build successful)</subtask>
+          <subtask>Verify Hello Extension component displays (component created and imported)</subtask>
+          <subtask>Test side panel opens khi clicking extension icon (build outputs ready, requires manual verification)</subtask>
+          <subtask>Verify side panel size is correct (full height, 400-600px width CSS configured)</subtask>
+          <subtask>Test side panel functionality (open, persistence, display) (build outputs ready, requires manual verification)</subtask>
+          <subtask>Verify background worker configured correctly</subtask>
         </subtasks>
       </task>
     </tasks>
   </story>
 
   <acceptanceCriteria>
-    <ac id="1">`popup.html` created với React root element</ac>
-    <ac id="2">`popup.tsx` entry point với React setup</ac>
-    <ac id="3">Basic "Hello Extension" component renders in popup</ac>
-    <ac id="4">Popup opens khi clicking extension icon</ac>
-    <ac id="5">Popup displays correctly (400x600px recommended size)</ac>
+    <ac id="1">`sidepanel.html` created với React root element</ac>
+    <ac id="2">`sidepanel.tsx` entry point với React setup</ac>
+    <ac id="3">Basic "Hello Extension" component renders in side panel</ac>
+    <ac id="4">Side panel opens khi clicking extension icon (chrome.sidePanel API)</ac>
+    <ac id="5">Side panel displays correctly (400-600px width, full height)</ac>
+    <ac id="6">Background worker configured để open side panel on action click</ac>
   </acceptanceCriteria>
 
   <artifacts>
@@ -95,61 +101,68 @@
         <path>docs/architecture-extension-suna.md</path>
         <title>Browser Extension Architecture - Suna.so</title>
         <section>Project Structure</section>
-        <snippet>Popup structure: `extension/src/popup/popup.tsx` (React entry point), `extension/public/popup.html` (HTML template). Popup size: 400x600px recommended.</snippet>
+        <snippet>Side panel structure: `extension/src/sidepanel/sidepanel.tsx` (React entry point), `extension/src/sidepanel/sidepanel.html` (HTML template). Side panel size: Full height (100vh), width 400-600px (user resizable). Side panel persists (doesn't close when clicking outside).</snippet>
       </doc>
       <doc>
         <path>docs/architecture-extension-suna.md</path>
         <title>Browser Extension Architecture - Suna.so</title>
         <section>Technology Stack Decisions</section>
-        <snippet>React 18+ for UI framework. Use ReactDOM.createRoot() (React 18 API). Tailwind CSS for styling. Popup opens when clicking extension icon.</snippet>
+        <snippet>React 18+ for UI framework. Use ReactDOM.createRoot() (React 18 API). Tailwind CSS for styling. Side panel opens when clicking extension icon via chrome.sidePanel API.</snippet>
       </doc>
       <doc>
         <path>docs/epics-extension.md</path>
         <title>Suna.so Browser Extension - Epic Breakdown</title>
-        <section>Story 10.4: Basic Popup Skeleton</section>
-        <snippet>As a developer, I want basic popup HTML và React entry point, So that popup UI can be developed. Acceptance criteria include popup.html, popup.tsx, basic component, popup opens, và popup sizing.</snippet>
+        <section>Story 10.4: Basic Side Panel Skeleton</section>
+        <snippet>As a developer, I want basic side panel HTML và React entry point, So that side panel UI can be developed. Acceptance criteria include sidepanel.html, sidepanel.tsx, basic component, side panel opens via chrome.sidePanel API, side panel sizing (full height, 400-600px width), và background worker configuration.</snippet>
       </doc>
       <doc>
         <path>docs/stories/10-2-extension-manifest-configuration.md</path>
         <title>Story 10.2: Extension Manifest Configuration</title>
         <section>Dev Agent Record</section>
-        <snippet>Manifest configured với popup: `action.default_popup: "popup.html"`. Popup opens khi clicking extension icon.</snippet>
+        <snippet>Manifest configured với side panel: `side_panel.default_path: "sidepanel.html"`, `side_panel` permission. Background worker configured to open side panel on action click. Side panel opens khi clicking extension icon.</snippet>
       </doc>
       <doc>
         <path>docs/stories/10-3-build-configuration-shared-code-setup.md</path>
         <title>Story 10.3: Build Configuration & Shared Code Setup</title>
         <section>Dev Agent Record</section>
-        <snippet>Build configuration created với popup entry point. Build produces `popup.js` và `popup.html` in `dist/` directory. Path aliases configured để import từ frontend.</snippet>
+        <snippet>Build configuration created với sidepanel entry point. Build produces `sidepanel.js` và `sidepanel.html` in `dist/` directory. Path aliases configured để import từ frontend.</snippet>
       </doc>
     </docs>
     <code>
       <file>
         <path>extension/manifest.json</path>
         <kind>config</kind>
-        <symbol>action.default_popup</symbol>
+        <symbol>side_panel.default_path</symbol>
         <lines>N/A</lines>
-        <reason>Manifest references popup.html. Popup HTML must exist at path specified in manifest (typically `popup.html` in dist/).</reason>
+        <reason>Manifest references sidepanel.html via `side_panel.default_path`. Side panel HTML must exist at path specified in manifest (typically `sidepanel.html` in dist/).</reason>
       </file>
       <file>
-        <path>extension/src/popup/</path>
+        <path>extension/src/sidepanel/</path>
         <kind>directory</kind>
-        <symbol>popup.tsx</symbol>
+        <symbol>sidepanel.tsx</symbol>
         <lines>N/A</lines>
-        <reason>React entry point location. Create popup.tsx here to render React app into popup.html root element.</reason>
+        <reason>React entry point location. Create sidepanel.tsx here to render React app into sidepanel.html root element.</reason>
       </file>
       <file>
-        <path>extension/public/popup.html</path>
+        <path>extension/src/sidepanel/sidepanel.html</path>
         <kind>template</kind>
-        <symbol>popup.html</symbol>
+        <symbol>sidepanel.html</symbol>
         <lines>N/A</lines>
-        <reason>Popup HTML template. Contains React root element `<div id="extension-root"></div>` và script tag to load popup.js.</reason>
+        <reason>Side panel HTML template. Contains React root element `<div id="extension-root"></div>`. Script tag automatically injected by webpack HtmlWebpackPlugin.</reason>
+      </file>
+      <file>
+        <path>extension/src/background/background.ts</path>
+        <kind>service-worker</kind>
+        <symbol>chrome.sidePanel</symbol>
+        <lines>N/A</lines>
+        <reason>Background worker must configure chrome.sidePanel API: `chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })` to open side panel on action click.</reason>
       </file>
       <file>
         <path>frontend/src/app/layout.tsx</path>
         <kind>component</kind>
         <symbol>React setup pattern</symbol>
         <lines>1-50</lines>
-        <reason>Reference for React setup patterns. Extension popup should follow similar React initialization pattern.</reason>
+        <reason>Reference for React setup patterns. Extension side panel should follow similar React initialization pattern.</reason>
       </file>
     </code>
     <dependencies>
@@ -169,94 +182,113 @@
       <description>Must use React 18+ (matches frontend). Use ReactDOM.createRoot() API (React 18), not deprecated ReactDOM.render().</description>
     </constraint>
     <constraint>
-      <type>Popup Size</type>
-      <description>Popup size: 400x600px recommended. Can be set via CSS. Browser may enforce minimum/maximum sizes. Test với different content sizes.</description>
+      <type>Side Panel Size</type>
+      <description>Side panel size: Full height (100vh), width 400-600px (user resizable). Can be set via CSS. Browser may enforce minimum/maximum sizes. Side panel persists (doesn't close when clicking outside).</description>
     </constraint>
     <constraint>
       <type>HTML Structure</type>
-      <description>Popup HTML must have React root element: `<div id="extension-root"></div>`. Element must exist before React tries to render. Script tag loads popup.js.</description>
+      <description>Side panel HTML must have React root element: `<div id="extension-root"></div>`. Element must exist before React tries to render. Script tag automatically injected by webpack HtmlWebpackPlugin.</description>
     </constraint>
     <constraint>
       <type>Build Integration</type>
-      <description>Popup HTML và JS processed by build tool (Story 10.3). Build output: `dist/popup.html` và `dist/popup.js`. Manifest references `popup.html` from dist/.</description>
+      <description>Side panel HTML và JS processed by build tool (Story 10.3). Build output: `dist/sidepanel.html` và `dist/sidepanel.js`. Manifest references `sidepanel.html` via `side_panel.default_path`.</description>
     </constraint>
     <constraint>
       <type>Styling</type>
-      <description>Use Tailwind CSS (matches frontend). Popup-specific styles can be added. Ensure styles don't conflict với browser default styles.</description>
+      <description>Use Tailwind CSS (matches frontend). Side panel-specific styles can be added. Ensure styles don't conflict với browser default styles.</description>
+    </constraint>
+    <constraint>
+      <type>Side Panel API</type>
+      <description>Background worker must configure chrome.sidePanel API: `chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })`. Side panel opens when clicking extension icon. Side panel persists (doesn't close when clicking outside).</description>
     </constraint>
     <constraint>
       <type>Manifest Reference</type>
-      <description>Manifest `action.default_popup` references `popup.html`. Build output must match this reference. Popup opens when clicking extension icon.</description>
+      <description>Manifest `side_panel.default_path` references `sidepanel.html`. Build output must match this reference. `side_panel` permission required.</description>
     </constraint>
   </constraints>
 
   <interfaces>
     <interface>
-      <name>Popup HTML Template</name>
+      <name>Side Panel HTML Template</name>
       <kind>template</kind>
-      <signature>&lt;div id="extension-root"&gt;&lt;/div&gt; với script tag loading popup.js</signature>
-      <path>extension/public/popup.html</path>
+      <signature>&lt;div id="extension-root"&gt;&lt;/div&gt; với script tag automatically injected by webpack</signature>
+      <path>extension/src/sidepanel/sidepanel.html</path>
     </interface>
     <interface>
       <name>React Entry Point</name>
       <kind>component</kind>
-      <signature>ReactDOM.createRoot(rootElement).render(&lt;App /&gt;)</signature>
-      <path>extension/src/popup/popup.tsx</path>
+      <signature>createRoot(rootElement).render(&lt;App /&gt;)</signature>
+      <path>extension/src/sidepanel/sidepanel.tsx</path>
     </interface>
     <interface>
       <name>Hello Extension Component</name>
       <kind>component</kind>
       <signature>function HelloExtension() { return &lt;div&gt;Hello Extension&lt;/div&gt; }</signature>
-      <path>extension/src/popup/components/HelloExtension.tsx</path>
+      <path>extension/src/sidepanel/components/HelloExtension.tsx</path>
+    </interface>
+    <interface>
+      <name>Side Panel API Configuration</name>
+      <kind>service-worker</kind>
+      <signature>chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })</signature>
+      <path>extension/src/background/background.ts</path>
     </interface>
   </interfaces>
 
   <tests>
     <standards>
-      Testing standards: Verify popup.html structure is valid, test React entry point renders without errors, verify Hello Extension component displays, test popup opens khi clicking extension icon, verify popup size is correct (400x600px), test popup functionality (open, close, display). Use Chrome extension management và DevTools để verify.
+      Testing standards: Verify sidepanel.html structure is valid, test React entry point renders without errors, verify Hello Extension component displays, test side panel opens khi clicking extension icon, verify side panel size is correct (full height, 400-600px width), test side panel functionality (open, persistence, display), verify background worker configured correctly. Use Chrome extension management và DevTools để verify.
     </standards>
     <locations>
-      <location>extension/src/popup/</location>
-      <location>extension/public/</location>
+      <location>extension/src/sidepanel/</location>
+      <location>extension/src/background/</location>
       <location>extension/dist/</location>
-      <location>Chrome Extension Popup</location>
+      <location>Chrome Extension Side Panel</location>
     </locations>
     <ideas>
       <test ac="1">
-        <idea>Verify popup.html structure is valid HTML và contains React root element</idea>
+        <idea>Verify sidepanel.html structure is valid HTML và contains React root element</idea>
       </test>
       <test ac="1">
-        <idea>Verify popup.html includes script tag to load popup.js</idea>
+        <idea>Verify sidepanel.html script tag automatically injected by webpack HtmlWebpackPlugin</idea>
       </test>
       <test ac="2">
-        <idea>Test React entry point (popup.tsx) renders without errors (check DevTools Console)</idea>
+        <idea>Test React entry point (sidepanel.tsx) renders without errors (check DevTools Console)</idea>
       </test>
       <test ac="2">
         <idea>Verify React root element is found và React renders successfully</idea>
       </test>
       <test ac="3">
-        <idea>Verify Hello Extension component displays "Hello Extension" text trong popup</idea>
+        <idea>Verify Hello Extension component displays "Hello Extension" text trong side panel</idea>
       </test>
       <test ac="3">
         <idea>Check component renders correctly với basic styling</idea>
       </test>
       <test ac="4">
-        <idea>Click extension icon trong browser toolbar và verify popup opens</idea>
+        <idea>Verify manifest.json includes `side_panel` permission và `side_panel.default_path`</idea>
       </test>
       <test ac="4">
-        <idea>Verify popup displays content (Hello Extension component)</idea>
+        <idea>Verify background worker configured với chrome.sidePanel.setPanelBehavior()</idea>
       </test>
       <test ac="4">
-        <idea>Test popup closes khi clicking outside popup area</idea>
+        <idea>Click extension icon trong browser toolbar và verify side panel opens</idea>
+      </test>
+      <test ac="4">
+        <idea>Verify side panel displays content (Hello Extension component)</idea>
       </test>
       <test ac="5">
-        <idea>Measure popup size và verify it's 400x600px (or close to it)</idea>
+        <idea>Measure side panel size và verify it's full height (100vh) và width 400-600px (resizable)</idea>
       </test>
       <test ac="5">
-        <idea>Test popup với content that exceeds size và verify scrolling works</idea>
+        <idea>Test side panel với content that exceeds size và verify scrolling works</idea>
       </test>
       <test ac="5">
-        <idea>Test popup sizing on different screen resolutions</idea>
+        <idea>Test side panel sizing on different screen resolutions</idea>
+      </test>
+      <test ac="6">
+        <idea>Verify side panel persists (doesn't close when clicking outside)</idea>
+      </test>
+      <test ac="6">
+        <idea>Verify background worker configured correctly trong background.ts</idea>
       </test>
     </ideas>
   </tests>

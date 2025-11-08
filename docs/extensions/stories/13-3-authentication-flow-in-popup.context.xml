@@ -2,16 +2,17 @@
   <metadata>
     <epicId>13</epicId>
     <storyId>13.3</storyId>
-    <title>Authentication Flow in Popup</title>
+    <title>Authentication Flow in Side Panel</title>
     <status>ready-for-dev</status>
     <generatedAt>2025-11-08</generatedAt>
+    <updatedAt>2025-01-15</updatedAt>
     <generator>BMAD Story Context Workflow</generator>
     <sourceStoryPath>docs/stories/13-3-authentication-flow-in-popup.md</sourceStoryPath>
   </metadata>
 
   <story>
     <asA>user</asA>
-    <iWant>login trong extension popup</iWant>
+    <iWant>login trong extension side panel</iWant>
     <soThat>I can access authenticated features</soThat>
     <tasks>
       <task id="1" ac="1">
@@ -45,7 +46,7 @@
       <task id="4" ac="4">
         <title>Show logged-in state</title>
         <subtasks>
-          <subtask>Check auth state on popup open</subtask>
+          <subtask>Check auth state on side panel open</subtask>
           <subtask>Display user info if logged in</subtask>
           <subtask>Hide login form if logged in</subtask>
           <subtask>Show authenticated UI</subtask>
@@ -63,9 +64,9 @@
       <task id="6" ac="6">
         <title>Test auth persistence</title>
         <subtasks>
-          <subtask>Test auth state persists after popup close</subtask>
+          <subtask>Test auth state persists after side panel close</subtask>
           <subtask>Test auth state persists after browser restart</subtask>
-          <subtask>Test auth state loads on popup open</subtask>
+          <subtask>Test auth state loads on side panel open</subtask>
           <subtask>Test across browser sessions</subtask>
         </subtasks>
       </task>
@@ -73,10 +74,10 @@
   </story>
 
   <acceptanceCriteria>
-    <ac id="1">Login UI trong popup (reuse frontend auth components)</ac>
+    <ac id="1">Login UI trong side panel (reuse frontend auth components)</ac>
     <ac id="2">Login form submits credentials</ac>
     <ac id="3">Auth token stored in chrome.storage after login</ac>
-    <ac id="4">Popup shows logged-in state</ac>
+    <ac id="4">Side panel shows logged-in state</ac>
     <ac id="5">Logout functionality works</ac>
     <ac id="6">Auth state persists across browser sessions</ac>
   </acceptanceCriteria>
@@ -86,7 +87,7 @@
       <doc>
         <path>docs/epics-extension.md</path>
         <title>Epic 13: API Integration & Authentication</title>
-        <section>Story 13.3: Authentication Flow in Popup</section>
+        <section>Story 13.3: Authentication Flow in Side Panel</section>
       </doc>
       <doc>
         <path>docs/stories/13-1-chrome-storage-adapter-for-supabase.md</path>
@@ -101,14 +102,14 @@
       <doc>
         <path>docs/stories/12-2-popup-layout-structure.md</path>
         <title>Story 12.2: Popup Layout & Structure</title>
-        <snippet>Popup layout ready. Login UI can be integrated into popup.</snippet>
+        <snippet>Side panel layout ready. Login UI can be integrated into side panel.</snippet>
       </doc>
     </docs>
   </artifacts>
 
   <dependencies>
     <prerequisite>Story 13.2: API client adaptation must be complete</prerequisite>
-    <prerequisite>Story 12.2: Popup layout must be created</prerequisite>
+    <prerequisite>Story 12.2: Side panel layout must be created</prerequisite>
     <prerequisite>Story 13.1: Supabase client với storage adapter must be complete</prerequisite>
   </dependencies>
 
@@ -116,15 +117,16 @@
     <constraint>Login UI must reuse frontend auth components if possible</constraint>
     <constraint>Auth state must persist across browser sessions</constraint>
     <constraint>Logout must clear auth state correctly</constraint>
+    <constraint>Side panel must show logged-in state when auth state is available</constraint>
   </constraints>
 
   <testing>
-    <test>Test login UI displays</test>
+    <test>Test login UI displays trong side panel</test>
     <test>Test login form submission</test>
     <test>Test auth token storage</test>
-    <test>Test logged-in state</test>
+    <test>Test logged-in state trong side panel</test>
     <test>Test logout functionality</test>
-    <test>Test auth persistence</test>
+    <test>Test auth persistence across side panel sessions</test>
   </testing>
 </story-context>
 

@@ -2,26 +2,27 @@
   <metadata>
     <epicId>12</epicId>
     <storyId>12.2</storyId>
-    <title>Popup Layout & Structure</title>
+    <title>Side Panel Layout & Structure</title>
     <status>ready-for-dev</status>
     <generatedAt>2025-11-08</generatedAt>
+    <updatedAt>2025-01-15</updatedAt>
     <generator>BMAD Story Context Workflow</generator>
     <sourceStoryPath>docs/stories/12-2-popup-layout-structure.md</sourceStoryPath>
   </metadata>
 
   <story>
     <asA>user</asA>
-    <iWant>well-organized popup layout</iWant>
-    <soThat>I can easily view analysis results</soThat>
+    <iWant>well-organized side panel layout (mở bên phải trình duyệt)</iWant>
+    <soThat>I can easily view analysis results với more space và persistent view</soThat>
     <tasks>
       <task id="1" ac="1">
-        <title>Create popup layout structure</title>
+        <title>Create side panel layout structure</title>
         <subtasks>
-          <subtask>Create layout component: `PopupLayout.tsx`</subtask>
-          <subtask>Define header, content, và footer sections</subtask>
-          <subtask>Use flexbox hoặc grid for layout</subtask>
-          <subtask>Ensure layout is responsive</subtask>
-          <subtask>Test layout structure renders correctly</subtask>
+          <subtask>Create layout component: `SidePanelLayout.tsx`</subtask>
+          <subtask>Define header, content, và footer sections (full height)</subtask>
+          <subtask>Use flexbox hoặc grid for layout (100vh height)</subtask>
+          <subtask>Ensure layout is responsive to panel width (400-600px)</subtask>
+          <subtask>Test layout structure renders correctly in side panel</subtask>
         </subtasks>
       </task>
       <task id="2" ac="2">
@@ -30,16 +31,19 @@
           <subtask>Create header component hoặc section</subtask>
           <subtask>Display extension name: "Suna" hoặc "Suna Coin Analysis"</subtask>
           <subtask>Add logo/icon if available</subtask>
-          <subtask>Style header với consistent design</subtask>
+          <subtask>Add close button (X) to close side panel</subtask>
+          <subtask>Style header với consistent design (fixed height)</subtask>
+          <subtask>Test header displays correctly</subtask>
         </subtasks>
       </task>
       <task id="3" ac="3">
         <title>Implement content area</title>
         <subtasks>
-          <subtask>Create content area section</subtask>
-          <subtask>Make content area scrollable if needed</subtask>
+          <subtask>Create content area section (flex: 1, full height)</subtask>
+          <subtask>Make content area scrollable (overflow-y: auto)</subtask>
           <subtask>Prepare for analysis results display</subtask>
-          <subtask>Style content area</subtask>
+          <subtask>Style content area (full height, scrollable)</subtask>
+          <subtask>Test content area ready for results với long content</subtask>
         </subtasks>
       </task>
       <task id="4" ac="4">
@@ -49,6 +53,7 @@
           <subtask>Add "Generate Full Report" button</subtask>
           <subtask>Add other action buttons if needed</subtask>
           <subtask>Style footer với consistent design</subtask>
+          <subtask>Test footer displays correctly</subtask>
         </subtasks>
       </task>
       <task id="5" ac="5">
@@ -56,8 +61,9 @@
         <subtasks>
           <subtask>Test layout với small content</subtask>
           <subtask>Test layout với large content (scrollable)</subtask>
-          <subtask>Test layout với different popup sizes</subtask>
-          <subtask>Verify layout adapts correctly</subtask>
+          <subtask>Test layout với different side panel widths (400px, 500px, 600px)</subtask>
+          <subtask>Verify layout adapts correctly to panel width</subtask>
+          <subtask>Test layout doesn't break at different widths</subtask>
         </subtasks>
       </task>
       <task id="6" ac="6">
@@ -67,26 +73,47 @@
           <subtask>Use similar spacing và typography</subtask>
           <subtask>Use similar color scheme</subtask>
           <subtask>Match component styling</subtask>
+          <subtask>Test design consistency</subtask>
+        </subtasks>
+      </task>
+      <task id="7" ac="7">
+        <title>Setup side panel in manifest</title>
+        <subtasks>
+          <subtask>Add `"side_panel"` permission to manifest.json</subtask>
+          <subtask>Add `side_panel.default_path` configuration</subtask>
+          <subtask>Update background worker to handle side panel opening</subtask>
+          <subtask>Test side panel opens when clicking extension icon</subtask>
+        </subtasks>
+      </task>
+      <task id="8" ac="8">
+        <title>Ensure side panel persistence</title>
+        <subtasks>
+          <subtask>Verify side panel doesn't close when clicking outside</subtask>
+          <subtask>Test side panel stays open during navigation</subtask>
+          <subtask>Test close button works correctly</subtask>
+          <subtask>Test side panel state persistence</subtask>
         </subtasks>
       </task>
     </tasks>
   </story>
 
   <acceptanceCriteria>
-    <ac id="1">Popup layout với header, content area, và footer</ac>
-    <ac id="2">Header shows extension name/logo</ac>
-    <ac id="3">Content area ready for analysis results display</ac>
+    <ac id="1">Side panel layout với header, content area, và footer (full height, resizable)</ac>
+    <ac id="2">Header shows extension name/logo với close button</ac>
+    <ac id="3">Content area ready for analysis results display (scrollable, full height)</ac>
     <ac id="4">Footer với action buttons (Generate Report, etc.)</ac>
-    <ac id="5">Responsive layout works với different content sizes</ac>
+    <ac id="5">Responsive layout works với different panel widths (400-600px resizable)</ac>
     <ac id="6">Layout matches main app design patterns</ac>
+    <ac id="7">Side panel opens when clicking extension icon (chrome.sidePanel API)</ac>
+    <ac id="8">Side panel persists (doesn't close when clicking outside)</ac>
   </acceptanceCriteria>
 
   <artifacts>
     <docs>
       <doc>
         <path>docs/epics-extension.md</path>
-        <title>Epic 12: Popup UI & Shared Components Integration</title>
-        <section>Story 12.2: Popup Layout & Structure</section>
+        <title>Epic 12: Side Panel UI & Shared Components Integration</title>
+        <section>Story 12.2: Side Panel Layout & Structure</section>
       </doc>
       <doc>
         <path>docs/stories/12-1-shared-ui-components-integration.md</path>
@@ -111,13 +138,20 @@
     <constraint>Layout must be responsive và work với different content sizes</constraint>
     <constraint>Layout must match main app design patterns</constraint>
     <constraint>Use shared UI components từ Story 12.1</constraint>
+    <constraint>Side panel must open via chrome.sidePanel API when clicking extension icon</constraint>
+    <constraint>Side panel must persist (doesn't close when clicking outside)</constraint>
+    <constraint>Side panel sizing: Full height (100vh), width 400-600px (user resizable)</constraint>
   </constraints>
 
   <testing>
-    <test>Test layout structure renders correctly</test>
+    <test>Test layout structure renders correctly trong side panel</test>
     <test>Test header, content, footer all display</test>
-    <test>Test responsive layout works</test>
+    <test>Test responsive layout works với different panel widths (400-600px)</test>
     <test>Test layout matches main app design</test>
+    <test>Test side panel opens when clicking extension icon</test>
+    <test>Test side panel persists (doesn't close when clicking outside)</test>
+    <test>Test close button works correctly</test>
+    <test>Test side panel state persistence</test>
   </testing>
 </story-context>
 

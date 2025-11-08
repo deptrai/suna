@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-Kiến trúc extension được thiết kế để tối đa hóa code reuse từ frontend Next.js hiện tại, cho phép user click vào tên coin trên bất kỳ website nào và tạo báo cáo/phân tích ngay lập tức. Extension sử dụng shared components, API client, và state management từ frontend để đảm bảo consistency và minimize code duplication.
+Kiến trúc extension được thiết kế để tối đa hóa code reuse từ frontend Next.js hiện tại, cho phép user click vào tên coin trên bất kỳ website nào và tạo agent chat mới để analyze coin. Extension sử dụng shared components (ChatInput, UI components), API client (unifiedAgentStart, streamAgent), và state management từ frontend để đảm bảo consistency và minimize code duplication. Extension mở side panel (bên phải trình duyệt) với chat interface thay vì popup để provide better UX và persistent view.
 
 **Core Strategy:** Monorepo code sharing với extension như một lightweight wrapper sử dụng shared libraries từ frontend.
 
@@ -92,10 +92,10 @@ Extension được xây dựng như một lightweight wrapper sử dụng shared
 ├─────────────────────────────────────────────────────────┤
 │                                                           │
 │  ┌──────────────┐      ┌──────────────┐               │
-│  │ Content      │      │ Popup/       │               │
-│  │ Script       │◄────►│ Sidebar      │               │
-│  │ (Coin        │      │ (Analysis    │               │
-│  │ Detection)   │      │  UI)         │               │
+│  │ Content      │      │ Side Panel   │               │
+│  │ Script       │◄────►│ (Chat        │               │
+│  │ (Coin        │      │  Interface)  │               │
+│  │ Detection)   │      │              │               │
 │  └──────┬───────┘      └──────┬───────┘               │
 │         │                     │                         │
 │         └──────────┬──────────┘                        │
@@ -156,63 +156,138 @@ observer.observe(document.body, { childList: true, subtree: true });
 // Handle button clicks
 document.addEventListener('click', (e) => {
   if (e.target.matches('.suna-analyze-btn')) {
-    const coinData = e.target.dataset.coin;
-    sendToBackground({ type: 'ANALYZE_COIN', data: coinData });
+    const coinData = JSON.parse(e.target.dataset.coin || '{}');
+    sendToBackground({ 
+      type: 'OPEN_SIDE_PANEL_WITH_COIN', 
+      coinInfo: {
+        name: coinData.name,
+        symbol: coinData.symbol,
+        price: coinData.price
+      }
+    });
   }
 });
 ```
 
-#### 2. **Popup/Sidebar UI** (`popup.tsx` hoặc `sidebar.tsx`)
-**Purpose:** Display analysis results và controls
+#### 2. **Side Panel UI** (`sidepanel.tsx`)
+**Purpose:** Display chat interface với coin analysis
 
 **Architecture:**
-- Sử dụng React components từ frontend
-- Shared API client để call backend
-- Shared UI components (Button, Card, Dialog)
-- React Query cho data fetching
+- Sử dụng React components từ frontend (ChatInput, ThreadComponent patterns)
+- Shared API client để call backend (unifiedAgentStart, streamAgent)
+- Shared UI components (Button, Card, Dialog, ChatInput)
+- React Query cho data fetching (optional, simplified for extension)
+- Real-time message streaming với EventSource
 
 **Structure:**
 ```
 extension/
-├── popup/
-│   ├── popup.tsx           # Main popup component
-│   ├── coin-analysis.tsx    # Analysis display (reuses frontend components)
-│   └── styles.css          # Extension-specific overrides
+├── sidepanel/
+│   ├── sidepanel.tsx        # Main side panel component
+│   ├── ChatInterface.tsx    # Chat interface (reuses frontend ChatInput)
+│   ├── MessageDisplay.tsx   # Message display (simplified from ThreadContent)
+│   ├── LoginForm.tsx        # Authentication UI
+│   └── styles.css           # Extension-specific overrides
 ```
 
 **Code Reuse Example:**
 ```typescript
-// extension/popup/coin-analysis.tsx
-import { Button } from '@/components/ui/button';  // From frontend
-import { Card } from '@/components/ui/card';       // From frontend
-import { analyzeCoin } from '@/lib/api';           // From frontend
-import { useQuery } from '@tanstack/react-query'; // From frontend
+// extension/sidepanel/ChatInterface.tsx
+import { useEffect, useState } from 'react';
+import { ChatInput } from '@/components/thread/chat-input/chat-input';  // From frontend
+import { unifiedAgentStart } from '@/lib/api';                          // From frontend
+import { streamAgent } from '@/lib/api';                                // From frontend
+import { useCoinInfo } from './hooks/useCoinInfo';                      // Extension-specific hook
 
-export function CoinAnalysis({ coinName }: { coinName: string }) {
-  const { data, isLoading } = useQuery({
-    queryKey: ['coin-analysis', coinName],
-    queryFn: () => analyzeCoin(coinName),
-  });
+export function ChatInterface() {
+  const [threadId, setThreadId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const coinInfo = useCoinInfo(); // From chrome.storage (pendingCoinInfo)
+
+  // Load thread ID from storage on mount
+  useEffect(() => {
+    chrome.storage.local.get(['currentThreadId'], (result) => {
+      if (result.currentThreadId) {
+        setThreadId(result.currentThreadId);
+        // Load message history
+        loadMessageHistory(result.currentThreadId);
+      }
+    });
+  }, []);
+
+  const handleSubmit = async (prompt: string) => {
+    // Pre-fill prompt với coin info if available
+    let fullPrompt = prompt;
+    if (coinInfo) {
+      fullPrompt = `Analyze ${coinInfo.name} (${coinInfo.symbol})${coinInfo.price ? ` - Current price: $${coinInfo.price}` : ''}\n\n${prompt}`;
+    }
+
+    // Create agent chat với coin info (or continue existing thread)
+    const result = await unifiedAgentStart({
+      prompt: fullPrompt,
+      thread_id: threadId || undefined, // Continue existing thread if available
+    });
+
+    // Store thread ID for continue chatting
+    if (result.thread_id) {
+      setThreadId(result.thread_id);
+      chrome.storage.local.set({ currentThreadId: result.thread_id });
+    }
+
+    // Start streaming
+    streamAgent(result.agent_run_id, {
+      onMessage: (content) => {
+        // Update streaming content in real-time
+        setMessages(prev => {
+          const lastMessage = prev[prev.length - 1];
+          if (lastMessage && lastMessage.role === 'assistant' && lastMessage.streaming) {
+            // Update streaming message
+            return [...prev.slice(0, -1), { ...lastMessage, content: lastMessage.content + content }];
+          }
+          // Add new message
+          return [...prev, { role: 'assistant', content, streaming: true }];
+        });
+      },
+      onError: (error) => {
+        // Handle streaming error
+        console.error('Streaming error:', error);
+      },
+      onClose: () => {
+        // Streaming completed - mark message as complete
+        setMessages(prev => {
+          const lastMessage = prev[prev.length - 1];
+          if (lastMessage && lastMessage.streaming) {
+            return [...prev.slice(0, -1), { ...lastMessage, streaming: false }];
+          }
+          return prev;
+        });
+        // Persist messages to chrome.storage
+        persistMessages(threadId || result.thread_id, messages);
+      },
+    });
+  };
 
   return (
-    <Card>
-      {/* Reuse frontend components */}
-      <Button onClick={() => generateReport(coinName)}>
-        Generate Full Report
-      </Button>
-    </Card>
+    <div className="flex flex-col h-screen">
+      <ChatInput onSubmit={handleSubmit} />
+      <MessageDisplay messages={messages} />
+    </div>
   );
 }
 ```
 
 #### 3. **Background Service Worker** (`background.ts`)
-**Purpose:** Coordinate between content script và popup, handle API calls
+**Purpose:** Coordinate between content script và side panel, handle side panel opening, và API calls
 
 **Responsibilities:**
-- Message passing between content script và popup
-- API request coordination
-- Storage management (chrome.storage)
-- Authentication token management
+- Message passing between content script và side panel
+- Handle `OPEN_SIDE_PANEL_WITH_COIN` messages từ content script (primary flow)
+- Handle `ANALYZE_COIN` messages (legacy support, optional)
+- Store coin info trong chrome.storage (key: `pendingCoinInfo`) khi opening side panel
+- Open side panel using `chrome.sidePanel.open()` API
+- Configure side panel behavior: `chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })`
+- Storage management (chrome.storage) - coin info, thread ID, message history
+- Authentication token management (sync với Supabase via chrome.storage adapter)
 
 #### 4. **Shared Code Layer**
 **Purpose:** Reuse frontend code với minimal changes
@@ -286,10 +361,15 @@ suna/
     │   │   ├── coin-detector.ts      # Coin name detection logic
     │   │   └── injector.ts           # UI injection
     │   │
-    │   ├── popup/
-    │   │   ├── popup.tsx              # Main popup UI
-    │   │   ├── coin-analysis.tsx      # Analysis display
-    │   │   └── report-viewer.tsx      # Report display
+    │   ├── sidepanel/
+    │   │   ├── sidepanel.tsx          # Main side panel UI
+    │   │   ├── ChatInterface.tsx      # Chat interface
+    │   │   ├── MessageDisplay.tsx     # Message display
+    │   │   ├── LoginForm.tsx          # Authentication UI
+    │   │   └── hooks/
+    │   │       ├── useCreateAgentChat.ts
+    │   │       ├── useAgentStream.ts
+    │   │       └── useCoinInfo.ts
     │   │
     │   ├── background/
     │   │   ├── background.ts          # Service worker
@@ -301,13 +381,40 @@ suna/
     │   │   └── types.ts
     │   │
     │   └── styles/
-    │       └── popup.css              # Extension-specific styles
+    │       └── sidepanel.css          # Extension-specific styles
     │
     ├── public/
     │   ├── icons/                     # Extension icons
-    │   └── popup.html                 # Popup HTML
+    │   └── sidepanel.html             # Side panel HTML (automatically injected by webpack)
     │
     └── webpack.config.js              # Build config
+```
+
+**Manifest V3 Configuration:**
+```json
+{
+  "manifest_version": 3,
+  "permissions": [
+    "storage",
+    "activeTab",
+    "side_panel"
+  ],
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "action": {
+    "default_title": "Suna Coin Analysis",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  }
+}
 ```
 
 ### Alternative: Simpler Structure (Direct Import)
@@ -331,7 +438,7 @@ suna/
     ├── webpack.config.js              # Resolve frontend modules
     └── src/
         ├── content-script/
-        ├── popup/
+        ├── sidepanel/
         └── background/
 ```
 
@@ -374,10 +481,11 @@ suna/
 
 **Implementation:**
 ```typescript
-// extension/popup/coin-analysis.tsx
+// extension/sidepanel/ChatInterface.tsx
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { ChatInput } from '@/components/thread/chat-input/chat-input';
 
 // Direct import với path aliases hoặc từ shared package
 ```
@@ -517,13 +625,13 @@ export function injectAnalysisButton(
 
 ### Pattern 3: Message Passing
 
-**Background ↔ Content Script ↔ Popup:**
+**Background ↔ Content Script ↔ Side Panel:**
 ```typescript
 // extension/background/messaging.ts
 
 type MessageType = 
-  | { type: 'ANALYZE_COIN'; coin: string }
-  | { type: 'ANALYSIS_COMPLETE'; result: AnalysisResult }
+  | { type: 'OPEN_SIDE_PANEL_WITH_COIN'; coinInfo: { name: string; symbol: string; price?: number } }
+  | { type: 'ANALYZE_COIN'; coin: string } // Legacy support (optional)
   | { type: 'GET_AUTH_TOKEN' };
 
 export function sendToBackground(message: MessageType): Promise<any> {
@@ -532,12 +640,20 @@ export function sendToBackground(message: MessageType): Promise<any> {
 
 // Background worker
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === 'ANALYZE_COIN') {
-    analyzeCoin(message.coin).then(result => {
-      sendResponse({ type: 'ANALYSIS_COMPLETE', result });
+  if (message.type === 'OPEN_SIDE_PANEL_WITH_COIN') {
+    // Store coin info trong chrome.storage
+    chrome.storage.local.set({
+      pendingCoinInfo: message.coinInfo,
+    }, () => {
+      // Open side panel
+      chrome.sidePanel.open({ windowId: sender.tab?.windowId });
+      sendResponse({ success: true });
     });
     return true; // Async response
   }
+  
+  // Note: ANALYZE_COIN is legacy support - new flow uses OPEN_SIDE_PANEL_WITH_COIN
+  // Background worker can handle both for backward compatibility
 });
 ```
 
@@ -568,7 +684,7 @@ chrome.runtime.onMessage.addListener((message) => {
 
 ## User Flow
 
-### Flow 1: Coin Detection và Analysis
+### Flow 1: Coin Detection và Chat Analysis
 
 ```
 1. User visits crypto website (e.g., CoinGecko, Binance)
@@ -579,23 +695,51 @@ chrome.runtime.onMessage.addListener((message) => {
    ↓
 4. User clicks "Analyze" button next to coin name
    ↓
-5. Extension sends coin name to background worker
+5. Extension sends coin info (name, symbol, price) to background worker
    ↓
-6. Background worker calls backend API (reusing frontend API client)
+6. Background worker stores coin info trong chrome.storage và opens side panel
    ↓
-7. Analysis results displayed in popup/sidebar
+7. Side panel opens với chat interface và pre-filled prompt
    ↓
-8. User can generate full report (opens in new tab hoặc popup)
+8. User reviews/edits prompt và submits
+   ↓
+9. Extension creates agent chat mới (unifiedAgentStart API)
+   ↓
+10. Messages stream in real-time (EventSource streaming)
+   ↓
+11. User can continue chatting về coin (follow-up questions)
+   ↓
+12. User can open full report in new tab (optional)
 ```
 
-### Flow 2: Report Generation
+### Flow 2: Continue Chatting
 
 ```
-1. User clicks "Generate Full Report" in extension popup
+1. User has existing chat thread về coin (thread ID stored trong chrome.storage)
    ↓
-2. Extension opens new tab với report URL
+2. User opens side panel (thread ID loaded từ chrome.storage)
    ↓
-3. Report page (frontend) loads với coin context
+3. Side panel loads message history từ chrome.storage (key: thread_{threadId}_messages)
+   ↓
+4. User sends additional message về coin
+   ↓
+5. Extension uses existing thread ID để continue conversation (unifiedAgentStart với thread_id parameter)
+   ↓
+6. New message streams in real-time (EventSource streaming)
+   ↓
+7. Updated message history persisted trong chrome.storage
+   ↓
+8. Thread ID maintained for future messages
+```
+
+### Flow 3: Report Generation
+
+```
+1. User clicks "Open Full Report" trong chat interface (optional)
+   ↓
+2. Extension opens new tab với report URL (includes thread ID)
+   ↓
+3. Report page (frontend) loads với coin context và chat history
    ↓
 4. Frontend generates comprehensive report using existing infrastructure
    ↓
@@ -608,19 +752,25 @@ chrome.runtime.onMessage.addListener((message) => {
 
 ### Backend API Endpoints (Existing)
 
-Extension sẽ reuse existing backend APIs:
+Extension sẽ reuse existing backend APIs từ frontend:
 
-**Coin Analysis API:**
+**Agent Creation API:**
 ```
-POST /api/analyze
-Body: { coinName: string, includeAdvanced?: boolean }
-Response: AnalysisResult
+POST /agent/start
+Body: FormData { prompt: string, thread_id?: string, model_name?: string, agent_id?: string }
+Response: { thread_id: string, agent_run_id: string, status: string }
+```
+
+**Message Streaming API:**
+```
+GET /agent-run/{agent_run_id}/stream?token={jwt_token}
+Response: Server-Sent Events (SSE) stream
 ```
 
 **Report Generation API:**
 ```
 POST /api/reports/generate
-Body: { coinName: string, analysisId: string }
+Body: { coinName: string, threadId: string }
 Response: { reportId: string, reportUrl: string }
 ```
 
@@ -643,9 +793,9 @@ Response: { reportId: string, reportUrl: string }
 ### Authentication Flow
 
 1. **Initial Auth:**
-   - User logs in via extension popup (reuse frontend auth UI)
+   - User logs in via extension side panel (reuse frontend auth UI)
    - Token stored in `chrome.storage.local` (encrypted)
-   - Token synced với Supabase session
+   - Token synced với Supabase session via chrome.storage adapter
 
 2. **Token Management:**
    - Background worker handles token refresh
@@ -676,23 +826,25 @@ Response: { reportId: string, reportUrl: string }
 - Cache detected coins to avoid re-scanning
 - Use `requestIdleCallback` for non-critical operations
 
-### Popup Performance
+### Side Panel Performance
 
 **Optimizations:**
-- Lazy load analysis results
-- Use React Query caching
-- Prefetch on coin detection
+- Lazy load chat components
+- Use React Query caching (optional, simplified for extension)
+- Stream messages efficiently (EventSource throttling)
 - Optimize bundle size (tree-shaking)
+- Message history persistence với chrome.storage
 
 ### Bundle Size
 
-**Target:** < 500KB total extension size
+**Target:** < 2MB total extension size (allows for shared frontend code)
 
 **Strategies:**
 - Tree-shake unused frontend code
-- Code splitting for popup vs content script
-- Lazy load heavy components
+- Code splitting for side panel vs content script
+- Lazy load heavy components (ChatInput, streaming logic)
 - Minimize dependencies
+- Shared code from frontend (no duplication)
 
 ---
 
@@ -793,9 +945,16 @@ npm run build
 **Structure:**
 ```
 extension/src/
-├── content-script/    # Content script code
-├── popup/             # Popup UI
-├── background/        # Background worker
+├── content-script/    # Content script code (coin detection)
+├── sidepanel/         # Side panel UI (chat interface)
+│   ├── ChatInterface.tsx
+│   ├── MessageDisplay.tsx
+│   ├── LoginForm.tsx
+│   └── hooks/
+│       ├── useCreateAgentChat.ts
+│       ├── useAgentStream.ts
+│       └── useCoinInfo.ts
+├── background/        # Background worker (message coordination)
 ├── shared/            # Extension-specific shared
 └── lib/               # Reused from frontend (via aliases)
 ```
@@ -873,13 +1032,14 @@ extension/src/
 1. Set up extension project structure
 2. Create shared packages (if monorepo)
 3. Set up build configuration
-4. Basic manifest và popup skeleton
+4. Basic manifest và side panel skeleton
 
 ### Phase 2: Core Features (Week 3-4)
 1. Implement coin detection
 2. Content script injection
-3. Basic popup UI với shared components
+3. Basic side panel UI với shared components
 4. API integration (reuse frontend API client)
+5. Chat interface setup (Epic 15)
 
 ### Phase 3: Analysis Flow (Week 5-6)
 1. Analysis request flow
@@ -900,15 +1060,28 @@ extension/src/
 Extension architecture được thiết kế để maximize code reuse từ frontend, ensuring consistency và minimizing development effort. Bằng cách reuse UI components, API client, và state management, extension sẽ provide seamless experience cho users khi analyze coins từ bất kỳ website nào.
 
 **Key Benefits:**
-- ✅ Minimal new code required
-- ✅ Consistent UI/UX với main app
+- ✅ Minimal new code required (~95-98% code reuse)
+- ✅ Consistent UI/UX với main app (shared components)
 - ✅ Shared error handling và authentication
+- ✅ Real-time chat interface với streaming
+- ✅ Persistent side panel (better UX than popup)
 - ✅ Easier maintenance (single source of truth)
 - ✅ Type safety across codebase
 
+**Key Features:**
+- ✅ Side panel UI (mở bên phải trình duyệt, persistent)
+- ✅ Chat interface với ChatInput component từ frontend
+- ✅ Real-time message streaming với EventSource
+- ✅ Agent creation với unifiedAgentStart API
+- ✅ Continue chatting với thread ID persistence
+- ✅ Coin context integration (pre-filled prompts)
+- ✅ Message history persistence trong chrome.storage
+
 ---
 
-_Architecture Document v1.0_  
+_Architecture Document v2.1_  
 _Generated: 2025-11-07_  
+_Updated: 2025-01-15 (Added Side Panel & Chat Integration, Fixed Consistency Issues)_  
+_Reviewed: 2025-01-15 (Architecture consistency với PRD và Epic verified)_  
 _Architect: Winston (BMAD Architect Agent)_
 

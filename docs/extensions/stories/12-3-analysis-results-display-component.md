@@ -5,7 +5,7 @@ Status: ready-for-dev
 ## Story
 
 As a user,  
-I want see analysis results trong popup,  
+I want see analysis results trong side panel,  
 So that I can review coin analysis quickly.
 
 ## Acceptance Criteria
@@ -20,7 +20,7 @@ So that I can review coin analysis quickly.
 ## Tasks / Subtasks
 
 - [ ] Task 1: Create coin-analysis component (AC: 1)
-  - [ ] Create `extension/src/popup/components/coin-analysis.tsx`
+  - [ ] Create `extension/src/sidepanel/components/coin-analysis.tsx`
   - [ ] Define component props interface
   - [ ] Create component structure
   - [ ] Export component
@@ -94,9 +94,9 @@ So that I can review coin analysis quickly.
 ### Project Structure Notes
 
 **Component Location:**
-- `extension/src/popup/components/coin-analysis.tsx`
-- Can be used trong popup layout
-- Import vào main popup component
+- `extension/src/sidepanel/components/coin-analysis.tsx`
+- Can be used trong side panel layout
+- Import vào main side panel component
 
 **Data Props:**
 - Component receives analysis data as props
@@ -107,14 +107,14 @@ So that I can review coin analysis quickly.
 
 - [Source: docs/epics-extension.md#Epic-12] - Epic 12 goal: display analysis results
 - [Source: docs/epics-extension.md#Story-12.3] - Story acceptance criteria và prerequisites
-- [Source: docs/stories/12-2-popup-layout-structure.md#Dev-Agent-Record] - Popup layout ready
+- [Source: docs/stories/12-2-popup-layout-structure.md#Dev-Agent-Record] - Side panel layout ready
 - [Source: docs/PRD-extension.md#Functional-Requirements] - FR004: Analysis results display
 
 ### Learnings from Previous Story
 
 **From Story 12.2 (Status: ready-for-dev)**
 
-- **Popup Layout Created**: Header, content, footer structure created
+- **Side Panel Layout Created**: Header, content, footer structure created
 - **Layout Ready**: Content area ready for analysis results
 - **Shared Components**: Button, Card components available
 - **Design Patterns**: Layout matches main app design

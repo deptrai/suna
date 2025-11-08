@@ -5,15 +5,15 @@ Status: ready-for-dev
 ## Story
 
 As a user,  
-I want login trong extension popup,  
+I want login trong extension side panel,  
 So that I can access authenticated features.
 
 ## Acceptance Criteria
 
-1. Login UI trong popup (reuse frontend auth components)
+1. Login UI trong side panel (reuse frontend auth components)
 2. Login form submits credentials
 3. Auth token stored in chrome.storage after login
-4. Popup shows logged-in state
+4. Side panel shows logged-in state
 5. Logout functionality works
 6. Auth state persists across browser sessions
 
