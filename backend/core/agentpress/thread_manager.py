@@ -33,6 +33,8 @@ class ThreadManager:
             self.trace = langfuse.trace(name="anonymous:thread_manager")
             
         self.agent_config = agent_config
+        # Story 3.2 enhancement: Track routing_id per thread for cost calculation
+        self._thread_routing_ids: Dict[str, Optional[str]] = {}  # thread_id -> routing_id
         self.response_processor = ResponseProcessor(
             tool_registry=self.tool_registry,
             add_message_callback=self.add_message,
@@ -128,6 +130,34 @@ class ThreadManager:
             completion_tokens = int(usage.get("completion_tokens", 0) or 0)
             is_estimated = usage.get("estimated", False)
             is_fallback = usage.get("fallback", False)
+            
+            # Story 3.2 enhancement: Update model router cost metrics với actual tokens
+            # Get routing_id from thread routing IDs or message content
+            routing_id = self._thread_routing_ids.get(thread_id) or content.get("routing_id")
+            if routing_id and (prompt_tokens > 0 or completion_tokens > 0):
+                # Clear routing_id after use (one-time use per thread)
+                if thread_id in self._thread_routing_ids:
+                    del self._thread_routing_ids[thread_id]
+                try:
+                    from core.utils.config import OptimizationConfig, OptimizationMode
+                    from core.optimizations.model_router import get_model_router
+                    
+                    if OptimizationConfig.OPTIMIZATION_MODE == OptimizationMode.OPTIMIZED:
+                        model_router = get_model_router()
+                        # Update cost metrics với actual token usage
+                        # Note: prompt_tokens = input_tokens, completion_tokens = output_tokens
+                        model_router.update_cost_with_tokens(
+                            routing_id=routing_id,
+                            input_tokens=prompt_tokens,
+                            output_tokens=completion_tokens
+                        )
+                        logger.debug(
+                            f"💰 Updated model router cost metrics - routing_id={routing_id}, "
+                            f"input_tokens={prompt_tokens}, output_tokens={completion_tokens}"
+                        )
+                except Exception as e:
+                    logger.debug(f"Failed to update model router cost metrics: {e}")
+                    # Non-critical, continue with billing
             
             # Extract cached tokens (OpenAI prompt caching)
             # Try multiple fields for compatibility with different API formats
@@ -602,10 +632,14 @@ class ThreadManager:
                             
                             if routing_result and routing_result.decision.value == "routed":
                                 effective_model = routing_result.model_id
+                                # Story 3.2 enhancement: Store routing_id for cost calculation
+                                if routing_result.routing_id:
+                                    self._thread_routing_ids[thread_id] = routing_result.routing_id
                                 logger.info(
                                     f"✅ Model routing: {llm_model} → {effective_model} "
                                     f"(complexity={routing_result.complexity.value}, "
-                                    f"confidence={routing_result.confidence:.2f})"
+                                    f"confidence={routing_result.confidence:.2f}, "
+                                    f"routing_id={routing_result.routing_id})"
                                 )
                             else:
                                 logger.debug(
@@ -683,8 +717,12 @@ class ThreadManager:
                                 
                                 if fallback_result and fallback_result.fallback_used:
                                     effective_model = fallback_result.model_id
+                                    # Story 3.2 enhancement: Store fallback routing_id for cost calculation
+                                    if fallback_result.routing_id:
+                                        self._thread_routing_ids[thread_id] = fallback_result.routing_id
                                     logger.info(
-                                        f"✅ Fallback routing: {routing_result.model_id} → {effective_model}"
+                                        f"✅ Fallback routing: {routing_result.model_id} → {effective_model} "
+                                        f"(routing_id={fallback_result.routing_id})"
                                     )
                                     
                                     # Retry LLM call với fallback model

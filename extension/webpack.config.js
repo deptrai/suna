@@ -31,6 +31,10 @@ module.exports = (env, argv) => {
       alias: {
         // Path alias to import from frontend (matches tsconfig.json)
         '@': path.resolve(__dirname, '../frontend/src'),
+        // Force React và react-dom từ extension node_modules để avoid duplicate instances
+        // This ensures all components use the same React instance
+        'react': path.resolve(__dirname, 'node_modules/react'),
+        'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
       },
     },
 
@@ -142,6 +146,9 @@ module.exports = (env, argv) => {
     // Optimization
     optimization: {
       minimize: isProduction,
+      // Không split chunks cho popup để tránh React dispatcher issues
+      // Bundle React trực tiếp vào popup.js
+      splitChunks: false,
     },
 
     // Stats

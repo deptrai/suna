@@ -230,4 +230,5 @@ Auto (Developer Agent)
 | 2025-11-07 | 1.0 | Initial story draft | BMAD Architect Agent |
 | 2025-11-07 | 1.1 | Clarified model selection logic for multiple matches | BMAD Architect Agent |
 | 2025-11-08 | 2.0 | Implementation complete - All tasks và tests completed | Auto (Developer Agent) |
+| 2025-11-08 | 2.1 | Cost calculation enhancement - Actual token tracking implemented | Auto (Developer Agent) |
 

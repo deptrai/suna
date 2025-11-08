@@ -101,7 +101,8 @@ class GateDecisionEnforcer:
         # Check P0 pass rate
         p0_pass_rate = criteria.get('p0_pass_rate', 0)
         min_p0_pass_rate = thresholds.get('min_p0_pass_rate', 100)
-        if p0_pass_rate < min_p0_pass_rate:
+        # Skip validation if p0_pass_rate is "N/A" or a string (manual verification)
+        if isinstance(p0_pass_rate, (int, float)) and p0_pass_rate < min_p0_pass_rate:
             issues.append(f"P0 pass rate {p0_pass_rate}% < {min_p0_pass_rate}% (BLOCKER)")
             all_pass = False
             

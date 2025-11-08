@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Dict, Any, Optional, List, Tuple
+import uuid
 
 from core.utils.logger import logger
 from core.utils.config import OptimizationConfig, OptimizationMode
@@ -46,6 +47,7 @@ class RoutingResult:
     fallback_used: bool = False
     routing_metadata: Dict[str, Any] = field(default_factory=dict)
     timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    routing_id: Optional[str] = None  # Unique ID for tracking token usage later (Story 3.2 enhancement)
 
 
 @dataclass
@@ -63,6 +65,10 @@ class RoutingMetrics:
     cost_savings_percentage: float = 0.0
     total_cost_before: float = 0.0
     total_cost_after: float = 0.0
+    # Story 3.2 enhancement: Actual token tracking
+    total_input_tokens: int = 0  # Actual input tokens from LLM responses
+    total_output_tokens: int = 0  # Actual output tokens from LLM responses
+    routings_with_token_data: int = 0  # Count of routings with actual token data
 
 
 class ModelRouter:
@@ -129,6 +135,8 @@ class ModelRouter:
             ComplexityLevel.COMPLEX: 0,
             ComplexityLevel.VERY_COMPLEX: 0,
         }
+        # Story 3.2 enhancement: Track routing decisions for token usage updates
+        self._active_routings: Dict[str, Dict[str, Any]] = {}  # routing_id -> {model_id, complexity, timestamp}
     
     @staticmethod
     def get_routing_rules() -> Dict[ComplexityLevel, List[str]]:
@@ -387,6 +395,17 @@ class ModelRouter:
                 routing_metadata={"selection_failed": True}
             )
         
+        # Generate unique routing ID for token usage tracking (Story 3.2 enhancement)
+        routing_id = str(uuid.uuid4())
+        
+        # Store routing information for later token usage update
+        self._active_routings[routing_id] = {
+            "model_id": selected_model.id,
+            "complexity": complexity,
+            "timestamp": datetime.now(timezone.utc),
+            "baseline_model_id": "anthropic/claude-sonnet-4-5-20250929"  # Premium baseline
+        }
+        
         # Update metrics
         self.metrics.total_routings += 1
         self.metrics.routings_by_complexity[complexity] += 1
@@ -394,37 +413,26 @@ class ModelRouter:
             self.metrics.routings_by_model.get(selected_model.id, 0) + 1
         )
         
-        # Calculate cost savings (compare with premium model baseline)
+        # Calculate estimated cost savings (will be updated with actual tokens later)
         # Baseline: Assume all requests would use premium model (claude-sonnet-4-5)
         baseline_model = self.model_registry.get("anthropic/claude-sonnet-4-5-20250929")
         if baseline_model and baseline_model.pricing and selected_model.pricing:
             # Estimate cost for baseline model (using average input/output ratio)
-            # For simplicity, assume 1:1 input/output ratio
-            baseline_cost = (
+            # Note: This is an estimate - actual cost will be calculated when token usage is available
+            baseline_cost_estimate = (
                 baseline_model.pricing.input_cost_per_million_tokens +
                 baseline_model.pricing.output_cost_per_million_tokens
             ) / 2
             
-            selected_cost = (
+            selected_cost_estimate = (
                 selected_model.pricing.input_cost_per_million_tokens +
                 selected_model.pricing.output_cost_per_million_tokens
             ) / 2
             
-            if baseline_cost > 0:
-                cost_savings = ((baseline_cost - selected_cost) / baseline_cost) * 100
-                # Update running average of cost savings
-                if self.metrics.total_routings == 1:
-                    self.metrics.cost_savings_percentage = cost_savings
-                else:
-                    # Weighted average
-                    self.metrics.cost_savings_percentage = (
-                        (self.metrics.cost_savings_percentage * (self.metrics.total_routings - 1) + cost_savings) /
-                        self.metrics.total_routings
-                    )
-                
-                # Track cost metrics
-                self.metrics.total_cost_before += baseline_cost
-                self.metrics.total_cost_after += selected_cost
+            # Note: We don't update total_cost_before/total_cost_after here with estimates
+            # Actual costs will be updated when token usage is available via update_cost_with_tokens()
+            # We only update cost_savings_percentage based on estimates for routings without token data
+            # When actual tokens are available, cost_savings_percentage will be recalculated based on actual costs
         
         # Log routing decision
         logger.info(
@@ -454,6 +462,7 @@ class ModelRouter:
             complexity=complexity,
             confidence=confidence,
             decision=RoutingDecision.ROUTED,
+            routing_id=routing_id,  # Story 3.2 enhancement: Include routing_id for token tracking
             routing_metadata={
                 "model_name": selected_model.name,
                 "model_provider": selected_model.provider.value,
@@ -538,12 +547,21 @@ class ModelRouter:
                     except Exception as e:
                         logger.warning(f"Failed to track fallback in quality monitor: {e}")
                     
+                    # Story 3.2 enhancement: Update active_routings với fallback model if routing_id exists
+                    if routing_result.routing_id and routing_result.routing_id in self._active_routings:
+                        # Update the routing entry to point to fallback model
+                        self._active_routings[routing_result.routing_id]["model_id"] = fallback_model.id
+                        logger.debug(
+                            f"Updated routing_id {routing_result.routing_id} to use fallback model {fallback_model.id}"
+                        )
+                    
                     return RoutingResult(
                         model_id=fallback_model.id,
                         complexity=routing_result.complexity,
                         confidence=routing_result.confidence,
                         decision=RoutingDecision.FALLBACK,
                         fallback_used=True,
+                        routing_id=routing_result.routing_id,  # Reuse routing_id from original routing
                         routing_metadata={
                             **routing_result.routing_metadata,
                             "original_model": failed_model_id,
@@ -583,11 +601,112 @@ class ModelRouter:
             "cost_savings_percentage": self.metrics.cost_savings_percentage,
             "total_cost_before": self.metrics.total_cost_before,
             "total_cost_after": self.metrics.total_cost_after,
+            # Story 3.2 enhancement: Actual token tracking
+            "total_input_tokens": self.metrics.total_input_tokens,
+            "total_output_tokens": self.metrics.total_output_tokens,
+            "routings_with_token_data": self.metrics.routings_with_token_data,
+            "token_data_coverage": (
+                (self.metrics.routings_with_token_data / total * 100) if total > 0 else 0.0
+            ),
         }
+    
+    def update_cost_with_tokens(
+        self,
+        routing_id: str,
+        input_tokens: int,
+        output_tokens: int
+    ) -> None:
+        """
+        Update cost metrics with actual token usage (Story 3.2 enhancement).
+        
+        This method should be called after LLM API call completes với actual token usage.
+        
+        Args:
+            routing_id: Unique routing ID from RoutingResult
+            input_tokens: Actual input tokens from LLM response
+            output_tokens: Actual output tokens from LLM response
+        """
+        if routing_id not in self._active_routings:
+            logger.debug(f"Routing ID {routing_id} not found in active routings (may have expired)")
+            return
+        
+        routing_info = self._active_routings[routing_id]
+        model_id = routing_info["model_id"]
+        baseline_model_id = routing_info["baseline_model_id"]
+        
+        # Get model và baseline model from registry
+        selected_model = self.model_registry.get(model_id)
+        baseline_model = self.model_registry.get(baseline_model_id)
+        
+        if not selected_model or not selected_model.pricing:
+            logger.debug(f"Model {model_id} not found or has no pricing info")
+            # Clean up routing info
+            del self._active_routings[routing_id]
+            return
+        
+        if not baseline_model or not baseline_model.pricing:
+            logger.debug(f"Baseline model {baseline_model_id} not found or has no pricing info")
+            # Clean up routing info
+            del self._active_routings[routing_id]
+            return
+        
+        # Calculate actual costs based on token usage
+        # Cost = (input_tokens / 1_000_000) * input_cost_per_million + (output_tokens / 1_000_000) * output_cost_per_million
+        baseline_cost = (
+            (input_tokens / 1_000_000) * baseline_model.pricing.input_cost_per_million_tokens +
+            (output_tokens / 1_000_000) * baseline_model.pricing.output_cost_per_million_tokens
+        )
+        
+        selected_cost = (
+            (input_tokens / 1_000_000) * selected_model.pricing.input_cost_per_million_tokens +
+            (output_tokens / 1_000_000) * selected_model.pricing.output_cost_per_million_tokens
+        )
+        
+        # Update metrics với actual token data
+        self.metrics.total_input_tokens += input_tokens
+        self.metrics.total_output_tokens += output_tokens
+        self.metrics.routings_with_token_data += 1
+        
+        # Recalculate cost savings percentage based on actual tokens
+        if baseline_cost > 0:
+            cost_savings = ((baseline_cost - selected_cost) / baseline_cost) * 100
+            
+            # Update running average of cost savings (only for routings with token data)
+            if self.metrics.routings_with_token_data == 1:
+                self.metrics.cost_savings_percentage = cost_savings
+            else:
+                # Weighted average based on actual cost difference
+                # Weight by cost difference (larger savings have more weight)
+                previous_avg = self.metrics.cost_savings_percentage
+                cost_diff_weight = abs(baseline_cost - selected_cost)
+                
+                # Simple weighted average (can be improved)
+                self.metrics.cost_savings_percentage = (
+                    (previous_avg * (self.metrics.routings_with_token_data - 1) + cost_savings) /
+                    self.metrics.routings_with_token_data
+                )
+            
+            # Update total cost metrics (replace estimated with actual)
+            # Note: We subtract the estimated cost and add actual cost
+            # Since we can't easily track which estimated cost to subtract, we'll track actual separately
+            # For now, we'll accumulate actual costs (this is more accurate)
+            self.metrics.total_cost_before += baseline_cost
+            self.metrics.total_cost_after += selected_cost
+            
+            logger.debug(
+                f"💰 Updated cost metrics với actual tokens - routing_id={routing_id}, "
+                f"input_tokens={input_tokens}, output_tokens={output_tokens}, "
+                f"baseline_cost=${baseline_cost:.6f}, selected_cost=${selected_cost:.6f}, "
+                f"savings={cost_savings:.2f}%"
+            )
+        
+        # Clean up routing info (optional - can keep for a TTL if needed)
+        del self._active_routings[routing_id]
     
     def reset_metrics(self) -> None:
         """Reset routing metrics."""
         self.metrics = RoutingMetrics()
+        self._active_routings.clear()  # Clear active routings when resetting metrics
         logger.info("ModelRouter metrics reset")
 
 

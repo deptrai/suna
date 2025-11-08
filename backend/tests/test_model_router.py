@@ -658,14 +658,83 @@ class TestCostTracking:
         )
         
         # Route task (should use cheap model)
-        await router_with_mocks.route(task)
+        result = await router_with_mocks.route(task)
+        assert result.routing_id is not None
         
         metrics = router_with_mocks.get_metrics()
         
-        # Cost savings should be calculated (comparing với premium baseline)
+        # Cost metrics should exist (but may be 0 until actual tokens are provided)
         assert "cost_savings_percentage" in metrics
-        assert metrics["total_cost_before"] > 0
-        assert metrics["total_cost_after"] > 0
+        assert "total_cost_before" in metrics
+        assert "total_cost_after" in metrics
+        assert "total_input_tokens" in metrics
+        assert "total_output_tokens" in metrics
+        assert "routings_with_token_data" in metrics
+        
+        # Update với actual tokens to get real cost tracking
+        router_with_mocks.update_cost_with_tokens(
+            routing_id=result.routing_id,
+            input_tokens=1000,
+            output_tokens=500
+        )
+        
+        # After updating với tokens, costs should be > 0
+        metrics_after = router_with_mocks.get_metrics()
+        assert metrics_after["total_cost_before"] > 0
+        assert metrics_after["total_cost_after"] > 0
+        assert metrics_after["total_input_tokens"] > 0
+        assert metrics_after["total_output_tokens"] > 0
+    
+    @pytest.mark.p1
+    @pytest.mark.asyncio
+    async def test_update_cost_with_tokens(self, router_with_mocks, mock_task_classifier, sample_models):
+        """Test updating cost metrics với actual token usage (Story 3.2 enhancement).
+        
+        Test ID: 3.2-UNIT-016
+        Priority: P1 (High priority)
+        AC: #6 (enhancement)
+        
+        Given: Routing result với routing_id và actual token usage
+        When: update_cost_with_tokens is called
+        Then: Should update cost metrics với actual token-based costs
+        """
+        task = "Simple task"
+        mock_task_classifier.classify.return_value = ClassificationResult(
+            complexity=TaskComplexityLevel.SIMPLE,
+            confidence=0.9,
+            task=task,
+            metadata={},
+            timestamp=datetime.now(timezone.utc)
+        )
+        
+        # Route task to get routing_id
+        result = await router_with_mocks.route(task)
+        assert result.routing_id is not None
+        
+        # Get initial metrics
+        metrics_before = router_with_mocks.get_metrics()
+        initial_total_input = metrics_before.get("total_input_tokens", 0)
+        initial_total_output = metrics_before.get("total_output_tokens", 0)
+        initial_routings_with_tokens = metrics_before.get("routings_with_token_data", 0)
+        
+        # Update với actual token usage
+        input_tokens = 1000
+        output_tokens = 500
+        router_with_mocks.update_cost_with_tokens(
+            routing_id=result.routing_id,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens
+        )
+        
+        # Verify metrics were updated
+        metrics_after = router_with_mocks.get_metrics()
+        assert metrics_after["total_input_tokens"] == initial_total_input + input_tokens
+        assert metrics_after["total_output_tokens"] == initial_total_output + output_tokens
+        assert metrics_after["routings_with_token_data"] == initial_routings_with_tokens + 1
+        assert metrics_after["token_data_coverage"] > 0
+        
+        # Verify routing_id was removed from active_routings
+        assert result.routing_id not in router_with_mocks._active_routings
 
 
 class TestModelRouterIntegration:
