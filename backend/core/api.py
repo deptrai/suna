@@ -23,6 +23,7 @@ except ImportError:
 from .api.semantic_cache_api import router as semantic_cache_router
 from .api.task_classifier_api import router as task_classifier_router
 from .api.model_router_api import router as model_router_router
+from .api.multi_model_orchestrator_api import router as workflow_orchestrator_router
 
 router = APIRouter()
 
@@ -42,6 +43,7 @@ if cache_metrics_router:
 router.include_router(semantic_cache_router)  # Story 2.1 - Semantic Cache Metrics
 router.include_router(task_classifier_router)  # Story 3.1 - Task Complexity Classification
 router.include_router(model_router_router)  # Story 3.2 - Model Selection Rules
+router.include_router(workflow_orchestrator_router)  # Story 3.3 - Sequential Model Execution
 
 # Re-export the initialize and cleanup functions
 __all__ = ['router', 'initialize', 'cleanup']

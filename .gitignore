@@ -230,3 +230,69 @@ apps/mobile/app-example
 test-results/
 playwright-report/
 playwright/.cache/
+
+# Log files
+*.log
+logs/
+**/logs/
+backend/logs/
+scripts/logs/
+services/**/logs/
+
+# Cache directories
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+backend/.pytest_cache/
+backend/tests/**/.pytest_cache/
+
+# Virtual environments (additional patterns)
+.venv/
+backend/.venv/
+**/.venv/
+
+# Extension node_modules
+extension/node_modules/
+extension/.pnpm-store/
+
+# TypeScript build info
+*.tsbuildinfo
+extension/*.tsbuildinfo
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# IDE and editor files
+.vscode/
+.idea/
+*.sublime-*
+.DS_Store
+*.code-workspace
+
+# Test output and coverage
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+.nox/
+coverage/
+*.cover
+.hypothesis/
+
+# Documentation build artifacts
+docs/_build/
+docs/.doctrees/
+site/
+
+# Summary files (temporary)
+*_SUMMARY.md
+*_UPDATE_SUMMARY.md
+*_REVIEW_SUMMARY.md
+*_EXPLANATION.md
+docs/extensions/*_SUMMARY.md
+docs/extensions/**/*_SUMMARY.md
+docs/extensions/reviews-analysis/

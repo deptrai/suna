@@ -362,6 +362,15 @@ class Configuration:
     MODEL_ROUTING_PREFER_CHEAPER: Optional[bool] = True  # Prefer cheaper models when multiple models match
     MODEL_ROUTING_FALLBACK_ENABLED: Optional[bool] = True  # Enable fallback mechanism if selected model fails
     
+    # Multi-Model Orchestration configuration (Story 3.3)
+    MULTI_MODEL_ORCHESTRATION_ENABLED: Optional[bool] = True  # Enable multi-step workflow orchestration
+    
+    # Workflow execution limits (security - Story 3.3 enhancements)
+    MAX_WORKFLOW_STEPS: int = 20  # Maximum number of steps in a workflow
+    MAX_STEP_INPUT_LENGTH: int = 100_000  # Maximum length of step input (characters)
+    MAX_WORKFLOW_EXECUTION_TIME_SECONDS: int = 3600  # Maximum total workflow execution time (1 hour)
+    MAX_INTERMEDIATE_RESULT_SIZE: int = 1_000_000  # Maximum size of intermediate results (characters)
+    
     # Daytona sandbox configuration (optional - sandbox features disabled if not configured)
     DAYTONA_API_KEY: Optional[str] = None
     DAYTONA_SERVER_URL: Optional[str] = None
