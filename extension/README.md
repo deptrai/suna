@@ -1,4 +1,4 @@
-# Suna.so Browser Extension
+# ChainLens.so Browser Extension
 
 Browser extension cho phép user click vào tên coin trên bất kỳ website crypto và tạo agent chat mới để analyze coin.
 
@@ -109,7 +109,7 @@ Extension được thiết kế để:
 - ✅ Enable coin detection và analysis từ bất kỳ website crypto
 
 Xem thêm architecture details trong:
-- [Architecture Document](../../docs/extensions/epic-prd-architecture/architecture-extension-suna.md)
+- [Architecture Document](../../docs/extensions/epic-prd-architecture/architecture-extension-chainlens.md)
 - [PRD](../../docs/extensions/epic-prd-architecture/PRD-extension.md)
 - [Epics](../../docs/extensions/epic-prd-architecture/epics-extension.md)
 
@@ -164,7 +164,7 @@ Xem thêm architecture details trong:
 
 ## Links
 
-- [Architecture Document](../../docs/extensions/epic-prd-architecture/architecture-extension-suna.md)
+- [Architecture Document](../../docs/extensions/epic-prd-architecture/architecture-extension-chainlens.md)
 - [PRD](../../docs/extensions/epic-prd-architecture/PRD-extension.md)
 - [Epics](../../docs/extensions/epic-prd-architecture/epics-extension.md)
 - [Stories](../../docs/extensions/stories/)

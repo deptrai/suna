@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coin Detector Test Page</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    .test-section h3 {
+      margin-top: 0;
+      color: #333;
+      border-bottom: 2px solid #6366f1;
+      padding-bottom: 10px;
+    }
+    .detection-result {
+      background: #f0f9ff;
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 3px;
+      border-left: 4px solid #6366f1;
+    }
+    .detection-result strong {
+      color: #6366f1;
+    }
+    button {
+      padding: 10px 20px;
+      background: #6366f1;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 10px 5px 10px 0;
+      font-size: 16px;
+    }
+    button:hover {
+      background: #4f46e5;
+    }
+    #results {
+      margin-top: 20px;
+    }
+    .result-summary {
+      background: #e0f2fe;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+    }
+    .coin-tag {
+      display: inline-block;
+      padding: 3px 8px;
+      margin: 2px;
+      background: #6366f1;
+      color: white;
+      border-radius: 3px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 Coin Detector Test Page</h1>
+  <p>Test the coin detection algorithm với various coin formats.</p>
+  
+  <button onclick="runDetection()">🔍 Run Detection</button>
+  <button onclick="clearResults()">🗑️ Clear Results</button>
+  
+  <div id="results"></div>
+  
+  <div class="test-section">
+    <h3>Test 1: Coin Name Detection</h3>
+    <p>Bitcoin is the most popular cryptocurrency.</p>
+    <p>Ethereum network is widely used for DeFi applications.</p>
+    <p>Solana blockchain offers fast transaction speeds.</p>
+    <p>Cardano and Polygon are also popular choices.</p>
+  </div>
+  
+  <div class="test-section">
+    <h3>Test 2: Coin Symbol Detection</h3>
+    <p>BTC is trading at high prices.</p>
+    <p>The price of ETH has increased significantly.</p>
+    <p>$SOL token is gaining popularity.</p>
+    <p>ADA và MATIC are also on the rise.</p>
+  </div>
+  
+  <div class="test-section">
+    <h3>Test 3: Price Detection</h3>
+    <p>BTC $45,000 is the current price.</p>
+    <p>ETH 3,500 USD per token.</p>
+    <p>SOL €150 is the market value.</p>
+    <p>ADA is trading at 1.20k per coin.</p>
+    <p>MATIC price is $0.90 USD.</p>
+  </div>
+  
+  <div class="test-section">
+    <h3>Test 4: Combined Formats</h3>
+    <p>Bitcoin (BTC) is trading at $45,000.</p>
+    <p>Ethereum ETH price is 3,500 USD.</p>
+    <p>Solana SOL is worth €150.</p>
+    <p>Cardano ADA currently at $1.20.</p>
+  </div>
+  
+  <div class="test-section">
+    <h3>Test 5: Multiple Coins</h3>
+    <p>Top cryptocurrencies include Bitcoin, Ethereum, Solana, Cardano, and Polygon.</p>
+    <p>Prices: BTC $45,000, ETH $3,500, SOL $150, ADA $1.20, MATIC $0.90.</p>
+  </div>
+  
+  <div class="test-section">
+    <h3>Test 6: Nested Elements</h3>
+    <div>
+      <p>Bitcoin is mentioned in this <span>nested</span> structure.</p>
+      <ul>
+        <li>Ethereum</li>
+        <li>Solana</li>
+        <li>Cardano</li>
+      </ul>
+    </div>
+  </div>
+  
+  <div class="test-section">
+    <h3>Test 7: Edge Cases</h3>
+    <p>Script và style elements should be ignored.</p>
+    <script>const bitcoin = "BTC"; const ethereum = "ETH";</script>
+    <style>.ethereum { color: blue; } .bitcoin { color: orange; }</style>
+    <p>Empty text nodes should be skipped.</p>
+    <p>Special characters: Bitcoin's value, Ethereum (ETH), Solana's price.</p>
+  </div>
+  
+  <script type="module">
+    // Import coin detector (when extension is loaded)
+    // For testing, we'll use a simple mock implementation
+    // In real scenario, import from extension module
+    
+    async function loadCoinDetector() {
+      try {
+        // Try to import from extension (if available)
+        const { detectCoins, detectCoinsInDocument } = await import(
+          chrome?.runtime?.getURL 
+            ? chrome.runtime.getURL('content-script.js')
+            : '../coin-detector.ts'
+        );
+        return { detectCoins, detectCoinsInDocument };
+      } catch (e) {
+        console.warn('Extension module not available, using test implementation');
+        return null;
+      }
+    }
+    
+    window.runDetection = async function() {
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = '<p>Running detection...</p>';
+      
+      try {
+        // Try to use extension module
+        const detector = await loadCoinDetector();
+        
+        if (detector) {
+          const detections = detector.detectCoinsInDocument();
+          displayResults(detections);
+        } else {
+          // Fallback: Show test instructions
+          resultsDiv.innerHTML = `
+            <div class="result-summary">
+              <h2>📋 Test Instructions</h2>
+              <p><strong>To test the coin detector:</strong></p>
+              <ol>
+                <li>Build the extension: <code>cd extension && pnpm run build</code></li>
+                <li>Load extension in Chrome (Developer mode)</li>
+                <li>Open this page với extension enabled</li>
+                <li>Open browser console (F12)</li>
+                <li>Run: <code>detectCoinsInDocument()</code></li>
+                <li>Or integrate vào content script (Story 11.2)</li>
+              </ol>
+              <p><strong>Expected detections:</strong></p>
+              <ul>
+                <li>Coin names: Bitcoin, Ethereum, Solana, Cardano, Polygon</li>
+                <li>Coin symbols: BTC, ETH, SOL, ADA, MATIC</li>
+                <li>Prices: $45,000, 3,500 USD, €150, 1.20k, $0.90</li>
+              </ul>
+            </div>
+          `;
+        }
+      } catch (error) {
+        resultsDiv.innerHTML = `
+          <div style="background: #fee; padding: 15px; border-radius: 5px; color: #c00;">
+            <strong>Error:</strong> ${error.message}
+            <br><br>
+            <strong>Note:</strong> To test với actual module, load extension và use browser console.
+          </div>
+        `;
+      }
+    };
+    
+    function displayResults(detections) {
+      const resultsDiv = document.getElementById('results');
+      
+      if (!detections || detections.length === 0) {
+        resultsDiv.innerHTML = '<p style="color: orange;">No coins detected. Check console for details.</p>';
+        return;
+      }
+      
+      // Group by coin name
+      const grouped = {};
+      detections.forEach(d => {
+        const key = d.name;
+        if (!grouped[key]) {
+          grouped[key] = [];
+        }
+        grouped[key].push(d);
+      });
+      
+      let html = `
+        <div class="result-summary">
+          <h2>✅ Detection Results</h2>
+          <p><strong>Total detections:</strong> ${detections.length}</p>
+          <p><strong>Unique coins:</strong> ${Object.keys(grouped).length}</p>
+          <p><strong>Coins found:</strong> ${Object.keys(grouped).map(name => `<span class="coin-tag">${name}</span>`).join('')}</p>
+        </div>
+      `;
+      
+      // Display grouped results
+      Object.entries(grouped).forEach(([name, items]) => {
+        html += `<div class="test-section">`;
+        html += `<h3>🪙 ${name}</h3>`;
+        items.forEach((detection, idx) => {
+          html += `
+            <div class="detection-result">
+              <strong>Detection ${idx + 1}:</strong><br>
+              <strong>Element:</strong> ${detection.element.tagName.toLowerCase()}<br>
+              <strong>Name:</strong> ${detection.name}<br>
+              ${detection.symbol ? `<strong>Symbol:</strong> ${detection.symbol}<br>` : ''}
+              ${detection.price ? `<strong>Price:</strong> ${detection.price.toLocaleString()}<br>` : ''}
+              <strong>Text content:</strong> "${detection.element.textContent?.substring(0, 100)}..."
+            </div>
+          `;
+        });
+        html += `</div>`;
+      });
+      
+      resultsDiv.innerHTML = html;
+      
+      // Log to console
+      console.log('Coin Detection Results:', detections);
+      console.table(detections.map(d => ({
+        name: d.name,
+        symbol: d.symbol || '-',
+        price: d.price || '-',
+        element: d.element.tagName,
+      })));
+    }
+    
+    window.clearResults = function() {
+      document.getElementById('results').innerHTML = '';
+    };
+    
+    // Auto-run on load (optional)
+    // window.addEventListener('DOMContentLoaded', () => {
+    //   setTimeout(runDetection, 1000);
+    // });
+  </script>
+</body>
+</html>
+

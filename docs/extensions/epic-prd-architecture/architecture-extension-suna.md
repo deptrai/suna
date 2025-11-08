@@ -1,9 +1,9 @@
-# Browser Extension Architecture - Suna.so
+# Browser Extension Architecture - ChainLens.so
 
 **Generated:** 2025-11-07  
 **Architect:** Winston (BMAD Architect Agent)  
 **For:** Luis  
-**Project:** Suna.so Browser Extension
+**Project:** ChainLens.so Browser Extension
 
 ---
 
@@ -133,7 +133,7 @@ Extension được xây dựng như một lightweight wrapper sử dụng shared
 **Responsibilities:**
 - Scan DOM cho coin names (regex patterns, common crypto symbols)
 - Highlight detected coins
-- Inject "Analyze with Suna" button/context menu
+- Inject "Analyze with ChainLens" button/context menu
 - Listen for user clicks on coin names
 - Extract coin context (name, symbol, price if available)
 
@@ -155,7 +155,7 @@ observer.observe(document.body, { childList: true, subtree: true });
 
 // Handle button clicks
 document.addEventListener('click', (e) => {
-  if (e.target.matches('.suna-analyze-btn')) {
+  if (e.target.matches('.chainlens-analyze-btn')) {
     const coinData = JSON.parse(e.target.dataset.coin || '{}');
     sendToBackground({ 
       type: 'OPEN_SIDE_PANEL_WITH_COIN', 
@@ -327,7 +327,7 @@ extension/
 ### Recommended Structure (Monorepo)
 
 ```
-suna/
+chainlens/
 ├── packages/
 │   ├── shared-ui/                    # Shared UI components
 │   │   ├── src/
@@ -403,7 +403,7 @@ suna/
     "default_path": "sidepanel.html"
   },
   "action": {
-    "default_title": "Suna Coin Analysis",
+    "default_title": "ChainLens Coin Analysis",
     "default_icon": {
       "16": "icons/icon-16.png",
       "48": "icons/icon-48.png",
@@ -420,7 +420,7 @@ suna/
 ### Alternative: Simpler Structure (Direct Import)
 
 ```
-suna/
+chainlens/
 ├── frontend/                          # Existing Next.js app
 │   └── src/
 │       └── lib/                       # Shared code (as-is)
@@ -602,11 +602,11 @@ export function injectAnalysisButton(
   coinData: CoinMatch
 ): void {
   // Avoid duplicate injection
-  if (element.querySelector('.suna-analyze-btn')) return;
+  if (element.querySelector('.chainlens-analyze-btn')) return;
   
   const button = document.createElement('button');
-  button.className = 'suna-analyze-btn';
-  button.textContent = '📊 Analyze with Suna';
+  button.className = 'chainlens-analyze-btn';
+  button.textContent = '📊 Analyze with ChainLens';
   button.dataset.coin = coinData.name;
   
   // Position relative to coin name
@@ -938,7 +938,7 @@ npm run build
 
 **CSS Classes:**
 - Tailwind utility classes (reuse từ frontend)
-- Custom classes: `suna-*` prefix (e.g., `suna-analyze-btn`)
+- Custom classes: `chainlens-*` prefix (e.g., `chainlens-analyze-btn`)
 
 ### Code Organization
 

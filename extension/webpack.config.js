@@ -7,11 +7,11 @@ module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
 
   return {
-    entry: {
-      'content-script': './src/content-script/content-script.ts',
-      'background': './src/background/background.ts',
-      'sidepanel': './src/sidepanel/sidepanel.tsx',
-    },
+  entry: {
+    'content-script': './src/content-script/content-script.ts',
+    'background': './src/background/background.ts',
+    'sidepanel': './src/sidepanel/sidepanel.tsx',
+  },
     output: {
       path: path.resolve(__dirname, 'dist'),
       filename: '[name].js',
@@ -22,7 +22,13 @@ module.exports = (env, argv) => {
         {
           test: /\.tsx?$/,
           use: 'ts-loader',
-          exclude: /node_modules/,
+          exclude: [
+            /node_modules/,
+            /__tests__/,
+            /\.test\.ts$/,
+            /\.spec\.ts$/,
+            /\.integration\.test\.ts$/,
+          ],
         },
         {
           // CSS rule for content-script: extract to separate file

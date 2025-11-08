@@ -30,7 +30,7 @@ So that I can easily view analysis results với more space và persistent view.
 
 - [ ] Task 2: Implement header section (AC: 2)
   - [ ] Create header component hoặc section
-  - [ ] Display extension name: "Suna" hoặc "Suna Coin Analysis"
+  - [ ] Display extension name: "ChainLens" hoặc "ChainLens Coin Analysis"
   - [ ] Add logo/icon if available
   - [ ] Add close button (X) to close side panel
   - [ ] Style header với consistent design (fixed height)

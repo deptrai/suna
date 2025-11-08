@@ -63,7 +63,7 @@
 
 - **Coverage:** FULL ✅
 - **Implementation:**
-  - `extension/src/content-script/content-script.css:4-24` - Button styling với `.suna-analyze-btn` class
+  - `extension/src/content-script/content-script.css:4-24` - Button styling với `.chainlens-analyze-btn` class
   - Styling includes: background color (#4a90e2), hover state, active state, border radius, padding
   - CSS file registered in manifest.json (Story 10.2)
   - Note: Uses CSS classes instead of Tailwind (content scripts can't easily use Tailwind)
@@ -94,9 +94,9 @@
 - **Coverage:** FULL ✅
 - **Implementation:**
   - `extension/src/content-script/injector.ts:34-39` - Duplicate prevention check
-  - `extension/src/content-script/injector.ts:35` - Checks for existing button using `.suna-analyze-btn` class
-  - `extension/src/content-script/injector.ts:15` - Unique class name: `BUTTON_CLASS_NAME = 'suna-analyze-btn'`
-  - `extension/src/content-script/injector.ts:21,44` - Data attribute for identification: `data-suna-btn`
+  - `extension/src/content-script/injector.ts:35` - Checks for existing button using `.chainlens-analyze-btn` class
+  - `extension/src/content-script/injector.ts:15` - Unique class name: `BUTTON_CLASS_NAME = 'chainlens-analyze-btn'`
+  - `extension/src/content-script/injector.ts:21,44` - Data attribute for identification: `data-chainlens-btn`
   - `extension/src/content-script/injector.ts:142-144` - Helper function to check if button exists
 
 - **Verification Method:** Code review, build verification

@@ -80,7 +80,7 @@ So that code is maintainable và follows best practices.
 
 **Alignment with Architecture:**
 - Structure matches "Recommended Structure (Monorepo)" from architecture doc
-- Extension directory at project root: `suna/extension/`
+- Extension directory at project root: `chainlens/extension/`
 - Source code in `extension/src/` với organized subdirectories
 - Public assets in `extension/public/`
 
@@ -96,8 +96,8 @@ So that code is maintainable và follows best practices.
 
 ### References
 
-- [Source: docs/architecture-extension-suna.md#Project-Structure] - Recommended extension project structure
-- [Source: docs/architecture-extension-suna.md#Technology-Stack-Decisions] - Technology stack requirements
+- [Source: docs/architecture-extension-chainlens.md#Project-Structure] - Recommended extension project structure
+- [Source: docs/architecture-extension-chainlens.md#Technology-Stack-Decisions] - Technology stack requirements
 - [Source: docs/epics-extension.md#Epic-10] - Epic 10 goal và value proposition
 - [Source: docs/PRD-extension.md#Goals] - Project goals including code reuse target
 - [Source: docs/epics-extension.md#Story-10.1] - Story acceptance criteria và prerequisites
@@ -146,7 +146,7 @@ So that code is maintainable và follows best practices.
 
 ### Completion Notes List
 
-✅ **Task 1 Complete:** Extension directory structure created với all required folders (content-script, popup, background, shared, public). Structure matches architecture spec from docs/architecture-extension-suna.md.
+✅ **Task 1 Complete:** Extension directory structure created với all required folders (content-script, popup, background, shared, public). Structure matches architecture spec from docs/architecture-extension-chainlens.md.
 
 ✅ **Task 2 Complete:** TypeScript configuration created với path aliases configured. Path alias `@/*` maps to `../frontend/src/*` để enable importing từ frontend codebase. Compiler options match frontend tsconfig.json để ensure compatibility. Created test file (`src/shared/test-path-alias.ts`) để verify path alias resolution works.
 

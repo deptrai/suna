@@ -11,7 +11,7 @@
 
   <story>
     <asA>developer</asA>
-    <iWant>inject "Analyze with Suna" buttons next to detected coins</iWant>
+    <iWant>inject "Analyze with ChainLens" buttons next to detected coins</iWant>
     <soThat>user can easily trigger analysis</soThat>
     <tasks>
       <task id="1" ac="1">
@@ -27,7 +27,7 @@
         <title>Implement button injection logic</title>
         <subtasks>
           <subtask>Create button element: `document.createElement('button')`</subtask>
-          <subtask>Set button text: "Analyze with Suna" hoặc similar</subtask>
+          <subtask>Set button text: "Analyze with ChainLens" hoặc similar</subtask>
           <subtask>Position button next to detected coin element</subtask>
           <subtask>Handle different element types (inline, block, etc.)</subtask>
           <subtask>Test button appears correctly</subtask>
@@ -57,7 +57,7 @@
       <task id="5" ac="5">
         <title>Implement duplicate prevention</title>
         <subtasks>
-          <subtask>Check if button already exists: `element.querySelector('.suna-analyze-btn')`</subtask>
+          <subtask>Check if button already exists: `element.querySelector('.chainlens-analyze-btn')`</subtask>
           <subtask>Skip injection if button exists</subtask>
           <subtask>Add unique identifier to button (data attribute)</subtask>
           <subtask>Handle button removal và re-injection</subtask>
@@ -90,8 +90,8 @@
   <artifacts>
     <docs>
       <doc>
-        <path>docs/architecture-extension-suna.md</path>
-        <title>Browser Extension Architecture - Suna.so</title>
+        <path>docs/architecture-extension-chainlens.md</path>
+        <title>Browser Extension Architecture - ChainLens.so</title>
         <section>Implementation Patterns - Pattern 2: UI Injection</section>
         <snippet>Non-intrusive button injection pattern. Create button element, position next to coin element, add click handler sending message to background worker. Avoid duplicate injection.</snippet>
       </doc>
@@ -144,7 +144,7 @@
     </constraint>
     <constraint>
       <type>Duplicate Prevention</type>
-      <description>Check for existing button before injection. Use unique class name: .suna-analyze-btn. Add data attributes for identification. Handle re-injection scenarios.</description>
+      <description>Check for existing button before injection. Use unique class name: .chainlens-analyze-btn. Add data attributes for identification. Handle re-injection scenarios.</description>
     </constraint>
   </constraints>
 

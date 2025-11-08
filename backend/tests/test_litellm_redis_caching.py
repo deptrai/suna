@@ -50,10 +50,13 @@ class TestLiteLLMCacheConfiguration:
         """Verify setup_litellm_redis_cache function exists."""
         assert callable(setup_litellm_redis_cache)
     
-    @patch('core.services.llm.litellm')
     @patch('core.services.llm.config')
-    def test_cache_type_is_redis_not_semantic(self, mock_config, mock_litellm):
+    def test_cache_type_is_redis_not_semantic(self, mock_config):
         """Verify cache type is 'redis' (exact match), not 'redis-semantic'."""
+        # Reset global flag to allow re-execution
+        import core.services.llm as llm_module
+        llm_module._litellm_cache_configured = False
+        
         # Setup mock config
         mock_config.REDIS_HOST = 'localhost'
         mock_config.REDIS_PORT = 6379
@@ -61,13 +64,23 @@ class TestLiteLLMCacheConfiguration:
         mock_config.LITELLM_CACHE_TTL = 3600
         mock_config.LITELLM_CACHE_ENABLED = True
         
-        # Mock RedisCache import
-        mock_redis_cache = MagicMock()
-        with patch('core.services.llm.RedisCache', mock_redis_cache):
-            setup_litellm_redis_cache()
-        
-        # Verify environment variable is set to 'redis' (not 'redis-semantic')
-        assert os.environ.get('LITELLM_CACHE_TYPE') == 'redis'
+        # Clear any existing env vars for this test
+        original_cache_type = os.environ.pop('LITELLM_CACHE_TYPE', None)
+        try:
+            # Mock RedisCache import from litellm (imported inside function)
+            # Force fallback to environment variables only
+            with patch('litellm.RedisCache', side_effect=ImportError("Not available")), \
+                 patch('litellm.Cache', side_effect=ImportError("Not available")):
+                setup_litellm_redis_cache()
+            
+            # Verify environment variable is set to 'redis' (not 'redis-semantic')
+            assert os.environ.get('LITELLM_CACHE_TYPE') == 'redis'
+        finally:
+            # Restore original env var
+            if original_cache_type:
+                os.environ['LITELLM_CACHE_TYPE'] = original_cache_type
+            elif 'LITELLM_CACHE_TYPE' in os.environ:
+                del os.environ['LITELLM_CACHE_TYPE']
     
     @patch('core.services.llm.litellm')
     @patch('core.services.llm.config')
@@ -125,6 +138,10 @@ class TestCacheTTL:
     @patch('core.services.llm.config')
     def test_ttl_used_in_cache_configuration(self, mock_config):
         """Verify TTL is used when configuring cache."""
+        # Reset global flag to allow re-execution
+        import core.services.llm as llm_module
+        llm_module._litellm_cache_configured = False
+        
         custom_ttl = 7200  # 2 hours
         mock_config.REDIS_HOST = 'localhost'
         mock_config.REDIS_PORT = 6379
@@ -132,10 +149,22 @@ class TestCacheTTL:
         mock_config.LITELLM_CACHE_TTL = custom_ttl
         mock_config.LITELLM_CACHE_ENABLED = True
         
-        with patch('core.services.llm.RedisCache') as mock_redis_cache:
-            setup_litellm_redis_cache()
-            # Verify TTL is passed to cache configuration
-            assert os.environ.get('LITELLM_CACHE_TTL_SECONDS') == str(custom_ttl)
+        # Clear any existing env vars for this test
+        original_ttl = os.environ.pop('LITELLM_CACHE_TTL_SECONDS', None)
+        try:
+            # Mock RedisCache import from litellm (imported inside function)
+            # Force fallback to environment variables only
+            with patch('litellm.RedisCache', side_effect=ImportError("Not available")), \
+                 patch('litellm.Cache', side_effect=ImportError("Not available")):
+                setup_litellm_redis_cache()
+                # Verify TTL is passed to cache configuration via environment variable
+                assert os.environ.get('LITELLM_CACHE_TTL_SECONDS') == str(custom_ttl)
+        finally:
+            # Restore original env var
+            if original_ttl:
+                os.environ['LITELLM_CACHE_TTL_SECONDS'] = original_ttl
+            elif 'LITELLM_CACHE_TTL_SECONDS' in os.environ:
+                del os.environ['LITELLM_CACHE_TTL_SECONDS']
 
 
 class TestCacheMetricsTracking:

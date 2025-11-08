@@ -5,7 +5,7 @@ Status: done
 ## Story
 
 As a developer,  
-I want inject "Analyze with Suna" buttons next to detected coins,  
+I want inject "Analyze with ChainLens" buttons next to detected coins,  
 So that user can easily trigger analysis.
 
 ## Acceptance Criteria
@@ -27,7 +27,7 @@ So that user can easily trigger analysis.
 
 - [x] Task 2: Implement button injection logic (AC: 2)
   - [x] Create button element: `document.createElement('button')`
-  - [x] Set button text: "Analyze with Suna" hoặc similar
+  - [x] Set button text: "Analyze with ChainLens" hoặc similar
   - [x] Position button next to detected coin element
   - [x] Handle different element types (inline, block, etc.)
   - [x] Test button appears correctly
@@ -48,7 +48,7 @@ So that user can easily trigger analysis.
   - [x] Test message sending works
 
 - [x] Task 5: Implement duplicate prevention (AC: 5)
-  - [x] Check if button already exists: `element.querySelector('.suna-analyze-btn')`
+  - [x] Check if button already exists: `element.querySelector('.chainlens-analyze-btn')`
   - [x] Skip injection if button exists
   - [x] Add unique identifier to button (data attribute)
   - [x] Handle button removal và re-injection
@@ -94,7 +94,7 @@ So that user can easily trigger analysis.
 
 **Duplicate Prevention:**
 - Check for existing button before injection
-- Use unique class name: `.suna-analyze-btn`
+- Use unique class name: `.chainlens-analyze-btn`
 - Add data attributes for identification
 - Handle re-injection scenarios
 
@@ -116,7 +116,7 @@ So that user can easily trigger analysis.
 
 ### References
 
-- [Source: docs/architecture-extension-suna.md#Implementation-Patterns] - UI Injection pattern với button creation
+- [Source: docs/architecture-extension-chainlens.md#Implementation-Patterns] - UI Injection pattern với button creation
 - [Source: docs/epics-extension.md#Epic-11] - Epic 11 goal: inject buttons next to detected coins
 - [Source: docs/epics-extension.md#Story-11.3] - Story acceptance criteria và prerequisites
 - [Source: docs/PRD-extension.md#Functional-Requirements] - FR002: UI injection với "Analyze" buttons
@@ -156,9 +156,9 @@ So that user can easily trigger analysis.
 **Implementation Summary (2025-11-08):**
 - ✅ Created `injector.ts` module với `injectAnalysisButton()` function
 - ✅ Implemented button injection logic với support for inline, block, table cell, và list item elements
-- ✅ Button styling uses existing `.suna-analyze-btn` CSS class từ `content-script.css`
+- ✅ Button styling uses existing `.chainlens-analyze-btn` CSS class từ `content-script.css`
 - ✅ Click handler sends `ANALYZE_COIN` message to background worker với coin data (name, symbol, price)
-- ✅ Duplicate prevention checks for existing buttons using `.suna-analyze-btn` class selector
+- ✅ Duplicate prevention checks for existing buttons using `.chainlens-analyze-btn` class selector
 - ✅ Integrated button injection vào `content-script.ts` - buttons injected after coin detection
 - ✅ Added helper functions: `injectAnalysisButtons()`, `removeAllInjectedButtons()`, `hasButtonForElement()`
 - ✅ Build successful (5.57KB content-script.js, no errors)
@@ -166,7 +166,7 @@ So that user can easily trigger analysis.
 - ⚠️ Background worker needs to handle `ANALYZE_COIN` message (will be implemented in Story 13.4)
 
 **Technical Decisions:**
-- Used existing CSS class `.suna-analyze-btn` from `content-script.css` instead of Tailwind (content scripts can't easily use Tailwind)
+- Used existing CSS class `.chainlens-analyze-btn` from `content-script.css` instead of Tailwind (content scripts can't easily use Tailwind)
 - Button positioning handles multiple element types (inline, block, table-cell, list-item) để work trên various page layouts
 - Duplicate prevention checks element for existing button before injection
 - Message format includes coin name, symbol, và optional price để provide context to background worker
@@ -221,7 +221,7 @@ Story 11.3 successfully implements button injection functionality with robust du
 |-----|-------------|--------|----------|
 | AC1 | `injector.ts` module với button injection logic | ✅ IMPLEMENTED | `extension/src/content-script/injector.ts:1-189` - Module created với `injectAnalysisButton()`, `injectAnalysisButtons()`, `removeAllInjectedButtons()`, `hasButtonForElement()` functions |
 | AC2 | Button injected next to detected coin elements | ✅ IMPLEMENTED | `extension/src/content-script/injector.ts:117-148` - Button positioning logic handles inline, block, table-cell, list-item elements. Buttons inserted after element using `parentNode.insertBefore()` or `appendChild()` for table cells |
-| AC3 | Button styling matches extension design | ✅ IMPLEMENTED | `extension/src/content-script/content-script.css:4-24` - CSS class `.suna-analyze-btn` with proper styling (colors, padding, hover states). Applied via `button.className = BUTTON_CLASS_NAME` at `injector.ts:82` |
+| AC3 | Button styling matches extension design | ✅ IMPLEMENTED | `extension/src/content-script/content-script.css:4-24` - CSS class `.chainlens-analyze-btn` with proper styling (colors, padding, hover states). Applied via `button.className = BUTTON_CLASS_NAME` at `injector.ts:82` |
 | AC4 | Button click handler sends message to background worker | ✅ IMPLEMENTED | `extension/src/content-script/injector.ts:88-115` - Click handler sends `ANALYZE_COIN` message với `chrome.runtime.sendMessage()`. Message includes coin name, symbol, và optional price |
 | AC5 | Duplicate injection prevention | ✅ IMPLEMENTED | `extension/src/content-script/injector.ts:27,40-78,151` - Multiple duplicate prevention mechanisms: (1) WeakSet tracking (`injectedElements`), (2) Check inside element, (3) Check next sibling, (4) Check parent's children. Bug fix applied to prevent infinite injection |
 | AC6 | Button visible và clickable trên various page layouts | ✅ IMPLEMENTED | `extension/src/content-script/injector.ts:117-148` - Button positioning handles multiple element types (inline, block, table-cell, list-item). CSS ensures visibility với proper styling. Button type set to "button" to prevent form submission |
@@ -234,7 +234,7 @@ Story 11.3 successfully implements button injection functionality with robust du
 |------|-----------|-------------|----------|
 | Task 1: Create injector.ts module | ✅ Complete | ✅ VERIFIED COMPLETE | `extension/src/content-script/injector.ts` exists với exported functions và JSDoc comments |
 | Task 2: Implement button injection logic | ✅ Complete | ✅ VERIFIED COMPLETE | Button creation (`injector.ts:81-84`), positioning (`injector.ts:117-148`), handles inline/block/table-cell/list-item elements |
-| Task 3: Style button với Tailwind classes | ✅ Complete | ✅ VERIFIED COMPLETE | CSS styling via `.suna-analyze-btn` class (`content-script.css:4-24`). Note: Tailwind not used (content scripts can't easily use Tailwind), but CSS matches extension design |
+| Task 3: Style button với Tailwind classes | ✅ Complete | ✅ VERIFIED COMPLETE | CSS styling via `.chainlens-analyze-btn` class (`content-script.css:4-24`). Note: Tailwind not used (content scripts can't easily use Tailwind), but CSS matches extension design |
 | Task 4: Implement click handler | ✅ Complete | ✅ VERIFIED COMPLETE | Click handler (`injector.ts:88-115`) với `stopPropagation()`, `preventDefault()`, và `chrome.runtime.sendMessage()` |
 | Task 5: Implement duplicate prevention | ✅ Complete | ✅ VERIFIED COMPLETE | Enhanced duplicate prevention (`injector.ts:27,40-78,151`) với WeakSet tracking và multiple checks (inside element, siblings, parent children). Bug fix applied |
 | Task 6: Test trên various layouts | ✅ Complete | ✅ VERIFIED COMPLETE | Positioning logic handles inline, block, table-cell, list-item elements (`injector.ts:119-148`). Code supports various layouts, manual testing recommended |

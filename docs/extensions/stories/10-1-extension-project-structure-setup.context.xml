@@ -81,32 +81,32 @@
   <artifacts>
     <docs>
       <doc>
-        <path>docs/architecture-extension-suna.md</path>
-        <title>Browser Extension Architecture - Suna.so</title>
+        <path>docs/architecture-extension-chainlens.md</path>
+        <title>Browser Extension Architecture - ChainLens.so</title>
         <section>Project Structure</section>
         <snippet>Recommended structure: extension/ với src/content-script/, src/sidepanel/, src/background/, src/shared/. Alternative simpler structure uses direct import với path aliases.</snippet>
       </doc>
       <doc>
-        <path>docs/architecture-extension-suna.md</path>
-        <title>Browser Extension Architecture - Suna.so</title>
+        <path>docs/architecture-extension-chainlens.md</path>
+        <title>Browser Extension Architecture - ChainLens.so</title>
         <section>Technology Stack Decisions</section>
         <snippet>React 18+, TypeScript 5+, Tailwind CSS 4+, Chrome Extension Manifest V3. Extension uses path aliases để import từ frontend codebase.</snippet>
       </doc>
       <doc>
         <path>docs/epics-extension.md</path>
-        <title>Suna.so Browser Extension - Epic Breakdown</title>
+        <title>ChainLens.so Browser Extension - Epic Breakdown</title>
         <section>Epic 10: Extension Foundation & Setup</section>
         <snippet>Epic 10 establishes extension project structure, build configuration, basic manifest, và shared code setup để enable code reuse từ frontend.</snippet>
       </doc>
       <doc>
         <path>docs/epics-extension.md</path>
-        <title>Suna.so Browser Extension - Epic Breakdown</title>
+        <title>ChainLens.so Browser Extension - Epic Breakdown</title>
         <section>Story 10.1: Extension Project Structure Setup</section>
         <snippet>As a developer, I want extension project structure với proper organization, So that code is maintainable và follows best practices. Acceptance criteria include directory structure, TypeScript config, package.json, và README.</snippet>
       </doc>
       <doc>
         <path>docs/PRD-extension.md</path>
-        <title>Suna.so Browser Extension - Product Requirements Document</title>
+        <title>ChainLens.so Browser Extension - Product Requirements Document</title>
         <section>Goals</section>
         <snippet>Goals include tối đa hóa code reuse từ frontend Next.js (target ~95-98%) để giảm thiểu development effort và cung cấp trải nghiệm nhất quán với main app.</snippet>
       </doc>

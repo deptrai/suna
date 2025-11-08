@@ -1,4 +1,4 @@
-# Suna.so Browser Extension - Product Requirements Document (PRD)
+# ChainLens.so Browser Extension - Product Requirements Document (PRD)
 
 **Author:** Luis  
 **Date:** 2025-11-07  
@@ -19,7 +19,7 @@
 
 ### Background Context
 
-Hiện tại, user phải copy/paste coin name vào main Suna.so app để phân tích. Extension sẽ cho phép tạo agent chat mới trực tiếp từ bất kỳ website crypto (CoinGecko, Binance, etc.) bằng cách detect coin names và inject "Analyze" buttons.
+Hiện tại, user phải copy/paste coin name vào main ChainLens.so app để phân tích. Extension sẽ cho phép tạo agent chat mới trực tiếp từ bất kỳ website crypto (CoinGecko, Binance, etc.) bằng cách detect coin names và inject "Analyze" buttons.
 
 **Flow:** User clicks "Analyze" button → Extension mở side panel với chat interface → Prompt pre-filled với coin info → User edits/submits → Tạo agent chat mới → Continue chatting về coin.
 
@@ -33,7 +33,7 @@ Architecture đã được thiết kế để reuse ~95-98% code từ frontend N
 
 **FR001:** Extension phải detect coin names trên bất kỳ website crypto nào (CoinGecko, Binance, etc.) sử dụng content script với pattern matching
 
-**FR002:** Extension phải inject "Analyze with Suna" button next to detected coin names trên web pages
+**FR002:** Extension phải inject "Analyze with ChainLens" button next to detected coin names trên web pages
 
 **FR003:** User có thể click vào injected button để mở side panel với chat interface
 
@@ -125,7 +125,7 @@ Architecture đã được thiết kế để reuse ~95-98% code từ frontend N
 
 **Core Screens/Views:**
 - Extension side panel (400-600px width, full height) - Chat interface
-- Content script injected buttons - "Analyze with Suna" buttons
+- Content script injected buttons - "Analyze with ChainLens" buttons
 - Background worker - Message coordination
 
 **Key Interaction Patterns:**

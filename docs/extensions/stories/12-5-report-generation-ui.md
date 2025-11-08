@@ -73,7 +73,7 @@ So that I can get comprehensive analysis.
 **URL Construction:**
 - Base URL: Frontend report page URL
 - Query params: `coin`, `coinName`, `symbol`, etc.
-- Example: `https://suna.so/reports?coinName=Bitcoin&symbol=BTC`
+- Example: `https://chainlens.so/reports?coinName=Bitcoin&symbol=BTC`
 
 **Chrome Tabs API:**
 - Use `chrome.tabs.create()` to open new tab

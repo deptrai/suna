@@ -327,7 +327,7 @@ try {
 
 ### References
 
-- [Source: docs/architecture-extension-suna.md#API-Integration] - API integration patterns
+- [Source: docs/architecture-extension-chainlens.md#API-Integration] - API integration patterns
 - [Source: docs/epics-extension.md#Epic-13] - Epic 13 goal: API integration với authentication
 - [Source: docs/epics-extension.md#Story-13.2] - Story acceptance criteria và prerequisites
 - [Source: docs/stories/13-1-chrome-storage-adapter-for-supabase.md#Dev-Agent-Record] - Supabase client với storage adapter

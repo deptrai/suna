@@ -94,20 +94,20 @@
   <artifacts>
     <docs>
       <doc>
-        <path>docs/architecture-extension-suna.md</path>
-        <title>Browser Extension Architecture - Suna.so</title>
+        <path>docs/architecture-extension-chainlens.md</path>
+        <title>Browser Extension Architecture - ChainLens.so</title>
         <section>Technology Stack Decisions</section>
         <snippet>Build Tool: Webpack hoặc Vite. Extension uses path aliases để import từ frontend codebase. Build outputs to dist/ directory.</snippet>
       </doc>
       <doc>
-        <path>docs/architecture-extension-suna.md</path>
-        <title>Browser Extension Architecture - Suna.so</title>
+        <path>docs/architecture-extension-chainlens.md</path>
+        <title>Browser Extension Architecture - ChainLens.so</title>
         <section>Project Structure</section>
         <snippet>Build output structure: `dist/content-script.js`, `dist/background.js`, `dist/sidepanel.js`, `dist/sidepanel.html`. Build tool must support multiple entry points và path alias resolution.</snippet>
       </doc>
       <doc>
         <path>docs/epics-extension.md</path>
-        <title>Suna.so Browser Extension - Epic Breakdown</title>
+        <title>ChainLens.so Browser Extension - Epic Breakdown</title>
         <section>Story 10.3: Build Configuration & Shared Code Setup</section>
         <snippet>As a developer, I want build configuration để bundle extension và setup shared code access, So that extension can reuse frontend components và utilities. Acceptance criteria include build tool config, output directory, path aliases, shared code import test, và build outputs.</snippet>
       </doc>

@@ -1,8 +1,8 @@
-# Model Recommendations for Suna.so Community
+# Model Recommendations for ChainLens.so Community
 
 ## 📊 Research Summary: Cost-Effective Models
 
-Dựa trên research về cộng đồng suna.so và các best practices, đây là các model được recommend vừa tiết kiệm chi phí vừa hiệu quả:
+Dựa trên research về cộng đồng chainlens.so và các best practices, đây là các model được recommend vừa tiết kiệm chi phí vừa hiệu quả:
 
 ## 🏆 Top Recommended Models (Cost-Effective)
 
@@ -70,7 +70,7 @@ Dựa trên research về cộng đồng suna.so và các best practices, đây 
 | **Claude Haiku 4.5** | $1.00 | $5.00 | **$6.00** | High quality |
 | **Claude Sonnet 4.5** | $3.00 | $15.00 | **$18.00** | Complex reasoning |
 
-## 🎯 Recommendations for Suna.so
+## 🎯 Recommendations for ChainLens.so
 
 ### Current Setup ✅
 - **GPT-4o Mini** đã được config và đang hoạt động tốt
@@ -112,7 +112,7 @@ Dựa trên research về cộng đồng suna.so và các best practices, đây 
 ## 📝 Notes
 
 - **GPT-4o Mini** là lựa chọn tốt nhất hiện tại cho cost-effectiveness
-- Cộng đồng suna.so thường prefer models có pricing < $1.00 input
+- Cộng đồng chainlens.so thường prefer models có pricing < $1.00 input
 - Self-hosted options (DeepSeek, Ollama) giúp tiết kiệm hơn nữa
 - Context window 128k+ là đủ cho hầu hết use cases
 

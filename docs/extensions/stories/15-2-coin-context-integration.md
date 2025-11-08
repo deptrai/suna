@@ -228,7 +228,7 @@ So that I can quickly start analyzing coin without manually typing coin name.
         <div className="flex flex-col h-screen">
           <header className="flex items-center justify-between p-4 border-b">
             <div>
-              <h1 className="text-lg font-bold">Suna Coin Analysis</h1>
+              <h1 className="text-lg font-bold">ChainLens Coin Analysis</h1>
               {coinInfo && (
                 <p className="text-sm text-gray-600">
                   Analyzing: {coinInfo.name} ({coinInfo.symbol})

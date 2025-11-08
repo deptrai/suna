@@ -178,7 +178,7 @@ Rich Slack message includes:
 ```
 🚨 Test Pipeline Failed
 
-Repository: deptrai/suna
+Repository: deptrai/chainlens
 Branch: feature/test-enhancement
 Commit: abc123
 Author: developer

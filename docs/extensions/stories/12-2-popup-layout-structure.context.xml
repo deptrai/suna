@@ -29,7 +29,7 @@
         <title>Implement header section</title>
         <subtasks>
           <subtask>Create header component hoặc section</subtask>
-          <subtask>Display extension name: "Suna" hoặc "Suna Coin Analysis"</subtask>
+          <subtask>Display extension name: "ChainLens" hoặc "ChainLens Coin Analysis"</subtask>
           <subtask>Add logo/icon if available</subtask>
           <subtask>Add close button (X) to close side panel</subtask>
           <subtask>Style header với consistent design (fixed height)</subtask>

@@ -110,8 +110,8 @@ So that popup UI can be developed.
 
 ### References
 
-- [Source: docs/architecture-extension-suna.md#Project-Structure] - Extension project structure với popup location
-- [Source: docs/architecture-extension-suna.md#Technology-Stack-Decisions] - React 18+ requirement
+- [Source: docs/architecture-extension-chainlens.md#Project-Structure] - Extension project structure với popup location
+- [Source: docs/architecture-extension-chainlens.md#Technology-Stack-Decisions] - React 18+ requirement
 - [Source: docs/epics-extension.md#Epic-10] - Epic 10 goal và value proposition
 - [Source: docs/epics-extension.md#Story-10.4] - Story acceptance criteria và prerequisites
 - [Source: docs/stories/10-2-extension-manifest-configuration.md#Dev-Agent-Record] - Popup configuration in manifest

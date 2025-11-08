@@ -46,14 +46,14 @@ development_status:
   epic-2: backlog
   2-1-semantic-response-caching-quality-controlled: done
   2-2-message-history-compression-quality-preserving: review
-  2-3-tool-schema-optimization-minimal-format: ready-for-dev
+  2-3-tool-schema-optimization-minimal-format: done
   2-4-quality-monitoring-framework: done
          epic-2-retrospective: optional
 
          epic-3: backlog
          3-1-task-complexity-classification: done
-         3-2-model-selection-rules: done
-         3-3-sequential-model-execution: done
+         3-2-model-selection-rules: review
+         3-3-sequential-model-execution: ready-for-dev
          epic-3-retrospective: optional
 
   # Extension Project Stories (Epic 10-14)
@@ -67,12 +67,12 @@ development_status:
   extension-epic-2: backlog
   11-1-coin-detection-algorithm: done
   11-2-content-script-injection: done
-  11-3-analysis-button-injection: done
+  11-3-analysis-button-injection: review
   11-4-coin-highlighting-visual-feedback: ready-for-dev
   extension-epic-2-retrospective: optional
 
   extension-epic-3: backlog
-  12-1-shared-ui-components-integration: in-progress
+  12-1-shared-ui-components-integration: ready-for-dev
   12-2-popup-layout-structure: ready-for-dev
   12-3-analysis-results-display-component: ready-for-dev
   12-4-react-query-integration: ready-for-dev

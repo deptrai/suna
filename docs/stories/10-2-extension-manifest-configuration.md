@@ -26,7 +26,7 @@ So that extension can be loaded và run in browser.
   - [x] Test manifest loads correctly in Chrome
 
 - [x] Task 2: Configure manifest metadata và permissions (AC: 2)
-  - [x] Add `name`: "Suna Extension" hoặc "Suna Coin Analysis"
+  - [x] Add `name`: "ChainLens Extension" hoặc "ChainLens Coin Analysis"
   - [x] Add `version`: "1.0.0" (initial version)
   - [x] Add `description`: Brief description of extension functionality
   - [x] Add `permissions`: ["storage", "activeTab"]
@@ -49,7 +49,7 @@ So that extension can be loaded và run in browser.
 - [x] Task 5: Configure popup và action (AC: 5)
   - [x] Add `action` section
   - [x] Set `default_popup`: "popup.html" (will be built)
-  - [x] Set `default_title`: "Suna Coin Analysis"
+  - [x] Set `default_title`: "ChainLens Coin Analysis"
   - [x] Add `default_icon` configuration
   - [x] Verify popup opens khi clicking extension icon
 
@@ -117,8 +117,8 @@ So that extension can be loaded và run in browser.
 
 ### References
 
-- [Source: docs/architecture-extension-suna.md#Technology-Stack-Decisions] - Manifest V3 requirement và extension-specific technologies
-- [Source: docs/architecture-extension-suna.md#Project-Structure] - Extension directory structure
+- [Source: docs/architecture-extension-chainlens.md#Technology-Stack-Decisions] - Manifest V3 requirement và extension-specific technologies
+- [Source: docs/architecture-extension-chainlens.md#Project-Structure] - Extension directory structure
 - [Source: docs/epics-extension.md#Epic-10] - Epic 10 goal và value proposition
 - [Source: docs/epics-extension.md#Story-10.2] - Story acceptance criteria và prerequisites
 - [Source: docs/PRD-extension.md#Functional-Requirements] - FR012: Extension must work trên Chrome, Edge, và Firefox (Manifest V3 compatible)
@@ -182,13 +182,13 @@ So that extension can be loaded và run in browser.
 
 ✅ **Task 1 Complete:** Manifest.json created với Manifest V3 format. All required fields configured correctly. Manifest validated as valid JSON và follows V3 specification.
 
-✅ **Task 2 Complete:** Manifest metadata configured với name "Suna Coin Analysis", version "1.0.0", và description. Permissions configured: `storage` và `activeTab`. Host permissions configured with specific domains: Supabase domains (`*.supabase.co/*`, `*.supabase.in/*`), Suna.so API domains (`api.suna.so/*`, `*.suna.so/*`), và localhost for development. Permissions are minimal và necessary. Updated from `https://*/*` to specific domains for better security (principle of least privilege).
+✅ **Task 2 Complete:** Manifest metadata configured với name "ChainLens Coin Analysis", version "1.0.0", và description. Permissions configured: `storage` và `activeTab`. Host permissions configured with specific domains: Supabase domains (`*.supabase.co/*`, `*.supabase.in/*`), ChainLens.so API domains (`api.chainlens.so/*`, `*.chainlens.so/*`), và localhost for development. Permissions are minimal và necessary. Updated from `https://*/*` to specific domains for better security (principle of least privilege).
 
 ✅ **Task 3 Complete:** Content script configured với matches patterns for 11 crypto websites (CoinGecko, Binance, CoinMarketCap, etc.). Content script set to load at `document_idle` for performance. CSS file configured for injected styles. Placeholder content-script.ts created.
 
 ✅ **Task 4 Complete:** Background service worker configured với `service_worker: "background.js"` và `type: "module"` for ES modules. Placeholder background.ts created với message handling và lifecycle hooks.
 
-✅ **Task 5 Complete:** Action/popup configured với `default_popup: "popup.html"`, `default_title: "Suna Coin Analysis"`, và default_icon configuration. Placeholder popup.html created.
+✅ **Task 5 Complete:** Action/popup configured với `default_popup: "popup.html"`, `default_title: "ChainLens Coin Analysis"`, và default_icon configuration. Placeholder popup.html created.
 
 ✅ **Task 6 Complete:** Placeholder icons created: icon-16.png, icon-48.png, icon-128.png. Icons configured in manifest `icons` section và `action.default_icon`. Icons are valid PNG files với proper dimensions.
 
@@ -230,7 +230,7 @@ Story 10.2 successfully implements Chrome Extension Manifest V3 configuration v�
 - **Web Accessible Resources**: Icons are exposed to all URLs (`<all_urls>`). Consider narrowing if icons are only needed for specific domains. This is a minor security consideration, không blocking.
 
 **LOW Severity Findings:**
-- **Host Permissions**: Host permissions are appropriately scoped to specific domains (Supabase, Suna.so API, localhost). Good security practice following principle of least privilege.
+- **Host Permissions**: Host permissions are appropriately scoped to specific domains (Supabase, ChainLens.so API, localhost). Good security practice following principle of least privilege.
 
 ### Acceptance Criteria Coverage
 
@@ -308,7 +308,7 @@ Story 10.2 successfully implements Chrome Extension Manifest V3 configuration v�
 ### Security Notes
 
 **Positive Security Practices:**
-- ✅ Host permissions narrowed from `https://*/*` to specific domains (Supabase, Suna.so API, localhost)
+- ✅ Host permissions narrowed from `https://*/*` to specific domains (Supabase, ChainLens.so API, localhost)
 - ✅ Permissions minimal: only `storage` và `activeTab` (no unnecessary permissions)
 - ✅ Manifest V3 uses service workers (stricter CSP by default)
 - ✅ No inline scripts (good security practice)
@@ -345,7 +345,7 @@ Story 10.2 successfully implements Chrome Extension Manifest V3 configuration v�
 
 - 2025-11-08: Story created from epics-extension.md
 - 2025-11-08: Implementation complete - Manifest V3 configured, icons created, placeholder files created
-- 2025-11-08: Security improvement - Narrowed host permissions from `https://*/*` to specific domains (Supabase, Suna.so API, localhost)
+- 2025-11-08: Security improvement - Narrowed host permissions from `https://*/*` to specific domains (Supabase, ChainLens.so API, localhost)
 - 2025-01-15: Quality gate PASS - Traceability verified, story status updated to "done"
 - 2025-11-08: Senior Developer Review notes appended - Outcome: Approve
 

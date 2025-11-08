@@ -112,7 +112,7 @@ So that content script và side panel can request analysis và open chat.
 
 ### References
 
-- [Source: docs/architecture-extension-suna.md#Implementation-Patterns] - Message passing patterns
+- [Source: docs/architecture-extension-chainlens.md#Implementation-Patterns] - Message passing patterns
 - [Source: docs/epics-extension.md#Epic-13] - Epic 13 goal: background worker API coordination
 - [Source: docs/epics-extension.md#Story-13.4] - Story acceptance criteria và prerequisites
 - [Source: docs/stories/13-2-api-client-adaptation.md#Dev-Agent-Record] - API client ready

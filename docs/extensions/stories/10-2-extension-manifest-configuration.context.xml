@@ -27,7 +27,7 @@
       <task id="2" ac="2">
         <title>Configure manifest metadata và permissions</title>
         <subtasks>
-          <subtask>Add `name`: "Suna Extension" hoặc "Suna Coin Analysis"</subtask>
+          <subtask>Add `name`: "ChainLens Extension" hoặc "ChainLens Coin Analysis"</subtask>
           <subtask>Add `version`: "1.0.0" (initial version)</subtask>
           <subtask>Add `description`: Brief description of extension functionality</subtask>
           <subtask>Add `permissions`: ["storage", "activeTab", "side_panel"]</subtask>
@@ -60,7 +60,7 @@
           <subtask>Add `side_panel` section</subtask>
           <subtask>Set `side_panel.default_path`: "sidepanel.html" (will be built)</subtask>
           <subtask>Configure background worker to open side panel on action click</subtask>
-          <subtask>Set `action.default_title`: "Suna Coin Analysis"</subtask>
+          <subtask>Set `action.default_title`: "ChainLens Coin Analysis"</subtask>
           <subtask>Add `action.default_icon` configuration</subtask>
           <subtask>Verify side panel opens khi clicking extension icon</subtask>
         </subtasks>
@@ -103,26 +103,26 @@
   <artifacts>
     <docs>
       <doc>
-        <path>docs/architecture-extension-suna.md</path>
-        <title>Browser Extension Architecture - Suna.so</title>
+        <path>docs/architecture-extension-chainlens.md</path>
+        <title>Browser Extension Architecture - ChainLens.so</title>
         <section>Technology Stack Decisions</section>
         <snippet>Chrome Extension Manifest V3 is required (modern standard, required by Chrome). Background pages replaced by service workers. Content scripts run in isolated world.</snippet>
       </doc>
       <doc>
-        <path>docs/architecture-extension-suna.md</path>
-        <title>Browser Extension Architecture - Suna.so</title>
+        <path>docs/architecture-extension-chainlens.md</path>
+        <title>Browser Extension Architecture - ChainLens.so</title>
         <section>Extension-Specific Technologies</section>
         <snippet>Storage: chrome.storage API. Messaging: chrome.runtime.sendMessage. Background Processing: Service Worker (Manifest V3). Content Script Injection: Vanilla JS hoặc React.</snippet>
       </doc>
       <doc>
         <path>docs/epics-extension.md</path>
-        <title>Suna.so Browser Extension - Epic Breakdown</title>
+        <title>ChainLens.so Browser Extension - Epic Breakdown</title>
         <section>Story 10.2: Extension Manifest Configuration</section>
         <snippet>As a developer, I want Chrome Extension Manifest V3 configuration, So that extension can be loaded và run in browser. Acceptance criteria include manifest format, permissions (storage, activeTab, side_panel), content script, background worker, side panel, và icons.</snippet>
       </doc>
       <doc>
         <path>docs/PRD-extension.md</path>
-        <title>Suna.so Browser Extension - Product Requirements Document</title>
+        <title>ChainLens.so Browser Extension - Product Requirements Document</title>
         <section>Functional Requirements</section>
         <snippet>FR012: Extension phải work trên Chrome, Edge, và Firefox (Manifest V3 compatible). Extension phải support authentication sử dụng Supabase với chrome.storage adapter.</snippet>
       </doc>

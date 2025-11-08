@@ -99,7 +99,7 @@ So that authentication works trong extension environment.
 
 ### References
 
-- [Source: docs/architecture-extension-suna.md#Security-Architecture] - Authentication flow với chrome.storage
+- [Source: docs/architecture-extension-chainlens.md#Security-Architecture] - Authentication flow với chrome.storage
 - [Source: docs/epics-extension.md#Epic-13] - Epic 13 goal: authentication với chrome.storage adapter
 - [Source: docs/epics-extension.md#Story-13.1] - Story acceptance criteria và prerequisites
 - [Source: docs/stories/10-3-build-configuration-shared-code-setup.md#Dev-Agent-Record] - Build config enables imports

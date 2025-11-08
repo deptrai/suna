@@ -105,7 +105,7 @@
   - ✅ Component properly exported
   - ✅ Inline styles used (appropriate for basic component)
   - ✅ Component structure clean và maintainable
-  - ✅ Text content clear ("Hello Extension", "Suna Coin Analysis Extension")
+  - ✅ Text content clear ("Hello Extension", "ChainLens Coin Analysis Extension")
 - **Build Verification:**
   - ✅ Build completes successfully
   - ✅ Component included trong bundled popup.js
@@ -546,7 +546,7 @@ traceability_and_gate:
 - **Story File:** `docs/stories/10-4-basic-popup-skeleton.md`
 - **Story Context:** `docs/stories/10-4-basic-popup-skeleton.context.xml`
 - **Test Design:** N/A (UI setup story, no functional tests required)
-- **Tech Spec:** Referenced in story (architecture-extension-suna.md)
+- **Tech Spec:** Referenced in story (architecture-extension-chainlens.md)
 - **Test Results:** Build execution verification (production và development builds)
 - **NFR Assessment:** Code review và build execution verification
 - **Created Files:**

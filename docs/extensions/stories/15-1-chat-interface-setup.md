@@ -30,7 +30,7 @@ So that I can interact với AI agent về coin analysis.
         <div className="flex flex-col h-screen">
           {/* Header */}
           <header className="flex items-center justify-between p-4 border-b">
-            <h1 className="text-lg font-bold">Suna Coin Analysis</h1>
+            <h1 className="text-lg font-bold">ChainLens Coin Analysis</h1>
             <button onClick={handleClose}>✕</button>
           </header>
 
@@ -208,7 +208,7 @@ So that I can interact với AI agent về coin analysis.
     // Match frontend styling
     <div className="flex flex-col h-screen bg-background">
       <header className="flex items-center justify-between p-4 border-b border-border">
-        <h1 className="text-lg font-semibold text-foreground">Suna Coin Analysis</h1>
+        <h1 className="text-lg font-semibold text-foreground">ChainLens Coin Analysis</h1>
       </header>
       <main className="flex-1 overflow-y-auto p-4 bg-background">
         {/* Messages */}

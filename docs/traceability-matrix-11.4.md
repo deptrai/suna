@@ -32,7 +32,7 @@
 
 - **Coverage:** FULL ✅
 - **Implementation:**
-  - `extension/src/content-script/content-script.css:29-40` - CSS class `.suna-coin-highlight` với box-shadow inset border và background color
+  - `extension/src/content-script/content-script.css:29-40` - CSS class `.chainlens-coin-highlight` với box-shadow inset border và background color
   - `extension/src/content-script/content-script.css:31` - Box-shadow inset: `0 0 0 1px rgba(74, 144, 226, 0.4) inset`
   - `extension/src/content-script/content-script.css:33` - Background color: `rgba(74, 144, 226, 0.08)` (low opacity)
   - `extension/src/content-script/highlighter.ts:38-53` - `applyHighlight()` function applies highlight class

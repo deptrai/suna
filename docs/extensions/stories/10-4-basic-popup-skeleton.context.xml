@@ -98,20 +98,20 @@
   <artifacts>
     <docs>
       <doc>
-        <path>docs/architecture-extension-suna.md</path>
-        <title>Browser Extension Architecture - Suna.so</title>
+        <path>docs/architecture-extension-chainlens.md</path>
+        <title>Browser Extension Architecture - ChainLens.so</title>
         <section>Project Structure</section>
         <snippet>Side panel structure: `extension/src/sidepanel/sidepanel.tsx` (React entry point), `extension/src/sidepanel/sidepanel.html` (HTML template). Side panel size: Full height (100vh), width 400-600px (user resizable). Side panel persists (doesn't close when clicking outside).</snippet>
       </doc>
       <doc>
-        <path>docs/architecture-extension-suna.md</path>
-        <title>Browser Extension Architecture - Suna.so</title>
+        <path>docs/architecture-extension-chainlens.md</path>
+        <title>Browser Extension Architecture - ChainLens.so</title>
         <section>Technology Stack Decisions</section>
         <snippet>React 18+ for UI framework. Use ReactDOM.createRoot() (React 18 API). Tailwind CSS for styling. Side panel opens when clicking extension icon via chrome.sidePanel API.</snippet>
       </doc>
       <doc>
         <path>docs/epics-extension.md</path>
-        <title>Suna.so Browser Extension - Epic Breakdown</title>
+        <title>ChainLens.so Browser Extension - Epic Breakdown</title>
         <section>Story 10.4: Basic Side Panel Skeleton</section>
         <snippet>As a developer, I want basic side panel HTML và React entry point, So that side panel UI can be developed. Acceptance criteria include sidepanel.html, sidepanel.tsx, basic component, side panel opens via chrome.sidePanel API, side panel sizing (full height, 400-600px width), và background worker configuration.</snippet>
       </doc>

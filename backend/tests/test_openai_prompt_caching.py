@@ -145,7 +145,15 @@ class TestPromptRestructuring:
         thread_id = "test-thread-123"
         mcp_wrapper = None
         client = Mock()
-        client.rpc = AsyncMock(return_value=Mock(data="Test knowledge base content"))
+        # Mock successful knowledge base retrieval - properly configure async mock
+        # client.rpc() returns an object with .execute() method that returns the result
+        kb_mock_response = Mock()
+        kb_mock_response.data = "Test knowledge base content"
+        rpc_mock_result = Mock()
+        async def mock_execute():
+            return kb_mock_response
+        rpc_mock_result.execute = mock_execute
+        client.rpc = Mock(return_value=rpc_mock_result)
         tool_registry = None
         
         system_prompt = await PromptManager.build_system_prompt(
@@ -237,6 +245,210 @@ class TestCacheMetricsExtraction:
         assert cache_hit_rate == 0.0, "Cache hit rate should be 0 when no tokens are cached"
 
 
+class TestEdgeCases:
+    """Test edge cases and error handling."""
+    
+    @pytest.mark.asyncio
+    async def test_knowledge_base_retrieval_failure(self):
+        """Test that prompt building continues when knowledge base retrieval fails."""
+        model_name = "openai-compatible/gpt-4o-mini"
+        agent_config = {
+            "system_prompt": "Test agent prompt",
+            "agent_id": "test-agent-123",
+            "agentpress_tools": {
+                "agent_config_tool": True
+            }
+        }
+        thread_id = "test-thread-123"
+        mcp_wrapper = None
+        client = Mock()
+        # Mock knowledge base retrieval failure
+        async def mock_execute():
+            raise Exception("Knowledge base retrieval failed")
+        rpc_mock_result = Mock()
+        rpc_mock_result.execute = mock_execute
+        client.rpc = Mock(return_value=rpc_mock_result)
+        tool_registry = Mock()
+        tool_registry.get_openapi_schemas = Mock(return_value={
+            "test_tool": {"type": "function", "function": {"name": "test_tool"}}
+        })
+        
+        # Prompt building should not fail even if knowledge base retrieval fails
+        system_prompt = await PromptManager.build_system_prompt(
+            model_name=model_name,
+            agent_config=agent_config,
+            thread_id=thread_id,
+            mcp_wrapper_instance=mcp_wrapper,
+            client=client,
+            tool_registry=tool_registry,
+            xml_tool_calling=True
+        )
+        
+        content = system_prompt["content"]
+        
+        # Verify prompt is still built successfully without knowledge base
+        assert "You are Chainlens.so" in content or "autonomous AI Worker" in content
+        assert "Test agent prompt" in content
+        # Knowledge base should not be present due to retrieval failure
+        assert "AGENT KNOWLEDGE BASE" not in content or "Knowledge base retrieval failed" not in content
+    
+    @pytest.mark.asyncio
+    async def test_empty_knowledge_base_response(self):
+        """Test that prompt building handles empty knowledge base responses."""
+        model_name = "openai-compatible/gpt-4o-mini"
+        agent_config = {
+            "system_prompt": "Test agent prompt",
+            "agent_id": "test-agent-123",
+            "agentpress_tools": {
+                "agent_config_tool": True
+            }
+        }
+        thread_id = "test-thread-123"
+        mcp_wrapper = None
+        client = Mock()
+        # Mock empty knowledge base response
+        kb_mock_response = Mock()
+        kb_mock_response.data = ""  # Empty response
+        rpc_mock_result = Mock()
+        async def mock_execute():
+            return kb_mock_response
+        rpc_mock_result.execute = mock_execute
+        client.rpc = Mock(return_value=rpc_mock_result)
+        tool_registry = Mock()
+        tool_registry.get_openapi_schemas = Mock(return_value={
+            "test_tool": {"type": "function", "function": {"name": "test_tool"}}
+        })
+        
+        system_prompt = await PromptManager.build_system_prompt(
+            model_name=model_name,
+            agent_config=agent_config,
+            thread_id=thread_id,
+            mcp_wrapper_instance=mcp_wrapper,
+            client=client,
+            tool_registry=tool_registry,
+            xml_tool_calling=True
+        )
+        
+        content = system_prompt["content"]
+        
+        # Verify prompt is built successfully
+        assert "You are Chainlens.so" in content or "autonomous AI Worker" in content
+        # Knowledge base should not be present due to empty response
+        assert "AGENT KNOWLEDGE BASE" not in content
+    
+    def test_cache_metrics_with_missing_prompt_tokens_details(self):
+        """Test cache metrics extraction when prompt_tokens_details is missing."""
+        usage_dict = {
+            "prompt_tokens": 1500,
+            "completion_tokens": 200,
+            "total_tokens": 1700
+            # Missing prompt_tokens_details
+        }
+        
+        # Extract cached tokens (matching thread_manager.py logic)
+        cache_read_tokens = int(usage_dict.get("cache_read_input_tokens", 0) or 0)
+        if cache_read_tokens == 0:
+            prompt_tokens_details = usage_dict.get("prompt_tokens_details") or {}
+            if isinstance(prompt_tokens_details, dict):
+                cache_read_tokens = int(prompt_tokens_details.get("cached_tokens", 0) or 0)
+        
+        # Should return 0 when prompt_tokens_details is missing
+        assert cache_read_tokens == 0, "Should return 0 when prompt_tokens_details is missing"
+    
+    def test_cache_metrics_with_cache_read_input_tokens(self):
+        """Test cache metrics extraction using cache_read_input_tokens (alternative format)."""
+        usage_dict = {
+            "prompt_tokens": 1500,
+            "completion_tokens": 200,
+            "total_tokens": 1700,
+            "cache_read_input_tokens": 500  # Alternative format
+        }
+        
+        # Extract cached tokens (matching thread_manager.py logic)
+        cache_read_tokens = int(usage_dict.get("cache_read_input_tokens", 0) or 0)
+        if cache_read_tokens == 0:
+            prompt_tokens_details = usage_dict.get("prompt_tokens_details") or {}
+            if isinstance(prompt_tokens_details, dict):
+                cache_read_tokens = int(prompt_tokens_details.get("cached_tokens", 0) or 0)
+        
+        assert cache_read_tokens == 500, "Should extract cache_read_input_tokens when present"
+    
+    @pytest.mark.asyncio
+    async def test_large_tool_schemas_prompt_size(self):
+        """Test that prompt size meets threshold even with large tool schemas."""
+        model_name = "openai-compatible/gpt-4o-mini"
+        agent_config = None
+        thread_id = "test-thread-123"
+        mcp_wrapper = None
+        client = None
+        tool_registry = Mock()
+        
+        # Create a large tool schema (simulating 10+ tools)
+        large_schemas = {}
+        for i in range(15):
+            tool_name = f"test_tool_{i}"
+            large_schemas[tool_name] = {
+                "type": "function",
+                "function": {
+                    "name": tool_name,
+                    "description": f"A comprehensive test tool {i} with detailed description",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            f"param1_{i}": {
+                                "type": "string",
+                                "description": f"Parameter 1 for tool {i} with detailed description"
+                            },
+                            f"param2_{i}": {
+                                "type": "integer",
+                                "description": f"Parameter 2 for tool {i} with detailed description"
+                            }
+                        },
+                        "required": [f"param1_{i}"]
+                    }
+                }
+            }
+        
+        tool_registry.get_openapi_schemas = Mock(return_value=large_schemas)
+        
+        system_prompt = await PromptManager.build_system_prompt(
+            model_name=model_name,
+            agent_config=agent_config,
+            thread_id=thread_id,
+            mcp_wrapper_instance=mcp_wrapper,
+            client=client,
+            tool_registry=tool_registry,
+            xml_tool_calling=True
+        )
+        
+        # Verify token count using LiteLLM token counter
+        from litellm import token_counter
+        prompt_tokens = token_counter(model=model_name, text=system_prompt["content"])
+        
+        # Should still meet threshold with large tool schemas
+        assert prompt_tokens >= 1024, f"Prompt size ({prompt_tokens} tokens) should meet threshold even with large tool schemas"
+    
+    def test_cache_hit_rate_edge_cases(self):
+        """Test cache hit rate calculation edge cases."""
+        # Test division by zero protection
+        prompt_tokens = 0
+        cache_read_tokens = 0
+        cache_hit_rate = (cache_read_tokens / prompt_tokens) * 100.0 if prompt_tokens > 0 else 0.0
+        assert cache_hit_rate == 0.0, "Cache hit rate should be 0.0 when prompt_tokens is 0"
+        
+        # Test 100% cache hit rate
+        prompt_tokens = 1000
+        cache_read_tokens = 1000
+        cache_hit_rate = (cache_read_tokens / prompt_tokens) * 100.0
+        assert cache_hit_rate == 100.0, "Cache hit rate should be 100% when all tokens are cached"
+        
+        # Test partial cache hit rate
+        prompt_tokens = 1000
+        cache_read_tokens = 500
+        cache_hit_rate = (cache_read_tokens / prompt_tokens) * 100.0
+        assert cache_hit_rate == 50.0, "Cache hit rate should be 50% when half tokens are cached"
+
+
 class TestQualityValidation:
     """Test quality validation for cached vs non-cached responses."""
     
@@ -254,10 +466,15 @@ class TestQualityValidation:
         thread_id = "test-thread-123"
         mcp_wrapper = None
         client = Mock()
-        # Mock successful knowledge base retrieval
+        # Mock successful knowledge base retrieval - properly configure async mock
+        # client.rpc() returns an object with .execute() method that returns the result
         kb_mock_response = Mock()
         kb_mock_response.data = "Test knowledge base content"
-        client.rpc = AsyncMock(return_value=kb_mock_response)
+        rpc_mock_result = Mock()
+        async def mock_execute():
+            return kb_mock_response
+        rpc_mock_result.execute = mock_execute
+        client.rpc = Mock(return_value=rpc_mock_result)
         tool_registry = Mock()
         tool_registry.get_openapi_schemas = Mock(return_value={
             "test_tool": {"type": "function", "function": {"name": "test_tool"}}

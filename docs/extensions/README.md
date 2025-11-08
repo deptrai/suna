@@ -1,6 +1,6 @@
-# Suna Extension Documentation
+# ChainLens Extension Documentation
 
-Tài liệu đầy đủ về Suna.so Browser Extension project.
+Tài liệu đầy đủ về ChainLens.so Browser Extension project.
 
 ## 📁 Cấu trúc Folder
 
@@ -18,7 +18,7 @@ extensions/
 ### Epic & PRD
 - **`epics-extension.md`** - Epic breakdown cho extension project (Epic 10-14)
 - **`PRD-extension.md`** - Product Requirements Document
-- **`architecture-extension-suna.md`** - Architecture documentation
+- **`architecture-extension-chainlens.md`** - Architecture documentation
 
 ### Stories (Epic 10-14)
 
@@ -68,12 +68,12 @@ extensions/
 - **`extension-stories-review.md`** - Review summary của extension stories
 - **`extension-approach-comparison.md`** - So sánh các approaches
 - **`extension-code-reuse-analysis.md`** - Phân tích code reuse strategy
-- **`code-review-suna-extension-check-2025-11-07.md`** - Code review
+- **`code-review-chainlens-extension-check-2025-11-07.md`** - Code review
 
 ## 🚀 Quick Start
 
 1. Đọc **PRD-extension.md** để hiểu requirements
-2. Đọc **architecture-extension-suna.md** để hiểu architecture
+2. Đọc **architecture-extension-chainlens.md** để hiểu architecture
 3. Xem **epics-extension.md** để hiểu epic breakdown
 4. Bắt đầu implement từ **Story 10.1** trong `stories/`
 

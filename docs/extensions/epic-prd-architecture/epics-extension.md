@@ -1,4 +1,4 @@
-# Suna.so Browser Extension - Epic Breakdown
+# ChainLens.so Browser Extension - Epic Breakdown
 
 **Author:** Luis  
 **Date:** 2025-11-07  
@@ -9,7 +9,7 @@
 
 ## Overview
 
-This document provides the detailed epic breakdown for Suna.so Browser Extension, expanding on the high-level epic list in the [PRD](./PRD-extension.md).
+This document provides the detailed epic breakdown for ChainLens.so Browser Extension, expanding on the high-level epic list in the [PRD](./PRD-extension.md).
 
 Each epic includes:
 
@@ -106,7 +106,7 @@ Each epic includes:
 
 ## Epic 11: Coin Detection & Content Script
 
-**Goal:** Implement coin name detection trên web pages và inject "Analyze with Suna" buttons next to detected coins.
+**Goal:** Implement coin name detection trên web pages và inject "Analyze with ChainLens" buttons next to detected coins.
 
 **Value Proposition:** Core functionality cho phép user discover và trigger analysis từ any crypto website.
 
@@ -151,7 +151,7 @@ Each epic includes:
 ### Story 11.3: Analysis Button Injection
 
 **As a** developer,  
-**I want** inject "Analyze with Suna" buttons next to detected coins,  
+**I want** inject "Analyze with ChainLens" buttons next to detected coins,  
 **So that** user can easily trigger analysis.
 
 **Acceptance Criteria:**

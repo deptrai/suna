@@ -55,11 +55,11 @@
 - **Coverage:** FULL ✅
 - **Verification Method:** Configuration file review
 - **Evidence:**
-  - ✅ `name`: "Suna Coin Analysis" (present)
+  - ✅ `name`: "ChainLens Coin Analysis" (present)
   - ✅ `version`: "1.0.0" (present)
   - ✅ `description`: Present với clear description of functionality
   - ✅ `permissions`: ["storage", "activeTab"] (present)
-  - ✅ `host_permissions`: Configured với specific domains (Supabase, Suna.so API, localhost)
+  - ✅ `host_permissions`: Configured với specific domains (Supabase, ChainLens.so API, localhost)
   - ✅ Permissions follow principle of least privilege
 - **Files Created:**
   - `extension/manifest.json` (metadata section)
@@ -136,7 +136,7 @@
 - **Evidence:**
   - ✅ `action` section present
   - ✅ `default_popup`: "popup.html" (references built file)
-  - ✅ `default_title`: "Suna Coin Analysis" (present)
+  - ✅ `default_title`: "ChainLens Coin Analysis" (present)
   - ✅ `default_icon` configuration present
   - ✅ Popup HTML file created
 - **Files Created:**
@@ -506,7 +506,7 @@ traceability_and_gate:
 - **Story File:** `docs/stories/10-2-extension-manifest-configuration.md`
 - **Story Context:** `docs/stories/10-2-extension-manifest-configuration.context.xml`
 - **Test Design:** N/A (setup story, no functional tests required)
-- **Tech Spec:** Referenced in story (architecture-extension-suna.md)
+- **Tech Spec:** Referenced in story (architecture-extension-chainlens.md)
 - **Test Results:** Manual verification (file system, configuration, security review)
 - **NFR Assessment:** Code review và security assessment
 - **Created Files:**

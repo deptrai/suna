@@ -114,7 +114,7 @@
     <interface>
       <name>Highlight CSS Class</name>
       <kind>css</kind>
-      <signature>.suna-coin-highlight { border: 1px solid rgba(...); }</signature>
+      <signature>.chainlens-coin-highlight { border: 1px solid rgba(...); }</signature>
       <path>extension/src/content-script/</path>
     </interface>
   </interfaces>

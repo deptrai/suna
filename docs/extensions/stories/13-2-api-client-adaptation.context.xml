@@ -83,7 +83,7 @@
   <artifacts>
     <docs>
       <doc>
-        <path>docs/architecture-extension-suna.md</path>
+        <path>docs/architecture-extension-chainlens.md</path>
         <title>Browser Extension Architecture</title>
         <section>API Integration - API client reuse patterns</section>
       </doc>

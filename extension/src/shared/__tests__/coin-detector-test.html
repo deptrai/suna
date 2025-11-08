@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coin Detector Test Page</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    .test-section h3 {
+      margin-top: 0;
+      color: #333;
+    }
+    .detection-result {
+      background: #f0f0f0;
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 3px;
+    }
+    button {
+      padding: 10px 20px;
+      background: #6366f1;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 10px 0;
+    }
+    button:hover {
+      background: #4f46e5;
+    }
+  </style>
+</head>
+<body>
+  <h1>Coin Detector Test Page</h1>
+  <p>This page tests the coin detection algorithm với various coin formats.</p>
+  
+  <button onclick="runDetection()">Run Detection</button>
+  <div id="results"></div>
+  
+  <div class="test-section">
+    <h3>Test 1: Coin Name Detection</h3>
+    <p>Bitcoin is the most popular cryptocurrency.</p>
+    <p>Ethereum network is widely used for DeFi applications.</p>
+    <p>Solana blockchain offers fast transaction speeds.</p>
+  </div>
+  
+  <div class="test-section">
+    <h3>Test 2: Coin Symbol Detection</h3>
+    <p>BTC is trading at high prices.</p>
+    <p>The price of ETH has increased significantly.</p>
+    <p>$SOL token is gaining popularity.</p>
+  </div>
+  
+  <div class="test-section">
+    <h3>Test 3: Price Detection</h3>
+    <p>BTC $45,000 is the current price.</p>
+    <p>ETH 3,500 USD per token.</p>
+    <p>SOL €150 is the market value.</p>
+    <p>ADA is trading at 1.20k per coin.</p>
+  </div>
+  
+  <div class="test-section">
+    <h3>Test 4: Combined Formats</h3>
+    <p>Bitcoin (BTC) is trading at $45,000.</p>
+    <p>Ethereum ETH price is 3,500 USD.</p>
+    <p>Solana SOL is worth €150.</p>
+  </div>
+  
+  <div class="test-section">
+    <h3>Test 5: Multiple Coins</h3>
+    <p>Top cryptocurrencies include Bitcoin, Ethereum, Solana, Cardano, and Polygon.</p>
+    <p>Prices: BTC $45,000, ETH $3,500, SOL $150, ADA $1.20, MATIC $0.90.</p>
+  </div>
+  
+  <div class="test-section">
+    <h3>Test 6: Nested Elements</h3>
+    <div>
+      <p>Bitcoin is mentioned in this <span>nested</span> structure.</p>
+      <ul>
+        <li>Ethereum</li>
+        <li>Solana</li>
+        <li>Cardano</li>
+      </ul>
+    </div>
+  </div>
+  
+  <div class="test-section">
+    <h3>Test 7: Edge Cases</h3>
+    <p>Script và style elements should be ignored.</p>
+    <script>const bitcoin = "BTC";</script>
+    <style>.ethereum { color: blue; }</style>
+    <p>Empty text nodes should be skipped.</p>
+    <p>Special characters: Bitcoin's value, Ethereum (ETH).</p>
+  </div>
+  
+  <script type="module">
+    // Note: This test file is for manual verification
+    // In a real scenario, the coin detector would be imported from the extension
+    // For now, we'll just show the test structure
+    
+    window.runDetection = function() {
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = '<h2>Detection Results</h2><p>To test the coin detector, load this page in a browser với the extension installed và run the detection from the content script.</p>';
+    };
+  </script>
+</body>
+</html>
+

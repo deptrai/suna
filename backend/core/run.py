@@ -325,6 +325,48 @@ class MCPManager:
 
 class PromptManager:
     @staticmethod
+    def _format_tools(openapi_schemas: List[Dict[str, Any]], format_type: str = "minimal") -> str:
+        """
+        Format tool schemas for system prompt (Story 2.3).
+        
+        Args:
+            openapi_schemas: List of OpenAPI schema dictionaries
+            format_type: "minimal" (name + description only) or "full" (complete JSON schema)
+        
+        Returns:
+            Formatted tool schema string
+        """
+        # Use format_type directly - if "minimal" is requested, use minimal format
+        # The format_type parameter is set by the caller based on optimization mode
+        if format_type == "minimal":
+            # Minimal format: name + description only
+            minimal_schemas = []
+            for schema in openapi_schemas:
+                if isinstance(schema, dict) and "function" in schema:
+                    func_info = schema["function"]
+                    name = func_info.get("name", "")
+                    description = func_info.get("description", "")
+                    
+                    # Validate required fields: skip schemas without name (required field)
+                    if not name:
+                        logger.warning(f"Skipping tool schema without required 'name' field: {schema.get('function', {}).get('name', 'unknown')}")
+                        continue
+                    
+                    minimal_schema = {
+                        "type": "function",
+                        "function": {
+                            "name": name,
+                            "description": description
+                        }
+                    }
+                    minimal_schemas.append(minimal_schema)
+            
+            return json.dumps(minimal_schemas, indent=2)
+        else:
+            # Full format: complete JSON schema
+            return json.dumps(openapi_schemas, indent=2)
+    
+    @staticmethod
     async def build_system_prompt(model_name: str, agent_config: Optional[dict], 
                                   thread_id: str, 
                                   mcp_wrapper_instance: Optional[MCPToolWrapper],
@@ -401,13 +443,118 @@ class PromptManager:
                 builder_prompt = get_agent_builder_prompt()
                 static_sections.append(builder_prompt)
         
-        # 1.3: Tool schemas JSON (STATIC - ~1,500 tokens, if available)
+        # Use helper method to build prompt with full format (ORIGINAL mode)
+        return await PromptManager._build_prompt_with_format(
+            model_name, agent_config, thread_id,
+            mcp_wrapper_instance, client, tool_registry, xml_tool_calling,
+            tool_format_type="full"
+        )
+    
+    @staticmethod
+    async def _build_optimized_prompt(model_name: str, agent_config: Optional[dict], 
+                                      thread_id: str, 
+                                      mcp_wrapper_instance: Optional[MCPToolWrapper],
+                                      client=None,
+                                      tool_registry=None,
+                                      xml_tool_calling: bool = True) -> dict:
+        """
+        Build system prompt with quality-preserving optimizations (Story 1.4 - AC #5).
+        
+        Applies optimizations from Stories 1.1, 1.2, 1.3, 2.3:
+        - Story 1.1: Restructure prompt with static content first (OpenAI caching)
+        - Story 1.2: LiteLLM Redis caching enabled (configured at LLM service level)
+        - Story 1.3: Anthropic cache_control directives (applied at LLM service level)
+        - Story 2.3: Tool schema optimization (minimal format: name + description only)
+        
+        Note: Prompt structure is the same as ORIGINAL (static/dynamic separation),
+        but this method uses minimal tool schema format for token reduction.
+        """
+        # Build prompt with minimal tool schema format (Story 2.3)
+        # Use the same structure as _build_original_prompt but with minimal format
+        return await PromptManager._build_prompt_with_format(
+            model_name, agent_config, thread_id,
+            mcp_wrapper_instance, client, tool_registry, xml_tool_calling,
+            tool_format_type="minimal"
+        )
+    
+    @staticmethod
+    async def _build_prompt_with_format(
+        model_name: str, agent_config: Optional[dict], 
+        thread_id: str, 
+        mcp_wrapper_instance: Optional[MCPToolWrapper],
+        client=None,
+        tool_registry=None,
+        xml_tool_calling: bool = True,
+        tool_format_type: str = "full"
+    ) -> dict:
+        """
+        Build system prompt with specified tool format (helper method for Story 2.3).
+        
+        Args:
+            tool_format_type: "minimal" or "full" - tool schema format to use
+        """
+        # ============================================
+        # PHASE 1: STATIC CONTENT (Cached by OpenAI)
+        # ============================================
+        static_sections = []
+        
+        # 1.1: Default system prompt (STATIC - ~1,000 tokens)
+        default_system_content = get_system_prompt()
+        static_sections.append(default_system_content)
+        
+        # 1.2: Builder prompt (STATIC - ~300 tokens, if enabled)
+        if agent_config:
+            agentpress_tools = agent_config.get('agentpress_tools', {})
+            has_builder_tools = any(
+                agentpress_tools.get(tool, False) 
+                for tool in ['agent_config_tool', 'mcp_search_tool', 'credential_profile_tool', 'trigger_tool']
+            )
+            
+            if has_builder_tools:
+                builder_prompt = get_agent_builder_prompt()
+                static_sections.append(builder_prompt)
+        
+        # 1.3: Tool schemas JSON (STATIC - ~1,500 tokens full, ~300 tokens minimal, if available)
+        # Import token_counter once at the start (fix duplicate import)
+        try:
+            from litellm import token_counter
+        except ImportError:
+            token_counter = None
+        
+        tool_schema_tokens_before = 0
+        tool_schema_tokens_after = 0
         if xml_tool_calling and tool_registry:
             openapi_schemas = tool_registry.get_openapi_schemas()
             
             if openapi_schemas:
-                # Convert schemas to JSON string
-                schemas_json = json.dumps(openapi_schemas, indent=2)
+                # Track token count before formatting (for Story 2.3 - AC #5)
+                if token_counter:
+                    try:
+                        full_schemas_json = json.dumps(openapi_schemas, indent=2)
+                        tool_schema_tokens_before = token_counter(model=model_name, text=full_schemas_json)
+                    except Exception as e:
+                        logger.debug(f"Could not count tool schema tokens: {e}")
+                        tool_schema_tokens_before = 0
+                
+                # Format schemas with specified format type
+                schemas_json = PromptManager._format_tools(openapi_schemas, format_type=tool_format_type)
+                
+                # Track token count after formatting (for Story 2.3 - AC #5)
+                if token_counter:
+                    try:
+                        tool_schema_tokens_after = token_counter(model=model_name, text=schemas_json)
+                        
+                        # Log token reduction
+                        if tool_schema_tokens_before > 0:
+                            reduction = tool_schema_tokens_before - tool_schema_tokens_after
+                            reduction_pct = (reduction / tool_schema_tokens_before) * 100
+                            logger.debug(
+                                f"📊 Tool schema token reduction: {reduction} tokens ({reduction_pct:.1f}%) "
+                                f"({tool_schema_tokens_before} → {tool_schema_tokens_after})"
+                            )
+                    except Exception as e:
+                        logger.debug(f"Could not count formatted tool schema tokens: {e}")
+                        tool_schema_tokens_after = 0
                 
                 examples_content = f"""
 
@@ -438,7 +585,7 @@ When using the tools:
 """
                 
                 static_sections.append(examples_content)
-                logger.debug("Appended XML tool examples to system prompt (static section)")
+                logger.debug(f"Appended XML tool examples to system prompt (static section, format: {tool_format_type})")
         
         # Combine static sections
         static_content = "\n\n".join(static_sections)
@@ -568,32 +715,6 @@ IMPORTANT: Always reference and utilize the knowledge base information above whe
         
         system_message = {"role": "system", "content": system_content}
         return system_message
-    
-    @staticmethod
-    async def _build_optimized_prompt(model_name: str, agent_config: Optional[dict], 
-                                      thread_id: str, 
-                                      mcp_wrapper_instance: Optional[MCPToolWrapper],
-                                      client=None,
-                                      tool_registry=None,
-                                      xml_tool_calling: bool = True) -> dict:
-        """
-        Build system prompt with quality-preserving optimizations (Story 1.4 - AC #5).
-        
-        Applies optimizations from Stories 1.1, 1.2, 1.3:
-        - Story 1.1: Restructure prompt with static content first (OpenAI caching)
-        - Story 1.2: LiteLLM Redis caching enabled (configured at LLM service level)
-        - Story 1.3: Anthropic cache_control directives (applied at LLM service level)
-        
-        Note: Prompt structure is the same as ORIGINAL (static/dynamic separation),
-        but this method is explicitly designed for OPTIMIZED mode with all caching enabled.
-        """
-        # Use the same structure as _build_original_prompt (Story 1.1 optimization already applied)
-        # The optimizations from Stories 1.2 and 1.3 are applied at the LLM service level,
-        # not in the prompt building logic itself
-        return await PromptManager._build_original_prompt(
-            model_name, agent_config, thread_id,
-            mcp_wrapper_instance, client, tool_registry, xml_tool_calling
-        )
 
 
 

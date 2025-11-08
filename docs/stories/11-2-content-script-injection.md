@@ -116,7 +116,7 @@ So that coins are detected khi user visits crypto websites.
 
 ### References
 
-- [Source: docs/architecture-extension-suna.md#Implementation-Patterns] - Content script patterns và coin detection
+- [Source: docs/architecture-extension-chainlens.md#Implementation-Patterns] - Content script patterns và coin detection
 - [Source: docs/epics-extension.md#Epic-11] - Epic 11 goal: coin detection trên web pages
 - [Source: docs/epics-extension.md#Story-11.2] - Story acceptance criteria và prerequisites
 - [Source: docs/PRD-extension.md#Functional-Requirements] - FR001: Coin detection trên crypto websites
@@ -298,7 +298,7 @@ Story 11.2 implements content script injection với coin detection functionalit
 ### Architectural Alignment
 
 ✅ **Compliance Verified:**
-- Follows content script patterns from architecture-extension-suna.md
+- Follows content script patterns from architecture-extension-chainlens.md
 - Uses shared coin-detector module correctly (import từ ../shared/coin-detector)
 - Proper separation: detection logic in shared module, injection in content script
 - Manifest configuration matches requirements (matches patterns, run_at: document_idle)

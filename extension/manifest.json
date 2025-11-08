@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Suna Coin Analysis",
+  "name": "ChainLens Coin Analysis",
   "version": "1.0.0",
-  "description": "Browser extension để analyze crypto coins từ bất kỳ website nào. Click vào coin name để tạo agent chat mới với Suna AI.",
+  "description": "Browser extension để analyze crypto coins từ bất kỳ website nào. Click vào coin name để tạo agent chat mới với ChainLens AI.",
   "permissions": [
     "storage",
     "activeTab",
@@ -11,8 +11,8 @@
   "host_permissions": [
     "https://*.supabase.co/*",
     "https://*.supabase.in/*",
-    "https://api.suna.so/*",
-    "https://*.suna.so/*",
+    "https://api.chainlens.so/*",
+    "https://*.chainlens.so/*",
     "http://localhost/*",
     "http://127.0.0.1/*"
   ],
@@ -26,6 +26,7 @@
         "*://*.coingecko.com/*",
         "*://*.binance.com/*",
         "*://*.coinmarketcap.com/*",
+        "*://www.coinmarketcap.com/*",
         "*://*.cryptocompare.com/*",
         "*://*.crypto.com/*",
         "*://*.kraken.com/*",
@@ -45,7 +46,7 @@
     }
   ],
   "action": {
-    "default_title": "Suna Coin Analysis",
+    "default_title": "ChainLens Coin Analysis",
     "default_icon": {
       "16": "icons/icon-16.png",
       "48": "icons/icon-48.png",

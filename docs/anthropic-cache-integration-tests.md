@@ -133,7 +133,7 @@ if __name__ == "__main__":
 Save this as `test_anthropic_cache_manual.py` and run:
 
 ```bash
-cd /Users/mac_1/Documents/GitHub/suna
+cd /Users/mac_1/Documents/GitHub/chainlens
 python3 test_anthropic_cache_manual.py
 ```
 

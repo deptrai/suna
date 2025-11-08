@@ -248,7 +248,7 @@ To enable Slack notifications on failures:
 Add CI status badge to README:
 
 ```markdown
-![CI Tests](https://github.com/deptrai/suna/workflows/Test%20Pipeline/badge.svg)
+![CI Tests](https://github.com/deptrai/chainlens/workflows/Test%20Pipeline/badge.svg)
 ```
 
 ---

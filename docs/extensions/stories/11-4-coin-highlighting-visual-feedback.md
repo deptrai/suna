@@ -98,7 +98,7 @@ So that I can easily see which coins can be analyzed.
 - Consider using Shadow DOM if needed (advanced)
 
 **Highlight Classes:**
-- Use unique class name: `.suna-coin-highlight`
+- Use unique class name: `.chainlens-coin-highlight`
 - Apply to detected coin elements
 - Can combine với button injection
 
@@ -109,7 +109,7 @@ So that I can easily see which coins can be analyzed.
 
 ### References
 
-- [Source: docs/architecture-extension-suna.md#Implementation-Patterns] - Visual feedback patterns
+- [Source: docs/architecture-extension-chainlens.md#Implementation-Patterns] - Visual feedback patterns
 - [Source: docs/epics-extension.md#Epic-11] - Epic 11 goal: visual feedback for detected coins
 - [Source: docs/epics-extension.md#Story-11.4] - Story acceptance criteria và prerequisites
 - [Source: docs/PRD-extension.md#Functional-Requirements] - FR003: Visual feedback for detected coins
@@ -215,7 +215,7 @@ Story 11.4 successfully implements coin highlighting functionality with subtle v
 
 | AC# | Description | Status | Evidence |
 |-----|-------------|--------|----------|
-| AC1 | Detected coins have visual highlight (subtle border hoặc background) | ✅ IMPLEMENTED | `extension/src/content-script/content-script.css:29-40` - CSS class `.suna-coin-highlight` với box-shadow inset border (rgba(74, 144, 226, 0.4)) và background color (rgba(74, 144, 226, 0.08)) |
+| AC1 | Detected coins have visual highlight (subtle border hoặc background) | ✅ IMPLEMENTED | `extension/src/content-script/content-script.css:29-40` - CSS class `.chainlens-coin-highlight` với box-shadow inset border (rgba(74, 144, 226, 0.4)) và background color (rgba(74, 144, 226, 0.08)) |
 | AC2 | Highlight appears khi coin is detected | ✅ IMPLEMENTED | `extension/src/content-script/content-script.ts:103,141` - `applyHighlights(coins)` called after coin detection. `highlighter.ts:38-53` - `applyHighlight()` function applies highlight class to element |
 | AC3 | Highlight removed khi button is clicked (optional) | ✅ IMPLEMENTED | `extension/src/content-script/highlighter.ts:113-154` - `setupHighlightRemoval()` function với event delegation. Configurable via `CONFIG.REMOVE_HIGHLIGHT_ON_CLICK` (default: false to keep highlight for better UX) |
 | AC4 | Highlight styling không interfere với page design | ✅ IMPLEMENTED | `extension/src/content-script/content-script.css:29-40` - Uses box-shadow inset instead of border để avoid layout shifts. Box-sizing: border-box. Low opacity colors (0.08 background, 0.4 border). No dimension changes |

@@ -761,6 +761,10 @@ class ResponseProcessor:
                            self.trace.event(name="could_not_map_result_for_tool_index", level="WARNING", status_message=(f"Could not map result for tool index {current_tool_idx}"))
                        current_tool_idx += 1
 
+                # Track tool calling success rate (Story 2.3 - AC #3)
+                if tool_results_map:
+                    await self._track_tool_success_rate(tool_results_map)
+                
                 # Save and Yield each result message
                 if tool_results_map:
                     logger.debug(f"Saving and yielding {len(tool_results_map)} final tool result messages")
@@ -2082,3 +2086,82 @@ class ResponseProcessor:
             thread_id=thread_id, type="status", content=content, is_llm_message=False, metadata=metadata
         )
         return saved_message_obj
+    
+    async def _track_tool_success_rate(self, tool_results_map: Dict[int, Tuple[Dict[str, Any], ToolResult, ToolExecutionContext]]) -> None:
+        """
+        Track tool calling success rate and integrate with QualityMonitor (Story 2.3 - AC #3, #4).
+        
+        Args:
+            tool_results_map: Dictionary mapping tool indices to (tool_call, result, context) tuples
+        """
+        try:
+            from core.optimizations.quality_monitor import get_quality_monitor
+            from core.optimizations.quality_metrics import calculate_tool_success_rate
+            from core.utils.config import config, OptimizationConfig, OptimizationMode
+            
+            # Only track in OPTIMIZED mode (Story 2.3)
+            if OptimizationConfig.OPTIMIZATION_MODE != OptimizationMode.OPTIMIZED:
+                return
+            
+            # Extract tool calls and results
+            tool_calls = []
+            tool_results = []
+            
+            for tool_idx in sorted(tool_results_map.keys()):
+                tool_call, result, context = tool_results_map[tool_idx]
+                tool_calls.append(tool_call)
+                # Convert ToolResult to dict format for calculate_tool_success_rate
+                if isinstance(result, ToolResult):
+                    tool_result_dict = {
+                        "success": result.success,
+                        "error": None if result.success else result.output,
+                        "status": "error" if not result.success else "success"
+                    }
+                else:
+                    tool_result_dict = result if isinstance(result, dict) else {"success": False, "error": str(result), "status": "error"}
+                tool_results.append(tool_result_dict)
+            
+            if not tool_calls:
+                return  # No tools called
+            
+            # Calculate success rate
+            success_rate = calculate_tool_success_rate(tool_calls, tool_results)
+            
+            # Track with QualityMonitor
+            quality_monitor = get_quality_monitor()
+            await quality_monitor.track_metric(
+                "tool_success_rate",
+                value=success_rate,
+                metadata={
+                    "tool_count": len(tool_calls),
+                    "tool_names": [tc.get("function_name", "unknown") for tc in tool_calls]
+                }
+            )
+            
+            logger.debug(
+                f"📊 Tool calling success rate tracked: {success_rate:.3f} "
+                f"({len([r for r in tool_results if r.get('success', False)])}/{len(tool_calls)} successful)"
+            )
+            
+            # Check for rollback if success rate < threshold (Story 2.3 - AC #4)
+            # Use config values (now defined in config.py)
+            threshold = config.TOOL_SCHEMA_SUCCESS_RATE_THRESHOLD if config and config.TOOL_SCHEMA_SUCCESS_RATE_THRESHOLD is not None else 0.95
+            if success_rate < threshold:
+                logger.warning(
+                    f"⚠️ Tool calling success rate ({success_rate:.3f}) below threshold ({threshold}). "
+                    f"Checking rollback configuration..."
+                )
+                
+                # Check if auto-rollback is enabled (default to True if not set)
+                auto_rollback_enabled = config.TOOL_SCHEMA_AUTO_ROLLBACK_ENABLED if config and config.TOOL_SCHEMA_AUTO_ROLLBACK_ENABLED is not None else True
+                if auto_rollback_enabled:
+                    # Use existing auto-rollback mechanism from OptimizationConfig
+                    rollback_triggered = await OptimizationConfig.auto_rollback_if_needed(quality_monitor)
+                    if rollback_triggered:
+                        logger.critical(
+                            f"🚨 Auto-rollback triggered: Tool calling success rate ({success_rate:.3f}) "
+                            f"below threshold ({threshold}). Switched to ORIGINAL mode."
+                        )
+        except Exception as e:
+            # Don't fail tool execution if tracking fails
+            logger.debug(f"Tool success rate tracking error (non-critical): {e}")

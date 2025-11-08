@@ -104,20 +104,20 @@
   <artifacts>
     <docs>
       <doc>
-        <path>docs/architecture-extension-suna.md</path>
-        <title>Browser Extension Architecture - Suna.so</title>
+        <path>docs/architecture-extension-chainlens.md</path>
+        <title>Browser Extension Architecture - ChainLens.so</title>
         <section>Implementation Patterns - Pattern 1: Coin Detection</section>
         <snippet>Example coin detection pattern với COIN_PATTERNS regex, detectCoins function using TreeWalker, và CoinMatch interface. Pattern matching for coin names, symbols, và prices.</snippet>
       </doc>
       <doc>
         <path>docs/epics-extension.md</path>
-        <title>Suna.so Browser Extension - Epic Breakdown</title>
+        <title>ChainLens.so Browser Extension - Epic Breakdown</title>
         <section>Epic 11: Coin Detection & Content Script</section>
-        <snippet>Epic 11 goal: Implement coin name detection trên web pages và inject "Analyze with Suna" buttons next to detected coins. Core functionality cho phép user discover và trigger analysis từ any crypto website.</snippet>
+        <snippet>Epic 11 goal: Implement coin name detection trên web pages và inject "Analyze with ChainLens" buttons next to detected coins. Core functionality cho phép user discover và trigger analysis từ any crypto website.</snippet>
       </doc>
       <doc>
         <path>docs/epics-extension.md</path>
-        <title>Suna.so Browser Extension - Epic Breakdown</title>
+        <title>ChainLens.so Browser Extension - Epic Breakdown</title>
         <section>Story 11.1: Coin Detection Algorithm</section>
         <snippet>As a developer, I want coin detection algorithm để identify coin names trên web pages, So that extension can find relevant coins to analyze. Acceptance criteria include coin-detector.ts module, pattern matching for names/symbols/prices, detection result structure, và testing.</snippet>
       </doc>
@@ -136,7 +136,7 @@
     </docs>
     <code>
       <file>
-        <path>docs/architecture-extension-suna.md</path>
+        <path>docs/architecture-extension-chainlens.md</path>
         <kind>example</kind>
         <symbol>detectCoins function</symbol>
         <lines>443-484</lines>

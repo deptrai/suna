@@ -112,7 +112,7 @@ So that side panel UI matches main app design.
 
 ### References
 
-- [Source: docs/architecture-extension-suna.md#Code-Reuse-Strategy] - UI Components Reuse strategy
+- [Source: docs/architecture-extension-chainlens.md#Code-Reuse-Strategy] - UI Components Reuse strategy
 - [Source: docs/epics-extension.md#Epic-12] - Epic 12 goal: reuse frontend components
 - [Source: docs/epics-extension.md#Story-12.1] - Story acceptance criteria và prerequisites
 - [Source: docs/stories/10-3-build-configuration-shared-code-setup.md#Dev-Agent-Record] - Path aliases configured

@@ -16,7 +16,12 @@
     "ignoreDeprecations": "5.0",
     "paths": {
       "@/*": ["../frontend/src/*"]
-    }
+    },
+    // Gradual strict mode enablement (disabled for now to avoid breaking changes)
+    // "strictNullChecks": true,  // Enable gradually
+    // "strictFunctionTypes": true,  // Enable gradually
+    // "noUnusedLocals": true,  // Enable gradually
+    // "noUnusedParameters": true  // Enable gradually
   },
   "include": [
     "src/**/*.ts",

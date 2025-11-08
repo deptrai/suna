@@ -90,8 +90,8 @@
   <artifacts>
     <docs>
       <doc>
-        <path>docs/architecture-extension-suna.md</path>
-        <title>Browser Extension Architecture - Suna.so</title>
+        <path>docs/architecture-extension-chainlens.md</path>
+        <title>Browser Extension Architecture - ChainLens.so</title>
         <section>Implementation Patterns - Pattern 1: Coin Detection</section>
         <snippet>Content script pattern với detectCoins function. Content script runs in isolated world, can access DOM but not page JavaScript. Must be registered in manifest với matches patterns.</snippet>
       </doc>

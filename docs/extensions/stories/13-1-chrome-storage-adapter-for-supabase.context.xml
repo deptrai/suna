@@ -75,7 +75,7 @@
   <artifacts>
     <docs>
       <doc>
-        <path>docs/architecture-extension-suna.md</path>
+        <path>docs/architecture-extension-chainlens.md</path>
         <title>Browser Extension Architecture</title>
         <section>Security Architecture - Authentication flow với chrome.storage</section>
       </doc>

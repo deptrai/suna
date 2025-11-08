@@ -129,7 +129,7 @@ interface CoinDetection {
 
 ### References
 
-- [Source: docs/architecture-extension-suna.md#Implementation-Patterns] - Coin Detection pattern details
+- [Source: docs/architecture-extension-chainlens.md#Implementation-Patterns] - Coin Detection pattern details
 - [Source: docs/epics-extension.md#Epic-11] - Epic 11 goal: coin detection trên web pages
 - [Source: docs/epics-extension.md#Story-11.1] - Story acceptance criteria và prerequisites
 - [Source: docs/PRD-extension.md#Functional-Requirements] - FR001: Coin detection trên crypto websites
@@ -318,7 +318,7 @@ Story 11.1 implementation is **solid và comprehensive**. The coin detection alg
 - Result structure: CoinDetection interface ✅ (matches constraint exactly)
 
 **✅ Architecture Patterns:**
-- Follows extension architecture pattern from `docs/architecture-extension-suna.md:443-484`
+- Follows extension architecture pattern from `docs/architecture-extension-chainlens.md:443-484`
 - Uses TreeWalker for efficient DOM traversal
 - Returns structured results với element references
 - Shared module pattern (can be used by content script và popup)
@@ -347,7 +347,7 @@ Story 11.1 implementation is **solid và comprehensive**. The coin detection alg
 - ✅ Edge case handling (script/style elements)
 
 **References:**
-- Extension Architecture: `docs/architecture-extension-suna.md`
+- Extension Architecture: `docs/architecture-extension-chainlens.md`
 - Epic 11 Specification: `docs/epics-extension.md#Epic-11`
 - Story Context: `docs/stories/11-1-coin-detection-algorithm.context.xml`
 

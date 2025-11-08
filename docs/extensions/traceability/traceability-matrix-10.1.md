@@ -442,7 +442,7 @@ traceability_and_gate:
 - **Story File:** `docs/stories/10-1-extension-project-structure-setup.md`
 - **Story Context:** `docs/stories/10-1-extension-project-structure-setup.context.xml`
 - **Test Design:** N/A (setup story, no functional tests required)
-- **Tech Spec:** Referenced in story (architecture-extension-suna.md)
+- **Tech Spec:** Referenced in story (architecture-extension-chainlens.md)
 - **Test Results:** Manual verification (file system, configuration, documentation)
 - **NFR Assessment:** Code review and architecture alignment
 - **Created Files:**

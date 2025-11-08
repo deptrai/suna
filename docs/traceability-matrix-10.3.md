@@ -539,7 +539,7 @@ traceability_and_gate:
 - **Story File:** `docs/stories/10-3-build-configuration-shared-code-setup.md`
 - **Story Context:** `docs/stories/10-3-build-configuration-shared-code-setup.context.xml`
 - **Test Design:** N/A (build configuration story, no functional tests required)
-- **Tech Spec:** Referenced in story (architecture-extension-suna.md)
+- **Tech Spec:** Referenced in story (architecture-extension-chainlens.md)
 - **Test Results:** Build execution verification (production và development builds)
 - **NFR Assessment:** Code review và build execution verification
 - **Created Files:**

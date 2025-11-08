@@ -1,10 +1,10 @@
 /**
  * Content Script Styles
  * 
- * Styles for injected "Analyze with Suna" buttons và coin highlights
+ * Styles for injected "Analyze with ChainLens" buttons và coin highlights
  */
 
-.suna-analyze-btn {
+.chainlens-analyze-btn {
   display: inline-block;
   padding: 4px 8px;
   margin-left: 8px;
@@ -17,11 +17,11 @@
   transition: background-color 0.2s;
 }
 
-.suna-analyze-btn:hover {
+.chainlens-analyze-btn:hover {
   background-color: #4f46e5;
 }
 
-.suna-coin-highlight {
+.chainlens-coin-highlight {
   background-color: rgba(99, 102, 241, 0.1);
   border-radius: 2px;
   padding: 2px 4px;

@@ -114,8 +114,8 @@ So that extension can reuse frontend components và utilities.
 
 ### References
 
-- [Source: docs/architecture-extension-suna.md#Project-Structure] - Extension project structure và build output requirements
-- [Source: docs/architecture-extension-suna.md#Technology-Stack-Decisions] - Build tool requirements (Webpack hoặc Vite)
+- [Source: docs/architecture-extension-chainlens.md#Project-Structure] - Extension project structure và build output requirements
+- [Source: docs/architecture-extension-chainlens.md#Technology-Stack-Decisions] - Build tool requirements (Webpack hoặc Vite)
 - [Source: docs/epics-extension.md#Epic-10] - Epic 10 goal và value proposition
 - [Source: docs/epics-extension.md#Story-10.3] - Story acceptance criteria và prerequisites
 - [Source: docs/stories/10-1-extension-project-structure-setup.md#Dev-Agent-Record] - TypeScript config và path aliases setup
