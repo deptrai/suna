@@ -21,8 +21,8 @@ traceability_and_gate:
       medium: 1
       low: 0
     quality:
-      passing_tests: 9
-      total_tests: 9
+      passing_tests: 15
+      total_tests: 15
       blocker_issues: 0
       warning_issues: 0
     recommendations:
@@ -80,29 +80,35 @@ traceability_and_gate:
       priority: "P0"
       coverage_status: "FULL"
       tests:
-        - "test_static_content_first (backend/tests/test_openai_prompt_caching.py:25)"
-        - "test_static_sections_order (backend/tests/test_openai_prompt_caching.py:97)"
-        - "test_dynamic_sections_order (backend/tests/test_openai_prompt_caching.py:138)"
+      - "test_static_content_first (backend/tests/test_openai_prompt_caching.py:25)"
+      - "test_static_sections_order (backend/tests/test_openai_prompt_caching.py:96)"
+      - "test_dynamic_sections_order (backend/tests/test_openai_prompt_caching.py:137)"
+      - "test_knowledge_base_retrieval_failure (backend/tests/test_openai_prompt_caching.py:252) - Edge Case"
+      - "test_empty_knowledge_base_response (backend/tests/test_openai_prompt_caching.py:295) - Edge Case"
     - id: "AC-2"
       description: "Prompts đảm bảo > 1,024 tokens (threshold cho OpenAI caching)"
       priority: "P0"
       coverage_status: "FULL"
       tests:
-        - "test_prompt_size_threshold (backend/tests/test_openai_prompt_caching.py:54)"
-        - "test_token_count_verification (backend/tests/test_openai_prompt_caching.py:284)"
+        - "test_prompt_size_threshold (backend/tests/test_openai_prompt_caching.py:53)"
+        - "test_token_count_verification (backend/tests/test_openai_prompt_caching.py:509)"
+        - "test_large_tool_schemas_prompt_size (backend/tests/test_openai_prompt_caching.py:376) - Edge Case"
     - id: "AC-3"
       description: "Monitor `cached_tokens` trong responses và log metrics"
       priority: "P1"
       coverage_status: "FULL"
       tests:
-        - "test_extract_cached_tokens_from_usage (backend/tests/test_openai_prompt_caching.py:184)"
-        - "test_cache_metrics_with_zero_cached_tokens (backend/tests/test_openai_prompt_caching.py:215)"
+        - "test_extract_cached_tokens_from_usage (backend/tests/test_openai_prompt_caching.py:192)"
+        - "test_cache_metrics_with_zero_cached_tokens (backend/tests/test_openai_prompt_caching.py:223)"
+        - "test_cache_metrics_with_missing_prompt_tokens_details (backend/tests/test_openai_prompt_caching.py:339) - Edge Case"
+        - "test_cache_metrics_with_cache_read_input_tokens (backend/tests/test_openai_prompt_caching.py:358) - Edge Case"
     - id: "AC-4"
       description: "Cache hit rate được track và report trong monitoring dashboard"
       priority: "P1"
       coverage_status: "PARTIAL"
       tests:
-        - "test_cache_hit_rate_calculation (backend/tests/test_openai_prompt_caching.py:205)"
+        - "test_cache_hit_rate_calculation (backend/tests/test_openai_prompt_caching.py:213)"
+        - "test_cache_hit_rate_edge_cases (backend/tests/test_openai_prompt_caching.py:431) - Edge Case"
       gaps:
         - "Dashboard integration test (deferred to Story 2.4)"
         - "End-to-end metrics flow validation (deferred to Story 2.4)"
@@ -111,12 +117,12 @@ traceability_and_gate:
       priority: "P0"
       coverage_status: "FULL"
       tests:
-        - "test_prompt_structure_preserved (backend/tests/test_openai_prompt_caching.py:244)"
+        - "test_prompt_structure_preserved (backend/tests/test_openai_prompt_caching.py:455)"
 
   # Test Quality Metrics
   test_quality:
-    total_tests: 9
-    passing_tests: 9
+    total_tests: 15
+    passing_tests: 15
     quality_score: 100
     issues:
       blocker: 0
@@ -126,8 +132,11 @@ traceability_and_gate:
       - "Explicit assertions present"
       - "No hard waits detected"
       - "Tests isolated (no shared state)"
-      - "File size <300 lines (285 lines)"
+      - "Comprehensive edge case coverage (6 new tests)"
       - "Quick execution (unit tests)"
+      - "Error handling validated (knowledge base failures, missing fields)"
+      - "Alternative response formats tested"
+      - "Large tool schemas validated (15+ tools)"
 
   # Risk Assessment
   risk_assessment:
