@@ -251,13 +251,51 @@ backend/tests/**/.pytest_cache/
 backend/.venv/
 **/.venv/
 
-# Extension node_modules
+# Extension build artifacts và dependencies
 extension/node_modules/
 extension/.pnpm-store/
+extension/dist/
+extension/build/
+extension/.next/
+extension/.vite/
+extension/.cache/
+extension/.webpack/
 
 # TypeScript build info
 *.tsbuildinfo
 extension/*.tsbuildinfo
+extension/**/*.tsbuildinfo
+
+# Extension specific
+extension/.env
+extension/.env.local
+extension/.env*.local
+extension/*.log
+extension/.DS_Store
+extension/**/.DS_Store
+
+# Extension webpack output
+extension/dist/**/*
+!extension/dist/.gitkeep
+
+# Extension source maps và minified files
+extension/**/*.map
+extension/**/*.min.js
+extension/**/*.min.css
+
+# Extension cache files
+extension/.eslintcache
+extension/.turbo/
+extension/.swc/
+
+# Extension test coverage
+extension/coverage/
+extension/.nyc_output/
+
+# Extension IDE files
+extension/.vscode/
+extension/.idea/
+extension/*.code-workspace
 
 # Temporary files
 *.tmp
