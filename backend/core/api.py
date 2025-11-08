@@ -24,6 +24,11 @@ from .api.semantic_cache_api import router as semantic_cache_router
 from .api.task_classifier_api import router as task_classifier_router
 from .api.model_router_api import router as model_router_router
 from .api.multi_model_orchestrator_api import router as workflow_orchestrator_router
+# Import optimization dashboard router (Epic 1 + Story 2.4 Integration)
+try:
+    from .api.optimization_dashboard_api import router as optimization_dashboard_router
+except ImportError:
+    optimization_dashboard_router = None
 
 router = APIRouter()
 
@@ -44,6 +49,8 @@ router.include_router(semantic_cache_router)  # Story 2.1 - Semantic Cache Metri
 router.include_router(task_classifier_router)  # Story 3.1 - Task Complexity Classification
 router.include_router(model_router_router)  # Story 3.2 - Model Selection Rules
 router.include_router(workflow_orchestrator_router)  # Story 3.3 - Sequential Model Execution
+if optimization_dashboard_router:
+    router.include_router(optimization_dashboard_router)  # Epic 1 + Story 2.4 - Unified Optimization Dashboard
 
 # Re-export the initialize and cleanup functions
 __all__ = ['router', 'initialize', 'cleanup']

@@ -222,22 +222,38 @@ class TestQualityValidation:
 
 
 # Integration tests (require Redis and LLM API)
+# These tests are now implemented in test_epic1_integration.py
+# Run with: ENABLE_LLM_INTEGRATION_TESTS=true pytest backend/tests/test_epic1_integration.py -v
+
 @pytest.mark.integration
 class TestLiteLLMCacheIntegration:
-    """Integration tests for LiteLLM Redis caching."""
+    """Integration tests for LiteLLM Redis caching.
+    
+    Note: Full integration tests are implemented in test_epic1_integration.py.
+    Run with ENABLE_LLM_INTEGRATION_TESTS=true to execute.
+    """
     
     @pytest.mark.asyncio
     async def test_cache_hit_behavior(self):
         """Test actual cache hit behavior with real LLM calls."""
-        pytest.skip("Requires Redis and LLM API - run manually")
+        # Integration test moved to test_epic1_integration.py
+        import os
+        if os.getenv("ENABLE_LLM_INTEGRATION_TESTS", "false").lower() != "true":
+            pytest.skip("Requires ENABLE_LLM_INTEGRATION_TESTS=true - see test_epic1_integration.py")
     
     @pytest.mark.asyncio
     async def test_cache_expiration(self):
         """Test cache expiration with TTL."""
-        pytest.skip("Requires Redis and time delay - run manually")
+        # Integration test moved to test_epic1_integration.py
+        import os
+        if os.getenv("ENABLE_LLM_INTEGRATION_TESTS", "false").lower() != "true":
+            pytest.skip("Requires ENABLE_LLM_INTEGRATION_TESTS=true - see test_epic1_integration.py")
     
     @pytest.mark.asyncio
     async def test_exact_match_quality_integration(self):
         """Integration test for exact match quality validation."""
-        pytest.skip("Requires Redis and LLM API - run manually")
+        # Integration test moved to test_epic1_integration.py
+        import os
+        if os.getenv("ENABLE_LLM_INTEGRATION_TESTS", "false").lower() != "true":
+            pytest.skip("Requires ENABLE_LLM_INTEGRATION_TESTS=true - see test_epic1_integration.py")
 

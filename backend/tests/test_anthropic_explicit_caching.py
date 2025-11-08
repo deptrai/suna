@@ -271,27 +271,46 @@ class TestQualityValidation:
 
 
 # Integration tests (require Anthropic API)
+# These tests are now implemented in test_epic1_integration.py
+# Run with: ENABLE_LLM_INTEGRATION_TESTS=true pytest backend/tests/test_epic1_integration.py -v
+
 @pytest.mark.integration
 class TestAnthropicCacheIntegration:
-    """Integration tests for Anthropic explicit caching."""
+    """Integration tests for Anthropic explicit caching.
+    
+    Note: Full integration tests are implemented in test_epic1_integration.py.
+    Run with ENABLE_LLM_INTEGRATION_TESTS=true to execute.
+    """
     
     @pytest.mark.asyncio
     async def test_cache_control_with_actual_api(self):
         """Test cache_control với actual Claude API calls."""
-        pytest.skip("Requires Anthropic API - run manually")
+        # Integration test moved to test_epic1_integration.py
+        import os
+        if os.getenv("ENABLE_LLM_INTEGRATION_TESTS", "false").lower() != "true":
+            pytest.skip("Requires ENABLE_LLM_INTEGRATION_TESTS=true - see test_epic1_integration.py")
     
     @pytest.mark.asyncio
     async def test_cache_token_tracking_integration(self):
         """Integration test for cache token tracking."""
-        pytest.skip("Requires Anthropic API - run manually")
+        # Integration test moved to test_epic1_integration.py
+        import os
+        if os.getenv("ENABLE_LLM_INTEGRATION_TESTS", "false").lower() != "true":
+            pytest.skip("Requires ENABLE_LLM_INTEGRATION_TESTS=true - see test_epic1_integration.py")
     
     @pytest.mark.asyncio
     async def test_cache_expiration_with_ttl(self):
         """Test cache expiration với TTL."""
-        pytest.skip("Requires Anthropic API and time delay - run manually")
+        # Integration test moved to test_epic1_integration.py
+        import os
+        if os.getenv("ENABLE_LLM_INTEGRATION_TESTS", "false").lower() != "true":
+            pytest.skip("Requires ENABLE_LLM_INTEGRATION_TESTS=true - see test_epic1_integration.py")
     
     @pytest.mark.asyncio
     async def test_quality_validation_integration(self):
         """Integration test for quality validation (100% similarity)."""
-        pytest.skip("Requires Anthropic API - run manually")
+        # Integration test moved to test_epic1_integration.py
+        import os
+        if os.getenv("ENABLE_LLM_INTEGRATION_TESTS", "false").lower() != "true":
+            pytest.skip("Requires ENABLE_LLM_INTEGRATION_TESTS=true - see test_epic1_integration.py")
 

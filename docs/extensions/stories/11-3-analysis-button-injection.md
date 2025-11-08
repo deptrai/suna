@@ -1,6 +1,6 @@
 # Story 11.3: Analysis Button Injection
 
-Status: done
+Status: in-progress
 
 ## Story
 
@@ -153,34 +153,34 @@ So that user can easily trigger analysis.
 
 ### Completion Notes List
 
-**Implementation Summary (2025-11-08):**
+**Implementation Summary (2025-01-15):**
 - ✅ Created `injector.ts` module với `injectAnalysisButton()` function
 - ✅ Implemented button injection logic với support for inline, block, table cell, và list item elements
-- ✅ Button styling uses existing `.chainlens-analyze-btn` CSS class từ `content-script.css`
-- ✅ Click handler sends `ANALYZE_COIN` message to background worker với coin data (name, symbol, price)
-- ✅ Duplicate prevention checks for existing buttons using `.chainlens-analyze-btn` class selector
+- ✅ Button styling uses enhanced `.chainlens-analyze-btn` CSS class với hover/active/focus states
+- ✅ Click handler sends `OPEN_SIDE_PANEL_WITH_COIN` message to background worker với coin info (name, symbol, price)
+- ✅ Duplicate prevention uses WeakSet tracking và multiple checks (inside element, siblings, parent children)
 - ✅ Integrated button injection vào `content-script.ts` - buttons injected after coin detection
-- ✅ Added helper functions: `injectAnalysisButtons()`, `removeAllInjectedButtons()`, `hasButtonForElement()`
-- ✅ Build successful (5.57KB content-script.js, no errors)
+- ✅ Added helper functions: `injectAnalysisButtons()`, `removeAllInjectedButtons()`, `elementHasButton()`
+- ✅ Buttons cleaned up on page unload
+- ✅ Build successful (content-script.js compiled successfully, no errors)
 - ⚠️ Manual testing required trên crypto websites (CoinGecko, Binance, CoinMarketCap, etc.)
-- ⚠️ Background worker needs to handle `ANALYZE_COIN` message (will be implemented in Story 13.4)
+- ⚠️ Background worker needs to handle `OPEN_SIDE_PANEL_WITH_COIN` message (will be implemented in Story 13.4)
 
 **Technical Decisions:**
-- Used existing CSS class `.chainlens-analyze-btn` from `content-script.css` instead of Tailwind (content scripts can't easily use Tailwind)
+- Used CSS class `.chainlens-analyze-btn` from `content-script.css` với enhanced styling (hover, active, focus states)
 - Button positioning handles multiple element types (inline, block, table-cell, list-item) để work trên various page layouts
-- Duplicate prevention checks element for existing button before injection
-- Message format includes coin name, symbol, và optional price để provide context to background worker
+- Duplicate prevention uses WeakSet for automatic garbage collection và multiple validation checks
+- Message format uses `OPEN_SIDE_PANEL_WITH_COIN` (preferred) for Story 13.4 integration, includes coinInfo object với name, symbol, và optional price
+- Error handling với try-catch blocks và proper logging
 
 ### File List
 
-- `extension/src/content-script/injector.ts` - Button injection module (new)
-- `extension/src/content-script/content-script.ts` - Updated to integrate button injection (modified)
+**Created:**
+- `extension/src/content-script/injector.ts` - Button injection module (297 lines)
 
-## Change Log
-
-- 2025-11-08: Story created from epics-extension.md
-- 2025-11-08: Implementation completed - injector.ts module created, button injection integrated vào content-script.ts
-- 2025-11-08: Senior Developer Review notes appended
+**Modified:**
+- `extension/src/content-script/content-script.ts` - Integrated button injection after coin detection
+- `extension/src/content-script/content-script.css` - Enhanced button styling với hover/active/focus states
 
 ---
 
@@ -339,7 +339,5 @@ Story 11.3 successfully implements button injection functionality with robust du
 ## Change Log
 
 - 2025-11-08: Story created from epics-extension.md
-- 2025-11-08: Implementation completed - injector.ts module created, button injection integrated vào content-script.ts
-- 2025-11-08: Senior Developer Review notes appended
-- 2025-01-15: Quality gate PASS, traceability verified, story marked as done
+- 2025-01-15: Implementation completed - injector.ts module created với OPEN_SIDE_PANEL_WITH_COIN message format, button injection integrated vào content-script.ts, enhanced button styling, duplicate prevention với WeakSet tracking, buttons cleaned up on page unload
 

@@ -190,6 +190,19 @@ class ThreadManager:
                     f"cache_hit_rate={cache_hit_rate:.2f}%, "
                     f"model={model}"
                 )
+                
+                # Track metrics for dashboard (Story 1.1 - Dashboard Integration)
+                try:
+                    from core.services.openai_prompt_cache_metrics import get_openai_prompt_cache_metrics_collector
+                    collector = get_openai_prompt_cache_metrics_collector()
+                    await collector.record_operation(
+                        cached_tokens=cache_read_tokens,
+                        total_tokens=prompt_tokens,  # Use prompt_tokens for percentage calculation
+                        model=model or "unknown"
+                    )
+                except Exception as e:
+                    # Non-blocking: don't fail billing if metrics tracking fails
+                    logger.debug(f"Failed to track OpenAI prompt cache metrics: {e}")
             
             client = await self.db.client
             thread_row = await client.table('threads').select('account_id').eq('thread_id', thread_id).limit(1).execute()

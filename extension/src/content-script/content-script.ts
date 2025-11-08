@@ -5,7 +5,7 @@
  * symbols, và prices using the coin-detector module.
  * 
  * Story 11.2: Coin detection implemented
- * Story 11.3: Button injection will be implemented next
+ * Story 11.3: Button injection implemented
  */
 
 import './content-script.css';

@@ -50,9 +50,9 @@ interface AnalyzeCoinMessage {
 }
 
 /**
- * Check if button already exists for an element
+ * Check if button already exists for an element (internal function)
  */
-function hasButtonForElement(element: HTMLElement): boolean {
+function checkButtonExists(element: HTMLElement): boolean {
   // Check if element already has a button
   if (injectedElements.has(element)) {
     return true;
@@ -184,13 +184,19 @@ export function injectAnalysisButton(
   element: HTMLElement,
   coinData: CoinDetection
 ): void {
+  // Validate element
+  if (!element || !(element instanceof HTMLElement)) {
+    logger.warn('Invalid element provided to injectAnalysisButton');
+    return;
+  }
+
   // Skip if element is already a button (avoid injecting buttons into buttons)
   if (element.tagName === 'BUTTON' || element.classList.contains(BUTTON_CLASS_NAME)) {
     return;
   }
 
   // Check for duplicate injection
-  if (hasButtonForElement(element)) {
+  if (checkButtonExists(element)) {
     logger.debug(`Button already exists for element với coin: ${coinData.name}`);
     return;
   }
@@ -285,9 +291,12 @@ export function removeAllInjectedButtons(): void {
 }
 
 /**
- * Check if element has an injected button
+ * Check if element has an injected button (exported for external use)
+ * 
+ * @param element - The HTML element to check
+ * @returns true if element has an injected button, false otherwise
  */
-export function hasButtonForElement(element: HTMLElement): boolean {
-  return hasButtonForElement(element);
+export function elementHasButton(element: HTMLElement): boolean {
+  return checkButtonExists(element);
 }
 
