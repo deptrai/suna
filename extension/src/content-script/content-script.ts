@@ -12,6 +12,7 @@ import './content-script.css';
 import { testSharedCodeImport } from '../shared/test-import';
 import { detectCoins, detectCoinsInDocument, type CoinDetection } from '../shared/coin-detector';
 import { logger } from '../shared/logger';
+import { injectAnalysisButtons, removeAllInjectedButtons } from './injector';
 
 // ============================================
 // Content Script Initialization
@@ -137,6 +138,13 @@ function runCoinDetection(): void {
           element: d.element.tagName,
         })));
       }
+
+      // Inject analysis buttons next to detected coins (Story 11.3)
+      try {
+        injectAnalysisButtons(detections);
+      } catch (error) {
+        logger.error('Error injecting buttons:', error);
+      }
     }
     
     // Reset attempts on success
@@ -196,14 +204,14 @@ if (document.readyState === 'loading') {
 document.addEventListener('visibilitychange', visibilityChangeHandler);
 
 // Cleanup on page unload
-window.addEventListener('beforeunload', () => {
+const beforeUnloadHandler = () => {
   cleanupTimeouts();
+  // Remove all injected buttons on page unload
+  removeAllInjectedButtons();
   document.removeEventListener('DOMContentLoaded', domContentLoadedHandler);
   document.removeEventListener('visibilitychange', visibilityChangeHandler);
-});
+};
 
-// TODO (Story 11.3): Button injection next to detected coins
-// TODO (Story 11.3): Message passing to background worker
-// TODO (Story 11.3): Side panel opening với coin info
+window.addEventListener('beforeunload', beforeUnloadHandler);
 
 export {};
