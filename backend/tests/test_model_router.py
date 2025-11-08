@@ -416,6 +416,86 @@ class TestModelSelection:
     
     @pytest.mark.p1
     @pytest.mark.asyncio
+    async def test_round_robin_selection(self, router_with_mocks, mock_task_classifier, sample_models):
+        """Test round-robin selection when multiple models have same cost/priority.
+        
+        Test ID: 3.2-UNIT-011
+        Priority: P1 (High priority)
+        AC: #3
+        
+        Given: Multiple models with same cost/priority for same complexity
+        When: Multiple routing requests are made
+        Then: Should use round-robin to distribute load across models
+        """
+        task = "Simple task"
+        mock_task_classifier.classify.return_value = ClassificationResult(
+            complexity=TaskComplexityLevel.SIMPLE,
+            confidence=0.9,
+            task=task,
+            metadata={},
+            timestamp=datetime.now(timezone.utc)
+        )
+        
+        # Create two models with same cost
+        from core.ai_models.ai_models import ModelPricing
+        model1_pricing = ModelPricing(
+            input_cost_per_million_tokens=0.15,
+            output_cost_per_million_tokens=0.60
+        )
+        model2_pricing = ModelPricing(
+            input_cost_per_million_tokens=0.15,  # Same cost
+            output_cost_per_million_tokens=0.60
+        )
+        
+        # Mock models with same pricing (use actual Model objects for full compatibility)
+        model1 = Model(
+            id="openai-compatible/gpt-4o-mini",
+            name="GPT-4o Mini",
+            provider=ModelProvider.OPENAI_COMPATIBLE,
+            pricing=model1_pricing,
+            enabled=True,
+            priority=1,
+            recommended=True,
+            capabilities=[]
+        )
+        
+        model2 = Model(
+            id="openai-compatible/qwen3-30b-a3b-instruct-2507",
+            name="Qwen3 30B",
+            provider=ModelProvider.OPENAI_COMPATIBLE,
+            pricing=model2_pricing,
+            enabled=True,
+            priority=1,
+            recommended=True,
+            capabilities=[]
+        )
+        
+        # Mock registry to return both models
+        def get_model_side_effect(model_id: str):
+            if model_id == "openai-compatible/gpt-4o-mini":
+                return model1
+            elif model_id == "openai-compatible/qwen3-30b-a3b-instruct-2507":
+                return model2
+            return None
+        
+        router_with_mocks.model_registry.get = Mock(side_effect=get_model_side_effect)
+        
+        # Route multiple times and verify round-robin distribution
+        results = []
+        for _ in range(4):
+            result = await router_with_mocks.route(task)
+            results.append(result.model_id)
+        
+        # Verify both models were selected (round-robin)
+        assert "openai-compatible/gpt-4o-mini" in results
+        assert "openai-compatible/qwen3-30b-a3b-instruct-2507" in results
+        # Verify round-robin pattern (alternating or balanced distribution)
+        # At least 2 different models should be selected in 4 requests
+        unique_models = set(results)
+        assert len(unique_models) >= 2, f"Expected at least 2 models, got {unique_models}"
+    
+    @pytest.mark.p1
+    @pytest.mark.asyncio
     async def test_handle_no_available_models(self, mock_task_classifier, mock_model_registry, sample_models):
         """Test handling when no models are available.
         

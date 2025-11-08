@@ -3,6 +3,7 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const ESLintPlugin = require('eslint-webpack-plugin');
 const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const webpack = require('webpack');
 
 module.exports = (env, argv) => {
@@ -42,11 +43,20 @@ module.exports = (env, argv) => {
           use: 'ts-loader',
           exclude: /node_modules/,
         },
-        // CSS files - extract for content script, inject for popup
+        // CSS files - extract for popup using MiniCssExtractPlugin
+        {
+          test: /popup\.css$/,
+          use: [
+            MiniCssExtractPlugin.loader,
+            'css-loader',
+            'postcss-loader',
+          ],
+        },
+        // Other CSS files - use style-loader for runtime injection
         {
           test: /\.css$/,
-          exclude: /content-script\.css$/,
-          use: ['style-loader', 'css-loader'],
+          exclude: [/content-script\.css$/, /popup\.css$/],
+          use: ['style-loader', 'css-loader', 'postcss-loader'],
         },
         // Content script CSS - extract to separate file
         {
@@ -70,6 +80,12 @@ module.exports = (env, argv) => {
       // Define environment variables
       new webpack.DefinePlugin({
         'process.env.NODE_ENV': JSON.stringify(isProduction ? 'production' : 'development'),
+      }),
+
+      // Extract CSS for popup
+      new MiniCssExtractPlugin({
+        filename: '[name].css',
+        chunkFilename: '[id].css',
       }),
 
       // HTML plugin for popup

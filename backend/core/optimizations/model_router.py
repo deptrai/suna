@@ -208,6 +208,7 @@ class ModelRouter:
     def _select_best_model(
         self,
         models: List[Model],
+        complexity: ComplexityLevel,
         prefer_cheaper: bool = True
     ) -> Optional[Model]:
         """
@@ -217,10 +218,11 @@ class ModelRouter:
         1. Prefer cheaper model if multiple models match (if prefer_cheaper=True)
         2. Consider model availability (already filtered)
         3. Consider model capabilities (already filtered)
-        4. Use round-robin if all factors equal
+        4. Use round-robin if all factors equal (for load balancing)
         
         Args:
             models: List of available models
+            complexity: Complexity level for round-robin tracking
             prefer_cheaper: Whether to prefer cheaper models
         
         Returns:
@@ -243,8 +245,29 @@ class ModelRouter:
                 models_with_pricing,
                 key=lambda m: m.pricing.input_cost_per_million_tokens
             )
-            # Return cheapest model
-            return sorted_models[0]
+            
+            # Group models by cost (for round-robin when costs are equal)
+            cost_groups: Dict[float, List[Model]] = {}
+            for model in sorted_models:
+                cost = model.pricing.input_cost_per_million_tokens
+                if cost not in cost_groups:
+                    cost_groups[cost] = []
+                cost_groups[cost].append(model)
+            
+            # Get cheapest cost group
+            cheapest_cost = min(cost_groups.keys())
+            cheapest_models = cost_groups[cheapest_cost]
+            
+            # If multiple models have same cost, use round-robin
+            if len(cheapest_models) > 1:
+                idx = self._round_robin_index[complexity] % len(cheapest_models)
+                selected_model = cheapest_models[idx]
+                # Update round-robin index for next selection
+                self._round_robin_index[complexity] = (idx + 1) % len(cheapest_models)
+                return selected_model
+            
+            # Single cheapest model
+            return cheapest_models[0]
         
         # If no pricing info or prefer_cheaper=False, use priority và recommended
         # Sort by priority (higher first), then recommended (True first)
@@ -253,9 +276,28 @@ class ModelRouter:
             key=lambda m: (-m.priority, not m.recommended)
         )
         
-        # Use round-robin if all factors equal (for load balancing)
-        # For now, just return first model (can implement round-robin later)
-        return sorted_models[0]
+        # Group models by priority and recommended status (for round-robin when equal)
+        priority_groups: Dict[Tuple[int, bool], List[Model]] = {}
+        for model in sorted_models:
+            key = (model.priority, model.recommended)
+            if key not in priority_groups:
+                priority_groups[key] = []
+            priority_groups[key].append(model)
+        
+        # Get highest priority group
+        highest_priority = max(priority_groups.keys(), key=lambda k: (k[0], k[1]))
+        highest_priority_models = priority_groups[highest_priority]
+        
+        # If multiple models have same priority and recommended status, use round-robin
+        if len(highest_priority_models) > 1:
+            idx = self._round_robin_index[complexity] % len(highest_priority_models)
+            selected_model = highest_priority_models[idx]
+            # Update round-robin index for next selection
+            self._round_robin_index[complexity] = (idx + 1) % len(highest_priority_models)
+            return selected_model
+        
+        # Single highest priority model
+        return highest_priority_models[0]
     
     async def route(
         self,
@@ -330,8 +372,8 @@ class ModelRouter:
                 routing_metadata={"no_models_available": True}
             )
         
-        # Select best model
-        selected_model = self._select_best_model(available_models, prefer_cheaper=True)
+        # Select best model (with round-robin support)
+        selected_model = self._select_best_model(available_models, complexity, prefer_cheaper=True)
         
         if not selected_model:
             logger.warning(f"Model selection failed for complexity {complexity.value}")
@@ -468,8 +510,8 @@ class ModelRouter:
             ]
             
             if available_models:
-                # Select next best model
-                fallback_model = self._select_best_model(available_models, prefer_cheaper=True)
+                # Select next best model (with round-robin support)
+                fallback_model = self._select_best_model(available_models, routing_result.complexity, prefer_cheaper=True)
                 
                 if fallback_model:
                     # Update metrics

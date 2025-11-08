@@ -25,6 +25,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
+    "@tailwindcss/postcss": "^4.1.17",
     "@types/chrome": "^0.0.268",
     "@types/node": "^20",
     "@types/react": "^18",
@@ -38,7 +39,9 @@
     "eslint-webpack-plugin": "^5.0.2",
     "file-loader": "^6.2.0",
     "html-webpack-plugin": "^5.6.0",
+    "mini-css-extract-plugin": "^2.9.4",
     "postcss": "8.4.33",
+    "postcss-loader": "^8.2.0",
     "style-loader": "^4.0.0",
     "tailwindcss": "^4",
     "ts-loader": "^9.5.1",

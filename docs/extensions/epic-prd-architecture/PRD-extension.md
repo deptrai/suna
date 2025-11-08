@@ -11,16 +11,19 @@
 
 ### Goals
 
-- Cho phép user click vào tên coin trên bất kỳ website crypto và tạo báo cáo/phân tích ngay lập tức
+- Cho phép user click vào tên coin trên bất kỳ website crypto và tạo agent chat mới để analyze coin
 - Tối đa hóa code reuse từ frontend Next.js (target ~95-98%) để giảm thiểu development effort
 - Cung cấp trải nghiệm nhất quán với main app thông qua shared components, API client, và state management
 - Tận dụng lợi ích của browser extension (content script injection, background processing, storage)
+- Extension là bản rút gọn của frontend, chỉ bao gồm những tính năng quan trọng nhất
 
 ### Background Context
 
-Hiện tại, user phải copy/paste coin name vào main Suna.so app để phân tích. Extension sẽ cho phép phân tích trực tiếp từ bất kỳ website crypto (CoinGecko, Binance, etc.) bằng cách detect coin names và inject "Analyze" buttons.
+Hiện tại, user phải copy/paste coin name vào main Suna.so app để phân tích. Extension sẽ cho phép tạo agent chat mới trực tiếp từ bất kỳ website crypto (CoinGecko, Binance, etc.) bằng cách detect coin names và inject "Analyze" buttons.
 
-Architecture đã được thiết kế để reuse ~95-98% code từ frontend Next.js app, bao gồm UI components (Radix UI), API client, state management (Zustand + React Query), và utilities. Extension sẽ là lightweight wrapper với extension-specific layers cho browser APIs và content script injection.
+**Flow:** User clicks "Analyze" button → Extension mở side panel với chat interface → Prompt pre-filled với coin info → User edits/submits → Tạo agent chat mới → Continue chatting về coin.
+
+Architecture đã được thiết kế để reuse ~95-98% code từ frontend Next.js app, bao gồm UI components (Radix UI), API client, state management (Zustand + React Query), chat components, và utilities. Extension sẽ là lightweight wrapper với extension-specific layers cho browser APIs và content script injection.
 
 ---
 
@@ -32,15 +35,23 @@ Architecture đã được thiết kế để reuse ~95-98% code từ frontend N
 
 **FR002:** Extension phải inject "Analyze with Suna" button next to detected coin names trên web pages
 
-**FR003:** User có thể click vào injected button để trigger coin analysis
+**FR003:** User có thể click vào injected button để mở side panel với chat interface
 
-**FR004:** Extension popup/sidebar phải display analysis results sử dụng shared UI components từ frontend
+**FR004:** Extension side panel phải display chat interface với pre-filled prompt (coin info) sử dụng shared UI components từ frontend
 
-**FR005:** Extension phải reuse API client từ frontend để call backend analysis APIs
+**FR004a:** Extension phải allow user edit prompt trước khi submit
+
+**FR004b:** Extension phải tạo agent chat mới khi user submits prompt
+
+**FR004c:** Extension phải display chat messages với streaming responses
+
+**FR004d:** User có thể continue chatting (send additional messages) về coin
+
+**FR005:** Extension phải reuse API client từ frontend để call backend APIs (unifiedAgentStart để tạo agent chat)
 
 **FR006:** Extension phải support authentication sử dụng Supabase với chrome.storage adapter
 
-**FR007:** Extension phải allow user generate full report từ analysis results
+**FR007:** Extension phải allow user open full report trong new tab (optional, từ chat interface)
 
 **FR008:** Extension phải store authentication tokens securely trong chrome.storage
 
@@ -78,7 +89,7 @@ Architecture đã được thiết kế để reuse ~95-98% code từ frontend N
 
 ## User Journeys
 
-### Journey 1: Quick Coin Analysis from Web Page
+### Journey 1: Coin Analysis with Chat from Web Page
 
 **User:** Crypto investor browsing CoinGecko
 
@@ -87,12 +98,15 @@ Architecture đã được thiết kế để reuse ~95-98% code từ frontend N
 2. Extension automatically detects coin names trên page
 3. Extension highlights detected coins và injects "Analyze" buttons
 4. User clicks "Analyze" button next to "Bitcoin"
-5. Extension popup opens với analysis results
-6. User reviews analysis (price, sentiment, tokenomics, etc.)
-7. User clicks "Generate Full Report" để get comprehensive report
-8. Report opens in new tab với full details
+5. **Extension side panel opens với chat interface**
+6. **Prompt pre-filled: "Analyze Bitcoin (BTC) - Current price: $103,571"**
+7. **User reviews/edits prompt và clicks Send**
+8. **Extension creates agent chat mới (thread + project)**
+9. **Messages display với streaming responses**
+10. **User can continue chatting về Bitcoin (ask follow-up questions)**
+11. User can open full report in new tab (optional)
 
-**Success Criteria:** User gets coin analysis trong < 5 seconds từ click
+**Success Criteria:** User gets chat interface trong < 2 seconds từ click, agent chat created trong < 3 seconds từ submit
 
 ---
 
@@ -110,14 +124,16 @@ Architecture đã được thiết kế để reuse ~95-98% code từ frontend N
 **Platform:** Browser Extension (Chrome, Edge, Firefox)
 
 **Core Screens/Views:**
-- Extension popup (400x600px) - Analysis results display
+- Extension side panel (400-600px width, full height) - Chat interface
 - Content script injected buttons - "Analyze with Suna" buttons
-- Background worker - Silent processing
+- Background worker - Message coordination
 
 **Key Interaction Patterns:**
-- Click-to-analyze: Single click trên coin name triggers analysis
-- Popup display: Results shown in extension popup
-- Report generation: Opens full report in new tab
+- Click-to-analyze: Single click trên coin name opens side panel với chat
+- Chat interface: Pre-filled prompt với coin info, user can edit/submit
+- Agent creation: Creates new agent chat (thread + project) khi submit
+- Continue chatting: User can send additional messages về coin
+- Report generation: Opens full report in new tab (optional)
 
 **Design Constraints:**
 - Reuse Radix UI components từ frontend
@@ -136,17 +152,21 @@ Architecture đã được thiết kế để reuse ~95-98% code từ frontend N
 - Goal: Implement coin name detection trên web pages và inject analysis buttons
 - Estimated Stories: 3-4
 
-**Epic 3: Popup UI & Shared Components Integration**
-- Goal: Create extension popup UI reusing frontend components và display analysis results
+**Epic 12: Side Panel UI & Shared Components Integration**
+- Goal: Create extension side panel UI reusing frontend components
 - Estimated Stories: 4-5
 
-**Epic 4: API Integration & Authentication**
+**Epic 13: API Integration & Authentication**
 - Goal: Integrate backend APIs với authentication using chrome.storage adapter
 - Estimated Stories: 3-4
 
-**Epic 5: Report Generation & Polish**
+**Epic 14: Report Generation & Polish**
 - Goal: Implement full report generation, error handling, và final polish
 - Estimated Stories: 3-4
+
+**Epic 15: Chat Integration (NEW)**
+- Goal: Integrate chat functionality vào extension với agent creation
+- Estimated Stories: 4-5
 
 > **Note:** Detailed epic breakdown with full story specifications is available in [epics-extension.md](./epics-extension.md)
 

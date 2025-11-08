@@ -7,7 +7,9 @@
 
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { HelloExtension } from './components/HelloExtension';
+import { ComponentTest } from './components/ComponentTest';
+// Import Tailwind CSS for popup (extracted to popup.css by MiniCssExtractPlugin)
+import './popup.css';
 
 // Get root element từ popup.html
 const rootElement = document.getElementById('extension-root');
@@ -20,7 +22,7 @@ if (!rootElement) {
 const root = createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <HelloExtension />
+    <ComponentTest />
   </React.StrictMode>
 );
 

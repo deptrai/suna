@@ -468,10 +468,110 @@ So that [benefit/value].
 
 ---
 
+---
+
+## Epic 15: Chat Integration
+
+**Goal:** Integrate chat functionality vào extension với agent creation để allow user chat về coin analysis.
+
+**Value Proposition:** Interactive chat interface thay vì static analysis results, allowing user ask follow-up questions và get contextual responses về coin.
+
+**Story Breakdown:**
+
+### Story 15.1: Chat Interface Setup
+
+**As a** user,  
+**I want** chat interface trong side panel,  
+**So that** I can interact với AI agent về coin analysis.
+
+**Acceptance Criteria:**
+1. Side panel chat layout created với header, message area, và input area
+2. ChatInput component imported và reused từ frontend
+3. Message display area ready for messages
+4. Layout responsive với side panel width (400-600px)
+5. Chat interface matches main app design
+
+**Prerequisites:** Story 12.2
+
+---
+
+### Story 15.2: Coin Context Integration
+
+**As a** user,  
+**I want** prompt pre-filled với coin info khi click "Analyze",  
+**So that** I can quickly start analyzing coin.
+
+**Acceptance Criteria:**
+1. Content script passes coin info (name, symbol, price) to background worker
+2. Background worker stores coin info trong chrome.storage
+3. Side panel reads coin info on open
+4. Prompt pre-filled với format: "Analyze {coin_name} ({symbol}) - Current price: ${price}"
+5. User can edit prompt trước khi submit
+6. Coin info displayed in header
+
+**Prerequisites:** Story 15.1, Story 13.4
+
+---
+
+### Story 15.3: Agent Creation Integration
+
+**As a** developer,  
+**I want** integrate unifiedAgentStart API để tạo agent chat mới,  
+**So that** user can start chatting về coin.
+
+**Acceptance Criteria:**
+1. unifiedAgentStart API imported từ frontend
+2. useInitiateAgentMutation hook imported và used
+3. Submit prompt creates new agent chat (thread + project)
+4. Thread ID stored và used for continue chatting
+5. Error handling matches frontend patterns
+6. Loading states displayed during creation
+
+**Prerequisites:** Story 15.2, Story 13.2
+
+---
+
+### Story 15.4: Message Streaming
+
+**As a** user,  
+**I want** see streaming responses từ AI agent,  
+**So that** I get real-time feedback.
+
+**Acceptance Criteria:**
+1. Message streaming implemented (EventSource)
+2. Streaming messages display in real-time
+3. Streaming logic reused từ frontend
+4. Handle streaming errors gracefully
+5. Loading indicators during streaming
+6. Messages persist after streaming completes
+
+**Prerequisites:** Story 15.3
+
+---
+
+### Story 15.5: Continue Chatting
+
+**As a** user,  
+**I want** send additional messages trong same chat,  
+**So that** I can ask follow-up questions về coin.
+
+**Acceptance Criteria:**
+1. User can send additional messages after initial response
+2. Messages added to existing thread
+3. Thread ID maintained across messages
+4. Message history displayed correctly
+5. Streaming works for subsequent messages
+6. Chat history persists trong side panel
+
+**Prerequisites:** Story 15.4
+
+---
+
 **For implementation:** Use the `create-story` workflow to generate individual story implementation plans from this epic breakdown.
 
 ---
 
 _Generated: 2025-11-07_  
+_Updated: 2025-01-15 (Added Epic 15: Chat Integration)_  
 _Product Manager: John (BMAD PM Agent)_
 

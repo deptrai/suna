@@ -576,10 +576,27 @@ class ThreadManager:
                         
                         # Route to optimal model if we have a user task
                         if user_task:
+                            # Extract user_id from thread (Story 3.2 minor recommendation)
+                            extracted_user_id = None
+                            try:
+                                from core.utils.auth_utils import get_account_id_from_thread
+                                extracted_user_id = await get_account_id_from_thread(thread_id, self.db)
+                            except Exception as e:
+                                logger.debug(f"Failed to extract user_id from thread {thread_id}: {e}")
+                                # Continue without user_id - not critical for routing
+                            
+                            # Auto-detect required capabilities from tools (Story 3.2 minor recommendation)
+                            # If tools are present, require FUNCTION_CALLING capability
+                            detected_capabilities = None
+                            if openapi_tool_schemas and len(openapi_tool_schemas) > 0:
+                                from core.ai_models.ai_models import ModelCapability
+                                detected_capabilities = [ModelCapability.FUNCTION_CALLING]
+                                # TODO: Add vision capability detection if any tool processes images
+                            
                             routing_result = await model_router.route(
                                 user_task,
-                                user_id=None,  # Can be extracted from thread if needed
-                                required_capabilities=None,  # Can be determined from tools if needed
+                                user_id=extracted_user_id,  # Extracted from thread
+                                required_capabilities=detected_capabilities,  # Auto-detected from tools
                                 fallback_on_failure=True
                             )
                             
@@ -643,11 +660,24 @@ class ThreadManager:
                                     f"attempting fallback..."
                                 )
                                 
+                                # Extract user_id and capabilities for fallback (same as initial routing)
+                                extracted_user_id = None
+                                try:
+                                    from core.utils.auth_utils import get_account_id_from_thread
+                                    extracted_user_id = await get_account_id_from_thread(thread_id, self.db)
+                                except Exception as e:
+                                    logger.debug(f"Failed to extract user_id from thread {thread_id}: {e}")
+                                
+                                detected_capabilities = None
+                                if openapi_tool_schemas and len(openapi_tool_schemas) > 0:
+                                    from core.ai_models.ai_models import ModelCapability
+                                    detected_capabilities = [ModelCapability.FUNCTION_CALLING]
+                                
                                 # Try fallback routing
                                 fallback_result = await model_router.route_with_fallback(
                                     user_task,
-                                    user_id=None,
-                                    required_capabilities=None,
+                                    user_id=extracted_user_id,  # Extracted from thread
+                                    required_capabilities=detected_capabilities,  # Auto-detected from tools
                                     failed_model_id=effective_model
                                 )
                                 
