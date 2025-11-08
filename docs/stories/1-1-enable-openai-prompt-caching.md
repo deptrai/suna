@@ -192,7 +192,7 @@ Auto (via dev-story workflow)
 - `backend/core/agentpress/thread_manager.py` - Added cache metrics extraction and logging (lines 132-162)
 
 **Created:**
-- `backend/tests/test_openai_prompt_caching.py` - Comprehensive test suite for prompt restructuring, cache metrics, and quality validation
+- `backend/tests/test_openai_prompt_caching.py` - Comprehensive test suite (15 tests) for prompt restructuring, cache metrics, quality validation, and edge cases
 
 ## Traceability & Quality Gate
 
