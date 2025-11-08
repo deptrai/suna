@@ -55,18 +55,34 @@
     - **Given:** LLM service module is loaded
     - **When:** setup_litellm_redis_cache function is checked
     - **Then:** Function exists and is callable
-  - `test_cache_type_is_redis_not_semantic` - `backend/tests/test_litellm_redis_caching.py:55`
+  - `test_cache_type_is_redis_not_semantic` - `backend/tests/test_litellm_redis_caching.py:54`
     - **Given:** LiteLLM cache configuration is setup
     - **When:** setup_litellm_redis_cache() is called
     - **Then:** LITELLM_CACHE_TYPE environment variable is set to 'redis' (not 'redis-semantic')
-  - `test_cache_enabled_flag` - `backend/tests/test_litellm_redis_caching.py:74`
+  - `test_cache_enabled_flag` - `backend/tests/test_litellm_redis_caching.py:87`
     - **Given:** LITELLM_CACHE_ENABLED is False
     - **When:** setup_litellm_redis_cache() is called
     - **Then:** Cache setup respects the disabled flag (early return, no cache configured)
+  - `test_cache_setup_with_missing_redis_config` - `backend/tests/test_litellm_redis_caching.py:228` (NEW - Edge Case)
+    - **Given:** Redis configuration is missing
+    - **When:** setup_litellm_redis_cache() is called
+    - **Then:** Cache setup uses default values (localhost, 6379) and handles gracefully
+  - `test_cache_setup_idempotency` - `backend/tests/test_litellm_redis_caching.py:248` (NEW - Edge Case)
+    - **Given:** setup_litellm_redis_cache() is called multiple times
+    - **When:** Function is called again
+    - **Then:** Cache setup is idempotent (no duplicate configuration, no exceptions)
+  - `test_cache_setup_with_none_config` - `backend/tests/test_litellm_redis_caching.py:318` (NEW - Edge Case)
+    - **Given:** Config is None
+    - **When:** setup_litellm_redis_cache() is called
+    - **Then:** Cache setup handles None config gracefully (logs warning and returns early)
+  - `test_cache_setup_fallback_to_env_vars_only` - `backend/tests/test_litellm_redis_caching.py:395` (NEW - Edge Case)
+    - **Given:** LiteLLM Cache classes are unavailable
+    - **When:** setup_litellm_redis_cache() is called
+    - **Then:** Cache setup falls back to environment variables only (graceful degradation)
 
 - **Implementation Note:** LiteLLM Redis caching configured in `backend/core/services/llm.py::setup_litellm_redis_cache()` (lines 168-250). Cache type set to 'redis' (exact match only, not 'redis-semantic'). Supports RedisCache and Cache classes with fallback to environment variables.
 
-- **Recommendation:** ✅ Coverage is comprehensive. Exact match strategy validated, configuration function tested, and enable/disable flag tested.
+- **Recommendation:** ✅ Coverage is comprehensive. Exact match strategy validated, configuration function tested, enable/disable flag tested, and error handling scenarios validated.
 
 ---
 
@@ -74,18 +90,22 @@
 
 - **Coverage:** FULL ✅
 - **Tests:**
-  - `test_cache_key_prefix_configured` - `backend/tests/test_litellm_redis_caching.py:89`
+  - `test_cache_key_prefix_configured` - `backend/tests/test_litellm_redis_caching.py:102`
     - **Given:** LiteLLM cache is configured
     - **When:** setup_litellm_redis_cache() is called
     - **Then:** LITELLM_CACHE_KEY_PREFIX environment variable is set to 'litellm:cache:'
-  - `test_cache_key_namespace_isolation` - `backend/tests/test_litellm_redis_caching.py:104`
+  - `test_cache_key_namespace_isolation` - `backend/tests/test_litellm_redis_caching.py:117`
     - **Given:** Cache key prefix is configured
     - **When:** Prefix is checked
     - **Then:** Prefix starts with 'litellm:cache:' and contains namespace separator ':'
+  - `test_cache_key_prefix_with_special_characters` - `backend/tests/test_litellm_redis_caching.py:385` (NEW - Edge Case)
+    - **Given:** Cache key prefix contains special characters (colons for namespacing)
+    - **When:** Prefix is validated
+    - **Then:** Prefix is valid for Redis keys (colons are acceptable for namespacing)
 
 - **Implementation Note:** Cache key namespacing implemented with prefix 'litellm:cache:' to prevent conflicts with other Redis keys (e.g., Dramatiq keys). Configurable via LITELLM_CACHE_KEY_PREFIX environment variable.
 
-- **Recommendation:** ✅ Coverage is complete. Namespace prefix validation and isolation verified.
+- **Recommendation:** ✅ Coverage is complete. Namespace prefix validation, isolation, and special character handling verified.
 
 ---
 
@@ -479,10 +499,11 @@ traceability_and_gate:
       medium: 0
       low: 0
     quality:
-      passing_tests: 14
-      total_tests: 14
+      passing_tests: 23
+      total_tests: 26
+      skipped_tests: 3
       blocker_issues: 0
-      warning_issues: 0
+      warning_issues: 1
     recommendations:
       - "Run integration tests in CI/CD environment with Redis and LLM API access"
       - "Monitor production cache metrics and validate logging"

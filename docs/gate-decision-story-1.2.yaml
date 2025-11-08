@@ -21,8 +21,8 @@ traceability_and_gate:
       medium: 0
       low: 0
     quality:
-      passing_tests: 14
-      total_tests: 17
+      passing_tests: 23
+      total_tests: 26
       skipped_tests: 3
       blocker_issues: 0
       warning_issues: 1
@@ -79,8 +79,8 @@ traceability_and_gate:
 
   # Test Quality Metrics
   test_quality:
-    total_tests: 17
-    passing_tests: 14
+    total_tests: 26
+    passing_tests: 23
     failing_tests: 0
     skipped_tests: 3
     blocker_issues: 0
@@ -88,7 +88,7 @@ traceability_and_gate:
     quality_score: 100
     issues:
       - "Integration tests require Redis and LLM API (skipped in unit test runs, should run in CI/CD)"
-      - "PytestUnknownMarkWarning: Unknown pytest.mark.integration (register custom marks to avoid warning)"
+      - "PytestUnknownMarkWarning: Unknown pytest.mark.integration (non-blocking, marker defined in pytest.ini)"
     quality_indicators:
       - "All tests are deterministic (no flakiness detected)"
       - "Tests are isolated (no shared state)"

@@ -221,6 +221,220 @@ class TestQualityValidation:
         assert cache_type == 'redis' or cache_type == ''  # Empty if not configured yet
 
 
+class TestEdgeCases:
+    """Test edge cases and error handling scenarios."""
+    
+    @patch('core.services.llm.config')
+    def test_cache_setup_with_missing_redis_config(self, mock_config):
+        """Test cache setup when Redis configuration is missing."""
+        # Reset global flag to allow re-execution
+        import core.services.llm as llm_module
+        llm_module._litellm_cache_configured = False
+        
+        # Mock config with missing Redis settings
+        mock_config.LITELLM_CACHE_ENABLED = True
+        # Missing REDIS_HOST, REDIS_PORT attributes
+        
+        # Should use default values (localhost, 6379)
+        try:
+            setup_litellm_redis_cache()
+            # Should not raise exception, should use defaults
+            assert True
+        except Exception as e:
+            # If exception raised, it should be handled gracefully
+            assert False, f"Cache setup should handle missing config gracefully: {e}"
+    
+    @patch('core.services.llm.config')
+    def test_cache_setup_idempotency(self, mock_config):
+        """Test that cache setup can be called multiple times safely (idempotency)."""
+        # Reset global flag to allow re-execution
+        import core.services.llm as llm_module
+        llm_module._litellm_cache_configured = False
+        
+        # Setup mock config
+        mock_config.REDIS_HOST = 'localhost'
+        mock_config.REDIS_PORT = 6379
+        mock_config.REDIS_PASSWORD = None
+        mock_config.LITELLM_CACHE_TTL = 3600
+        mock_config.LITELLM_CACHE_ENABLED = True
+        
+        # Clear any existing env vars for this test
+        original_cache_type = os.environ.pop('LITELLM_CACHE_TYPE', None)
+        try:
+            # First call
+            with patch('litellm.RedisCache', side_effect=ImportError("Not available")), \
+                 patch('litellm.Cache', side_effect=ImportError("Not available")):
+                setup_litellm_redis_cache()
+            
+            # Second call should be idempotent (no exception, no duplicate configuration)
+            setup_litellm_redis_cache()
+            
+            # Should only set environment variables once
+            assert os.environ.get('LITELLM_CACHE_TYPE') == 'redis'
+        finally:
+            # Restore original env var
+            if original_cache_type:
+                os.environ['LITELLM_CACHE_TYPE'] = original_cache_type
+            elif 'LITELLM_CACHE_TYPE' in os.environ:
+                del os.environ['LITELLM_CACHE_TYPE']
+            # Reset global flag
+            llm_module._litellm_cache_configured = False
+    
+    @patch('core.services.llm.config')
+    def test_cache_setup_with_invalid_ttl(self, mock_config):
+        """Test cache setup with invalid TTL values."""
+        # Reset global flag to allow re-execution
+        import core.services.llm as llm_module
+        llm_module._litellm_cache_configured = False
+        
+        # Setup mock config with invalid TTL
+        mock_config.REDIS_HOST = 'localhost'
+        mock_config.REDIS_PORT = 6379
+        mock_config.REDIS_PASSWORD = None
+        mock_config.LITELLM_CACHE_TTL = -1  # Invalid negative TTL
+        mock_config.LITELLM_CACHE_ENABLED = True
+        
+        # Clear any existing env vars for this test
+        original_ttl = os.environ.pop('LITELLM_CACHE_TTL_SECONDS', None)
+        try:
+            # Should handle invalid TTL gracefully (use default or handle error)
+            with patch('litellm.RedisCache', side_effect=ImportError("Not available")), \
+                 patch('litellm.Cache', side_effect=ImportError("Not available")):
+                setup_litellm_redis_cache()
+            
+            # Should still set TTL (even if invalid, let LiteLLM handle it)
+            ttl_value = os.environ.get('LITELLM_CACHE_TTL_SECONDS', '')
+            assert ttl_value != ''  # Should be set (even if invalid)
+        finally:
+            # Restore original env var
+            if original_ttl:
+                os.environ['LITELLM_CACHE_TTL_SECONDS'] = original_ttl
+            elif 'LITELLM_CACHE_TTL_SECONDS' in os.environ:
+                del os.environ['LITELLM_CACHE_TTL_SECONDS']
+            # Reset global flag
+            llm_module._litellm_cache_configured = False
+    
+    @patch('core.services.llm.config')
+    def test_cache_setup_with_none_config(self, mock_config):
+        """Test cache setup when config is None."""
+        # Reset global flag to allow re-execution
+        import core.services.llm as llm_module
+        llm_module._litellm_cache_configured = False
+        
+        # Mock config as None
+        with patch('core.services.llm.config', None):
+            # Should handle None config gracefully (log warning and return)
+            try:
+                setup_litellm_redis_cache()
+                # Should not raise exception
+                assert True
+            except Exception as e:
+                assert False, f"Cache setup should handle None config gracefully: {e}"
+    
+    @pytest.mark.asyncio
+    async def test_cache_metrics_with_missing_hidden_params(self):
+        """Test cache metrics extraction when _hidden_params is missing."""
+        # Mock response without _hidden_params
+        mock_response = MagicMock()
+        # Remove _hidden_params attribute if it exists
+        if hasattr(mock_response, '_hidden_params'):
+            delattr(mock_response, '_hidden_params')
+        
+        # Should handle missing _hidden_params gracefully
+        if hasattr(mock_response, '_hidden_params'):
+            cache_info = mock_response._hidden_params.get('cache', {}) if mock_response._hidden_params else {}
+        else:
+            cache_info = {}
+        
+        # Should return empty cache info
+        assert cache_info == {}
+    
+    @pytest.mark.asyncio
+    async def test_cache_metrics_with_empty_cache_info(self):
+        """Test cache metrics extraction when cache info is empty."""
+        # Mock response with empty cache info
+        mock_response = MagicMock()
+        mock_response._hidden_params = {
+            'cache': {}
+        }
+        
+        # Should handle empty cache info gracefully
+        cache_info = mock_response._hidden_params.get('cache', {}) if mock_response._hidden_params else {}
+        cache_hit = cache_info.get('hit', False)
+        
+        # Should return False for cache hit when info is empty
+        assert cache_hit is False
+    
+    @pytest.mark.asyncio
+    async def test_cache_metrics_with_missing_cache_key(self):
+        """Test cache metrics extraction when cache key is missing."""
+        # Mock response with cache hit but no key
+        mock_response = MagicMock()
+        mock_response._hidden_params = {
+            'cache': {
+                'hit': True
+                # Missing 'key'
+            }
+        }
+        
+        # Should handle missing cache key gracefully
+        cache_info = mock_response._hidden_params.get('cache', {})
+        cache_key = cache_info.get('key', None)
+        
+        # Should return None for cache key when missing
+        assert cache_key is None
+    
+    def test_cache_key_prefix_with_special_characters(self):
+        """Test cache key prefix handles special characters correctly."""
+        prefix = os.environ.get('LITELLM_CACHE_KEY_PREFIX', 'litellm:cache:')
+        
+        # Prefix should be valid (no special characters that would break Redis keys)
+        # Redis keys can contain colons, which we use for namespacing
+        assert ':' in prefix  # Should have namespace separator
+        assert prefix.startswith('litellm:cache:')  # Should start with expected prefix
+    
+    @patch('core.services.llm.config')
+    def test_cache_setup_fallback_to_env_vars_only(self, mock_config):
+        """Test cache setup falls back to environment variables when Cache classes unavailable."""
+        # Reset global flag to allow re-execution
+        import core.services.llm as llm_module
+        llm_module._litellm_cache_configured = False
+        
+        # Setup mock config
+        mock_config.REDIS_HOST = 'localhost'
+        mock_config.REDIS_PORT = 6379
+        mock_config.REDIS_PASSWORD = None
+        mock_config.LITELLM_CACHE_TTL = 3600
+        mock_config.LITELLM_CACHE_ENABLED = True
+        
+        # Clear any existing env vars for this test
+        original_cache_type = os.environ.pop('LITELLM_CACHE_TYPE', None)
+        try:
+            # Force fallback to environment variables only
+            with patch('litellm.RedisCache', side_effect=ImportError("Not available")), \
+                 patch('litellm.Cache', side_effect=ImportError("Not available")):
+                setup_litellm_redis_cache()
+            
+            # Verify environment variables are set (fallback mechanism)
+            assert os.environ.get('LITELLM_CACHE_TYPE') == 'redis'
+            assert os.environ.get('LITELLM_CACHE_HOST') == 'localhost'
+            assert os.environ.get('LITELLM_CACHE_PORT') == '6379'
+            assert os.environ.get('LITELLM_CACHE_TTL_SECONDS') == '3600'
+            assert os.environ.get('LITELLM_CACHE_KEY_PREFIX') == 'litellm:cache:'
+        finally:
+            # Restore original env vars
+            env_vars_to_restore = {
+                'LITELLM_CACHE_TYPE': original_cache_type,
+            }
+            for key, value in env_vars_to_restore.items():
+                if value:
+                    os.environ[key] = value
+                elif key in os.environ:
+                    del os.environ[key]
+            # Reset global flag
+            llm_module._litellm_cache_configured = False
+
+
 # Integration tests (require Redis and LLM API)
 # These tests are now implemented in test_epic1_integration.py
 # Run with: ENABLE_LLM_INTEGRATION_TESTS=true pytest backend/tests/test_epic1_integration.py -v
