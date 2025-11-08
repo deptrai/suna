@@ -52,7 +52,7 @@ development_status:
 
          epic-3: backlog
          3-1-task-complexity-classification: done
-         3-2-model-selection-rules: in-progress
+         3-2-model-selection-rules: review
          3-3-sequential-model-execution: ready-for-dev
          epic-3-retrospective: optional
 
@@ -67,8 +67,8 @@ development_status:
   extension-epic-2: backlog
   11-1-coin-detection-algorithm: done
   11-2-content-script-injection: done
-  11-3-analysis-button-injection: ready-for-dev
-  11-4-coin-highlighting-visual-feedback: ready-for-dev
+  11-3-analysis-button-injection: done
+  11-4-coin-highlighting-visual-feedback: done
   extension-epic-2-retrospective: optional
 
   extension-epic-3: backlog

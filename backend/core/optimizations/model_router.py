@@ -12,12 +12,10 @@ Features:
 - Logging và monitoring: Track routing decisions và metrics
 """
 
-import random
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Dict, Any, Optional, List, Tuple
-import asyncio
 
 from core.utils.logger import logger
 from core.utils.config import OptimizationConfig, OptimizationMode

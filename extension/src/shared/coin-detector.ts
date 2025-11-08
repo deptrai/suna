@@ -268,14 +268,18 @@ export function detectCoins(element: HTMLElement): CoinDetection[] {
     element,
     NodeFilter.SHOW_TEXT,
     {
-      acceptNode: (node) => {
-        // Skip script and style elements
-        const parent = node.parentElement;
-        if (parent && (parent.tagName === 'SCRIPT' || parent.tagName === 'STYLE')) {
-          return NodeFilter.FILTER_REJECT;
-        }
-        return NodeFilter.FILTER_ACCEPT;
-      },
+            acceptNode: (node) => {
+              // Skip script and style elements
+              const parent = node.parentElement;
+              if (parent && (parent.tagName === 'SCRIPT' || parent.tagName === 'STYLE')) {
+                return NodeFilter.FILTER_REJECT;
+              }
+              // Skip buttons (especially our injected buttons) to prevent recursive detection
+              if (parent && (parent.tagName === 'BUTTON' || parent.classList.contains('suna-analyze-btn'))) {
+                return NodeFilter.FILTER_REJECT;
+              }
+              return NodeFilter.FILTER_ACCEPT;
+            },
     }
   );
   

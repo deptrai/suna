@@ -543,10 +543,66 @@ class ThreadManager:
             # The LLM's usage.prompt_tokens (reported after the call) is the accurate source of truth
             logger.info(f"📤 Sending {len(prepared_messages)} prepared messages to LLM")
 
+            # Story 3.2: Model Selection Rules - Route to optimal model based on complexity
+            effective_model = llm_model
+            routing_result = None
+            try:
+                from core.utils.config import OptimizationConfig, OptimizationMode
+                
+                # Only use model routing in OPTIMIZED mode
+                if OptimizationConfig.OPTIMIZATION_MODE == OptimizationMode.OPTIMIZED:
+                    from core.optimizations.model_router import get_model_router
+                    
+                    model_router = get_model_router()
+                    
+                    if model_router.enabled:
+                        # Extract user task from messages (last user message)
+                        user_task = None
+                        for message in reversed(prepared_messages):
+                            if isinstance(message, dict) and message.get("role") == "user":
+                                content = message.get("content", "")
+                                if isinstance(content, str):
+                                    user_task = content
+                                elif isinstance(content, list):
+                                    # Extract text from content array
+                                    texts = []
+                                    for item in content:
+                                        if isinstance(item, dict) and "text" in item:
+                                            texts.append(item["text"])
+                                        elif isinstance(item, str):
+                                            texts.append(item)
+                                    user_task = " ".join(texts) if texts else None
+                                break
+                        
+                        # Route to optimal model if we have a user task
+                        if user_task:
+                            routing_result = await model_router.route(
+                                user_task,
+                                user_id=None,  # Can be extracted from thread if needed
+                                required_capabilities=None,  # Can be determined from tools if needed
+                                fallback_on_failure=True
+                            )
+                            
+                            if routing_result and routing_result.decision.value == "routed":
+                                effective_model = routing_result.model_id
+                                logger.info(
+                                    f"✅ Model routing: {llm_model} → {effective_model} "
+                                    f"(complexity={routing_result.complexity.value}, "
+                                    f"confidence={routing_result.confidence:.2f})"
+                                )
+                            else:
+                                logger.debug(
+                                    f"Model routing returned {routing_result.decision.value if routing_result else 'None'}, "
+                                    f"using original model: {llm_model}"
+                                )
+            except Exception as e:
+                logger.debug(f"Model routing failed (non-critical): {e}, using original model: {llm_model}")
+                # Continue with original model if routing fails
+
             # Make LLM call
             try:
                 llm_response = await make_llm_api_call(
-                    prepared_messages, llm_model,
+                    prepared_messages, effective_model,  # Use routed model
                     temperature=llm_temperature,
                     max_tokens=llm_max_tokens,
                     tools=openapi_tool_schemas,
@@ -555,6 +611,73 @@ class ThreadManager:
                     thread_id=thread_id  # Story 2.1: Pass thread_id for semantic cache context
                 )
             except LLMError as e:
+                # Story 3.2: Try fallback if routing was used và model failed
+                if routing_result and routing_result.decision.value == "routed":
+                    try:
+                        from core.utils.config import OptimizationConfig, OptimizationMode
+                        from core.optimizations.model_router import get_model_router
+                        
+                        if OptimizationConfig.OPTIMIZATION_MODE == OptimizationMode.OPTIMIZED:
+                            model_router = get_model_router()
+                            
+                            # Extract user task for fallback
+                            user_task = None
+                            for message in reversed(prepared_messages):
+                                if isinstance(message, dict) and message.get("role") == "user":
+                                    content = message.get("content", "")
+                                    if isinstance(content, str):
+                                        user_task = content
+                                    elif isinstance(content, list):
+                                        texts = []
+                                        for item in content:
+                                            if isinstance(item, dict) and "text" in item:
+                                                texts.append(item["text"])
+                                            elif isinstance(item, str):
+                                                texts.append(item)
+                                        user_task = " ".join(texts) if texts else None
+                                    break
+                            
+                            if user_task:
+                                logger.warning(
+                                    f"LLM call failed với routed model {effective_model}, "
+                                    f"attempting fallback..."
+                                )
+                                
+                                # Try fallback routing
+                                fallback_result = await model_router.route_with_fallback(
+                                    user_task,
+                                    user_id=None,
+                                    required_capabilities=None,
+                                    failed_model_id=effective_model
+                                )
+                                
+                                if fallback_result and fallback_result.fallback_used:
+                                    effective_model = fallback_result.model_id
+                                    logger.info(
+                                        f"✅ Fallback routing: {routing_result.model_id} → {effective_model}"
+                                    )
+                                    
+                                    # Retry LLM call với fallback model
+                                    try:
+                                        llm_response = await make_llm_api_call(
+                                            prepared_messages, effective_model,
+                                            temperature=llm_temperature,
+                                            max_tokens=llm_max_tokens,
+                                            tools=openapi_tool_schemas,
+                                            tool_choice=tool_choice if config.native_tool_calling else "none",
+                                            stream=stream,
+                                            thread_id=thread_id
+                                        )
+                                        # Success với fallback, continue processing
+                                    except LLMError as fallback_error:
+                                        logger.error(
+                                            f"Fallback model {effective_model} also failed: {fallback_error}"
+                                        )
+                                        return {"type": "status", "status": "error", "message": str(fallback_error)}
+                    except Exception as fallback_exception:
+                        logger.warning(f"Fallback routing failed: {fallback_exception}")
+                
+                # If no fallback or fallback failed, return original error
                 return {"type": "status", "status": "error", "message": str(e)}
 
             # Check for error response

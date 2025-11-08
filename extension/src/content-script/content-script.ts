@@ -11,6 +11,12 @@ import './content-script.css';
 // Import coin detection module
 import { detectCoins, CoinDetection } from '../shared/coin-detector';
 
+// Import button injection module
+import { injectAnalysisButtons } from './injector';
+
+// Import highlight module
+import { applyHighlights, setupHighlightRemoval } from './highlighter';
+
 /**
  * Configuration
  * Configurable settings for content script behavior
@@ -92,6 +98,14 @@ function runCoinDetection(rootElement: HTMLElement = document.body): void {
           // Reset error counter on success
           consecutiveErrors = 0;
           debugLog('Detected coins:', coins.length, coins);
+
+          // Apply highlights to detected coins
+          applyHighlights(coins);
+          debugLog('Applied highlights to', coins.length, 'coins');
+
+          // Inject analysis buttons for detected coins
+          injectAnalysisButtons(coins);
+          debugLog('Injected analysis buttons for', coins.length, 'coins');
         } catch (error) {
           consecutiveErrors++;
           errorLog('Coin detection error:', error);
@@ -115,14 +129,22 @@ function runCoinDetection(rootElement: HTMLElement = document.body): void {
     );
   } else {
     // Fallback to setTimeout if requestIdleCallback not available
-    setTimeout(() => {
-      try {
-        const coins = detectCoins(rootElement);
-        detectedCoins = coins;
-        // Reset error counter on success
-        consecutiveErrors = 0;
-        debugLog('Detected coins:', coins.length, coins);
-      } catch (error) {
+          setTimeout(() => {
+            try {
+              const coins = detectCoins(rootElement);
+              detectedCoins = coins;
+              // Reset error counter on success
+              consecutiveErrors = 0;
+              debugLog('Detected coins:', coins.length, coins);
+
+              // Apply highlights to detected coins
+              applyHighlights(coins);
+              debugLog('Applied highlights to', coins.length, 'coins');
+
+              // Inject analysis buttons for detected coins
+              injectAnalysisButtons(coins);
+              debugLog('Injected analysis buttons for', coins.length, 'coins');
+            } catch (error) {
         consecutiveErrors++;
         errorLog('Coin detection error:', error);
         
@@ -201,6 +223,9 @@ function isValidSender(sender: chrome.runtime.MessageSender): boolean {
  */
 function init(): void {
   debugLog('Initializing content script');
+
+  // Setup highlight removal on button click (optional feature)
+  setupHighlightRemoval();
 
   // Run detection on page load
   runCoinDetection(document.body);
