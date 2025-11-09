@@ -43,6 +43,14 @@
     - **Given:** Non-Anthropic model names are provided
     - **When:** `_is_anthropic_model()` is called
     - **Then:** Non-Anthropic models are correctly not detected
+  - `test_is_anthropic_model_with_none` - `backend/tests/test_anthropic_explicit_caching.py:276` (NEW - Edge Case)
+    - **Given:** None or empty string is provided as model name
+    - **When:** `_is_anthropic_model()` is called
+    - **Then:** Returns False (handles None/empty input gracefully)
+  - `test_is_anthropic_model_with_empty_string` - `backend/tests/test_anthropic_explicit_caching.py:281` (NEW - Edge Case)
+    - **Given:** Empty string is provided as model name
+    - **When:** `_is_anthropic_model()` is called
+    - **Then:** Returns False (handles empty string gracefully)
   - `test_add_cache_control_system_message` - `backend/tests/test_anthropic_explicit_caching.py:62`
     - **Given:** System message ≥1024 tokens for Claude model
     - **When:** `_add_anthropic_cache_control()` is called

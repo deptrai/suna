@@ -21,8 +21,8 @@ traceability_and_gate:
       medium: 0
       low: 1
     quality:
-      passing_tests: 18
-      total_tests: 22
+      passing_tests: 34
+      total_tests: 38
       skipped_tests: 4
       blocker_issues: 0
       warning_issues: 1
@@ -78,8 +78,8 @@ traceability_and_gate:
 
   # Test Quality Metrics
   test_quality:
-    total_tests: 22
-    passing_tests: 18
+    total_tests: 38
+    passing_tests: 34
     failing_tests: 0
     skipped_tests: 4
     blocker_issues: 0
