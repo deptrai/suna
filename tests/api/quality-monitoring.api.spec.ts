@@ -1,4 +1,6 @@
 import { test, expect } from '../support/fixtures';
+import { validateAuthenticationError, validateNotFoundError, validateOptionalField, validateOptionalMetricHistory } from '../support/helpers/api-validation-helpers';
+import { createMetricHistoryResponse } from '../support/factories/api-test-factory';
 
 /**
  * Quality Monitoring API Tests
@@ -20,9 +22,9 @@ import { test, expect } from '../support/fixtures';
 
 const API_BASE_URL = process.env.API_URL || 'http://localhost:8000';
 
-test.describe('Quality Monitoring API', () => {
+test.describe('2.4-API: Quality Monitoring API', () => {
   
-  test('[P1] GET /api/quality/metrics - should return quality metrics summary', async ({ authenticatedRequest }) => {
+  test('2.4-API-001 [P1] GET /api/quality/metrics - should return quality metrics summary', async ({ authenticatedRequest }) => {
     // GIVEN: Authenticated API request
     const endpoint = `${API_BASE_URL}/api/quality/metrics`;
 
@@ -44,19 +46,19 @@ test.describe('Quality Monitoring API', () => {
     expect(data).toHaveProperty('thresholds');
     expect(data).toHaveProperty('thresholds_met');
     
-    // Verify current metrics structure
-    if (data.current_metrics) {
+    // Verify current metrics structure (optional)
+    validateOptionalField(data.current_metrics, (metrics) => {
       // Quality metrics may include: response_similarity, tool_success_rate, error_rate, etc.
-      expect(typeof data.current_metrics).toBe('object');
-    }
+      expect(typeof metrics).toBe('object');
+    });
     
-    // Verify thresholds structure
-    if (data.thresholds) {
-      expect(typeof data.thresholds).toBe('object');
-    }
+    // Verify thresholds structure (optional)
+    validateOptionalField(data.thresholds, (thresholds) => {
+      expect(typeof thresholds).toBe('object');
+    });
   });
 
-  test('[P1] GET /api/quality/status - should return quality status', async ({ authenticatedRequest }) => {
+  test('2.4-API-002 [P1] GET /api/quality/status - should return quality status', async ({ authenticatedRequest }) => {
     // GIVEN: Authenticated API request
     const endpoint = `${API_BASE_URL}/api/quality/status`;
 
@@ -82,7 +84,7 @@ test.describe('Quality Monitoring API', () => {
     expect(typeof data.thresholds_met).toBe('boolean');
   });
 
-  test('[P1] GET /api/quality/metrics/{metric_name} - should return metric history', async ({ authenticatedRequest }) => {
+  test('2.4-API-003 [P1] GET /api/quality/metrics/{metric_name} - should return metric history', async ({ authenticatedRequest }) => {
     // GIVEN: Authenticated API request with metric name
     const metricName = 'response_similarity';
     const endpoint = `${API_BASE_URL}/api/quality/metrics/${metricName}`;
@@ -105,16 +107,11 @@ test.describe('Quality Monitoring API', () => {
     expect(Array.isArray(data.history)).toBe(true);
     expect(typeof data.count).toBe('number');
     
-    // Verify history entries structure
-    if (data.history.length > 0) {
-      const entry = data.history[0];
-      expect(entry).toHaveProperty('value');
-      expect(entry).toHaveProperty('timestamp');
-      expect(entry).toHaveProperty('metadata');
-    }
+    // Verify history entries structure (optional)
+    validateOptionalMetricHistory(data.history);
   });
 
-  test('[P1] GET /api/quality/metrics/{metric_name} - should return 404 for invalid metric', async ({ authenticatedRequest }) => {
+  test('2.4-API-004 [P1] GET /api/quality/metrics/{metric_name} - should return 404 for invalid metric', async ({ authenticatedRequest }) => {
     // GIVEN: Authenticated API request with invalid metric name
     const metricName = 'invalid_metric_name';
     const endpoint = `${API_BASE_URL}/api/quality/metrics/${metricName}`;
@@ -122,15 +119,11 @@ test.describe('Quality Monitoring API', () => {
     // WHEN: Requesting invalid metric history
     const response = await authenticatedRequest.get(endpoint);
 
-    // THEN: Returns 404 Not Found
-    expect(response.status()).toBe(404);
-    
-    const body = await response.json();
-    expect(body).toHaveProperty('detail');
-    expect(body.detail).toContain(metricName);
+    // THEN: Returns 404 Not Found with proper error structure
+    await validateNotFoundError(response, metricName);
   });
 
-  test('[P1] GET /api/quality/optimization-mode/stats - should return optimization mode statistics', async ({ authenticatedRequest }) => {
+  test('2.4-API-005 [P1] GET /api/quality/optimization-mode/stats - should return optimization mode statistics', async ({ authenticatedRequest }) => {
     // GIVEN: Authenticated API request
     const endpoint = `${API_BASE_URL}/api/quality/optimization-mode/stats`;
 
@@ -155,22 +148,18 @@ test.describe('Quality Monitoring API', () => {
     expect(typeof data.switch_count).toBe('number');
   });
 
-  test('[P1] GET /api/quality/metrics - should handle authentication errors', async ({ request }) => {
+  test('2.4-API-006 [P1] GET /api/quality/metrics - should handle authentication errors', async ({ request }) => {
     // GIVEN: Unauthenticated API request
     const endpoint = `${API_BASE_URL}/api/quality/metrics`;
 
     // WHEN: Requesting quality metrics without authentication
     const response = await request.get(endpoint);
 
-    // THEN: Returns 401 Unauthorized
-    expect(response.status()).toBe(401);
-    
-    const body = await response.json();
-    expect(body).toHaveProperty('detail');
-    expect(body.detail).toContain('authentication');
+    // THEN: Returns 401 Unauthorized with proper error structure
+    await validateAuthenticationError(response, 401);
   });
 
-  test('[P2] GET /api/quality/metrics/{metric_name}?limit={limit} - should respect limit parameter', async ({ authenticatedRequest }) => {
+  test('2.4-API-007 [P2] GET /api/quality/metrics/{metric_name}?limit={limit} - should respect limit parameter', async ({ authenticatedRequest }) => {
     // GIVEN: Authenticated API request with limit parameter
     const metricName = 'response_similarity';
     const limit = 10;

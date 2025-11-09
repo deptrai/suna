@@ -15,7 +15,7 @@ import { defineConfig, devices } from '@playwright/test';
  * - Traces: retain on failure
  */
 export default defineConfig({
-  testDir: './tests/e2e',
+  testDir: './tests',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -42,9 +42,29 @@ export default defineConfig({
   ],
 
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
-    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+    { 
+      name: 'chromium', 
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /.*\.(spec|test)\.ts/,
+    },
+    { 
+      name: 'firefox', 
+      use: { ...devices['Desktop Firefox'] },
+      testMatch: /.*\.(spec|test)\.ts/,
+    },
+    { 
+      name: 'webkit', 
+      use: { ...devices['Desktop Safari'] },
+      testMatch: /.*\.(spec|test)\.ts/,
+    },
+    {
+      name: 'api-tests',
+      testMatch: /.*\.api\.spec\.ts/,
+      use: { 
+        ...devices['Desktop Chrome'],
+        baseURL: process.env.API_URL || 'http://localhost:8000',
+      },
+    },
   ],
 });
 

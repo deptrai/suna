@@ -1,4 +1,5 @@
 import { test, expect } from '../support/fixtures';
+import { validateAuthenticationError, validateOptionalCacheMetrics, validateOptionalQualityMetrics, validateOptionalCostSavings, validateOptionalLiteLLMCacheMetrics } from '../support/helpers/api-validation-helpers';
 
 /**
  * Optimization Dashboard API Tests
@@ -18,9 +19,9 @@ import { test, expect } from '../support/fixtures';
 
 const API_BASE_URL = process.env.API_URL || 'http://localhost:8000';
 
-test.describe('Optimization Dashboard API', () => {
+test.describe('1.1-API: Optimization Dashboard API', () => {
   
-  test('[P1] GET /api/optimization/dashboard - should return unified optimization dashboard', async ({ authenticatedRequest }) => {
+  test('1.1-API-001 [P1] GET /api/optimization/dashboard - should return unified optimization dashboard', async ({ authenticatedRequest }) => {
     // GIVEN: Authenticated API request
     const endpoint = `${API_BASE_URL}/api/optimization/dashboard`;
 
@@ -44,19 +45,11 @@ test.describe('Optimization Dashboard API', () => {
     expect(data).toHaveProperty('cost_savings');
     expect(data).toHaveProperty('performance_summary');
     
-    // Verify cache metrics structure
-    if (data.cache_metrics) {
-      expect(data.cache_metrics).toHaveProperty('litellm_redis');
-      expect(data.cache_metrics).toHaveProperty('anthropic');
-      expect(data.cache_metrics).toHaveProperty('openai_prompt');
-    }
+    // Verify cache metrics structure (optional)
+    validateOptionalCacheMetrics(data.cache_metrics);
     
-    // Verify quality metrics structure
-    if (data.quality_metrics) {
-      expect(data.quality_metrics).toHaveProperty('status');
-      expect(data.quality_metrics).toHaveProperty('current_metrics');
-      expect(data.quality_metrics).toHaveProperty('thresholds');
-    }
+    // Verify quality metrics structure (optional)
+    validateOptionalQualityMetrics(data.quality_metrics);
     
     // Verify performance summary
     expect(data.performance_summary).toHaveProperty('cache_hit_rate');
@@ -65,7 +58,7 @@ test.describe('Optimization Dashboard API', () => {
     expect(data.performance_summary).toHaveProperty('overall_health');
   });
 
-  test('[P1] GET /api/optimization/dashboard/cache - should return cache metrics dashboard', async ({ authenticatedRequest }) => {
+  test('1.1-API-002 [P1] GET /api/optimization/dashboard/cache - should return cache metrics dashboard', async ({ authenticatedRequest }) => {
     // GIVEN: Authenticated API request
     const endpoint = `${API_BASE_URL}/api/optimization/dashboard/cache`;
 
@@ -87,18 +80,12 @@ test.describe('Optimization Dashboard API', () => {
     expect(data).toHaveProperty('openai_prompt');
     expect(data).toHaveProperty('summary');
     
-    // Verify LiteLLM Redis cache metrics
+    // Verify LiteLLM Redis cache metrics (optional)
     if (data.litellm_redis && data.litellm_redis.available) {
       expect(data.litellm_redis).toHaveProperty('metrics');
       expect(data.litellm_redis).toHaveProperty('health');
       
-      const metrics = data.litellm_redis.metrics;
-      if (metrics) {
-        expect(metrics).toHaveProperty('total_requests');
-        expect(metrics).toHaveProperty('cache_hits');
-        expect(metrics).toHaveProperty('cache_misses');
-        expect(metrics).toHaveProperty('hit_rate');
-      }
+      validateOptionalLiteLLMCacheMetrics(data.litellm_redis.metrics);
     }
     
     // Verify summary
@@ -107,37 +94,29 @@ test.describe('Optimization Dashboard API', () => {
     expect(data.summary).toHaveProperty('cache_health');
   });
 
-  test('[P1] GET /api/optimization/dashboard - should handle authentication errors', async ({ request }) => {
+  test('1.1-API-003 [P1] GET /api/optimization/dashboard - should handle authentication errors', async ({ request }) => {
     // GIVEN: Unauthenticated API request
     const endpoint = `${API_BASE_URL}/api/optimization/dashboard`;
 
     // WHEN: Requesting dashboard without authentication
     const response = await request.get(endpoint);
 
-    // THEN: Returns 401 Unauthorized
-    expect(response.status()).toBe(401);
-    
-    const body = await response.json();
-    expect(body).toHaveProperty('detail');
-    expect(body.detail).toContain('authentication');
+    // THEN: Returns 401 Unauthorized with proper error structure
+    await validateAuthenticationError(response, 401);
   });
 
-  test('[P1] GET /api/optimization/dashboard/cache - should handle authentication errors', async ({ request }) => {
+  test('1.1-API-004 [P1] GET /api/optimization/dashboard/cache - should handle authentication errors', async ({ request }) => {
     // GIVEN: Unauthenticated API request
     const endpoint = `${API_BASE_URL}/api/optimization/dashboard/cache`;
 
     // WHEN: Requesting cache dashboard without authentication
     const response = await request.get(endpoint);
 
-    // THEN: Returns 401 Unauthorized
-    expect(response.status()).toBe(401);
-    
-    const body = await response.json();
-    expect(body).toHaveProperty('detail');
-    expect(body.detail).toContain('authentication');
+    // THEN: Returns 401 Unauthorized with proper error structure
+    await validateAuthenticationError(response, 401);
   });
 
-  test('[P2] GET /api/optimization/dashboard - should return cost savings estimates', async ({ authenticatedRequest }) => {
+  test('1.1-API-005 [P2] GET /api/optimization/dashboard - should return cost savings estimates', async ({ authenticatedRequest }) => {
     // GIVEN: Authenticated API request
     const endpoint = `${API_BASE_URL}/api/optimization/dashboard`;
 
@@ -150,29 +129,11 @@ test.describe('Optimization Dashboard API', () => {
     const body = await response.json();
     const data = body.data;
     
-    if (data.cost_savings && data.cost_savings.available) {
-      expect(data.cost_savings).toHaveProperty('estimates');
-      expect(data.cost_savings).toHaveProperty('total_estimated_monthly_savings_usd');
-      
-      const estimates = data.cost_savings.estimates;
-      if (estimates.litellm_redis) {
-        expect(estimates.litellm_redis).toHaveProperty('monthly_savings_usd');
-        expect(estimates.litellm_redis).toHaveProperty('hit_rate');
-      }
-      
-      if (estimates.anthropic) {
-        expect(estimates.anthropic).toHaveProperty('monthly_savings_usd');
-        expect(estimates.anthropic).toHaveProperty('cache_hit_rate');
-      }
-      
-      if (estimates.openai_prompt) {
-        expect(estimates.openai_prompt).toHaveProperty('monthly_savings_usd');
-        expect(estimates.openai_prompt).toHaveProperty('cache_hit_rate');
-      }
-    }
+    // Validate cost savings structure (optional)
+    validateOptionalCostSavings(data.cost_savings);
   });
 
-  test('[P2] GET /api/optimization/dashboard - should return performance summary', async ({ authenticatedRequest }) => {
+  test('1.1-API-006 [P2] GET /api/optimization/dashboard - should return performance summary', async ({ authenticatedRequest }) => {
     // GIVEN: Authenticated API request
     const endpoint = `${API_BASE_URL}/api/optimization/dashboard`;
 

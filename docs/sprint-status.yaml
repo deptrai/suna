@@ -68,12 +68,12 @@ development_status:
   11-1-coin-detection-algorithm: done
   11-2-content-script-injection: done
   11-3-analysis-button-injection: review
-  11-4-coin-highlighting-visual-feedback: review
+  11-4-coin-highlighting-visual-feedback: done
   extension-epic-2-retrospective: optional
 
   extension-epic-3: backlog
-  12-1-shared-ui-components-integration: ready-for-dev
-  12-2-popup-layout-structure: ready-for-dev
+  12-1-shared-ui-components-integration: done
+  12-2-popup-layout-structure: done
   12-3-analysis-results-display-component: ready-for-dev
   12-4-react-query-integration: ready-for-dev
   12-5-report-generation-ui: ready-for-dev

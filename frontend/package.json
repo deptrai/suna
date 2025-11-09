@@ -16,7 +16,9 @@
     "test:e2e:report": "playwright show-report playwright-report",
     "test:e2e:p0": "playwright test --grep '\\[P0\\]'",
     "test:e2e:p1": "playwright test --grep '\\[P0\\]|\\[P1\\]'",
-    "test:api": "playwright test tests/api"
+    "test:api": "playwright test tests/api",
+    "test:api:p1": "playwright test tests/api --grep '\\[P1\\]'",
+    "test:api:p2": "playwright test tests/api --grep '\\[P2\\]'"
   },
   "dependencies": {
     "@calcom/embed-react": "^1.5.2",

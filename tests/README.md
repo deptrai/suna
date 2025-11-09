@@ -40,8 +40,13 @@ cp .env.example .env
 
 Cập nhật các biến môi trường:
 - `BASE_URL`: URL của ứng dụng (mặc định: `http://localhost:3000`)
-- `API_URL`: URL của API backend (mặc định: `http://localhost:8000/api`)
+- `API_URL`: URL của API backend (mặc định: `http://localhost:8000`)
 - `TEST_ENV`: Môi trường test (`local`, `staging`, `production`)
+
+**Authentication (Required for API tests):**
+- `TEST_JWT_TOKEN`: JWT token cho API authentication (recommended)
+- `TEST_API_KEY`: API key format `pk_xxx:sk_xxx` (alternative)
+- `TEST_USER_ID`: Test user ID (optional, defaults to 'test-user-id')
 
 ---
 
@@ -49,8 +54,10 @@ Cập nhật các biến môi trường:
 
 ### Local Execution
 
+#### E2E Tests
+
 ```bash
-# Chạy tất cả tests
+# Chạy tất cả E2E tests
 npm run test:e2e
 
 # Chạy tests với UI mode (khuyến nghị cho development)
@@ -66,17 +73,50 @@ npm run test:e2e:debug
 npm run test:e2e:report
 ```
 
+#### API Tests
+
+```bash
+# Chạy tất cả API tests
+npm run test:api
+
+# Chạy API tests với authentication
+export TEST_JWT_TOKEN="your-jwt-token"
+npm run test:api
+
+# Hoặc sử dụng API key
+export TEST_API_KEY="pk_xxx:sk_xxx"
+npm run test:api
+```
+
 ### Chạy Tests Cụ Thể
 
 ```bash
 # Chạy một test file
 npx playwright test tests/e2e/example.spec.ts
+npx playwright test tests/api/optimization-dashboard.api.spec.ts
 
 # Chạy tests matching pattern
 npx playwright test --grep "login"
+npx playwright test --grep "\\[P1\\]"  # Run P1 tests only
 
 # Chạy tests trên một browser cụ thể
 npx playwright test --project=chromium
+
+# Chạy API tests project
+npx playwright test --project=api-tests
+```
+
+### Chạy Tests Theo Priority
+
+```bash
+# Chạy P0 tests (critical paths)
+npx playwright test --grep "\\[P0\\]"
+
+# Chạy P0 + P1 tests (high priority)
+npm run test:e2e:p1
+
+# Chạy P0 tests only
+npm run test:e2e:p0
 ```
 
 ### CI/CD Execution
@@ -84,6 +124,7 @@ npx playwright test --project=chromium
 ```bash
 # Chạy tests trong CI (headless, với retries)
 CI=true npm run test:e2e
+CI=true npm run test:api
 ```
 
 ---
@@ -94,11 +135,16 @@ CI=true npm run test:e2e
 
 ```
 tests/
-├── e2e/                          # Test files (organize as needed)
-│   └── example.spec.ts           # Example test suite
+├── e2e/                          # E2E test files
+│   └── example.spec.ts           # Example E2E test suite
+├── api/                          # API test files
+│   ├── optimization-dashboard.api.spec.ts    # Epic 1 optimization dashboard API
+│   ├── cache-metrics.api.spec.ts             # Story 1.2 cache metrics API
+│   └── quality-monitoring.api.spec.ts        # Story 2.4 quality monitoring API
 ├── support/                      # Framework infrastructure
 │   ├── fixtures/                 # Test fixtures (key pattern)
 │   │   ├── index.ts             # Main fixture composition
+│   │   ├── auth.fixture.ts      # Authentication fixture
 │   │   └── factories/            # Data factories
 │   │       └── user-factory.ts   # User factory với auto-cleanup
 │   ├── helpers/                  # Utility functions
@@ -283,10 +329,27 @@ lsof -ti:3000 | xargs kill -9
 
 1. ✅ Framework đã được scaffold
 2. ✅ Sample tests đã được tạo
-3. 🔄 Cập nhật tests theo actual application flows
-4. 🔄 Thêm more factories nếu cần (products, orders, etc.)
-5. 🔄 Setup CI/CD pipeline
-6. 🔄 Add contract testing (Pact) nếu có microservices
+3. ✅ API tests cho Epic 1 optimization endpoints đã được tạo
+4. ✅ Authentication fixture đã được tạo
+5. 🔄 Configure authentication tokens (`TEST_JWT_TOKEN` or `TEST_API_KEY`)
+6. 🔄 Run API tests để verify: `npm run test:api`
+7. 🔄 Cập nhật tests theo actual application flows
+8. 🔄 Thêm more factories nếu cần (products, orders, etc.)
+9. 🔄 Setup CI/CD pipeline
+10. 🔄 Add contract testing (Pact) nếu có microservices
+
+## 📊 Test Coverage
+
+### Epic 1 Optimization APIs
+
+**API Tests Created:**
+- ✅ Optimization Dashboard API (5 tests)
+- ✅ Cache Metrics API (7 tests)
+- ✅ Quality Monitoring API (7 tests)
+
+**Total:** 15 API tests (P1: 12, P2: 3)
+
+**See:** `docs/automation-summary-epic1-optimization.md` for detailed coverage analysis.
 
 ---
 

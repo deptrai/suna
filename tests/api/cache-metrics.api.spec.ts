@@ -1,4 +1,6 @@
 import { test, expect } from '../support/fixtures';
+import { validateAuthenticationError, validateOptionalCacheHealthDetails, validateOptionalLiteLLMCacheMetrics, validateOptionalModelStats } from '../support/helpers/api-validation-helpers';
+import { createModelName } from '../support/factories/api-test-factory';
 
 /**
  * Cache Metrics API Tests
@@ -20,9 +22,9 @@ import { test, expect } from '../support/fixtures';
 
 const API_BASE_URL = process.env.API_URL || 'http://localhost:8000';
 
-test.describe('Cache Metrics API', () => {
+test.describe('1.2-API: Cache Metrics API', () => {
   
-  test('[P1] GET /api/cache/metrics - should return cache metrics summary', async ({ authenticatedRequest }) => {
+  test('1.2-API-001 [P1] GET /api/cache/metrics - should return cache metrics summary', async ({ authenticatedRequest }) => {
     // GIVEN: Authenticated API request
     const endpoint = `${API_BASE_URL}/api/cache/metrics`;
 
@@ -59,7 +61,7 @@ test.describe('Cache Metrics API', () => {
     expect(data.hit_rate_percentage).toBeLessThanOrEqual(100);
   });
 
-  test('[P1] GET /api/cache/health - should return cache health status', async ({ authenticatedRequest }) => {
+  test('1.2-API-002 [P1] GET /api/cache/health - should return cache health status', async ({ authenticatedRequest }) => {
     // GIVEN: Authenticated API request
     const endpoint = `${API_BASE_URL}/api/cache/health`;
 
@@ -85,15 +87,11 @@ test.describe('Cache Metrics API', () => {
     expect(typeof data.configured).toBe('boolean');
     expect(typeof data.operational).toBe('boolean');
     
-    // Verify details if available
-    if (data.details) {
-      expect(data.details).toHaveProperty('cache_type');
-      expect(data.details).toHaveProperty('redis_connected');
-      expect(data.details).toHaveProperty('metrics_available');
-    }
+    // Verify details if available (optional)
+    validateOptionalCacheHealthDetails(data.details);
   });
 
-  test('[P1] GET /api/cache/metrics/hit-rate - should return overall cache hit rate', async ({ authenticatedRequest }) => {
+  test('1.2-API-003 [P1] GET /api/cache/metrics/hit-rate - should return overall cache hit rate', async ({ authenticatedRequest }) => {
     // GIVEN: Authenticated API request
     const endpoint = `${API_BASE_URL}/api/cache/metrics/hit-rate`;
 
@@ -123,9 +121,9 @@ test.describe('Cache Metrics API', () => {
     expect(data.hit_rate_percentage).toBeLessThanOrEqual(100);
   });
 
-  test('[P1] GET /api/cache/metrics/hit-rate?model={model} - should return model-specific hit rate', async ({ authenticatedRequest }) => {
+  test('1.2-API-004 [P1] GET /api/cache/metrics/hit-rate?model={model} - should return model-specific hit rate', async ({ authenticatedRequest }) => {
     // GIVEN: Authenticated API request with model parameter
-    const model = 'gpt-4o-mini';
+    const model = createModelName({ provider: 'openai', model: 'gpt-4o-mini' });
     const endpoint = `${API_BASE_URL}/api/cache/metrics/hit-rate?model=${model}`;
 
     // WHEN: Requesting model-specific cache hit rate
@@ -148,7 +146,7 @@ test.describe('Cache Metrics API', () => {
     expect(data).toHaveProperty('cache_misses');
   });
 
-  test('[P1] GET /api/cache/metrics/performance - should return cache performance metrics', async ({ authenticatedRequest }) => {
+  test('1.2-API-005 [P1] GET /api/cache/metrics/performance - should return cache performance metrics', async ({ authenticatedRequest }) => {
     // GIVEN: Authenticated API request
     const endpoint = `${API_BASE_URL}/api/cache/metrics/performance`;
 
@@ -179,22 +177,18 @@ test.describe('Cache Metrics API', () => {
     }
   });
 
-  test('[P1] GET /api/cache/metrics - should handle authentication errors', async ({ request }) => {
+  test('1.2-API-006 [P1] GET /api/cache/metrics - should handle authentication errors', async ({ request }) => {
     // GIVEN: Unauthenticated API request
     const endpoint = `${API_BASE_URL}/api/cache/metrics`;
 
     // WHEN: Requesting cache metrics without authentication
     const response = await request.get(endpoint);
 
-    // THEN: Returns 401 Unauthorized
-    expect(response.status()).toBe(401);
-    
-    const body = await response.json();
-    expect(body).toHaveProperty('detail');
-    expect(body.detail).toContain('authentication');
+    // THEN: Returns 401 Unauthorized with proper error structure
+    await validateAuthenticationError(response, 401);
   });
 
-  test('[P2] GET /api/cache/metrics - should return model statistics when available', async ({ authenticatedRequest }) => {
+  test('1.2-API-007 [P2] GET /api/cache/metrics - should return model statistics when available', async ({ authenticatedRequest }) => {
     // GIVEN: Authenticated API request
     const endpoint = `${API_BASE_URL}/api/cache/metrics`;
 
@@ -207,20 +201,8 @@ test.describe('Cache Metrics API', () => {
     const body = await response.json();
     const data = body.data;
     
-    if (data.model_stats && Object.keys(data.model_stats).length > 0) {
-      // Verify model stats structure
-      const firstModel = Object.keys(data.model_stats)[0];
-      const modelStats = data.model_stats[firstModel];
-      
-      expect(modelStats).toHaveProperty('total_requests');
-      expect(modelStats).toHaveProperty('cache_hits');
-      expect(modelStats).toHaveProperty('cache_misses');
-      expect(modelStats).toHaveProperty('hit_rate');
-      
-      // Verify hit rate is valid
-      expect(modelStats.hit_rate).toBeGreaterThanOrEqual(0);
-      expect(modelStats.hit_rate).toBeLessThanOrEqual(1);
-    }
+    // Validate model statistics structure (optional)
+    validateOptionalModelStats(data.model_stats);
   });
 });
 
