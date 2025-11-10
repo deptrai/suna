@@ -4,7 +4,7 @@ from typing import Optional
 import jwt
 from jwt.exceptions import PyJWTError
 from core.utils.logger import structlog
-from core.utils.config import config
+from core.utils.config import config, EnvMode
 import os
 import base64
 import hashlib
@@ -105,6 +105,21 @@ async def _get_user_id_from_account_cached(account_id: str) -> Optional[str]:
         return None
 
 async def verify_and_get_user_id_from_jwt(request: Request) -> str:
+    # Test mode bypass for local development and testing
+    # Check if we're in test mode and using test token
+    if config.ENV_MODE == EnvMode.LOCAL:
+        auth_header = request.headers.get('Authorization')
+        if auth_header and auth_header.startswith('Bearer '):
+            token = auth_header.split(' ')[1]
+            # Allow test tokens for local development
+            if token in ['test-jwt-token-placeholder', 'test-token']:
+                test_user_id = os.getenv('TEST_USER_ID', 'test-user-id')
+                structlog.contextvars.bind_contextvars(
+                    user_id=test_user_id,
+                    auth_method="test_token"
+                )
+                return test_user_id
+    
     x_api_key = request.headers.get('x-api-key')
 
     if x_api_key:

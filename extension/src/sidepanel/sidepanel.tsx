@@ -18,6 +18,7 @@ import { ReactQueryProvider } from './providers/ReactQueryProvider';
 import { useCoinAnalysis } from './hooks/useCoinAnalysis';
 import { useAuthState } from './hooks/useAuthState';
 import { createSupabaseClient } from '../shared/supabase-extension';
+import { generateReportViaApi, openReportInNewTab } from '../shared/report-extension';
 import { Button } from '@/components/ui/button';
 
 function SidePanelApp() {
@@ -29,6 +30,10 @@ function SidePanelApp() {
     symbol?: string;
     price?: number;
   }>({});
+
+  // Report generation state
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
 
   // Listen for messages from background worker với coin info
   useEffect(() => {
@@ -72,61 +77,39 @@ function SidePanelApp() {
     enabled: Boolean(coinInfo.name),
   });
 
-  /**
-   * Generate report URL với coin context
-   */
-  const generateReportUrl = (coinName?: string, symbol?: string): string => {
-    // Base URL for reports - defaults to production, can be overridden
-    // In production: https://chainlens.so
-    // In development: http://localhost:3000
-    const baseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
-      ? 'http://localhost:3000'
-      : 'https://chainlens.so';
-    const reportPath = '/reports';
-    
-    const url = new URL(reportPath, baseUrl);
-    
-    // Add coin context as query parameters
-    if (coinName) {
-      url.searchParams.set('coinName', coinName);
-    }
-    if (symbol) {
-      url.searchParams.set('symbol', symbol);
-    }
-    
-    return url.toString();
-  };
-
   const handleGenerateReport = async () => {
+    setIsGeneratingReport(true);
+    setReportError(null);
+
     try {
       // Get coin info from current state hoặc analysis data
       const coinName = coinInfo.name || analysisData?.name;
       const symbol = coinInfo.symbol || analysisData?.symbol;
+      const price = coinInfo.price || analysisData?.price;
 
       if (!coinName) {
-        // Show error if no coin selected
-        console.error('No coin selected for report generation');
-        // Could show a toast/notification here
+        setReportError('No coin selected. Please select a coin to generate a report.');
+        setIsGeneratingReport(false);
         return;
       }
 
-      // Construct report URL với coin context
-      const reportUrl = generateReportUrl(coinName, symbol);
+      // Generate report URL via API (or local generation)
+      const reportUrl = await generateReportViaApi({
+        name: coinName,
+        symbol,
+        price,
+      });
 
       // Open new tab với report URL
-      try {
-        await chrome.tabs.create({
-          url: reportUrl,
-          active: true,
-        });
-      } catch (error) {
-        console.error('Failed to open report tab:', error);
-        // Fallback: try opening in current window
-        window.open(reportUrl, '_blank');
-      }
+      await openReportInNewTab(reportUrl);
     } catch (error) {
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : 'Failed to generate report. Please try again.';
+      setReportError(errorMessage);
       console.error('Error generating report:', error);
-      // Could show error message to user here
+    } finally {
+      setIsGeneratingReport(false);
     }
   };
 
@@ -192,6 +175,8 @@ function SidePanelApp() {
       footerActions={
         <SidePanelFooter
           onGenerateReport={handleGenerateReport}
+          isGeneratingReport={isGeneratingReport}
+          reportError={reportError}
           actions={
             <Button variant="outline" onClick={handleLogout}>
               Logout

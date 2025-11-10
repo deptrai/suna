@@ -128,7 +128,12 @@ export function validateOptionalLiteLLMCacheMetrics(metrics: unknown): void {
     expect(cacheMetrics).toHaveProperty('total_requests');
     expect(cacheMetrics).toHaveProperty('cache_hits');
     expect(cacheMetrics).toHaveProperty('cache_misses');
-    expect(cacheMetrics).toHaveProperty('hit_rate');
+    // Backend returns cache_hit_rate, not hit_rate
+    if ((cacheMetrics as any).hit_rate !== undefined) {
+      expect(cacheMetrics).toHaveProperty('hit_rate');
+    } else {
+      expect(cacheMetrics).toHaveProperty('cache_hit_rate');
+    }
   });
 }
 

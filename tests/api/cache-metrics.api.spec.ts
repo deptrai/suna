@@ -46,21 +46,22 @@ test.describe('1.2-API: Cache Metrics API', () => {
     expect(data).toHaveProperty('total_requests');
     expect(data).toHaveProperty('cache_hits');
     expect(data).toHaveProperty('cache_misses');
-    expect(data).toHaveProperty('hit_rate');
-    expect(data).toHaveProperty('hit_rate_percentage');
+    // Backend returns cache_hit_rate, not hit_rate
+    expect(data).toHaveProperty('cache_hit_rate');
+    expect(data).toHaveProperty('cache_hit_rate_percentage');
     
     // Verify data types
     expect(typeof data.total_requests).toBe('number');
     expect(typeof data.cache_hits).toBe('number');
     expect(typeof data.cache_misses).toBe('number');
-    expect(typeof data.hit_rate).toBe('number');
-    expect(typeof data.hit_rate_percentage).toBe('number');
+    expect(typeof data.cache_hit_rate).toBe('number');
+    expect(typeof data.cache_hit_rate_percentage).toBe('number');
     
     // Verify hit rate is between 0 and 1 (or percentage 0-100)
-    expect(data.hit_rate).toBeGreaterThanOrEqual(0);
-    expect(data.hit_rate).toBeLessThanOrEqual(1);
-    expect(data.hit_rate_percentage).toBeGreaterThanOrEqual(0);
-    expect(data.hit_rate_percentage).toBeLessThanOrEqual(100);
+    expect(data.cache_hit_rate).toBeGreaterThanOrEqual(0);
+    expect(data.cache_hit_rate).toBeLessThanOrEqual(1);
+    expect(data.cache_hit_rate_percentage).toBeGreaterThanOrEqual(0);
+    expect(data.cache_hit_rate_percentage).toBeLessThanOrEqual(100);
   });
 
   test('1.2-API-002 [P1] GET /api/cache/health - should return cache health status', async ({ authenticatedRequest }) => {
@@ -126,7 +127,7 @@ test.describe('1.2-API: Cache Metrics API', () => {
   test('1.2-API-004 [P1] GET /api/cache/metrics/hit-rate?model={model} - should return model-specific hit rate', async ({ authenticatedRequest }) => {
     // GIVEN: Authenticated API request with model parameter
     const model = createModelName({ provider: 'openai', model: 'gpt-4o-mini' });
-    const endpoint = `${API_BASE_URL}/api/cache/metrics/hit-rate?model=${model}`;
+    const endpoint = `${API_BASE_URL}${API_PREFIX}/cache/metrics/hit-rate?model=${model}`;
 
     // WHEN: Requesting model-specific cache hit rate
     const response = await authenticatedRequest.get(endpoint);

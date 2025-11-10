@@ -5,7 +5,7 @@ Provides REST endpoints for accessing cache metrics, health status, and performa
 """
 
 from fastapi import APIRouter, HTTPException, Depends
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from datetime import datetime
 
 from core.services.cache_metrics import get_cache_metrics_collector, check_cache_health
@@ -64,7 +64,7 @@ async def get_cache_health_status(
 
 @router.get("/metrics/hit-rate", summary="Get Cache Hit Rate", operation_id="get_cache_hit_rate")
 async def get_cache_hit_rate(
-    model: str = None,
+    model: Optional[str] = None,
     user_id: str = Depends(verify_and_get_user_id_from_jwt)
 ) -> Dict[str, Any]:
     """

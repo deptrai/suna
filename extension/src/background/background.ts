@@ -15,6 +15,7 @@ import { logger } from '../shared/logger';
 import type { ExtensionMessage, MessageResponse } from '../shared/message-types';
 import { createSupabaseClient } from '../shared/supabase-extension';
 import { createAgentChat, getAuthToken } from '../shared/api-extension';
+import { generateReportViaApi, openReportInNewTab } from '../shared/report-extension';
 
 logger.info('ChainLens Extension: Background service worker loaded');
 
@@ -190,6 +191,39 @@ async function handleFetchCoinAnalysis(
 }
 
 /**
+ * Handle GENERATE_REPORT message
+ */
+async function handleGenerateReport(
+  message: Extract<ExtensionMessage, { type: 'GENERATE_REPORT' }>
+): Promise<MessageResponse> {
+  try {
+    if (!message.coinInfo || !message.coinInfo.name) {
+      return {
+        success: false,
+        error: 'Coin info is required',
+      };
+    }
+
+    // Generate report URL via API (or local generation)
+    const reportUrl = await generateReportViaApi(message.coinInfo);
+
+    // Open new tab với report URL
+    await openReportInNewTab(reportUrl);
+
+    return {
+      success: true,
+      data: { reportUrl },
+    };
+  } catch (error) {
+    logger.error('Error handling GENERATE_REPORT:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to generate report',
+    };
+  }
+}
+
+/**
  * Message handler với retry logic
  */
 async function handleMessageWithRetry(
@@ -209,6 +243,9 @@ async function handleMessageWithRetry(
 
         case 'FETCH_COIN_ANALYSIS':
           return await handleFetchCoinAnalysis(message);
+
+        case 'GENERATE_REPORT':
+          return await handleGenerateReport(message);
 
         default:
           return {

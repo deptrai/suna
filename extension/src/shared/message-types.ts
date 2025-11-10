@@ -50,13 +50,26 @@ export interface CoinSelectedMessage {
 }
 
 /**
+ * Message to generate report
+ */
+export interface GenerateReportMessage {
+  type: 'GENERATE_REPORT';
+  coinInfo: {
+    name: string;
+    symbol?: string;
+    price?: number;
+  };
+}
+
+/**
  * Union type for all message types
  */
 export type ExtensionMessage =
   | OpenSidePanelWithCoinMessage
   | AnalyzeCoinMessage
   | FetchCoinAnalysisMessage
-  | CoinSelectedMessage;
+  | CoinSelectedMessage
+  | GenerateReportMessage;
 
 /**
  * Response format for messages
