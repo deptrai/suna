@@ -15,6 +15,7 @@ import { detectCoins, detectCoinsInDocument, type CoinDetection } from '../share
 import { logger } from '../shared/logger';
 import { injectAnalysisButtons, removeAllInjectedButtons } from './injector';
 import { applyHighlights, removeAllHighlights, setupHighlightRemoval } from './highlighter';
+import { wrapContentScript, wrapAsyncContentScript } from '../shared/error-handler-extension';
 
 // ============================================
 // Content Script Initialization
@@ -142,18 +143,16 @@ function runCoinDetection(): void {
       }
 
       // Apply highlights to detected coins (Story 11.4)
-      try {
+      // Wrapped với error handler để prevent breaking page
+      wrapContentScript(() => {
         applyHighlights(detections);
-      } catch (error) {
-        logger.error('Error applying highlights:', error);
-      }
+      }, { operation: 'apply highlights', silent: true })();
 
       // Inject analysis buttons next to detected coins (Story 11.3)
-      try {
+      // Wrapped với error handler để prevent breaking page
+      wrapContentScript(() => {
         injectAnalysisButtons(detections);
-      } catch (error) {
-        logger.error('Error injecting buttons:', error);
-      }
+      }, { operation: 'inject buttons', silent: true })();
     }
     
     // Reset attempts on success

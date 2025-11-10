@@ -7,7 +7,9 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { AlertCircle, TrendingUp, TrendingDown, Minus, RefreshCw, LogIn } from 'lucide-react';
+import { handleApiError, type ErrorRecovery } from '../../shared/error-handler-extension';
 
 export interface CoinAnalysisData {
   name: string;
@@ -24,6 +26,7 @@ export interface CoinAnalysisProps {
   isLoading?: boolean;
   error?: string | null;
   onRetry?: () => void;
+  onLogin?: () => void;
 }
 
 /**
@@ -126,9 +129,36 @@ function LoadingState() {
 }
 
 /**
- * Error state component
+ * Error state component với error recovery options
  */
-function ErrorState({ error, onRetry }: { error: string | null; onRetry?: () => void }) {
+function ErrorState({ 
+  error, 
+  onRetry,
+  onLogin,
+}: { 
+  error: string | null; 
+  onRetry?: () => void;
+  onLogin?: () => void;
+}) {
+  // Parse error để get recovery options
+  let errorMessage = error || 'An error occurred while analyzing the coin.';
+  let recoveryOptions: ErrorRecovery[] = [];
+  
+  if (error) {
+    try {
+      // error is string | null, so we need to convert to Error
+      const errorObj: Error = typeof error === 'string' ? new Error(error) : new Error(String(error));
+      const errorInfo = handleApiError(errorObj, { operation: 'analyze coin' });
+      errorMessage = errorInfo.userMessage;
+      recoveryOptions = errorInfo.recovery || [];
+    } catch {
+      // If error parsing fails, use original error message
+    }
+  }
+
+  const hasRetry = recoveryOptions.some(r => r.action === 'retry') || onRetry;
+  const hasLogin = recoveryOptions.some(r => r.action === 'login') || onLogin;
+
   return (
     <Card>
       <CardContent className="pt-6">
@@ -139,17 +169,31 @@ function ErrorState({ error, onRetry }: { error: string | null; onRetry?: () => 
           <div className="space-y-2">
             <h3 className="text-lg font-semibold text-foreground">Analysis Failed</h3>
             <p className="text-sm text-muted-foreground max-w-md">
-              {error || 'An error occurred while analyzing the coin.'}
+              {errorMessage}
             </p>
           </div>
-          {onRetry && (
-            <button
-              onClick={onRetry}
-              className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary/90 transition-colors"
-            >
-              Retry Analysis
-            </button>
-          )}
+          <div className="flex gap-2 mt-4">
+            {hasRetry && (
+              <Button
+                onClick={onRetry}
+                variant="default"
+                size="sm"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Retry
+              </Button>
+            )}
+            {hasLogin && (
+              <Button
+                onClick={onLogin}
+                variant="outline"
+                size="sm"
+              >
+                <LogIn className="h-4 w-4 mr-2" />
+                Sign In
+              </Button>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -159,7 +203,7 @@ function ErrorState({ error, onRetry }: { error: string | null; onRetry?: () => 
 /**
  * Coin Analysis Component
  */
-export function CoinAnalysis({ data, isLoading = false, error = null, onRetry }: CoinAnalysisProps) {
+export function CoinAnalysis({ data, isLoading = false, error = null, onRetry, onLogin }: CoinAnalysisProps) {
   // Loading state
   if (isLoading) {
     return <LoadingState />;
@@ -167,7 +211,7 @@ export function CoinAnalysis({ data, isLoading = false, error = null, onRetry }:
 
   // Error state (only if error is explicitly provided)
   if (error) {
-    return <ErrorState error={error} onRetry={onRetry} />;
+    return <ErrorState error={error} onRetry={onRetry} onLogin={onLogin} />;
   }
 
   // No data state

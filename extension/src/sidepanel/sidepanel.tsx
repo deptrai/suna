@@ -19,6 +19,7 @@ import { useCoinAnalysis } from './hooks/useCoinAnalysis';
 import { useAuthState } from './hooks/useAuthState';
 import { createSupabaseClient } from '../shared/supabase-extension';
 import { generateReportViaApi, openReportInNewTab } from '../shared/report-extension';
+import { handleApiError, isAuthenticationError } from '../shared/error-handler-extension';
 import { Button } from '@/components/ui/button';
 
 function SidePanelApp() {
@@ -136,11 +137,17 @@ function SidePanelApp() {
     }
   };
 
-  // Format error message for display
+  // Format error message for display using error handler
   const errorMessage = queryError
-    ? queryError instanceof Error
-      ? queryError.message
-      : 'Analysis failed'
+    ? (() => {
+        try {
+          const errorObj = queryError instanceof Error ? queryError : new Error(String(queryError));
+          const errorInfo = handleApiError(errorObj, { operation: 'analyze coin' });
+          return errorInfo.userMessage;
+        } catch {
+          return queryError instanceof Error ? queryError.message : 'Analysis failed';
+        }
+      })()
     : null;
 
   // Show loading state while checking auth
@@ -199,6 +206,10 @@ function SidePanelApp() {
             isLoading={isLoading}
             error={errorMessage}
             onRetry={handleRetry}
+            onLogin={() => {
+              // Force re-check auth state
+              // The useAuthState hook will update automatically
+            }}
           />
         ) : (
           // Empty state - no coin selected yet

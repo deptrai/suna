@@ -16,6 +16,7 @@ import type { ExtensionMessage, MessageResponse } from '../shared/message-types'
 import { createSupabaseClient } from '../shared/supabase-extension';
 import { createAgentChat, getAuthToken } from '../shared/api-extension';
 import { generateReportViaApi, openReportInNewTab } from '../shared/report-extension';
+import { handleApiError, isAuthenticationError } from '../shared/error-handler-extension';
 
 logger.info('ChainLens Extension: Background service worker loaded');
 
@@ -257,13 +258,7 @@ async function handleMessageWithRetry(
       lastError = error instanceof Error ? error : new Error(String(error));
       
       // Don't retry on authentication errors hoặc client errors
-      if (
-        error instanceof Error &&
-        (error.message.includes('Not authenticated') ||
-          error.message.includes('401') ||
-          error.message.includes('403') ||
-          error.message.includes('400'))
-      ) {
+      if (isAuthenticationError(error) || (error instanceof Error && error.message.includes('400'))) {
         logger.warn(`Non-retryable error on attempt ${attempt}:`, error);
         break;
       }
@@ -296,9 +291,10 @@ chrome.runtime.onMessage.addListener(
       })
       .catch((error) => {
         logger.error('Unhandled error in message handler:', error);
+        const errorInfo = handleApiError(error, { operation: 'handle message', silent: true });
         sendResponse({
           success: false,
-          error: error instanceof Error ? error.message : 'Internal error',
+          error: errorInfo.userMessage,
         });
       });
 
