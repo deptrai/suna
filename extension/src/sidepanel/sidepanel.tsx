@@ -3,6 +3,7 @@
  * 
  * This is the main entry point for the side panel React application.
  * Story 12.2: Side Panel Layout & Structure
+ * Story 12.4: React Query Integration
  */
 
 import './sidepanel.css';
@@ -12,25 +13,26 @@ import { SidePanelLayout } from './components/SidePanelLayout';
 import { SidePanelContent } from './components/SidePanelContent';
 import { SidePanelFooter } from './components/SidePanelFooter';
 import { CoinAnalysis, type CoinAnalysisData } from './components/CoinAnalysis';
+import { ReactQueryProvider } from './providers/ReactQueryProvider';
+import { useCoinAnalysis } from './hooks/useCoinAnalysis';
 
 function SidePanelApp() {
-  const [analysisData, setAnalysisData] = useState<CoinAnalysisData | undefined>(undefined);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [coinInfo, setCoinInfo] = useState<{
+    name?: string;
+    symbol?: string;
+    price?: number;
+  }>({});
 
   // Listen for messages from background worker với coin info
   useEffect(() => {
     const handleMessage = (message: any) => {
-      if (message.type === 'COIN_ANALYSIS_DATA') {
-        setAnalysisData(message.data);
-        setIsLoading(false);
-        setError(null);
-      } else if (message.type === 'COIN_ANALYSIS_LOADING') {
-        setIsLoading(true);
-        setError(null);
-      } else if (message.type === 'COIN_ANALYSIS_ERROR') {
-        setError(message.error || 'Analysis failed');
-        setIsLoading(false);
+      if (message.type === 'COIN_SELECTED') {
+        // Update coin info when coin is selected
+        setCoinInfo({
+          name: message.coinInfo?.name,
+          symbol: message.coinInfo?.symbol,
+          price: message.coinInfo?.price,
+        });
       }
     };
 
@@ -38,19 +40,13 @@ function SidePanelApp() {
     chrome.runtime.onMessage.addListener(handleMessage);
 
     // Check for stored coin info on mount (from chrome.storage)
-    chrome.storage.local.get(['coinInfo', 'analysisData'], (result) => {
+    chrome.storage.local.get(['coinInfo'], (result) => {
       if (result.coinInfo) {
-        // Set initial coin info (will trigger analysis in Story 12.4)
-        setAnalysisData({
+        setCoinInfo({
           name: result.coinInfo.name,
           symbol: result.coinInfo.symbol,
           price: result.coinInfo.price,
         });
-      }
-      if (result.analysisData) {
-        setAnalysisData(result.analysisData);
-        setIsLoading(false);
-        setError(null);
       }
     });
 
@@ -59,9 +55,72 @@ function SidePanelApp() {
     };
   }, []);
 
-  const handleGenerateReport = () => {
-    // Placeholder: Will be implemented in future stories
-    console.log('Generate report clicked', analysisData);
+  // Use React Query hook for coin analysis
+  const {
+    data: analysisData,
+    isLoading,
+    error: queryError,
+    refetchAnalysis,
+  } = useCoinAnalysis(coinInfo.name, coinInfo.symbol, coinInfo.price, {
+    enabled: Boolean(coinInfo.name),
+  });
+
+  /**
+   * Generate report URL với coin context
+   */
+  const generateReportUrl = (coinName?: string, symbol?: string): string => {
+    // Base URL for reports - defaults to production, can be overridden
+    // In production: https://chainlens.so
+    // In development: http://localhost:3000
+    const baseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+      ? 'http://localhost:3000'
+      : 'https://chainlens.so';
+    const reportPath = '/reports';
+    
+    const url = new URL(reportPath, baseUrl);
+    
+    // Add coin context as query parameters
+    if (coinName) {
+      url.searchParams.set('coinName', coinName);
+    }
+    if (symbol) {
+      url.searchParams.set('symbol', symbol);
+    }
+    
+    return url.toString();
+  };
+
+  const handleGenerateReport = async () => {
+    try {
+      // Get coin info from current state hoặc analysis data
+      const coinName = coinInfo.name || analysisData?.name;
+      const symbol = coinInfo.symbol || analysisData?.symbol;
+
+      if (!coinName) {
+        // Show error if no coin selected
+        console.error('No coin selected for report generation');
+        // Could show a toast/notification here
+        return;
+      }
+
+      // Construct report URL với coin context
+      const reportUrl = generateReportUrl(coinName, symbol);
+
+      // Open new tab với report URL
+      try {
+        await chrome.tabs.create({
+          url: reportUrl,
+          active: true,
+        });
+      } catch (error) {
+        console.error('Failed to open report tab:', error);
+        // Fallback: try opening in current window
+        window.open(reportUrl, '_blank');
+      }
+    } catch (error) {
+      console.error('Error generating report:', error);
+      // Could show error message to user here
+    }
   };
 
   const handleClose = () => {
@@ -73,12 +132,16 @@ function SidePanelApp() {
   };
 
   const handleRetry = () => {
-    // Retry analysis (will be implemented in Story 12.4)
-    setError(null);
-    setIsLoading(true);
-    // Trigger analysis retry
-    chrome.runtime.sendMessage({ type: 'RETRY_ANALYSIS' });
+    // Retry analysis using React Query refetch
+    refetchAnalysis();
   };
+
+  // Format error message for display
+  const errorMessage = queryError
+    ? queryError instanceof Error
+      ? queryError.message
+      : 'Analysis failed'
+    : null;
 
   return (
     <SidePanelLayout
@@ -91,11 +154,11 @@ function SidePanelApp() {
       }
     >
       <SidePanelContent>
-        {analysisData || isLoading || error ? (
+        {coinInfo.name || isLoading || errorMessage ? (
           <CoinAnalysis
             data={analysisData}
             isLoading={isLoading}
-            error={error}
+            error={errorMessage}
             onRetry={handleRetry}
           />
         ) : (
@@ -121,6 +184,14 @@ function SidePanelApp() {
   );
 }
 
+function SidePanelAppWithProvider() {
+  return (
+    <ReactQueryProvider>
+      <SidePanelApp />
+    </ReactQueryProvider>
+  );
+}
+
 // Mount React app
 const container = document.getElementById('extension-root');
 if (!container) {
@@ -128,6 +199,6 @@ if (!container) {
 }
 
 const root = createRoot(container);
-root.render(<SidePanelApp />);
+root.render(<SidePanelAppWithProvider />);
 
 
