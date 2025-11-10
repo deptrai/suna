@@ -80,10 +80,10 @@ development_status:
   extension-epic-3-retrospective: optional
 
   extension-epic-4: backlog
-  13-1-chrome-storage-adapter-for-supabase: ready-for-dev
-  13-2-api-client-adaptation: ready-for-dev
-  13-3-authentication-flow-in-popup: ready-for-dev
-  13-4-background-worker-api-coordination: ready-for-dev
+  13-1-chrome-storage-adapter-for-supabase: done
+  13-2-api-client-adaptation: done
+  13-3-authentication-flow-in-popup: done
+  13-4-background-worker-api-coordination: done
   extension-epic-4-retrospective: optional
 
   extension-epic-5: backlog

@@ -13,7 +13,7 @@ from core.optimizations.model_router import (
     ModelRouter,
     RoutingResult
 )
-from core.optimizations.task_classifier import ClassificationRequest
+from core.api.models.task_classifier_models import ClassificationRequest
 from core.utils.logger import logger
 from core.utils.auth_utils import verify_and_get_user_id_from_jwt
 

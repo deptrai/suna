@@ -66,15 +66,30 @@ export default defineConfig({
   ],
 
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    { 
+      name: 'chromium', 
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /.*\.(spec|test)\.ts/,
+    },
     // Firefox and Webkit disabled for faster local testing
     // Enable when needed: npx playwright install firefox webkit
     // { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
     // { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+    {
+      name: 'api-tests',
+      testDir: '../tests/api',
+      testMatch: /.*\.api\.spec\.ts/,
+      use: { 
+        ...devices['Desktop Chrome'],
+        baseURL: process.env.API_URL || 'http://localhost:8000',
+      },
+    },
   ],
 
   // Start development server before running tests
-  // Auto-starts dev server if not already running
+  // Auto-starts dev server if not already running (only for E2E tests, not API tests)
+  // Note: webServer is only used for projects listed in dependencies
+  // API tests don't need frontend server, so they're excluded
   webServer: {
     command: 'npm run dev',
     url: 'http://localhost:3000',
@@ -82,6 +97,8 @@ export default defineConfig({
     timeout: 120000,
     stdout: 'ignore',
     stderr: 'pipe',
+    // Only start server for chromium project (E2E tests), not api-tests
+    dependencies: ['chromium'],
   },
 });
 

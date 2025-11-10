@@ -21,12 +21,14 @@ import { createMetricHistoryResponse } from '../support/factories/api-test-facto
  */
 
 const API_BASE_URL = process.env.API_URL || 'http://localhost:8000';
+// Note: Backend has double /api prefix: /api/api/... due to router prefix + app prefix
+const API_PREFIX = '/api/api';
 
 test.describe('2.4-API: Quality Monitoring API', () => {
   
   test('2.4-API-001 [P1] GET /api/quality/metrics - should return quality metrics summary', async ({ authenticatedRequest }) => {
     // GIVEN: Authenticated API request
-    const endpoint = `${API_BASE_URL}/api/quality/metrics`;
+    const endpoint = `${API_BASE_URL}${API_PREFIX}/quality/metrics`;
 
     // WHEN: Requesting quality metrics summary
     const response = await authenticatedRequest.get(endpoint);
@@ -60,7 +62,7 @@ test.describe('2.4-API: Quality Monitoring API', () => {
 
   test('2.4-API-002 [P1] GET /api/quality/status - should return quality status', async ({ authenticatedRequest }) => {
     // GIVEN: Authenticated API request
-    const endpoint = `${API_BASE_URL}/api/quality/status`;
+    const endpoint = `${API_BASE_URL}${API_PREFIX}/quality/status`;
 
     // WHEN: Requesting quality status
     const response = await authenticatedRequest.get(endpoint);
@@ -87,7 +89,7 @@ test.describe('2.4-API: Quality Monitoring API', () => {
   test('2.4-API-003 [P1] GET /api/quality/metrics/{metric_name} - should return metric history', async ({ authenticatedRequest }) => {
     // GIVEN: Authenticated API request with metric name
     const metricName = 'response_similarity';
-    const endpoint = `${API_BASE_URL}/api/quality/metrics/${metricName}`;
+    const endpoint = `${API_BASE_URL}${API_PREFIX}/quality/metrics/${metricName}`;
 
     // WHEN: Requesting metric history
     const response = await authenticatedRequest.get(endpoint);
@@ -114,7 +116,7 @@ test.describe('2.4-API: Quality Monitoring API', () => {
   test('2.4-API-004 [P1] GET /api/quality/metrics/{metric_name} - should return 404 for invalid metric', async ({ authenticatedRequest }) => {
     // GIVEN: Authenticated API request with invalid metric name
     const metricName = 'invalid_metric_name';
-    const endpoint = `${API_BASE_URL}/api/quality/metrics/${metricName}`;
+    const endpoint = `${API_BASE_URL}${API_PREFIX}/quality/metrics/${metricName}`;
 
     // WHEN: Requesting invalid metric history
     const response = await authenticatedRequest.get(endpoint);
@@ -125,7 +127,7 @@ test.describe('2.4-API: Quality Monitoring API', () => {
 
   test('2.4-API-005 [P1] GET /api/quality/optimization-mode/stats - should return optimization mode statistics', async ({ authenticatedRequest }) => {
     // GIVEN: Authenticated API request
-    const endpoint = `${API_BASE_URL}/api/quality/optimization-mode/stats`;
+    const endpoint = `${API_BASE_URL}${API_PREFIX}/quality/optimization-mode/stats`;
 
     // WHEN: Requesting optimization mode statistics
     const response = await authenticatedRequest.get(endpoint);
@@ -150,7 +152,7 @@ test.describe('2.4-API: Quality Monitoring API', () => {
 
   test('2.4-API-006 [P1] GET /api/quality/metrics - should handle authentication errors', async ({ request }) => {
     // GIVEN: Unauthenticated API request
-    const endpoint = `${API_BASE_URL}/api/quality/metrics`;
+    const endpoint = `${API_BASE_URL}${API_PREFIX}/quality/metrics`;
 
     // WHEN: Requesting quality metrics without authentication
     const response = await request.get(endpoint);

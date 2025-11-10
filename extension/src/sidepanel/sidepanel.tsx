@@ -13,10 +13,17 @@ import { SidePanelLayout } from './components/SidePanelLayout';
 import { SidePanelContent } from './components/SidePanelContent';
 import { SidePanelFooter } from './components/SidePanelFooter';
 import { CoinAnalysis, type CoinAnalysisData } from './components/CoinAnalysis';
+import { LoginForm } from './components/LoginForm';
 import { ReactQueryProvider } from './providers/ReactQueryProvider';
 import { useCoinAnalysis } from './hooks/useCoinAnalysis';
+import { useAuthState } from './hooks/useAuthState';
+import { createSupabaseClient } from '../shared/supabase-extension';
+import { Button } from '@/components/ui/button';
 
 function SidePanelApp() {
+  // Authentication state
+  const { user, isLoading: authLoading } = useAuthState();
+  
   const [coinInfo, setCoinInfo] = useState<{
     name?: string;
     symbol?: string;
@@ -136,6 +143,16 @@ function SidePanelApp() {
     refetchAnalysis();
   };
 
+  const handleLogout = async () => {
+    try {
+      const supabase = await createSupabaseClient();
+      await supabase.auth.signOut();
+      // Auth state will update automatically via onAuthStateChange in useAuthState
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
   // Format error message for display
   const errorMessage = queryError
     ? queryError instanceof Error
@@ -143,6 +160,31 @@ function SidePanelApp() {
       : 'Analysis failed'
     : null;
 
+  // Show loading state while checking auth
+  if (authLoading) {
+    return (
+      <SidePanelLayout title="ChainLens Coin Analysis" onClose={handleClose}>
+        <SidePanelContent>
+          <div className="flex items-center justify-center h-full min-h-[400px]">
+            <div className="text-muted-foreground">Loading...</div>
+          </div>
+        </SidePanelContent>
+      </SidePanelLayout>
+    );
+  }
+
+  // Show login form if not authenticated
+  if (!user) {
+    return (
+      <SidePanelLayout title="ChainLens Coin Analysis" onClose={handleClose}>
+        <SidePanelContent>
+          <LoginForm />
+        </SidePanelContent>
+      </SidePanelLayout>
+    );
+  }
+
+  // Show authenticated content
   return (
     <SidePanelLayout
       title="ChainLens Coin Analysis"
@@ -150,10 +192,22 @@ function SidePanelApp() {
       footerActions={
         <SidePanelFooter
           onGenerateReport={handleGenerateReport}
+          actions={
+            <Button variant="outline" onClick={handleLogout}>
+              Logout
+            </Button>
+          }
         />
       }
     >
       <SidePanelContent>
+        {/* User info (optional) */}
+        <div className="mb-4 pb-4 border-b border-border">
+          <div className="text-sm text-muted-foreground">
+            Signed in as <span className="font-medium text-foreground">{user.email}</span>
+          </div>
+        </div>
+
         {coinInfo.name || isLoading || errorMessage ? (
           <CoinAnalysis
             data={analysisData}

@@ -18,12 +18,14 @@ import { validateAuthenticationError, validateOptionalCacheMetrics, validateOpti
  */
 
 const API_BASE_URL = process.env.API_URL || 'http://localhost:8000';
+// Note: Backend has double /api prefix: /api/api/... due to router prefix + app prefix
+const API_PREFIX = '/api/api';
 
 test.describe('1.1-API: Optimization Dashboard API', () => {
   
   test('1.1-API-001 [P1] GET /api/optimization/dashboard - should return unified optimization dashboard', async ({ authenticatedRequest }) => {
     // GIVEN: Authenticated API request
-    const endpoint = `${API_BASE_URL}/api/optimization/dashboard`;
+    const endpoint = `${API_BASE_URL}${API_PREFIX}/optimization/dashboard`;
 
     // WHEN: Requesting unified optimization dashboard
     const response = await authenticatedRequest.get(endpoint);
@@ -60,7 +62,7 @@ test.describe('1.1-API: Optimization Dashboard API', () => {
 
   test('1.1-API-002 [P1] GET /api/optimization/dashboard/cache - should return cache metrics dashboard', async ({ authenticatedRequest }) => {
     // GIVEN: Authenticated API request
-    const endpoint = `${API_BASE_URL}/api/optimization/dashboard/cache`;
+    const endpoint = `${API_BASE_URL}${API_PREFIX}/optimization/dashboard/cache`;
 
     // WHEN: Requesting cache metrics dashboard
     const response = await authenticatedRequest.get(endpoint);
@@ -96,7 +98,7 @@ test.describe('1.1-API: Optimization Dashboard API', () => {
 
   test('1.1-API-003 [P1] GET /api/optimization/dashboard - should handle authentication errors', async ({ request }) => {
     // GIVEN: Unauthenticated API request
-    const endpoint = `${API_BASE_URL}/api/optimization/dashboard`;
+    const endpoint = `${API_BASE_URL}${API_PREFIX}/optimization/dashboard`;
 
     // WHEN: Requesting dashboard without authentication
     const response = await request.get(endpoint);
@@ -107,7 +109,7 @@ test.describe('1.1-API: Optimization Dashboard API', () => {
 
   test('1.1-API-004 [P1] GET /api/optimization/dashboard/cache - should handle authentication errors', async ({ request }) => {
     // GIVEN: Unauthenticated API request
-    const endpoint = `${API_BASE_URL}/api/optimization/dashboard/cache`;
+    const endpoint = `${API_BASE_URL}${API_PREFIX}/optimization/dashboard/cache`;
 
     // WHEN: Requesting cache dashboard without authentication
     const response = await request.get(endpoint);
@@ -118,7 +120,7 @@ test.describe('1.1-API: Optimization Dashboard API', () => {
 
   test('1.1-API-005 [P2] GET /api/optimization/dashboard - should return cost savings estimates', async ({ authenticatedRequest }) => {
     // GIVEN: Authenticated API request
-    const endpoint = `${API_BASE_URL}/api/optimization/dashboard`;
+    const endpoint = `${API_BASE_URL}${API_PREFIX}/optimization/dashboard`;
 
     // WHEN: Requesting unified optimization dashboard
     const response = await authenticatedRequest.get(endpoint);
@@ -135,7 +137,7 @@ test.describe('1.1-API: Optimization Dashboard API', () => {
 
   test('1.1-API-006 [P2] GET /api/optimization/dashboard - should return performance summary', async ({ authenticatedRequest }) => {
     // GIVEN: Authenticated API request
-    const endpoint = `${API_BASE_URL}/api/optimization/dashboard`;
+    const endpoint = `${API_BASE_URL}${API_PREFIX}/optimization/dashboard`;
 
     // WHEN: Requesting unified optimization dashboard
     const response = await authenticatedRequest.get(endpoint);

@@ -14,16 +14,17 @@ interface SidePanelFooterProps {
 
 export function SidePanelFooter({ onGenerateReport, actions }: SidePanelFooterProps) {
   return (
-    <div className="flex items-center justify-end gap-2">
-      {actions || (
-        <>
-          {onGenerateReport && (
-            <Button onClick={onGenerateReport} variant="default">
-              Generate Full Report
-            </Button>
-          )}
-        </>
-      )}
+    <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center gap-2">
+        {actions}
+      </div>
+      <div className="flex items-center gap-2">
+        {onGenerateReport && (
+          <Button onClick={onGenerateReport} variant="default">
+            Generate Full Report
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

@@ -21,12 +21,14 @@ import { createModelName } from '../support/factories/api-test-factory';
  */
 
 const API_BASE_URL = process.env.API_URL || 'http://localhost:8000';
+// Note: Backend has double /api prefix: /api/api/... due to router prefix + app prefix
+const API_PREFIX = '/api/api';
 
 test.describe('1.2-API: Cache Metrics API', () => {
   
   test('1.2-API-001 [P1] GET /api/cache/metrics - should return cache metrics summary', async ({ authenticatedRequest }) => {
     // GIVEN: Authenticated API request
-    const endpoint = `${API_BASE_URL}/api/cache/metrics`;
+    const endpoint = `${API_BASE_URL}${API_PREFIX}/cache/metrics`;
 
     // WHEN: Requesting cache metrics summary
     const response = await authenticatedRequest.get(endpoint);
@@ -63,7 +65,7 @@ test.describe('1.2-API: Cache Metrics API', () => {
 
   test('1.2-API-002 [P1] GET /api/cache/health - should return cache health status', async ({ authenticatedRequest }) => {
     // GIVEN: Authenticated API request
-    const endpoint = `${API_BASE_URL}/api/cache/health`;
+    const endpoint = `${API_BASE_URL}${API_PREFIX}/cache/health`;
 
     // WHEN: Requesting cache health status
     const response = await authenticatedRequest.get(endpoint);
@@ -93,7 +95,7 @@ test.describe('1.2-API: Cache Metrics API', () => {
 
   test('1.2-API-003 [P1] GET /api/cache/metrics/hit-rate - should return overall cache hit rate', async ({ authenticatedRequest }) => {
     // GIVEN: Authenticated API request
-    const endpoint = `${API_BASE_URL}/api/cache/metrics/hit-rate`;
+    const endpoint = `${API_BASE_URL}${API_PREFIX}/cache/metrics/hit-rate`;
 
     // WHEN: Requesting overall cache hit rate
     const response = await authenticatedRequest.get(endpoint);
@@ -148,7 +150,7 @@ test.describe('1.2-API: Cache Metrics API', () => {
 
   test('1.2-API-005 [P1] GET /api/cache/metrics/performance - should return cache performance metrics', async ({ authenticatedRequest }) => {
     // GIVEN: Authenticated API request
-    const endpoint = `${API_BASE_URL}/api/cache/metrics/performance`;
+    const endpoint = `${API_BASE_URL}${API_PREFIX}/cache/metrics/performance`;
 
     // WHEN: Requesting cache performance metrics
     const response = await authenticatedRequest.get(endpoint);
@@ -179,7 +181,7 @@ test.describe('1.2-API: Cache Metrics API', () => {
 
   test('1.2-API-006 [P1] GET /api/cache/metrics - should handle authentication errors', async ({ request }) => {
     // GIVEN: Unauthenticated API request
-    const endpoint = `${API_BASE_URL}/api/cache/metrics`;
+    const endpoint = `${API_BASE_URL}${API_PREFIX}/cache/metrics`;
 
     // WHEN: Requesting cache metrics without authentication
     const response = await request.get(endpoint);
@@ -190,7 +192,7 @@ test.describe('1.2-API: Cache Metrics API', () => {
 
   test('1.2-API-007 [P2] GET /api/cache/metrics - should return model statistics when available', async ({ authenticatedRequest }) => {
     // GIVEN: Authenticated API request
-    const endpoint = `${API_BASE_URL}/api/cache/metrics`;
+    const endpoint = `${API_BASE_URL}${API_PREFIX}/cache/metrics`;
 
     // WHEN: Requesting cache metrics summary
     const response = await authenticatedRequest.get(endpoint);

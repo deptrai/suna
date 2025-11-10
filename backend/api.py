@@ -20,7 +20,70 @@ import os
 from pydantic import BaseModel
 import uuid
 
-from core import api as core_api
+# Import routers directly instead of importing from core.api
+# There's a conflict: core/api.py (file) vs core/api/ (package)
+# Solution: Import all routers directly and combine them
+from fastapi import APIRouter
+from core.versioning.api import router as agent_versioning_router
+from core.agent_runs import router as agent_runs_router
+from core.agent_crud import router as agent_crud_router
+from core.agent_tools import router as agent_tools_router
+from core.agent_json import router as agent_json_router
+from core.threads import router as threads_router
+from core.tools_api import router as tools_api_router
+from core.vapi_api import router as vapi_router
+from core.account_deletion import router as account_deletion_router
+from core.optimizations.quality_api import router as quality_monitoring_router
+from core.core_utils import initialize, cleanup
+
+# Import from core.api package (not the file)
+try:
+    from core.api.cache_metrics_api import router as cache_metrics_router
+except ImportError:
+    cache_metrics_router = None
+
+from core.api.semantic_cache_api import router as semantic_cache_router
+from core.api.task_classifier_api import router as task_classifier_router
+from core.api.model_router_api import router as model_router_router
+from core.api.multi_model_orchestrator_api import router as workflow_orchestrator_router
+
+try:
+    from core.api.optimization_dashboard_api import router as optimization_dashboard_router
+except ImportError:
+    optimization_dashboard_router = None
+
+# Create the combined router (same as core/api.py does)
+core_api_router = APIRouter()
+core_api_router.include_router(agent_versioning_router)
+core_api_router.include_router(agent_runs_router)
+core_api_router.include_router(agent_crud_router)
+core_api_router.include_router(agent_tools_router)
+core_api_router.include_router(agent_json_router)
+core_api_router.include_router(threads_router)
+core_api_router.include_router(tools_api_router)
+core_api_router.include_router(vapi_router)
+core_api_router.include_router(account_deletion_router)
+core_api_router.include_router(quality_monitoring_router)
+if cache_metrics_router:
+    core_api_router.include_router(cache_metrics_router)
+core_api_router.include_router(semantic_cache_router)
+core_api_router.include_router(task_classifier_router)
+core_api_router.include_router(model_router_router)
+core_api_router.include_router(workflow_orchestrator_router)
+if optimization_dashboard_router:
+    core_api_router.include_router(optimization_dashboard_router)
+
+# Create a mock core_api object with router and initialize/cleanup attributes
+# Wrap initialize to match expected signature
+def initialize_wrapper(db, instance_id):
+    return initialize(db, instance_id)
+
+class CoreApiModule:
+    router = core_api_router
+    initialize = initialize_wrapper
+    cleanup = cleanup
+
+core_api = CoreApiModule()
 
 from core.sandbox import api as sandbox_api
 from core.billing.api import router as billing_router
@@ -50,7 +113,7 @@ async def lifespan(app: FastAPI):
     try:
         await db.initialize()
         
-        core_api.initialize(
+        initialize(
             db,
             instance_id
         )
@@ -78,7 +141,7 @@ async def lifespan(app: FastAPI):
         yield
         
         logger.debug("Cleaning up agent resources")
-        await core_api.cleanup()
+        await cleanup()
         
         try:
             logger.debug("Closing Redis connection")
@@ -202,7 +265,7 @@ async def log_requests_middleware(request: Request, call_next):
 api_router = APIRouter()
 
 # Include all API routers without individual prefixes
-api_router.include_router(core_api.router)
+api_router.include_router(core_api_router)
 api_router.include_router(sandbox_api.router)
 api_router.include_router(billing_router)
 api_router.include_router(api_keys_api.router)

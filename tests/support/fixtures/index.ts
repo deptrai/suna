@@ -1,6 +1,5 @@
 import { test as base } from '@playwright/test';
 import { APIRequestContext } from '@playwright/test';
-import { UserFactory } from './factories/user-factory';
 
 /**
  * Custom Test Fixtures
@@ -11,15 +10,34 @@ import { UserFactory } from './factories/user-factory';
  * Pattern: Pure function → Fixture → Composition via extend
  * 
  * Reference: bmad/bmm/testarch/knowledge/fixture-architecture.md
+ * 
+ * Note: UserFactory is optional and only imported if needed (E2E tests).
+ * API tests don't need UserFactory, so we make it optional to avoid
+ * dependency on @faker-js/faker when not needed.
  */
 
 type TestFixtures = {
-  userFactory: UserFactory;
   authenticatedRequest: APIRequestContext;
   authToken: string;
   userId: string;
   apiKey: string;
 };
+
+// Optional: UserFactory (only for E2E tests)
+// Import dynamically to avoid dependency on @faker-js/faker for API tests
+let UserFactory: any = null;
+try {
+  const userFactoryModule = require('./factories/user-factory');
+  UserFactory = userFactoryModule.UserFactory;
+  
+  // Add userFactory to type if available
+  if (UserFactory) {
+    (TestFixtures as any).userFactory = UserFactory;
+  }
+} catch (error) {
+  // UserFactory not available (e.g., @faker-js/faker not installed)
+  // This is fine for API tests
+}
 
 /**
  * Generate test JWT token
@@ -47,11 +65,14 @@ function generateTestJWT(userId: string = 'test-user-id'): string {
 }
 
 export const test = base.extend<TestFixtures>({
-  userFactory: async ({}, use) => {
-    const factory = new UserFactory();
-    await use(factory);
-    await factory.cleanup(); // Auto-cleanup after test
-  },
+  // Optional: userFactory (only if UserFactory is available)
+  ...(UserFactory ? {
+    userFactory: async ({}, use) => {
+      const factory = new UserFactory();
+      await use(factory);
+      await factory.cleanup(); // Auto-cleanup after test
+    },
+  } : {}),
 
   authToken: async ({}, use) => {
     const token = generateTestJWT();
@@ -70,23 +91,42 @@ export const test = base.extend<TestFixtures>({
   },
 
   authenticatedRequest: async ({ request, authToken, apiKey }, use) => {
-    // Determine authentication method
-    const authHeader = apiKey 
-      ? { 'x-api-key': apiKey }
-      : { 'Authorization': `Bearer ${authToken}` };
-
-    // Create a new request context with authentication headers
-    const authenticatedContext = await request.newContext({
-      extraHTTPHeaders: {
-        ...authHeader,
-        'Content-Type': 'application/json',
-      },
+    // In Playwright API tests, `request` is already an APIRequestContext
+    // We can't create a new context, but we can wrap it with a proxy
+    // that adds authentication headers to all requests
+    
+    // Create a proxy object that adds auth headers to all requests
+    const authenticatedRequest = new Proxy(request, {
+      get(target, prop) {
+        const originalMethod = target[prop as keyof typeof target];
+        
+        // If it's a request method (get, post, put, delete, etc.), wrap it
+        if (typeof originalMethod === 'function' && ['get', 'post', 'put', 'delete', 'patch', 'head'].includes(prop as string)) {
+          return function(...args: any[]) {
+            // Determine authentication method
+            const authHeader = apiKey 
+              ? { 'x-api-key': apiKey }
+              : { 'Authorization': `Bearer ${authToken}` };
+            
+            // Add auth headers to request options
+            const options = args[1] || {};
+            options.headers = {
+              ...options.headers,
+              ...authHeader,
+              'Content-Type': 'application/json',
+            };
+            
+            // Call original method with updated options
+            return (originalMethod as Function).call(target, args[0], options);
+          };
+        }
+        
+        // For other properties/methods, return as-is
+        return originalMethod;
+      }
     });
 
-    await use(authenticatedContext);
-
-    // Cleanup
-    await authenticatedContext.dispose();
+    await use(authenticatedRequest);
   },
 });
 

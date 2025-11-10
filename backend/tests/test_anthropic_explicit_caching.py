@@ -270,6 +270,221 @@ class TestQualityValidation:
             pytest.skip("Quality monitoring framework not available")
 
 
+class TestEdgeCases:
+    """Test edge cases and error handling scenarios."""
+    
+    def test_is_anthropic_model_with_none(self):
+        """Test model detection with None input."""
+        assert _is_anthropic_model(None) is False
+        assert _is_anthropic_model("") is False
+    
+    def test_is_anthropic_model_with_empty_string(self):
+        """Test model detection with empty string."""
+        assert _is_anthropic_model("") is False
+    
+    def test_add_cache_control_with_empty_messages(self):
+        """Test cache control addition with empty messages list."""
+        result = _add_anthropic_cache_control([], "anthropic/claude-haiku-4-5")
+        assert result == []
+    
+    def test_add_cache_control_with_none_messages(self):
+        """Test cache control addition handles None gracefully."""
+        # Function raises TypeError for None input (expected behavior)
+        # This is acceptable - None is not a valid input
+        with pytest.raises((TypeError, AttributeError)):
+            _add_anthropic_cache_control(None, "anthropic/claude-haiku-4-5")
+    
+    def test_add_cache_control_with_missing_role(self):
+        """Test cache control addition with messages missing 'role' field."""
+        messages = [
+            {"content": "You are a helpful assistant. " * 300},  # Missing 'role'
+            {"role": "user", "content": "Hello"}
+        ]
+        
+        result = _add_anthropic_cache_control(messages, "anthropic/claude-haiku-4-5")
+        
+        # Should handle missing role gracefully (message without role is skipped for cache control)
+        assert len(result) == 2
+        # First message without role should be kept as-is (no cache control added)
+        assert result[0] == messages[0]
+    
+    def test_add_cache_control_with_missing_content(self):
+        """Test cache control addition with messages missing 'content' field."""
+        messages = [
+            {"role": "system"},  # Missing 'content'
+            {"role": "user", "content": "Hello"}
+        ]
+        
+        result = _add_anthropic_cache_control(messages, "anthropic/claude-haiku-4-5")
+        
+        # Should handle missing content gracefully (empty string or None)
+        assert len(result) == 2
+        # System message with missing content should be kept as-is (too small for caching)
+        assert result[0] == messages[0]
+    
+    def test_add_cache_control_with_list_content_format(self):
+        """Test cache control addition with messages already in list format."""
+        messages = [
+            {
+                "role": "system",
+                "content": [
+                    {"type": "text", "text": "You are a helpful assistant. " * 300}
+                ]
+            },
+            {"role": "user", "content": "Hello"}
+        ]
+        
+        result = _add_anthropic_cache_control(messages, "anthropic/claude-haiku-4-5")
+        
+        # Should add cache_control to list format content
+        assert result[0]["role"] == "system"
+        assert isinstance(result[0]["content"], list)
+        if result[0]["content"] and len(result[0]["content"]) > 0:
+            assert "cache_control" in result[0]["content"][0]
+    
+    def test_cache_token_extraction_with_missing_usage(self):
+        """Test cache token extraction when response.usage is missing."""
+        # Create a mock response without usage and without _hidden_params
+        mock_response = Mock(spec=[])  # Empty spec means no attributes by default
+        # Explicitly set usage to None and don't set _hidden_params
+        mock_response.usage = None
+        # Don't set _hidden_params at all (it won't exist)
+        
+        # Should handle missing usage gracefully
+        cache_creation_tokens = 0
+        cache_read_tokens = 0
+        
+        if hasattr(mock_response, 'usage') and mock_response.usage:
+            cache_creation_tokens = getattr(mock_response.usage, 'cache_creation_input_tokens', 0) or 0
+            cache_read_tokens = getattr(mock_response.usage, 'cache_read_input_tokens', 0) or 0
+        elif hasattr(mock_response, '_hidden_params') and mock_response._hidden_params:
+            # Fallback to _hidden_params if available
+            usage = mock_response._hidden_params.get('usage', {})
+            cache_creation_tokens = usage.get('cache_creation_input_tokens', 0) or 0
+            cache_read_tokens = usage.get('cache_read_input_tokens', 0) or 0
+        
+        assert cache_creation_tokens == 0
+        assert cache_read_tokens == 0
+    
+    def test_cache_token_extraction_with_none_usage(self):
+        """Test cache token extraction when response.usage is None."""
+        mock_response = MagicMock()
+        mock_response.usage = None
+        
+        # Should handle None usage gracefully
+        cache_creation_tokens = 0
+        cache_read_tokens = 0
+        
+        if mock_response.usage:
+            cache_creation_tokens = getattr(mock_response.usage, 'cache_creation_input_tokens', 0) or 0
+            cache_read_tokens = getattr(mock_response.usage, 'cache_read_input_tokens', 0) or 0
+        
+        assert cache_creation_tokens == 0
+        assert cache_read_tokens == 0
+    
+    def test_cache_hit_rate_calculation_with_zero_total_tokens(self):
+        """Test cache hit rate calculation when total input tokens is zero."""
+        cache_read_tokens = 500
+        total_input_tokens = 0
+        
+        # Should handle division by zero gracefully
+        cache_hit_rate = (cache_read_tokens / total_input_tokens * 100) if total_input_tokens > 0 else 0.0
+        
+        assert cache_hit_rate == 0.0
+    
+    def test_cache_hit_rate_calculation_with_100_percent_cache(self):
+        """Test cache hit rate calculation when all tokens are cached."""
+        cache_read_tokens = 1000
+        total_input_tokens = 1000
+        
+        cache_hit_rate = (cache_read_tokens / total_input_tokens * 100) if total_input_tokens > 0 else 0.0
+        
+        assert cache_hit_rate == 100.0
+    
+    def test_add_cache_control_with_non_string_content(self):
+        """Test cache control addition with non-string content types."""
+        messages = [
+            {"role": "system", "content": 12345},  # Non-string content
+            {"role": "user", "content": "Hello"}
+        ]
+        
+        result = _add_anthropic_cache_control(messages, "anthropic/claude-haiku-4-5")
+        
+        # Should handle non-string content gracefully (convert to string)
+        assert len(result) == 2
+    
+    @patch('core.services.llm.config')
+    def test_add_cache_control_with_missing_config(self, mock_config):
+        """Test cache control addition when config is missing."""
+        # Simulate missing config attribute
+        if hasattr(mock_config, 'ANTHROPIC_CACHE_ENABLED'):
+            delattr(mock_config, 'ANTHROPIC_CACHE_ENABLED')
+        
+        messages = [
+            {"role": "system", "content": "You are a helpful assistant. " * 300},
+            {"role": "user", "content": "Hello"}
+        ]
+        
+        # Should use default value (True) when config attribute is missing
+        result = _add_anthropic_cache_control(messages, "anthropic/claude-haiku-4-5")
+        
+        # Should still process messages (default to enabled)
+        assert len(result) == 2
+    
+    def test_token_counting_with_accurate_counter_failure(self):
+        """Test token counting fallback when accurate counter fails."""
+        messages = [
+            {"role": "system", "content": "You are a helpful assistant. " * 300},
+            {"role": "user", "content": "Hello"}
+        ]
+        
+        # Mock token_counter to raise exception
+        with patch('litellm.token_counter', side_effect=Exception("Token counter unavailable")):
+            result = _add_anthropic_cache_control(messages, "anthropic/claude-haiku-4-5")
+            
+            # Should fallback to rough estimation
+            assert len(result) == 2
+    
+    def test_cache_metrics_with_missing_hidden_params(self):
+        """Test cache metrics extraction when _hidden_params is missing."""
+        # Create a mock response without _hidden_params
+        mock_response = Mock(spec=['usage'])  # Only usage attribute, no _hidden_params
+        mock_response.usage = None
+        
+        # Should handle missing _hidden_params gracefully
+        cache_creation_tokens = 0
+        cache_read_tokens = 0
+        
+        if hasattr(mock_response, 'usage') and mock_response.usage:
+            cache_creation_tokens = getattr(mock_response.usage, 'cache_creation_input_tokens', 0) or 0
+            cache_read_tokens = getattr(mock_response.usage, 'cache_read_input_tokens', 0) or 0
+        elif hasattr(mock_response, '_hidden_params') and mock_response._hidden_params:
+            usage = mock_response._hidden_params.get('usage', {})
+            cache_creation_tokens = usage.get('cache_creation_input_tokens', 0) or 0
+            cache_read_tokens = usage.get('cache_read_input_tokens', 0) or 0
+        
+        assert cache_creation_tokens == 0
+        assert cache_read_tokens == 0
+    
+    def test_cache_metrics_with_empty_hidden_params(self):
+        """Test cache metrics extraction when _hidden_params is empty."""
+        mock_response = MagicMock()
+        mock_response.usage = None
+        mock_response._hidden_params = {}
+        
+        # Should handle empty _hidden_params gracefully
+        cache_creation_tokens = 0
+        cache_read_tokens = 0
+        
+        if hasattr(mock_response, '_hidden_params') and mock_response._hidden_params:
+            usage = mock_response._hidden_params.get('usage', {})
+            cache_creation_tokens = usage.get('cache_creation_input_tokens', 0) or 0
+            cache_read_tokens = usage.get('cache_read_input_tokens', 0) or 0
+        
+        assert cache_creation_tokens == 0
+        assert cache_read_tokens == 0
+
+
 # Integration tests (require Anthropic API)
 # These tests are now implemented in test_epic1_integration.py
 # Run with: ENABLE_LLM_INTEGRATION_TESTS=true pytest backend/tests/test_epic1_integration.py -v

@@ -7,7 +7,23 @@
  * Reference: bmad/bmm/testarch/knowledge/data-factories.md
  */
 
-import { faker } from '@faker-js/faker';
+// Dynamic import of faker to handle module resolution
+// Try to resolve from frontend/node_modules if not available in current context
+let faker: any = null;
+try {
+  // Try direct import first
+  faker = require('@faker-js/faker').faker;
+} catch (e1) {
+  try {
+    // Try from frontend/node_modules (relative to tests directory)
+    const path = require('path');
+    const fakerPath = path.resolve(__dirname, '../../frontend/node_modules/@faker-js/faker');
+    faker = require(fakerPath).faker;
+  } catch (e2) {
+    // Faker not available - use fallback implementations
+    faker = null;
+  }
+}
 
 /**
  * Model name factory
@@ -22,9 +38,19 @@ export function createModelName(overrides?: Partial<{ provider: string; model: s
     'openai-compatible': ['gpt-4o-mini', 'gpt-4o'],
   };
 
-  const provider = overrides?.provider || faker.helpers.arrayElement(providers);
+  // If overrides provided, use them directly
+  if (overrides?.provider && overrides?.model) {
+    return overrides.provider.includes('/') ? overrides.model : `${overrides.provider}/${overrides.model}`;
+  }
+
+  // Otherwise, use faker or fallback to defaults
+  const provider = overrides?.provider || (faker 
+    ? faker.helpers.arrayElement(providers)
+    : 'openai-compatible');
   const modelList = models[provider as keyof typeof models] || models.openai;
-  const model = overrides?.model || faker.helpers.arrayElement(modelList);
+  const model = overrides?.model || (faker
+    ? faker.helpers.arrayElement(modelList)
+    : modelList[0]);
 
   return provider.includes('/') ? model : `${provider}/${model}`;
 }
