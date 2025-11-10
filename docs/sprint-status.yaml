@@ -74,7 +74,7 @@ development_status:
   extension-epic-3: backlog
   12-1-shared-ui-components-integration: done
   12-2-popup-layout-structure: done
-  12-3-analysis-results-display-component: ready-for-dev
+  12-3-analysis-results-display-component: done
   12-4-react-query-integration: ready-for-dev
   12-5-report-generation-ui: ready-for-dev
   extension-epic-3-retrospective: optional
