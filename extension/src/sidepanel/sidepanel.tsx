@@ -8,12 +8,10 @@
 
 import './sidepanel.css';
 import { createRoot } from 'react-dom/client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { SidePanelLayout } from './components/SidePanelLayout';
 import { SidePanelContent } from './components/SidePanelContent';
 import { SidePanelFooter } from './components/SidePanelFooter';
-import { CoinAnalysis, type CoinAnalysisData } from './components/CoinAnalysis';
-import { LoginForm } from './components/LoginForm';
 import { ReactQueryProvider } from './providers/ReactQueryProvider';
 import { useCoinAnalysis } from './hooks/useCoinAnalysis';
 import { useAuthState } from './hooks/useAuthState';
@@ -21,6 +19,11 @@ import { createSupabaseClient } from '../shared/supabase-extension';
 import { generateReportViaApi, openReportInNewTab } from '../shared/report-extension';
 import { handleApiError, isAuthenticationError } from '../shared/error-handler-extension';
 import { Button } from '@/components/ui/button';
+import type { CoinAnalysisData } from './components/CoinAnalysis';
+
+// Lazy load heavy components for better initial load performance
+const CoinAnalysis = lazy(() => import('./components/CoinAnalysis').then(module => ({ default: module.CoinAnalysis })));
+const LoginForm = lazy(() => import('./components/LoginForm').then(module => ({ default: module.LoginForm })));
 
 function SidePanelApp() {
   // Authentication state
@@ -168,7 +171,15 @@ function SidePanelApp() {
     return (
       <SidePanelLayout title="ChainLens Coin Analysis" onClose={handleClose}>
         <SidePanelContent>
-          <LoginForm />
+          <Suspense fallback={
+            <div className="flex items-center justify-center min-h-[400px]">
+              <div className="text-sm text-muted-foreground">Loading...</div>
+            </div>
+          }>
+            <LoginForm onLoginSuccess={() => {
+              // Auth state will update automatically via useAuthState hook
+            }} />
+          </Suspense>
         </SidePanelContent>
       </SidePanelLayout>
     );
@@ -201,16 +212,22 @@ function SidePanelApp() {
         </div>
 
         {coinInfo.name || isLoading || errorMessage ? (
-          <CoinAnalysis
-            data={analysisData}
-            isLoading={isLoading}
-            error={errorMessage}
-            onRetry={handleRetry}
-            onLogin={() => {
-              // Force re-check auth state
-              // The useAuthState hook will update automatically
-            }}
-          />
+          <Suspense fallback={
+            <div className="flex items-center justify-center min-h-[400px]">
+              <div className="text-sm text-muted-foreground">Loading analysis...</div>
+            </div>
+          }>
+            <CoinAnalysis
+              data={analysisData}
+              isLoading={isLoading}
+              error={errorMessage}
+              onRetry={handleRetry}
+              onLogin={() => {
+                // Force re-check auth state
+                // The useAuthState hook will update automatically
+              }}
+            />
+          </Suspense>
         ) : (
           // Empty state - no coin selected yet
           <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center text-muted-foreground">
@@ -235,6 +252,19 @@ function SidePanelApp() {
 }
 
 function SidePanelAppWithProvider() {
+  // Measure initial load time for performance monitoring
+  useEffect(() => {
+    const loadStartTime = performance.now();
+    return () => {
+      const loadTime = performance.now() - loadStartTime;
+      if (loadTime > 2000) {
+        console.warn(`[Performance] Side panel load time: ${loadTime.toFixed(2)}ms (target: < 2000ms)`);
+      } else {
+        console.log(`[Performance] Side panel load time: ${loadTime.toFixed(2)}ms`);
+      }
+    };
+  }, []);
+
   return (
     <ReactQueryProvider>
       <SidePanelApp />

@@ -99,6 +99,32 @@ module.exports = (env, argv) => {
     devtool: isProduction ? false : 'source-map',
     optimization: {
       minimize: isProduction,
+      splitChunks: {
+        chunks: 'all',
+        cacheGroups: {
+          // Split vendor dependencies
+          vendor: {
+            test: /[\\/]node_modules[\\/]/,
+            name: 'vendors',
+            chunks: 'all',
+            priority: 10,
+          },
+          // Split frontend shared code
+          frontend: {
+            test: /[\\/]frontend[\\/]/,
+            name: 'frontend-shared',
+            chunks: 'all',
+            priority: 5,
+          },
+          // Split React and React DOM
+          react: {
+            test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/,
+            name: 'react-vendor',
+            chunks: 'all',
+            priority: 20,
+          },
+        },
+      },
     },
   };
 };

@@ -200,12 +200,25 @@ if (document.readyState === 'loading') {
   runCoinDetection();
   
   // Also run after a delay to catch dynamically loaded content (debounced)
-  detectionTimeoutId = window.setTimeout(() => {
-    logger.debug('Running detection again after delay (for dynamic content)...');
-    debouncedCoinDetection();
-    detectionTimeoutId = null;
-  }, 2000);
-  activeTimeouts.push(detectionTimeoutId);
+  // Use requestIdleCallback for non-critical detection to avoid blocking page
+  if (typeof requestIdleCallback !== 'undefined') {
+    requestIdleCallback(() => {
+      detectionTimeoutId = window.setTimeout(() => {
+        logger.debug('Running detection again after delay (for dynamic content)...');
+        debouncedCoinDetection();
+        detectionTimeoutId = null;
+      }, 2000);
+      activeTimeouts.push(detectionTimeoutId);
+    }, { timeout: 5000 });
+  } else {
+    // Fallback for browsers without requestIdleCallback
+    detectionTimeoutId = window.setTimeout(() => {
+      logger.debug('Running detection again after delay (for dynamic content)...');
+      debouncedCoinDetection();
+      detectionTimeoutId = null;
+    }, 2000);
+    activeTimeouts.push(detectionTimeoutId);
+  }
 }
 
 // Listen for page visibility changes
