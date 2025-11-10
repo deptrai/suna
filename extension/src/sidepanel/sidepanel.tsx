@@ -20,6 +20,7 @@ import { generateReportViaApi, openReportInNewTab } from '../shared/report-exten
 import { handleApiError, isAuthenticationError } from '../shared/error-handler-extension';
 import { Button } from '@/components/ui/button';
 import type { CoinAnalysisData } from './components/CoinAnalysis';
+import { logBrowserInfo } from '../shared/browser-compat';
 
 // Lazy load heavy components for better initial load performance
 const CoinAnalysis = lazy(() => import('./components/CoinAnalysis').then(module => ({ default: module.CoinAnalysis })));
@@ -254,6 +255,9 @@ function SidePanelApp() {
 function SidePanelAppWithProvider() {
   // Measure initial load time for performance monitoring
   useEffect(() => {
+    // Log browser compatibility info (Story 14.4)
+    logBrowserInfo();
+    
     const loadStartTime = performance.now();
     return () => {
       const loadTime = performance.now() - loadStartTime;

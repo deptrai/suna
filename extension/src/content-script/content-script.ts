@@ -16,6 +16,7 @@ import { logger } from '../shared/logger';
 import { injectAnalysisButtons, removeAllInjectedButtons } from './injector';
 import { applyHighlights, removeAllHighlights, setupHighlightRemoval } from './highlighter';
 import { wrapContentScript, wrapAsyncContentScript } from '../shared/error-handler-extension';
+import { logBrowserInfo, supportsRequestIdleCallback } from '../shared/browser-compat';
 
 // ============================================
 // Content Script Initialization
@@ -23,6 +24,9 @@ import { wrapContentScript, wrapAsyncContentScript } from '../shared/error-handl
 logger.info('ChainLens Extension: Content script loaded');
 logger.debug('URL:', window.location.href);
 logger.debug('Ready state:', document.readyState);
+
+// Log browser compatibility info (Story 14.4)
+logBrowserInfo();
 
 // Set flag immediately với namespace to avoid global pollution
 try {
@@ -201,7 +205,7 @@ if (document.readyState === 'loading') {
   
   // Also run after a delay to catch dynamically loaded content (debounced)
   // Use requestIdleCallback for non-critical detection to avoid blocking page
-  if (typeof requestIdleCallback !== 'undefined') {
+  if (supportsRequestIdleCallback()) {
     requestIdleCallback(() => {
       detectionTimeoutId = window.setTimeout(() => {
         logger.debug('Running detection again after delay (for dynamic content)...');

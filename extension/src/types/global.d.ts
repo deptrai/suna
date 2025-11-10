@@ -9,5 +9,8 @@ declare global {
   }
 }
 
+// Firefox browser API compatibility (global const, not inside declare global)
+declare const browser: typeof chrome | undefined;
+
 export {};
 

@@ -17,8 +17,11 @@ import { createSupabaseClient } from '../shared/supabase-extension';
 import { createAgentChat, getAuthToken } from '../shared/api-extension';
 import { generateReportViaApi, openReportInNewTab } from '../shared/report-extension';
 import { handleApiError, isAuthenticationError } from '../shared/error-handler-extension';
+import { logBrowserInfo } from '../shared/browser-compat';
 
 logger.info('ChainLens Extension: Background service worker loaded');
+// Log browser compatibility info (Story 14.4)
+logBrowserInfo();
 
 // Configure side panel behavior
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch((error) => {

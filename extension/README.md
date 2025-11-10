@@ -113,6 +113,16 @@ Xem thêm architecture details trong:
 - [PRD](../../docs/extensions/epic-prd-architecture/PRD-extension.md)
 - [Epics](../../docs/extensions/epic-prd-architecture/epics-extension.md)
 
+## Browser Compatibility
+
+### Supported Browsers
+
+- ✅ **Chrome** (Latest) - Full support, Manifest V3
+- ✅ **Edge** (Latest) - Full support, Manifest V3 (Chromium-based)
+- ⚠️ **Firefox** (109+) - Limited support, Manifest V3
+
+See [Cross-Browser Testing Guide](./docs/CROSS_BROWSER_TESTING.md) for detailed testing instructions.
+
 ## Testing
 
 ### Manual Testing
@@ -135,6 +145,10 @@ Xem thêm architecture details trong:
    # Verify all dependencies install correctly
    npm install
    ```
+
+4. **Cross-browser testing:**
+   - See [Cross-Browser Testing Guide](./docs/CROSS_BROWSER_TESTING.md)
+   - Test trên Chrome, Edge, và Firefox (if supported)
 
 ## Troubleshooting
 
