@@ -6,15 +6,22 @@
 
 // Composite component (quick setup)
 export { BillingContent } from './BillingContent';
+export { PricingSection } from './PricingSection';
+export { RevenueCatPricingSection } from './RevenueCatPricingSection';
+export { UnifiedPricingSection } from './UnifiedPricingSection';
+export { PlanSelectionModal } from './PlanSelectionModal';
+export { ScheduledDowngradeCard } from './ScheduledDowngradeCard';
 
 // Carousel view (horizontal scroll)
 export { PricingCarousel } from './PricingCarousel';
 
 // Atomic components (for custom layouts)
-export { TrialCard } from './TrialCard';
 export { PricingTierCard } from './PricingTierCard';
+export { PricingTierBadge } from './PricingTierBadge';
 export { BillingPeriodSelector } from './BillingPeriodSelector';
+export { BillingPeriodToggle } from './BillingPeriodToggle';
 export { CurrentPlanCard } from './CurrentPlanCard';
 export { CreditsCard } from './CreditsCard';
 export { CreditPackages } from './CreditPackages';
+export { CreditPurchaseModal } from './CreditPurchaseModal';
 

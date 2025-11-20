@@ -5,14 +5,13 @@ import { useLanguage } from '@/contexts';
 import * as React from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Menu, MoreHorizontal } from 'lucide-react-native';
+import { CircleEllipsis, Menu, MessageCircleMore, MoreHorizontal, TextAlignStart } from 'lucide-react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { useColorScheme } from 'nativewind';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -27,16 +26,8 @@ interface ThreadHeaderProps {
 /**
  * ThreadHeader Component
  * 
- * Minimal, elegant floating header with glassmorphism effect
- * Designed with Vercel-level attention to detail
- * 
- * Features:
- * - Ultra-compact blur card design (py-2, px-3)
- * - Sleek 13px medium-weight typography
- * - Subtle icons with refined opacity (60%)
- * - Editable thread title (tap to edit)
- * - Smooth spring animations with haptic feedback
- * - Portal-based drawer compatibility (no z-index conflicts)
+ * Clean, minimal header inspired by SettingsHeader design
+ * Matches the BillingPage aesthetic with proper spacing and layout
  */
 export function ThreadHeader({
   threadTitle,
@@ -45,7 +36,6 @@ export function ThreadHeader({
   onActionsPress,
   isLoading = false,
 }: ThreadHeaderProps) {
-  const { colorScheme } = useColorScheme();
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const [isEditingTitle, setIsEditingTitle] = React.useState(false);
@@ -65,82 +55,69 @@ export function ThreadHeader({
   }));
 
   React.useEffect(() => {
-    if (threadTitle) {
+    if (threadTitle && threadTitle.trim()) {
       setEditedTitle(threadTitle);
+    } else {
+      setEditedTitle('');
     }
   }, [threadTitle]);
 
   const handleMenuPress = () => {
     console.log('🎯 Menu panel pressed (Thread View)');
-    console.log('📱 Opening menu drawer');
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onMenuPress?.();
   };
 
   const handleTitlePress = () => {
     console.log('🎯 Thread title tapped');
-    console.log('✏️ Entering edit mode');
     setIsEditingTitle(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    // Focus input after state update
     setTimeout(() => {
       titleInputRef.current?.focus();
     }, 100);
   };
 
   const handleTitleBlur = async () => {
-    console.log('✅ Title editing complete');
-    console.log('📝 New title:', editedTitle);
+    console.log('✏️ Title editing finished');
     setIsEditingTitle(false);
-    
-    if (editedTitle.trim() !== threadTitle && editedTitle.trim() !== '') {
-      const newTitle = editedTitle.trim();
+
+    if (editedTitle !== threadTitle && editedTitle.trim()) {
+      console.log('💾 Saving new thread title:', editedTitle);
       setIsUpdating(true);
+
       try {
-        await onTitleChange?.(newTitle);
-        console.log('✅ Title updated successfully');
-        // Optimistically keep the new title immediately after success
-        setEditedTitle(newTitle);
+        await onTitleChange?.(editedTitle.trim());
+        console.log('✅ Thread title updated successfully');
       } catch (error) {
-        console.error('❌ Failed to update title:', error);
-        // Revert to original on error
-        if (threadTitle) {
-          setEditedTitle(threadTitle);
-        }
+        console.error('❌ Failed to update thread title:', error);
+        setEditedTitle(threadTitle || '');
       } finally {
         setIsUpdating(false);
       }
     } else {
-      // Revert if empty or unchanged
-      if (threadTitle) {
-        setEditedTitle(threadTitle);
-      }
+      setEditedTitle(threadTitle || '');
     }
   };
 
   const handleActionsPress = () => {
-    console.log('⚙️ Thread actions menu');
-    console.log('📂 Thread:', threadTitle);
+    console.log('🎯 Thread actions menu pressed');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onActionsPress?.();
   };
 
   return (
-    <View 
-      className="absolute top-0 left-0 right-0"
-      style={{ 
+    <View
+      className="absolute top-0 left-0 right-0 bg-background border-b border-border/20"
+      style={{
+        paddingTop: Math.max(insets.top, 16) + 8,
+        paddingBottom: 8,
+        zIndex: 0,
       }}
-      pointerEvents="box-none" // Allow touches to pass through empty areas
     >
-      {/* Floating card with solid background - Sleek minimal design */}
-      <View className="relative rounded-2xl pt-12 border border-border/30 overflow-hidden">
-        {/* Solid Background */}
-        <View 
-          className="absolute inset-0"
-          style={{ 
-            backgroundColor: colorScheme === 'dark' 
-              ? '#161618' 
-              : '#FFFFFF' 
+      <View className="px-3 flex-row items-center gap-3">
+        <AnimatedPressable
+          onPressIn={() => {
+            menuScale.value = withSpring(0.95, { damping: 15, stiffness: 400 });
           }}
         />
 
@@ -188,35 +165,36 @@ export function ThreadHeader({
                 hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
                 className="flex-1"
               >
-                <Text 
-                  className="text-[13px] font-roobert-medium text-foreground/80 text-center" 
-                  numberOfLines={1}
-                >
-                  {editedTitle}
-                </Text>
-              </Pressable>
-            ) : null}
-          </View>
+                {threadTitle && threadTitle.trim() ? threadTitle : 'Untitled'}
+              </Text>
+            </Pressable>
+          )}
 
-          {/* Right - Actions Button (Minimal) */}
-          <AnimatedPressable
-            onPressIn={() => {
-              actionScale.value = withSpring(0.95, { damping: 15, stiffness: 400 });
-            }}
-            onPressOut={() => {
-              actionScale.value = withSpring(1, { damping: 15, stiffness: 400 });
-            }}
-            onPress={handleActionsPress}
-            style={actionAnimatedStyle}
-            className="w-7 h-7 items-center justify-center rounded-full bg-secondary/40 -mr-1"
-            accessibilityRole="button"
-            accessibilityLabel="Thread actions"
-          >
-            <Icon as={MoreHorizontal} size={15} className="text-foreground/60" strokeWidth={2} />
-          </AnimatedPressable>
+          {(isUpdating || isLoading) && (
+            <View className="ml-2">
+              <KortixLoader size="large" />
+            </View>
+          )}
         </View>
+
+        {/* Actions Button */}
+        <AnimatedPressable
+          onPressIn={() => {
+            actionScale.value = withSpring(0.95, { damping: 15, stiffness: 400 });
+          }}
+          onPressOut={() => {
+            actionScale.value = withSpring(1, { damping: 15, stiffness: 400 });
+          }}
+          onPress={handleActionsPress}
+          style={actionAnimatedStyle}
+          className="w-8 h-8 items-center justify-center rounded-full"
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Thread actions"
+        >
+          <Icon as={MessageCircleMore} size={20} className="text-foreground" strokeWidth={2} />
+        </AnimatedPressable>
       </View>
     </View>
   );
 }
-

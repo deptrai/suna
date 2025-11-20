@@ -5,7 +5,7 @@ import { useAgentFromCache } from '@/hooks/react-query/agents/use-agents';
 import { EpsilonLogo } from '@/components/sidebar/chainlens-logo';
 import { DynamicIcon } from 'lucide-react/dynamic';
 import { cn } from '@/lib/utils';
-import type { Agent } from '@/hooks/react-query/agents/utils';
+import type { Agent } from '@/hooks/agents/utils';
 
 interface AgentAvatarProps {
   // For passing agent data directly (preferred - no fetch)

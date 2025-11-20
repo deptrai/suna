@@ -26,12 +26,14 @@ export type SubscriptionStatus = 'no_subscription' | 'active';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { IntegrationsRegistry } from '@/components/agents/integrations-registry';
-import { useComposioToolkitIcon } from '@/hooks/react-query/composio/use-composio';
+import { useComposioToolkitIcon } from '@/hooks/composio/use-composio';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useTranslations } from 'next-intl';
 import { NewAgentDialog } from '@/components/agents/new-agent-dialog';
 import { AgentAvatar } from '@/components/thread/content/agent-avatar';
 import { AgentModelSelector } from '@/components/agents/config/model-selector';
 import { AgentConfigurationDialog } from '@/components/agents/agent-configuration-dialog';
+import { usePricingModalStore } from '@/stores/pricing-modal-store';
 
 type UnifiedConfigMenuProps = {
     isLoggedIn?: boolean;
@@ -47,7 +49,6 @@ type UnifiedConfigMenuProps = {
     subscriptionStatus: SubscriptionStatus;
     canAccessModel: (modelId: string) => boolean;
     refreshCustomModels?: () => void;
-    onUpgradeRequest?: () => void;
 };
 
 const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMenu({
@@ -59,8 +60,8 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
     modelOptions,
     canAccessModel,
     subscriptionStatus,
-    onUpgradeRequest,
 }) {
+    const t = useTranslations('thread');
     const [isOpen, setIsOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
@@ -198,7 +199,7 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
                             <div className="flex items-center gap-2 min-w-0 max-w-[180px]">
                                 {renderAgentIcon(displayAgent)}
                                 <span className="truncate text-sm font-medium">
-                                    {displayAgent?.name || 'Super Worker'}
+                                    {displayAgent?.name || t('superWorker')}
                                 </span>
                                 <ChevronDown size={12} className="opacity-60 flex-shrink-0" />
                             </div>
@@ -227,7 +228,7 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
                                             <div className="flex items-center justify-center w-8 h-8 bg-card border-[1.5px] border-border flex-shrink-0" style={{ borderRadius: '10.4px' }}>
                                                 {renderAgentIcon(displayAgent)}
                                             </div>
-                                            <span className="flex-1 truncate font-medium text-left">{displayAgent?.name || 'Super Worker'}</span>
+                                            <span className="flex-1 truncate font-medium text-left">{displayAgent?.name || t('superWorker')}</span>
                                         </DropdownMenuSubTrigger>
                                         <DropdownMenuPortal>
                                             <DropdownMenuSubContent className="w-[320px] px-0 py-3 border-[1.5px] border-border rounded-2xl max-h-[500px] overflow-hidden" sideOffset={8}>
@@ -353,30 +354,62 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
                                         <div className="space-y-0.5">
                                             {modelOptions.map((model) => {
                                                 const isActive = selectedModel === model.id;
-                                                return (
+                                                const canAccess = canAccessModel(model.id);
+                                                const modelItem = (
                                                     <SpotlightCard
                                                         key={model.id}
-                                                        className="transition-colors cursor-pointer bg-transparent"
+                                                        className={cn(
+                                                            "transition-colors cursor-pointer bg-transparent",
+                                                            !canAccess && "opacity-60"
+                                                        )}
                                                     >
                                                         <div
-                                                            className="flex items-center gap-3 text-sm cursor-pointer px-1 py-1"
+                                                            className="flex items-center gap-3 text-sm cursor-pointer px-1 py-1 relative"
                                                             onClick={() => {
-                                                                onModelChange(model.id);
-                                                                setIsOpen(false);
+                                                                if (canAccess) {
+                                                                    onModelChange(model.id);
+                                                                    setIsOpen(false);
+                                                                } else {
+                                                                    setIsOpen(false);
+                                                                    usePricingModalStore.getState().openPricingModal({ 
+                                                                        isAlert: true, 
+                                                                        alertTitle: 'Upgrade to access this AI model' 
+                                                                    });
+                                                                }
                                                             }}
                                                         >
                                                             <ModelProviderIcon
                                                                 modelId={model.id}
                                                                 size={32}
-                                                                className="flex-shrink-0"
+                                                                className={cn("flex-shrink-0", !canAccess && "opacity-50")}
                                                             />
-                                                            <span className="flex-1 truncate font-medium">{model.label}</span>
-                                                            {isActive && (
+                                                            <span className={cn("flex-1 truncate font-medium", !canAccess && "text-muted-foreground")}>{model.label}</span>
+                                                            {!canAccess && (
+                                                                <Lock className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                                                            )}
+                                                            {isActive && canAccess && (
                                                                 <Check className="h-4 w-4 text-blue-500 flex-shrink-0" />
                                                             )}
                                                         </div>
                                                     </SpotlightCard>
                                                 );
+
+                                                if (!canAccess) {
+                                                    return (
+                                                        <TooltipProvider key={model.id}>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    {modelItem}
+                                                                </TooltipTrigger>
+                                                                <TooltipContent side="left" className="text-xs">
+                                                                    <p>Upgrade to access this model</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                    );
+                                                }
+
+                                                return modelItem;
                                             })}
                                         </div>
                                     </DropdownMenuSubContent>
@@ -396,7 +429,6 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
                                     { action: 'knowledge' as const, icon: Brain },
                                     { action: 'integrations' as const, icon: LibraryBig },
                                     { action: 'triggers' as const, icon: Zap },
-                                    { action: 'playbooks' as const, icon: Workflow },
                                 ].map(({ action, icon: Icon }) => (
                                     <Button
                                         key={action}

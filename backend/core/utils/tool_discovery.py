@@ -71,7 +71,8 @@ def _generate_tool_name(class_name: str) -> str:
     """Generate a tool name from class name.
     
     Converts CamelCase class names to snake_case tool names.
-    Example: SandboxFilesTool -> sb_files_tool
+    This is a fallback - normally we use the module file name instead.
+    Example: SandboxFilesTool -> sandbox_files_tool
     
     Args:
         class_name: Name of the tool class
@@ -118,26 +119,44 @@ def _generate_display_name(name: str) -> str:
     return s3.title()
 
 
+# Cache for discovered tools to avoid repeated expensive imports
+_TOOLS_CACHE = None
+
+
+def warm_up_tools_cache():
+    """Pre-load and cache all tool classes on worker startup.
+    
+    This should be called when a worker process starts to avoid the first
+    user request paying the ~4s cost of importing all tool modules.
+    """
+    logger.info("🔥 Warming up worker: loading tool classes...")
+    import time
+    start = time.time()
+    discover_tools()
+    elapsed = time.time() - start
+    logger.info(f"✅ Worker ready: {len(_TOOLS_CACHE)} tools loaded in {elapsed:.2f}s")
+
+
 def discover_tools() -> Dict[str, Type[Tool]]:
-    """Discover all available Tool subclasses.
+    """Discover all available tools from the centralized tool registry.
+    
+    Tool names and their corresponding classes are defined in the centralized registry
+    (core.tools.tool_registry), which is also used for runtime tool registration.
+    This ensures tool names are always consistent between runtime and UI metadata,
+    eliminating naming mismatches.
     
     Returns:
-        Dict mapping tool names to tool classes
+        Dict mapping tool names (str) to tool classes (Type[Tool])
+        Example: {'web_search_tool': SandboxWebSearchTool, 'browser_tool': BrowserTool, ...}
     """
-    # Ensure all tool modules are loaded
-    _ensure_tools_imported()
+    global _TOOLS_CACHE
+    if _TOOLS_CACHE is not None:
+        return _TOOLS_CACHE
     
-    # Get all Tool subclasses
-    tool_classes = _get_all_tool_subclasses()
-    
-    tools_map = {}
-    for tool_class in tool_classes:
-        tool_name = _generate_tool_name(tool_class.__name__)
-        tools_map[tool_name] = tool_class
-        # logger.debug(f"Discovered tool: {tool_name} ({tool_class.__name__})")
-    
-    # logger.info(f"Discovered {len(tools_map)} tools")
-    return tools_map
+    from core.tools.tool_registry import get_all_tools
+    _TOOLS_CACHE = get_all_tools()
+    logger.debug(f"Loaded and cached {len(_TOOLS_CACHE)} tool classes")
+    return _TOOLS_CACHE
 
 
 def _extract_tool_metadata(tool_name: str, tool_class: Type[Tool]) -> Dict[str, Any]:

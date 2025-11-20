@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState, useEffect } from 'react';
-import { useAllTriggers, type TriggerWithAgent } from '@/hooks/react-query/triggers/use-all-triggers';
+import { useAllTriggers, type TriggerWithAgent } from '@/hooks/triggers/use-all-triggers';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -77,12 +77,7 @@ const formatCronExpression = (cron?: string) => {
   if (minute === '0' && hour === '*/1' && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
     return 'Every hour';
   }
-  if (minute === '*/15' && hour === '*' && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
-    return 'Every 15 minutes';
-  }
-  if (minute === '*/30' && hour === '*' && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
-    return 'Every 30 minutes';
-  }
+  // Removed: schedules under 1 hour are no longer allowed
   if (minute === '0' && hour === '9' && dayOfMonth === '*' && month === '*' && dayOfWeek === '1-5') {
     return 'Weekdays at 9 AM';
   }

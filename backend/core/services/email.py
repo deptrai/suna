@@ -27,6 +27,9 @@ class EmailService:
             user_name = user_email.split('@')[0].title()
         
         subject = "🎉 Welcome to Chainlens — Let's Get Started "
+=======
+        subject = "🎉 Welcome to Kortix — Let's Get Started "
+>>>>>>> upstream/main
         html_content = self._get_welcome_email_template(user_name)
         text_content = self._get_welcome_email_text(user_name)
         
@@ -137,6 +140,7 @@ class EmailService:
 <body>
   <div class="container">
     <div class="logo-container">
+<<<<<<< HEAD
       <img src="https://i.postimg.cc/WdNtRx5Z/epsilon-chainlens-logo.png" alt="Epsilon Chainlens Logo" class="logo">
     </div>
     <h1>Welcome to Epsilon Chainlens!</h1>
@@ -147,8 +151,7 @@ class EmailService:
 
     <p>To get started, we'd like to get to know you better: fill out this short <a href="https://docs.google.com/forms/d/e/1FAIpQLSef1EHuqmIh_iQz-kwhjnzSC3Ml-V_5wIySDpMoMU9W_j24JQ/viewform">form</a>!</p>
 
-    <p>To celebrate your arrival, here's a <strong>15% discount</strong> for your first month to get more usage:</p>
-
+    <p>To celebrate your arrival, here's a <strong>15% discount</strong> for your first month:</p>
     <p>🎁 Use code <strong>WELCOME15</strong> at checkout.</p>
 
     <p>Let us know if you need help getting started or have questions — we're always here, and join our <a href="https://discord.com/invite/FjD644cfcs">Discord community</a>.</p>
@@ -160,19 +163,11 @@ class EmailService:
     <p>— The Chainlens Team</p>
 
     <a href="https://www.chainlens.net/" class="button">Go to the platform</a>
-  </div>
-</body>
-</html>"""
-    
-    def _get_welcome_email_text(self, user_name: str) -> str:
-        return f"""Hi {user_name},
-
-Welcome to Chainlens — we're excited to have you on board!
 
 To get started, we'd like to get to know you better: fill out this short form!
 https://docs.google.com/forms/d/e/1FAIpQLSef1EHuqmIh_iQz-kwhjnzSC3Ml-V_5wIySDpMoMU9W_j24JQ/viewform
 
-To celebrate your arrival, here's a 15% discount for your first month to get more usage:
+To celebrate your arrival, here's a 15% discount for your first month:
 🎁 Use code WELCOME15 at checkout.
 
 Let us know if you need help getting started or have questions — we're always here, and join our Discord community: https://discord.com/invite/FjD644cfcs

@@ -2,7 +2,8 @@ import { ThemeProvider } from '@/components/home/theme-provider';
 import { siteConfig } from '@/lib/site';
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
-import { Providers } from './providers';
+import { AuthProvider } from '@/components/AuthProvider';
+import { ReactQueryProvider } from './react-query-provider';
 import { Toaster } from '@/components/ui/sonner';
 import { Analytics } from '@vercel/analytics/react';
 import { GoogleAnalytics } from '@next/third-parties/google';
@@ -12,30 +13,51 @@ import { PostHogIdentify } from '@/components/posthog-identify';
 import '@/lib/polyfills';
 import { roobert } from './fonts/roobert';
 import { roobertMono } from './fonts/roobert-mono';
+import { PlanSelectionModal } from '@/components/billing/pricing/plan-selection-modal';
+import { Suspense } from 'react';
+import { I18nProvider } from '@/components/i18n-provider';
 
 
 export const viewport: Viewport = {
-  themeColor: 'black',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: 'white' },
+    { media: '(prefers-color-scheme: dark)', color: 'black' }
+  ],
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
   title: {
     default: siteConfig.name,
-    template: `%s - ${siteConfig.name}`,
+    template: `%s | ${siteConfig.name}`,
   },
   description:
     'Epsilon is a fully open source AI assistant that helps you accomplish real-world tasks with ease. Through natural conversation, Epsilon becomes your digital companion for research, data analysis, and everyday challenges.',
+=======
+  description: siteConfig.description,
+>>>>>>> upstream/main
   keywords: [
-    'AI',
+    'AI assistant',
+    'open source AI',
     'artificial intelligence',
+    'AI worker',
     'browser automation',
     'web scraping',
     'file management',
-    'AI assistant',
-    'open source',
-    'research',
+    'research assistant',
     'data analysis',
+    'task automation',
+    'Kortix',
+    'generalist AI',
+  ],
+  authors: [
+    { 
+      name: 'Kortix Team', 
+      url: 'https://kortix.com' 
+    }
   ],
   authors: [{ name: 'Epsilon Team', url: 'https://chainlens.net' }],
   creator:
@@ -52,9 +74,13 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
+    nocache: false,
     googleBot: {
       index: true,
       follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
     },
   },
   openGraph: {
@@ -65,17 +91,17 @@ export const metadata: Metadata = {
     siteName: 'Epsilon',
     images: [
       {
-        url: new URL('/banner.png', siteConfig.url).toString(),
+        url: '/banner.png',
         width: 1200,
         height: 630,
         alt: 'Epsilon - Open Source Generalist AI Worker',
         type: 'image/png',
       },
     ],
-    locale: 'en_US',
   },
   twitter: {
     card: 'summary_large_image',
+<<<<<<< HEAD
     title: 'Epsilon - Open Source Generalist AI Worker',
     description:
       'Epsilon is a fully open source AI assistant that helps you accomplish real-world tasks with ease through natural conversation.',
@@ -85,13 +111,18 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: '/favicon.png', sizes: 'any', media: '(prefers-color-scheme: light)' },
+      { url: '/favicon.png', sizes: 'any' },
       { url: '/favicon-light.png', sizes: 'any', media: '(prefers-color-scheme: dark)' },
     ],
     shortcut: '/favicon.png',
+    apple: '/favicon.png',
   },
+  manifest: '/manifest.json',
   alternates: {
     canonical: siteConfig.url,
+  },
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
   },
 };
 
@@ -101,6 +132,58 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className={`${roobert.variable} ${roobertMono.variable}`}>
       <head>
+        {/* Structured Data for Organization */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'Organization',
+              name: 'Kortix',
+              alternateName: ['Suna', 'Kortix AI'],
+              url: 'https://kortix.com',
+              logo: 'https://kortix.com/favicon.png',
+              description: siteConfig.description,
+              foundingDate: '2024',
+              sameAs: [
+                'https://github.com/kortix-ai',
+                'https://x.com/kortix',
+                'https://linkedin.com/company/kortix',
+              ],
+              contactPoint: {
+                '@type': 'ContactPoint',
+                contactType: 'Customer Support',
+                url: 'https://kortix.com',
+              },
+            }),
+          }}
+        />
+        
+        {/* Structured Data for Software Application */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'SoftwareApplication',
+              name: 'Kortix',
+              alternateName: 'Suna',
+              applicationCategory: 'BusinessApplication',
+              operatingSystem: 'Web, macOS, Windows, Linux',
+              offers: {
+                '@type': 'Offer',
+                price: '0',
+                priceCurrency: 'USD',
+              },
+              aggregateRating: {
+                '@type': 'AggregateRating',
+                ratingValue: '4.8',
+                ratingCount: '1000',
+              },
+            }),
+          }}
+        />
+        
         <Script id="google-tag-manager" strategy="afterInteractive">
           {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
           new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -128,10 +211,17 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <Providers>
-            {children}
-            <Toaster />
-          </Providers>
+          <I18nProvider>
+          <AuthProvider>
+            <ReactQueryProvider>
+              {children}
+              <Toaster />
+              <Suspense fallback={null}>
+                <PlanSelectionModal />
+              </Suspense>
+            </ReactQueryProvider>
+          </AuthProvider>
+          </I18nProvider>
           <Analytics />
           <GoogleAnalytics gaId="G-6ETJFB3PT3" />
           <SpeedInsights />

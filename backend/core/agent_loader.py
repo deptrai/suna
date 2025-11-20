@@ -357,6 +357,42 @@ class AgentLoader:
             'description_editable': False,
             'mcps_editable': True
         }
+        
+        if agent.current_version_id and user_id:
+            try:
+                from core.versioning.version_service import get_version_service
+                version_service = await get_version_service()
+                
+                version = await version_service.get_version(
+                    agent_id=agent.agent_id,
+                    version_id=agent.current_version_id,
+                    user_id=user_id
+                )
+                
+                version_dict = version.to_dict()
+                
+                if 'config' in version_dict and version_dict['config']:
+                    config = version_dict['config']
+                    tools = config.get('tools', {})
+                    
+                    agent.configured_mcps = tools.get('mcp', [])
+                    agent.custom_mcps = tools.get('custom_mcp', [])
+                    agent.triggers = config.get('triggers', [])
+                else:
+                    agent.configured_mcps = version_dict.get('configured_mcps', [])
+                    agent.custom_mcps = version_dict.get('custom_mcps', [])
+                    agent.triggers = []
+                    
+                logger.debug(f"Loaded Suna config with {len(agent.configured_mcps)} configured MCPs and {len(agent.custom_mcps)} custom MCPs")
+            except Exception as e:
+                logger.warning(f"Failed to load MCPs from version for Suna agent {agent.agent_id}: {e}")
+                agent.configured_mcps = []
+                agent.custom_mcps = []
+                agent.triggers = []
+        else:
+            agent.configured_mcps = []
+            agent.custom_mcps = []
+            agent.triggers = []
     
     async def _load_custom_config(self, agent: AgentData, user_id: str):
         """Load custom agent configuration from version."""

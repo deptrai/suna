@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from "@/components/ui/button"
-import { FolderOpen, ExternalLink, Monitor, Copy, Check } from "lucide-react"
+import { FolderOpen, Upload, Monitor, Copy, Check } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { toast } from "sonner"
 import {
@@ -12,14 +12,14 @@ import {
 } from "@/components/ui/tooltip"
 import { useState, useRef, KeyboardEvent } from "react"
 import { Input } from "@/components/ui/input"
-import { useUpdateProject } from "@/hooks/react-query"
+import { useUpdateProject } from "@/hooks/threads/use-project";
 import { Skeleton } from "@/components/ui/skeleton"
-import { useIsMobile } from "@/hooks/use-mobile"
+import { useIsMobile } from "@/hooks/utils"
 import { cn } from "@/lib/utils"
 import { ShareModal } from "@/components/sidebar/share-modal"
 import { useQueryClient } from "@tanstack/react-query";
-import { projectKeys } from "@/hooks/react-query/sidebar/keys";
-import { threadKeys } from "@/hooks/react-query/threads/keys";
+import { projectKeys } from "@/hooks/threads/keys";
+import { threadKeys } from "@/hooks/threads/keys";
 
 interface ThreadSiteHeaderProps {
   threadId?: string;
@@ -29,7 +29,6 @@ interface ThreadSiteHeaderProps {
   onToggleSidePanel: () => void;
   onProjectRenamed?: (newName: string) => void;
   isMobileView?: boolean;
-  debugMode?: boolean;
   variant?: 'default' | 'shared';
 }
 
@@ -41,13 +40,13 @@ export function SiteHeader({
   onToggleSidePanel,
   onProjectRenamed,
   isMobileView,
-  debugMode,
   variant = 'default',
 }: ThreadSiteHeaderProps) {
   const pathname = usePathname()
   const [isEditing, setIsEditing] = useState(false)
   const [editName, setEditName] = useState(projectName)
   const inputRef = useRef<HTMLInputElement>(null)
+  const isSharedVariant = variant === 'shared'
   const [showShareModal, setShowShareModal] = useState(false);
   const [showKnowledgeBase, setShowKnowledgeBase] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -147,7 +146,7 @@ export function SiteHeader({
           {variant === 'shared' ? (
             <div className="text-base font-medium text-muted-foreground flex items-center gap-2">
               {projectName}
-              <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-2 py-0.5 rounded-full">
+              <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
                 Shared
               </span>
             </div>
@@ -165,9 +164,10 @@ export function SiteHeader({
             <Skeleton className="h-5 w-32" />
           ) : (
             <div
-              className="text-base font-medium text-muted-foreground hover:text-foreground cursor-pointer flex items-center"
-              onClick={startEditing}
-              title="Click to rename project"
+              className={`text-base font-medium text-muted-foreground flex items-center ${isSharedVariant ? '' : 'hover:text-foreground cursor-pointer'
+                }`}
+              onClick={isSharedVariant ? undefined : startEditing}
+              title={isSharedVariant ? undefined : 'Click to rename project'}
             >
               {projectName}
             </div>
@@ -175,13 +175,6 @@ export function SiteHeader({
         </div>
 
         <div className="flex items-center gap-1 pr-4">
-          {/* Debug mode indicator */}
-          {debugMode && (
-            <div className="bg-amber-500 text-black text-xs px-2 py-0.5 rounded-md mr-2">
-              Debug
-            </div>
-          )}
-
           {/* Show all buttons on both mobile and desktop - responsive tooltips */}
           <TooltipProvider>
             {variant === 'shared' ? (
@@ -206,7 +199,7 @@ export function SiteHeader({
                 onClick={openShareModal}
                 className="h-9 px-3 cursor-pointer gap-2"
               >
-                <ExternalLink className="h-4 w-4" />
+                <Upload className="h-4 w-4" />
                 <span>Share</span>
               </Button>
             )}

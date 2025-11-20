@@ -1,6 +1,6 @@
 'use server';
 
-import { createTrialCheckout } from '@/lib/api/billing-v2';
+import { createTrialCheckout } from '@/lib/api/billing';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
@@ -98,16 +98,13 @@ export async function signUp(prevState: any, formData: FormData) {
     return { message: error.message || 'Could not create account' };
   }
 
-  const userName = email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  // Welcome email is now sent automatically by Supabase database trigger
+  // See: backend/supabase/migrations/20251113000000_welcome_email_webhook.sql
 
   const { error: signInError, data: signInData } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
-
-  if (signInData && signInData.user) {
-    sendWelcomeEmail(email, userName);
-  }
 
   if (signInError) {
     return {

@@ -1,5 +1,15 @@
 import { toast } from 'sonner';
-import { BillingError, AgentRunLimitError, ProjectLimitError } from './api';
+import { 
+  AgentRunLimitError, 
+  ProjectLimitError, 
+  BillingError,
+  TriggerLimitError,
+  ModelAccessDeniedError,
+  CustomWorkerLimitError,
+  ThreadLimitError,
+  AgentCountLimitError
+} from './api/errors';
+import { usePricingModalStore } from '@/stores/pricing-modal-store';
 
 export interface ApiError extends Error {
   status?: number;
@@ -58,6 +68,26 @@ const extractErrorMessage = (error: any): string => {
     return error.detail?.message || error.message || 'Project limit exceeded';
   }
 
+  if (error instanceof AgentCountLimitError) {
+    return error.detail?.message || error.message || 'Agent limit exceeded';
+  }
+
+  if (error instanceof TriggerLimitError) {
+    return error.detail?.message || error.message || 'Trigger limit exceeded';
+  }
+
+  if (error instanceof ModelAccessDeniedError) {
+    return error.detail?.message || error.message || 'Model access denied';
+  }
+
+  if (error instanceof CustomWorkerLimitError) {
+    return error.detail?.message || error.message || 'Custom worker limit exceeded';
+  }
+
+  if (error instanceof ThreadLimitError) {
+    return error.detail?.message || error.message || 'Thread limit exceeded';
+  }
+
   if (error instanceof Error) {
     return error.message;
   }
@@ -91,9 +121,6 @@ const shouldShowError = (error: any, context?: ErrorContext): boolean => {
     return false;
   }
   if (error instanceof BillingError) {
-    return false;
-  }
-  if (error instanceof AgentRunLimitError) {
     return false;
   }
 
@@ -138,6 +165,74 @@ export const handleApiError = (error: any, context?: ErrorContext): void => {
 
   const rawMessage = extractErrorMessage(error);
   const formattedMessage = formatErrorMessage(rawMessage, context);
+
+  if (error instanceof AgentRunLimitError) {
+    // Note: Translations should be handled in components that use this handler
+    // This is a fallback for non-component contexts
+    const upgradeMessage = `You've reached your limits. Agent Run Limit (${error.detail.running_count}/${error.detail.limit})`;
+    usePricingModalStore.getState().openPricingModal({ isAlert: true, alertTitle: upgradeMessage });
+    return;
+  }
+
+  if (error instanceof ProjectLimitError) {
+    // Note: Translations should be handled in components that use this handler
+    // This is a fallback for non-component contexts
+    const upgradeMessage = `You've reached your limits. Project Limit (${error.detail.current_count}/${error.detail.limit})`;
+    usePricingModalStore.getState().openPricingModal({ isAlert: true, alertTitle: upgradeMessage });
+    return;
+  }
+
+  if (error instanceof ThreadLimitError) {
+    const upgradeMessage = `You've reached your limits. Thread Limit (${error.detail.current_count}/${error.detail.limit})`;
+    usePricingModalStore.getState().openPricingModal({ isAlert: true, alertTitle: upgradeMessage });
+    return;
+  }
+
+  if (error instanceof AgentCountLimitError) {
+    const upgradeMessage = `You've reached your limits. Worker Limit (${error.detail.current_count}/${error.detail.limit})`;
+    usePricingModalStore.getState().openPricingModal({ isAlert: true, alertTitle: upgradeMessage });
+    return;
+  }
+
+  if (error instanceof TriggerLimitError) {
+    const upgradeMessage = `You've reached your limits. Trigger Limit (${error.detail.current_count}/${error.detail.limit})`;
+    usePricingModalStore.getState().openPricingModal({ isAlert: true, alertTitle: upgradeMessage });
+    return;
+  }
+
+  if (error instanceof ModelAccessDeniedError) {
+    const upgradeMessage = 'Upgrade to access premium AI models';
+    usePricingModalStore.getState().openPricingModal({ isAlert: true, alertTitle: upgradeMessage });
+    return;
+  }
+
+  if (error instanceof CustomWorkerLimitError) {
+    const upgradeMessage = `You've reached your limits. Worker Limit (${error.detail.current_count}/${error.detail.limit})`;
+    usePricingModalStore.getState().openPricingModal({ isAlert: true, alertTitle: upgradeMessage });
+    return;
+  }
+
+  if (error instanceof BillingError) {
+    // Extract billing error message and determine if credits are exhausted
+    const message = error.detail?.message?.toLowerCase() || '';
+    const isCreditsExhausted = 
+      message.includes('credit') ||
+      message.includes('balance') ||
+      message.includes('insufficient') ||
+      message.includes('out of credits') ||
+      message.includes('no credits');
+    
+    // Open pricing modal with appropriate alert title
+    const alertTitle = isCreditsExhausted 
+      ? 'You ran out of credits. Upgrade now.'
+      : 'Billing check failed. Please upgrade to continue.';
+    
+    usePricingModalStore.getState().openPricingModal({ 
+      isAlert: true, 
+      alertTitle 
+    });
+    return;
+  }
 
   if (error?.status >= 500) {
     toast.error(formattedMessage, {

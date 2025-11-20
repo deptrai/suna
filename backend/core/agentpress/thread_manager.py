@@ -2,6 +2,7 @@
 Simplified conversation thread management system for AgentPress.
 """
 
+import asyncio
 import json
 from typing import List, Dict, Any, Optional, Type, Union, AsyncGenerator, Literal, cast
 from core.services.llm import make_llm_api_call, LLMError
@@ -224,6 +225,7 @@ class ThreadManager:
                     completion_tokens=completion_tokens,
                     model=model or "unknown",
                     message_id=saved_message['message_id'],
+                    thread_id=thread_id,
                     cache_read_tokens=cache_read_tokens,
                     cache_creation_tokens=cache_creation_tokens
                 )
@@ -315,6 +317,7 @@ class ThreadManager:
         max_xml_tool_calls: int = 0,
         generation: Optional[StatefulGenerationClient] = None,
         latest_user_message_content: Optional[str] = None,
+        cancellation_event: Optional[asyncio.Event] = None,
     ) -> Union[Dict[str, Any], AsyncGenerator]:
         """Run a conversation thread with LLM integration and tool execution."""
         logger.debug(f"🚀 Starting thread execution for {thread_id} with model {llm_model}")
@@ -342,7 +345,8 @@ class ThreadManager:
             result = await self._execute_run(
                 thread_id, system_prompt, llm_model, llm_temperature, llm_max_tokens,
                 tool_choice, config, stream,
-                generation, auto_continue_state, temporary_message, latest_user_message_content
+                generation, auto_continue_state, temporary_message, latest_user_message_content,
+                cancellation_event
             )
             
             # If result is an error dict, convert it to a generator that yields the error
@@ -356,7 +360,7 @@ class ThreadManager:
             thread_id, system_prompt, llm_model, llm_temperature, llm_max_tokens,
             tool_choice, config, stream,
             generation, auto_continue_state, temporary_message,
-            native_max_auto_continues, latest_user_message_content
+            native_max_auto_continues, latest_user_message_content, cancellation_event
         )
 
     async def _execute_run(
@@ -364,7 +368,7 @@ class ThreadManager:
         llm_temperature: float, llm_max_tokens: Optional[int], tool_choice: ToolChoice,
         config: ProcessorConfig, stream: bool, generation: Optional[StatefulGenerationClient],
         auto_continue_state: Dict[str, Any], temporary_message: Optional[Dict[str, Any]] = None,
-        latest_user_message_content: Optional[str] = None
+        latest_user_message_content: Optional[str] = None, cancellation_event: Optional[asyncio.Event] = None
     ) -> Union[Dict[str, Any], AsyncGenerator]:
         """Execute a single LLM run."""
         
@@ -426,6 +430,12 @@ class ThreadManager:
                         if usage and normalized_stored == normalized_current:
                             # Use total_tokens (includes prev completion) for better accuracy
                             last_total_tokens = int(usage.get('total_tokens', 0))
+                            
+                            # Add cache creation tokens for accurate count (AWS Bedrock quota calculation)
+                            cache_creation = int(usage.get("cache_creation_input_tokens", 0) or 0)
+                            if cache_creation > 0:
+                                last_total_tokens += cache_creation
+                                logger.debug(f"Added {cache_creation} cache creation tokens to fast check total")
                             
                             # Count tokens in new message (only for first turn, not auto-continue)
                             new_msg_tokens = 0
@@ -505,7 +515,10 @@ class ThreadManager:
 
             # Apply context compression (only if needed based on fast path check)
             if ENABLE_CONTEXT_MANAGER:
-                if skip_fetch:
+                # Skip compression for first message (minimal context)
+                if len(messages) <= 2:
+                    logger.debug(f"First message: Skipping compression ({len(messages)} messages)")
+                elif skip_fetch:
                     # Fast path: We know we're under threshold, skip compression entirely
                     logger.debug(f"Fast path: Skipping compression check (under threshold)")
                 elif need_compression:
@@ -550,7 +563,8 @@ class ThreadManager:
                     logger.debug(f"Failed to check cache_needs_rebuild flag: {e}")
             
             # Apply caching
-            if ENABLE_PROMPT_CACHING:
+            if ENABLE_PROMPT_CACHING and len(messages) > 2:
+                # Skip caching for first message (minimal context)
                 prepared_messages = await apply_anthropic_caching_strategy(
                     system_prompt, 
                     messages, 
@@ -560,6 +574,8 @@ class ThreadManager:
                 )
                 prepared_messages = validate_cache_blocks(prepared_messages, llm_model)
             else:
+                if ENABLE_PROMPT_CACHING and len(messages) <= 2:
+                    logger.debug(f"First message: Skipping caching and validation ({len(messages)} messages)")
                 prepared_messages = [system_prompt] + messages
 
             # Get tool schemas for LLM API call (after compression)
@@ -776,7 +792,7 @@ class ThreadManager:
                     cast(AsyncGenerator, llm_response), thread_id, prepared_messages,
                     llm_model, config, True,
                     auto_continue_state['count'], auto_continue_state['continuous_state'],
-                    generation, estimated_total_tokens
+                    generation, estimated_total_tokens, cancellation_event
                 )
             else:
                 return self.response_processor.process_non_streaming_response(
@@ -793,7 +809,8 @@ class ThreadManager:
         llm_temperature: float, llm_max_tokens: Optional[int], tool_choice: ToolChoice,
         config: ProcessorConfig, stream: bool, generation: Optional[StatefulGenerationClient],
         auto_continue_state: Dict[str, Any], temporary_message: Optional[Dict[str, Any]],
-        native_max_auto_continues: int, latest_user_message_content: Optional[str] = None
+        native_max_auto_continues: int, latest_user_message_content: Optional[str] = None,
+        cancellation_event: Optional[asyncio.Event] = None
     ) -> AsyncGenerator:
         """Generator that handles auto-continue logic."""
         logger.debug(f"Starting auto-continue generator, max: {native_max_auto_continues}")
@@ -808,12 +825,18 @@ class ThreadManager:
             auto_continue_state['active'] = False  # Reset for this iteration
             
             try:
+                # Check for cancellation before continuing
+                if cancellation_event and cancellation_event.is_set():
+                    logger.info(f"Cancellation signal received in auto-continue generator for thread {thread_id}")
+                    break
+                
                 response_gen = await self._execute_run(
                     thread_id, system_prompt, llm_model, llm_temperature, llm_max_tokens,
                     tool_choice, config, stream,
                     generation, auto_continue_state,
                     temporary_message if auto_continue_state['count'] == 0 else None,
-                    latest_user_message_content if auto_continue_state['count'] == 0 else None
+                    latest_user_message_content if auto_continue_state['count'] == 0 else None,
+                    cancellation_event
                 )
 
                 # Handle error responses
@@ -824,6 +847,11 @@ class ThreadManager:
                 # Process streaming response
                 if hasattr(response_gen, '__aiter__'):
                     async for chunk in cast(AsyncGenerator, response_gen):
+                        # Check for cancellation
+                        if cancellation_event and cancellation_event.is_set():
+                            logger.info(f"Cancellation signal received while processing stream in auto-continue for thread {thread_id}")
+                            break
+                        
                         # Check for auto-continue triggers
                         should_continue = self._check_auto_continue_trigger(
                             chunk, auto_continue_state, native_max_auto_continues

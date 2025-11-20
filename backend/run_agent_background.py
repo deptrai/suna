@@ -48,6 +48,10 @@ async def initialize():
     logger.info(f"Initializing worker with Redis at {redis_host}:{redis_port}")
     await retry(lambda: redis.initialize_async())
     await db.initialize()
+    
+    # Pre-load tool classes to avoid first-request delay
+    from core.utils.tool_discovery import warm_up_tools_cache
+    warm_up_tools_cache()
 
     _initialized = True
     logger.info(f"✅ Worker initialized successfully with instance ID: {instance_id}")
@@ -164,6 +168,8 @@ async def run_agent_background(
                     if data == "STOP":
                         logger.debug(f"Received STOP signal for agent run {agent_run_id} (Instance: {instance_id})")
                         stop_signal_received = True
+                        # Set cancellation event to stop LLM execution immediately
+                        cancellation_event.set()
                         break
                 # Periodically refresh the active run key TTL
                 if total_responses % 50 == 0: # Refresh every 50 responses or so
@@ -199,12 +205,14 @@ async def run_agent_background(
         await redis.set(instance_active_key, "running", ex=redis.REDIS_KEY_TTL)
 
         # Initialize agent generator with optimization_mode
+        # Initialize agent generator with cancellation event
         agent_gen = run_agent(
             thread_id=thread_id, project_id=project_id,
             model_name=effective_model,
             agent_config=agent_config,
             trace=trace,
             optimization_mode=optimization_mode,
+            cancellation_event=cancellation_event,
         )
 
         async for response in agent_gen:

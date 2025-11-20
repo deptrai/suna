@@ -43,7 +43,7 @@ export interface BottomNavItem {
  * 
  * Available subscription tiers
  */
-export type TierType = 'Plus' | 'Pro' | 'Ultra';
+export type TierType = 'Basic' | 'Plus' | 'Pro' | 'Ultra';
 
 /**
  * User Profile Type
@@ -56,5 +56,6 @@ export interface UserProfile {
   email: string;
   avatar?: string;
   tier?: TierType;
+  planName?: string; // Plan name from subscription (e.g., 'Plus', 'Pro', 'Ultra')
 }
 

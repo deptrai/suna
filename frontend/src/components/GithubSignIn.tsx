@@ -5,9 +5,10 @@ import { useTheme } from 'next-themes';
 import { toast } from 'sonner';
 import { Icons } from './home/icons';
 // Using proper GitHub brand icon from Icons component
-import { useAuthMethodTracking } from '@/lib/stores/auth-tracking';
+import { useAuthMethodTracking } from '@/stores/auth-tracking';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useTranslations } from 'next-intl';
 
 interface GitHubSignInProps {
   returnUrl?: string;
@@ -22,6 +23,7 @@ interface AuthMessage {
 export default function GitHubSignIn({ returnUrl }: GitHubSignInProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { resolvedTheme } = useTheme();
+  const t = useTranslations('auth');
 
   const { wasLastMethod, markAsUsed } = useAuthMethodTracking('github');
 
@@ -164,7 +166,7 @@ export default function GitHubSignIn({ returnUrl }: GitHubSignInProps) {
           <Icons.github className="w-4 h-4" />
         )}
         <span>
-          {isLoading ? 'Signing in...' : 'Continue with GitHub'}
+          {isLoading ? t('signingIn') : t('continueWithGitHub')}
         </span>
       </Button>
 

@@ -14,8 +14,6 @@ import {
   type CreateCheckoutSessionRequest,
   type CreateCheckoutSessionResponse,
   type PurchaseCreditsRequest,
-  type TrialStartRequest,
-  type TrialStartResponse,
 } from './api';
 
 // Import the API functions we need
@@ -70,19 +68,6 @@ const checkoutApi = {
     console.log('✅ Backend returned checkout URLs:', {
       checkout_url: response.checkout_url,
       fe_checkout_url: response.fe_checkout_url,
-    });
-    return response;
-  },
-  
-  async startTrial(request: TrialStartRequest): Promise<TrialStartResponse> {
-    console.log('🔄 Starting trial via backend...');
-    const response = await fetchApi<TrialStartResponse>('/billing/trial/start', {
-      method: 'POST',
-      body: JSON.stringify(request),
-    });
-    console.log('✅ Backend returned trial checkout URLs:', {
-      fe_checkout_url: response.fe_checkout_url,
-      checkout_url: response.checkout_url,
     });
     return response;
   },
@@ -232,16 +217,16 @@ export async function startTrialCheckout(
  * 4. If immediate upgrade, calls success callback
  */
 export async function startPlanCheckout(
-  priceId: string,
+  tierKey: string,
   commitmentType: 'monthly' | 'yearly' | 'yearly_commitment' = 'monthly',
   onSuccess?: () => void,
   onCancel?: () => void
 ): Promise<CreateCheckoutSessionResponse> {
-  console.log('💳 Starting plan checkout...', { priceId, commitmentType });
+  console.log('💳 Starting plan checkout...', { tierKey, commitmentType });
 
   try {
     const request: CreateCheckoutSessionRequest = {
-      price_id: priceId,
+      tier_key: tierKey,
       success_url: buildSuccessUrl('plan'),
       cancel_url: buildCancelUrl(),
       commitment_type: commitmentType,

@@ -239,7 +239,7 @@ class SandboxPresentationTool(SandboxToolsBase):
         "type": "function",
         "function": {
             "name": "list_templates",
-            "description": "**MANDATORY FIRST STEP**: When a user requests a presentation (e.g., 'make a ppt on X', 'create a presentation about Y'), you MUST call this tool FIRST to list all available presentation templates with their preview images and metadata. ONLY skip this if the user explicitly specifies a template name (e.g., 'template hipster', 'use minimalist template'). Users may not know templates exist, so always show them their options first. After they select a template, use load_template_design to load it.",
+            "description": "List all available presentation templates. ** CRITICAL: ONLY USE WHEN USER EXPLICITLY REQUESTS TEMPLATES ** **WHEN TO USE**: Call this tool ONLY when the user explicitly asks for templates (e.g., 'use a template', 'show me templates', 'use the minimalist template', 'I want to use a template'). **WHEN TO SKIP**: Do NOT call this tool by default. The default workflow is CUSTOM THEME which creates truly unique designs. Do NOT call this tool if: (1) the user requests a presentation without mentioning templates (use custom theme instead), (2) the user explicitly requests a custom theme, or (3) the user wants a unique/original design. **IMPORTANT**: Templates are optional - only use when explicitly requested. The default is always a custom, unique design based on the topic's actual brand colors and visual identity.",
             "parameters": {
                 "type": "object",
                 "properties": {},
@@ -289,7 +289,7 @@ class SandboxPresentationTool(SandboxToolsBase):
             return self.success_response({
                 "message": f"Found {len(templates)} template(s)",
                 "templates": templates,
-                "note": "Use load_template_design with a template id to get the complete design reference"
+                "note": "Use load_template_design with a template id to get the complete design reference. If you don't like any of these templates, you can choose a custom theme instead."
             })
             
         except Exception as e:
@@ -299,7 +299,7 @@ class SandboxPresentationTool(SandboxToolsBase):
         "type": "function",
         "function": {
             "name": "load_template_design",
-            "description": "Load complete design reference from a presentation template including all slide HTML and extracted style patterns (colors, fonts, layouts). If presentation_name is provided, the entire template will be copied to /workspace/presentations/{presentation_name}/ so you can edit the content inside. Otherwise, use this template as DESIGN INSPIRATION ONLY - study the visual styling, CSS patterns, and layout structure to create your own original slides with similar aesthetics but completely different content.",
+            "description": "Load complete design reference from a presentation template including all slide HTML and extracted style patterns (colors, fonts, layouts). If presentation_name is provided, the entire template will be copied to /workspace/presentations/{presentation_name}/ so you can edit ONLY the text content using full_file_rewrite - you MUST preserve 100% of the CSS styling, colors, fonts, and HTML structure. The visual design must remain identical; only text/data should change. Otherwise, use this template as DESIGN INSPIRATION ONLY - study the visual styling, CSS patterns, and layout structure to create your own original slides with similar aesthetics but completely different content.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -391,20 +391,28 @@ class SandboxPresentationTool(SandboxToolsBase):
             if presentation_path:
                 safe_name = self._sanitize_filename(presentation_name)
                 response_data["presentation_path"] = f"{self.presentations_dir}/{safe_name}"
-                response_data["presentation_name"] = presentation_name
+                response_data["presentation_name"] = presentation_name.lower()
                 response_data["copied_to_workspace"] = True
-                response_data["note"] = f"Template copied to /workspace/{self.presentations_dir}/{safe_name}/. All slides are available for editing. This template provides ALL slides and extracted design patterns in one response."
+                response_data["note"] = f"Template copied to /workspace/{self.presentations_dir}/{safe_name}/. **CRITICAL**: Use full_file_rewrite to edit slides. ONLY change text content - preserve ALL CSS, styling, colors, fonts, and HTML structure 100% exactly. The template's visual design must remain identical. This template provides ALL slides and extracted design patterns in one response."
                 response_data["usage_instructions"] = {
-                    "purpose": "TEMPLATE COPIED TO WORKSPACE - Edit the content in the copied files",
+                    "purpose": "TEMPLATE COPIED TO WORKSPACE - Edit ONLY the content, preserve ALL design/styling",
                     "do": [
-                        "Edit the HTML content in the copied slide files",
-                        "Modify the text, data, and information to match your needs",
-                        "Update the styling while maintaining the design structure",
-                        "Use create_slide to update individual slides if needed"
+                        "Use full_file_rewrite tool to edit the copied slide HTML files",
+                        "ONLY modify text content inside HTML elements (headings, paragraphs, list items, data values)",
+                        "Replace placeholder/example data with actual presentation content",
+                        "Keep ALL <img>, <svg>, icon elements - only update src/alt attributes to point to your images",
+                        "Keep the exact same number and type of elements (if template has 3 logo images, keep 3 <img> tags)",
+                        "Preserve the content structure - if it's a list, keep it a list; if it's images, keep images"
                     ],
                     "dont": [
-                        "Delete the copied template structure",
-                        "Remove the metadata.json file"
+                        "NEVER modify <style> blocks or CSS styling - preserve them 100% exactly as-is",
+                        "NEVER change class names, colors, fonts, gradients, or any design properties",
+                        "NEVER change the HTML structure or layout patterns (flex, grid, positioning)",
+                        "NEVER add/remove major structural elements (containers, sections, wrappers)",
+                        "NEVER replace images with text - if template has <img> tags, keep them and only update src/alt",
+                        "NEVER remove visual elements like images, icons, SVGs, or graphics - only update their content/sources",
+                        "NEVER use create_slide tool - it's only for custom themes, NOT templates",
+                        "NEVER change the visual design - colors, fonts, spacing, sizes must stay identical"
                     ]
                 }
             else:
@@ -437,7 +445,7 @@ class SandboxPresentationTool(SandboxToolsBase):
         "type": "function",
         "function": {
             "name": "create_slide",
-            "description": "Create or update a single slide in a presentation. Each slide is saved as a standalone HTML file with 1920x1080 dimensions (16:9 aspect ratio). Perfect for iterative slide creation and editing.",
+            "description": "Create or update a single slide in a presentation. **WHEN TO USE**: This tool is ONLY for custom theme presentations (when no template is selected). **WHEN TO SKIP**: Do NOT use this tool for template-based presentations - use `full_file_rewrite` instead to rewrite existing template slide files. Each slide is saved as a standalone HTML file with 1920x1080 dimensions (16:9 aspect ratio). Slides are automatically validated to ensure both width (≤1920px) and height (≤1080px) limits are met. Use `box-sizing: border-box` on containers with padding to prevent dimension overflow. **CRITICAL**: For custom theme presentations, you MUST have completed Phase 3 (research, content outline, image search, and ALL image downloads) before using this tool. All styling MUST be derived from the custom color scheme and design elements defined in Phase 2.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -457,11 +465,34 @@ class SandboxPresentationTool(SandboxToolsBase):
                         "type": "string",
                         "description": """HTML body content only (DO NOT include <!DOCTYPE>, <html>, <head>, or <body> tags - these are added automatically). Include your content with inline CSS or <style> blocks. Design for 1920x1080 resolution. D3.js, Font Awesome, and Chart.js are pre-loaded and available to use.
                         
-                        ## 📐 **Design and Layout Rules**
+                        **🚨 IMPORTANT - Pre-configured Body Styles**: The slide template ALREADY includes base body styling in the <head>:
+                        ```
+                        body {
+                            height: 1080px;
+                            width: 1920px;
+                            margin: 0;
+                            padding: 0;
+                        }
+                        ```
+                        **DO NOT** add conflicting body styles (like `height: 100vh`, `margin`, or `padding` on body) in your content - this will override the fixed dimensions and cause validation failures. Style your content containers instead.
+                        
+                        ## 📐 **Critical Dimension Requirements**
 
+                        ### **Strict Limits**
+                        *   **Slide Size**: MUST fit within 1920px width × 1080px height
+                        *   **Validation**: Slides are automatically validated - both width AND height must not exceed limits
+                        *   **Box-Sizing**: ALWAYS use `box-sizing: border-box` on containers with padding/margin to prevent overflow
+                        
+                        ### **Common Overflow Issues**
+                        *   **Body Style Conflicts**: NEVER add `body { height: 100vh }` or other body styles in your content - the template already sets `body { height: 1080px; width: 1920px }`. Adding conflicting styles will break dimensions!
+                        *   **Padding/Margin**: With default `box-sizing: content-box`, padding adds to total dimensions
+                        *   **Example Problem**: `width: 100%` (1920px) + `padding: 80px` = 2080px total (exceeds limit!)
+                        *   **Solution**: Use `box-sizing: border-box` so padding is included in the width/height
+                        *   **CRITICAL HEIGHT ISSUE**: Containers with `height: 100%` (1080px) + `padding: 50px` top/bottom WILL cause ~100px overflow during validation! The scrollHeight measurement includes all content rendering, and flex centering with padding can push total height beyond 1080px. Use `max-height: 1080px` and reduce padding to 40px or less, OR ensure your content + padding stays well under 1080px.
+                        
                         ### **Dimensions & Spacing**
                         *   **Slide Size**: 1920x1080 pixels (16:9)
-                        *   **Padding**: 80px on all edges (minimum 60px)
+                        *   **Container Padding**: Maximum 40px on all edges (avoid 50px+ to prevent height overflow) - ALWAYS use `box-sizing: border-box`!
                         *   **Section Gaps**: 40-60px between major sections  
                         *   **Element Gaps**: 20-30px between related items
                         *   **List Spacing**: Use `gap: 25px` in flex/grid layouts
@@ -488,10 +519,11 @@ class SandboxPresentationTool(SandboxToolsBase):
                         *   Use `overflow: hidden` on containers
                         *   Grid columns: Use `gap: 50-60px`
                         *   Embrace whitespace - don't fill every pixel
+                        *   **CRITICAL**: Always use `box-sizing: border-box` on main containers to prevent dimension overflow
                         """
                     },
                     "presentation_title": {
-                                    "type": "string",
+                        "type": "string",
                         "description": "Main title of the presentation (used in HTML title and navigation)",
                         "default": "Presentation"
                     }
@@ -1192,92 +1224,3 @@ print(json.dumps(result))
         
         except Exception as e:
             return self.fail_response(f"Failed to export presentation to PDF: {str(e)}")
-
-    @openapi_schema({
-        "type": "function",
-        "function": {
-            "name": "present_presentation",
-            "description": "Present the final presentation to the user. Use this tool when: 1) All slides have been created and formatted, 2) The presentation is ready for user review, 3) You want to show the user the complete presentation with all files, 4) The presentation creation process is finished and you want to deliver the final result. IMPORTANT: This tool is specifically for presenting completed presentations, not for intermediate steps. Include the presentation name, slide count, and all relevant file attachments. This tool provides a special UI for presentation delivery. This tool allows users to download the presentation as PDF, PPTX, or upload to Google Slides. **IMPORTANT: Whenever a user wants to download the presentation as PDF, PPTX, or upload to Google Slides, use this tool to present the presentation to the user.**",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "presentation_name": {
-                        "type": "string",
-                        "description": "The identifier/folder name of the presentation (e.g., 'test_presentation'). This should match the presentation_name used in create_slide."
-                    },
-                    "presentation_title": {
-                        "type": "string",
-                        "description": "The human-readable title of the presentation (e.g., 'Test Presentation'). This will be displayed prominently to the user."
-                    },
-                    "presentation_path": {
-                        "type": "string",
-                        "description": "The file path where the presentation is located (e.g., 'presentations/my-presentation/'). This helps users locate the files."
-                    },
-                    "slide_count": {
-                        "type": "integer",
-                        "description": "The total number of slides in the presentation. This gives users a quick overview of the presentation size."
-                    },
-                    "text": {
-                        "type": "string",
-                        "description": "A summary or description of the presentation to present to the user. Include: 1) What the presentation covers, 2) Key highlights or features, 3) Any important notes about the presentation, 4) How to use or view the presentation."
-                    },
-                    "attachments": {
-                        "anyOf": [
-                            {"type": "string"},
-                            {"items": {"type": "string"}, "type": "array"}
-                        ],
-                        "description": "List of HTML slide files to attach (e.g., 'presentations/my-presentation/slide_01.html'). The UI will provide buttons for users to download as PDF, PPTX, or upload to Google Slides, so you only need to provide the HTML files. Always use relative paths to /workspace directory."
-                    },
-                    "presentation_url": {
-                        "type": "string",
-                        "description": "(Optional) A direct URL to view the presentation if available. This could be a hosted version or a specific viewing link."
-                    }
-                },
-                "required": ["presentation_name", "presentation_title", "presentation_path", "slide_count", "text", "attachments"]
-            }
-        }
-    })
-    async def present_presentation(
-        self, 
-        presentation_name: str,
-        presentation_title: str,
-        presentation_path: str,
-        slide_count: int,
-        text: str,
-        attachments: Union[str, List[str]],
-        presentation_url: Optional[str] = None
-    ) -> ToolResult:
-        """Present the final presentation to the user.
-
-        Args:
-            presentation_name: The identifier/folder name of the presentation
-            presentation_title: The human-readable title of the presentation
-            presentation_path: The file path where the presentation is located
-            slide_count: The total number of slides in the presentation
-            text: A summary or description of the presentation
-            attachments: List of presentation files to attach
-            presentation_url: Optional direct URL to view the presentation
-
-        Returns:
-            ToolResult indicating successful presentation delivery
-        """
-        try:
-            # Convert single attachment to list for consistent handling
-            if attachments and isinstance(attachments, str):
-                attachments = [attachments]
-
-            # Create a structured response with all presentation data
-            result_data = {
-                "presentation_name": presentation_name,
-                "presentation_title": presentation_title,
-                "presentation_path": presentation_path,
-                "slide_count": slide_count,
-                "text": text,
-                "attachments": attachments,
-                "presentation_url": presentation_url,
-                "status": "presentation_delivered"
-            }
-                
-            return self.success_response(result_data)
-        except Exception as e:
-            return self.fail_response(f"Error presenting presentation: {str(e)}")

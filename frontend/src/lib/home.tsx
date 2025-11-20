@@ -1,45 +1,17 @@
-import { FirstBentoAnimation } from '@/components/home/first-bento-animation';
-import { FourthBentoAnimation } from '@/components/home/fourth-bento-animation';
-import { SecondBentoAnimation } from '@/components/home/second-bento-animation';
-import { ThirdBentoAnimation } from '@/components/home/third-bento-animation';
-import { FlickeringGrid } from '@/components/home/ui/flickering-grid';
-import { Globe } from '@/components/home/ui/globe';
-import { cn } from '@/lib/utils';
-import { motion } from 'motion/react';
+import { FlickeringGrid } from '@/components/ui/flickering-grid';
 import { config } from '@/lib/config';
-
-export const Highlight = ({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) => {
-  return (
-    <span
-      className={cn(
-        'p-1 py-0.5 font-medium dark:font-semibold text-secondary',
-        className,
-      )}
-    >
-      {children}
-    </span>
-  );
-};
-
-export const BLUR_FADE_DELAY = 0.15;
 
 interface UpgradePlan {
   /** @deprecated */
   hours: string;
   price: string;
-  stripePriceId: string;
+  tierKey: string;  // Backend tier key
 }
 
 export interface PricingTier {
   name: string;
   price: string;
-  yearlyPrice?: string; // Add yearly price support
+  yearlyPrice?: string;
   description: string;
   buttonText: string;
   buttonColor: string;
@@ -47,14 +19,12 @@ export interface PricingTier {
   /** @deprecated */
   hours: string;
   features: string[];
-  stripePriceId: string;
-  yearlyStripePriceId?: string; // Add yearly price ID support
-  monthlyCommitmentStripePriceId?: string; // Add monthly commitment with yearly commitment support
+  tierKey: string;  // Backend tier key (e.g., 'tier_2_20', 'free')
   upgradePlans: UpgradePlan[];
-  hidden?: boolean; // Optional property to hide plans from display while keeping them in code
-  billingPeriod?: 'monthly' | 'yearly'; // Add billing period support
-  originalYearlyPrice?: string; // For showing crossed-out price
-  discountPercentage?: number; // For showing discount badge
+  hidden?: boolean;
+  billingPeriod?: 'monthly' | 'yearly';
+  originalYearlyPrice?: string;
+  discountPercentage?: number;
 }
 
 export const siteConfig = {
@@ -116,6 +86,26 @@ export const siteConfig = {
   },
   cloudPricingItems: [
     {
+      name: 'Basic',
+      price: '$0',
+      yearlyPrice: '$0',
+      originalYearlyPrice: '$0',
+      discountPercentage: 0,
+      description: 'Perfect for getting started',
+      buttonText: 'Select',
+      buttonColor: 'bg-secondary text-white',
+      isPopular: false,
+      hours: '0 hours',
+      features: [
+        '200 credits/month',
+        '1 custom Worker',
+        '1 private project',
+        '1 custom trigger',
+      ],
+      tierKey: config.SUBSCRIPTION_TIERS.FREE_TIER.tierKey,
+      upgradePlans: [],
+    },
+    {
       name: 'Plus',
       price: '$20',
       yearlyPrice: '$204',
@@ -125,20 +115,15 @@ export const siteConfig = {
       buttonText: 'Get started',
       buttonColor: 'bg-primary text-white dark:text-black',
       isPopular: true,
-      /** @deprecated */
       hours: '2 hours',
       features: [
-        '$20 AI token credits/m',
-        '5 custom agents',
+        '2,000 credits/month',
+        '5 custom workers',
         'Private projects',
-        'Custom abilities',
         '100+ integrations',
         'Premium AI Models',
-        'Advanced AI Capabilities',
       ],
-      stripePriceId: config.SUBSCRIPTION_TIERS.TIER_2_20.priceId,
-      yearlyStripePriceId: config.SUBSCRIPTION_TIERS.TIER_2_20_YEARLY.priceId,
-      monthlyCommitmentStripePriceId: config.SUBSCRIPTION_TIERS.TIER_2_17_YEARLY_COMMITMENT.priceId,
+      tierKey: config.SUBSCRIPTION_TIERS.TIER_2_20.tierKey,
       upgradePlans: [],
     },
     {
@@ -151,20 +136,15 @@ export const siteConfig = {
       buttonText: 'Get started',
       buttonColor: 'bg-secondary text-white',
       isPopular: false,
-      /** @deprecated */
       hours: '6 hours',
       features: [
-        '$50 AI token credits/m',
-        '20 custom agents',
+        '5,000 credits/month',
+        '20 custom workers',
         'Private projects',
-        'Custom abilities',
         '100+ integrations',
         'Premium AI Models',
-        'Advanced AI Capabilities',
       ],
-      stripePriceId: config.SUBSCRIPTION_TIERS.TIER_6_50.priceId,
-      yearlyStripePriceId: config.SUBSCRIPTION_TIERS.TIER_6_50_YEARLY.priceId,
-      monthlyCommitmentStripePriceId: config.SUBSCRIPTION_TIERS.TIER_6_42_YEARLY_COMMITMENT.priceId,
+      tierKey: config.SUBSCRIPTION_TIERS.TIER_6_50.tierKey,
       upgradePlans: [],
     },
     {
@@ -179,16 +159,13 @@ export const siteConfig = {
       isPopular: false,
       hours: '12 hours',
       features: [
-        '$100 AI token credits/m',
-        '20 custom agents',
+        '10,000 credits/month',
+        '20 custom workers',
         'Private projects',
-        'Custom abilities',
         '100+ integrations',
         'Premium AI Models',
-        'Advanced AI Capabilities',
       ],
-      stripePriceId: config.SUBSCRIPTION_TIERS.TIER_12_100.priceId,
-      yearlyStripePriceId: config.SUBSCRIPTION_TIERS.TIER_12_100_YEARLY.priceId,
+      tierKey: config.SUBSCRIPTION_TIERS.TIER_12_100.tierKey,
       upgradePlans: [],
       hidden: true,
     },
@@ -204,18 +181,14 @@ export const siteConfig = {
       isPopular: false,
       hours: '25 hours',
       features: [
-        '$200 AI token credits/m',
-        '100 custom agents',
+        '20,000 credits/month',
+        '100 custom workers',
         'Private projects',
-        'Custom abilities',
         '100+ integrations',
         'Premium AI Models',
         'Priority Support',
-        'Advanced AI Capabilities',
       ],
-      stripePriceId: config.SUBSCRIPTION_TIERS.TIER_25_200.priceId,
-      yearlyStripePriceId: config.SUBSCRIPTION_TIERS.TIER_25_200_YEARLY.priceId,
-      monthlyCommitmentStripePriceId: config.SUBSCRIPTION_TIERS.TIER_25_170_YEARLY_COMMITMENT.priceId,
+      tierKey: config.SUBSCRIPTION_TIERS.TIER_25_200.tierKey,
       upgradePlans: [],
     },
     {
@@ -230,16 +203,13 @@ export const siteConfig = {
       isPopular: false,
       hours: '50 hours',
       features: [
-        '$400 AI token credits/m',
+        '40,000 credits/month',
         'Private projects',
-        'Custom abilities',
         '100+ integrations',
         'Premium AI Models',
         'Priority support',
-        'Advanced AI Capabilities',
       ],
-      stripePriceId: config.SUBSCRIPTION_TIERS.TIER_50_400.priceId,
-      yearlyStripePriceId: config.SUBSCRIPTION_TIERS.TIER_50_400_YEARLY.priceId,
+      tierKey: config.SUBSCRIPTION_TIERS.TIER_50_400.tierKey,
       upgradePlans: [],
       hidden: true,
     },
@@ -255,17 +225,14 @@ export const siteConfig = {
       isPopular: false,
       hours: '125 hours',
       features: [
-        '$800 AI token credits/m',
+        '80,000 credits/month',
         'Private projects',
-        'Custom abilities',
         '100+ integrations',
         'Premium AI Models',
         'Priority support',
-        'Advanced AI Capabilities',
         'Dedicated account manager',
       ],
-      stripePriceId: config.SUBSCRIPTION_TIERS.TIER_125_800.priceId,
-      yearlyStripePriceId: config.SUBSCRIPTION_TIERS.TIER_125_800_YEARLY.priceId,
+      tierKey: config.SUBSCRIPTION_TIERS.TIER_125_800.tierKey,
       upgradePlans: [],
       hidden: true,
     },
@@ -281,18 +248,15 @@ export const siteConfig = {
       isPopular: false,
       hours: '200 hours',
       features: [
-        '$1000 AI token credits/m',
+        '100,000 credits/month',
         'Private projects',
-        'Custom abilities',
         '100+ integrations',
         'Premium AI Models',
         'Priority support',
-        'Advanced AI Capabilities',
         'Dedicated account manager',
         'Custom deployment',
       ],
-      stripePriceId: config.SUBSCRIPTION_TIERS.TIER_200_1000.priceId,
-      yearlyStripePriceId: config.SUBSCRIPTION_TIERS.TIER_200_1000_YEARLY.priceId,
+      tierKey: config.SUBSCRIPTION_TIERS.TIER_200_1000.tierKey,
       upgradePlans: [],
       hidden: true,
     },

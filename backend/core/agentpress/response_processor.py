@@ -118,37 +118,47 @@ class ResponseProcessor:
             return format_for_yield(message_obj)
         return None
 
-    def _estimate_token_usage(self, prompt_messages: List[Dict[str, Any]], accumulated_content: str, llm_model: str) -> Dict[str, Any]:
+    async def _estimate_token_usage(self, prompt_messages: List[Dict[str, Any]], accumulated_content: str, llm_model: str) -> Dict[str, Any]:
         """
         Estimate token usage when exact usage data is unavailable.
         This is critical for billing on timeouts, crashes, disconnects, etc.
+        
+        Uses ContextManager which has provider-specific APIs (Anthropic/Bedrock) for accuracy.
         """
         try:
-            prompt_tokens = token_counter(model=llm_model, messages=prompt_messages)
-            completion_tokens = token_counter(model=llm_model, text=accumulated_content) if accumulated_content else 0
-            
-            logger.warning(f"⚠️ ESTIMATED TOKEN USAGE (no exact data): prompt={prompt_tokens}, completion={completion_tokens}")
-            
-            return {
-                "prompt_tokens": prompt_tokens,
-                "completion_tokens": completion_tokens,
-                "total_tokens": prompt_tokens + completion_tokens,
-                "estimated": True
-            }
+            from core.agentpress.context_manager import ContextManager
+            context_mgr = ContextManager()
+            return await context_mgr.estimate_token_usage(prompt_messages, accumulated_content, llm_model)
         except Exception as e:
-            logger.error(f"Failed to estimate token usage: {e}")
-            fallback_prompt = len(' '.join(str(m.get('content', '')) for m in prompt_messages).split()) * 1.3
-            fallback_completion = len(accumulated_content.split()) * 1.3 if accumulated_content else 0
-            
-            logger.warning(f"⚠️ FALLBACK TOKEN ESTIMATION: prompt≈{int(fallback_prompt)}, completion≈{int(fallback_completion)}")
-            
-            return {
-                "prompt_tokens": int(fallback_prompt),
-                "completion_tokens": int(fallback_completion),
-                "total_tokens": int(fallback_prompt + fallback_completion),
-                "estimated": True,
-                "fallback": True
-            }
+            logger.error(f"Context manager estimation failed: {e}, falling back to LiteLLM")
+            # Fallback to LiteLLM
+            try:
+                prompt_tokens = token_counter(model=llm_model, messages=prompt_messages)
+                completion_tokens = token_counter(model=llm_model, text=accumulated_content) if accumulated_content else 0
+                
+                logger.warning(f"⚠️ ESTIMATED TOKEN USAGE (LiteLLM): prompt={prompt_tokens}, completion={completion_tokens}")
+                
+                return {
+                    "prompt_tokens": prompt_tokens,
+                    "completion_tokens": completion_tokens,
+                    "total_tokens": prompt_tokens + completion_tokens,
+                    "estimated": True
+                }
+            except Exception as e2:
+                logger.error(f"LiteLLM estimation failed: {e2}, using word count fallback")
+                # Final fallback to word count
+                fallback_prompt = len(' '.join(str(m.get('content', '')) for m in prompt_messages).split()) * 1.3
+                fallback_completion = len(accumulated_content.split()) * 1.3 if accumulated_content else 0
+                
+                logger.warning(f"⚠️ FALLBACK TOKEN ESTIMATION: prompt≈{int(fallback_prompt)}, completion≈{int(fallback_completion)}")
+                
+                return {
+                    "prompt_tokens": int(fallback_prompt),
+                    "completion_tokens": int(fallback_completion),
+                    "total_tokens": int(fallback_prompt + fallback_completion),
+                    "estimated": True,
+                    "fallback": True
+                }
     
     
     def _serialize_model_response(self, model_response) -> Dict[str, Any]:
@@ -236,6 +246,7 @@ class ResponseProcessor:
         continuous_state: Optional[Dict[str, Any]] = None,
         generation = None,
         estimated_total_tokens: Optional[int] = None,
+        cancellation_event: Optional[asyncio.Event] = None,
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """Process a streaming LLM response, handling tool calls and execution.
         
@@ -253,6 +264,10 @@ class ResponseProcessor:
             Complete message objects matching the DB schema, except for content chunks.
         """
         logger.info(f"Starting streaming response processing for thread {thread_id}")
+        
+        # Initialize cancellation event if not provided
+        if cancellation_event is None:
+            cancellation_event = asyncio.Event()
         
         # Initialize from continuous state if provided (for auto-continue)
         continuous_state = continuous_state or {}
@@ -322,6 +337,12 @@ class ResponseProcessor:
 
             chunk_count = 0
             async for chunk in llm_response:
+                # Check for cancellation before processing each chunk
+                if cancellation_event.is_set():
+                    logger.info(f"Cancellation signal received for thread {thread_id} - stopping LLM stream processing")
+                    finish_reason = "cancelled"
+                    break
+                
                 chunk_count += 1
                 
                 # Track timing
@@ -490,41 +511,10 @@ class ResponseProcessor:
                                 tool_index += 1
 
                 if finish_reason == "xml_tool_limit_reached":
-                    logger.info("XML tool limit reached - draining remaining stream to capture usage data")
-                    self.trace.event(name="xml_tool_limit_draining_stream", level="DEFAULT", status_message=(f"XML tool limit reached - draining remaining stream to capture usage data"))
-                    
-                    drain_timeout = 5.0
-                    drain_start_time = datetime.now(timezone.utc).timestamp()
-                    chunks_drained = 0
-                    max_drain_chunks = 100
-                    
-                    try:
-                        async for remaining_chunk in llm_response:
-                            chunk_count += 1
-                            chunks_drained += 1
-
-                            current_drain_time = datetime.now(timezone.utc).timestamp()
-                            last_chunk_time = current_drain_time
-
-                            if hasattr(remaining_chunk, 'usage') and remaining_chunk.usage and final_llm_response is None:
-                                final_llm_response = remaining_chunk
-                                logger.info(f"✅ Captured usage data after tool limit: {remaining_chunk.usage}")
-                                break
-
-                            if hasattr(remaining_chunk, 'choices') and remaining_chunk.choices:
-                                if hasattr(remaining_chunk.choices[0], 'finish_reason') and remaining_chunk.choices[0].finish_reason:
-                                    if not finish_reason:
-                                        finish_reason = remaining_chunk.choices[0].finish_reason
-                            
-                            if (current_drain_time - drain_start_time) > drain_timeout:
-                                break
-                            
-                            if chunks_drained >= max_drain_chunks:
-                                break
-                                
-                    except Exception as drain_error:
-                        logger.warning(f"Error draining stream after tool limit: {drain_error}")
-                    
+                    logger.info("XML tool limit reached - stopping immediately without draining stream")
+                    self.trace.event(name="xml_tool_limit_reached_immediate_stop", level="DEFAULT", status_message=(f"XML tool limit reached - stopping immediately to prevent further LLM token generation"))
+                    # Immediately break from the loop to stop consuming chunks
+                    # This prevents the LLM from continuing to generate tokens in the background
                     break
 
             logger.info(f"Stream complete. Total chunks: {chunk_count}")
@@ -563,7 +553,7 @@ class ResponseProcessor:
                                  context.result = result
                                  tool_results_buffer.append((execution["tool_call"], result, tool_idx, context))
                                  
-                                 if tool_name in ['ask', 'complete', 'present_presentation']:
+                                 if tool_name in ['ask', 'complete']:
                                      logger.debug(f"Terminating tool '{tool_name}' completed during streaming. Setting termination flag.")
                                      self.trace.event(name="terminating_tool_completed_during_streaming", level="DEFAULT", status_message=(f"Terminating tool '{tool_name}' completed during streaming. Setting termination flag."))
                                      agent_should_terminate = True
@@ -585,7 +575,7 @@ class ResponseProcessor:
                             context.result = result
                             tool_results_buffer.append((execution["tool_call"], result, tool_idx, context))
                             
-                            if tool_name in ['ask', 'complete', 'present_presentation']:
+                            if tool_name in ['ask', 'complete']:
                                 logger.debug(f"Terminating tool '{tool_name}' completed during streaming. Setting termination flag.")
                                 self.trace.event(name="terminating_tool_completed_during_streaming", level="DEFAULT", status_message=(f"Terminating tool '{tool_name}' completed during streaming. Setting termination flag."))
                                 agent_should_terminate = True
@@ -616,7 +606,9 @@ class ResponseProcessor:
 
             should_auto_continue = (can_auto_continue and finish_reason == 'length')
 
-            if accumulated_content and not should_auto_continue:
+            # Don't save partial response if user stopped (cancelled)
+            # But do save for other early stops like XML limit reached
+            if accumulated_content and not should_auto_continue and finish_reason != "cancelled":
                 # ... (Truncate accumulated_content logic) ...
                 if config.max_xml_tool_calls > 0 and xml_tool_call_count >= config.max_xml_tool_calls and xml_chunks_buffer:
                     last_xml_chunk = xml_chunks_buffer[-1]
@@ -970,6 +962,36 @@ class ResponseProcessor:
             # IMPORTANT: Finally block runs even when stream is stopped (GeneratorExit)
             # We MUST NOT yield here - just save to DB silently for billing/usage tracking
             
+            # Phase 3: Resource Cleanup - Cancel pending tasks and close generator
+            try:
+                # Cancel all pending tool execution tasks when stopping
+                if pending_tool_executions:
+                    logger.info(f"Cancelling {len(pending_tool_executions)} pending tool executions due to stop/cancellation")
+                    for execution in pending_tool_executions:
+                        task = execution.get("task")
+                        if task and not task.done():
+                            try:
+                                task.cancel()
+                            except Exception as cancel_err:
+                                logger.warning(f"Error cancelling tool execution task: {cancel_err}")
+                
+                # Try to close the LLM response generator if it supports aclose()
+                # This helps stop the underlying HTTP connection from continuing
+                if hasattr(llm_response, 'aclose'):
+                    try:
+                        await llm_response.aclose()
+                        logger.debug(f"Closed LLM response generator for thread {thread_id}")
+                    except Exception as close_err:
+                        logger.debug(f"Error closing LLM response generator (may not support aclose): {close_err}")
+                elif hasattr(llm_response, 'close'):
+                    try:
+                        llm_response.close()
+                        logger.debug(f"Closed LLM response generator (sync close) for thread {thread_id}")
+                    except Exception as close_err:
+                        logger.debug(f"Error closing LLM response generator (sync): {close_err}")
+            except Exception as cleanup_err:
+                logger.warning(f"Error during resource cleanup: {cleanup_err}")
+            
             if not llm_response_end_saved and last_assistant_message_object:
                 try:
                     logger.info(f"💰 BULLETPROOF BILLING: Saving llm_response_end in finally block for call #{auto_continue_count + 1}")
@@ -978,7 +1000,7 @@ class ResponseProcessor:
                         llm_end_content = self._serialize_model_response(final_llm_response)
                     else:
                         logger.warning("💰 No LLM response with usage - ESTIMATING token usage for billing")
-                        estimated_usage = self._estimate_token_usage(prompt_messages, accumulated_content, llm_model)
+                        estimated_usage = await self._estimate_token_usage(prompt_messages, accumulated_content, llm_model)
                         llm_end_content = {
                             "model": llm_model,
                             "usage": estimated_usage
@@ -1659,7 +1681,7 @@ class ResponseProcessor:
                     logger.debug(f"✅ Completed tool {tool_name} with success={result.success if hasattr(result, 'success') else False}")
 
                     # Check if this is a terminating tool (ask or complete)
-                    if tool_name in ['ask', 'complete', 'present_presentation']:
+                    if tool_name in ['ask', 'complete']:
                         logger.debug(f"🛑 TERMINATING TOOL '{tool_name}' executed. Stopping further tool execution.")
                         self.trace.event(name="terminating_tool_executed", level="DEFAULT", status_message=(f"Terminating tool '{tool_name}' executed. Stopping further tool execution."))
                         break  # Stop executing remaining tools
@@ -2058,7 +2080,7 @@ class ResponseProcessor:
             metadata["linked_tool_result_message_id"] = tool_message_id
             
         # <<< ADDED: Signal if this is a terminating tool >>>
-        if context.function_name in ['ask', 'complete', 'present_presentation']:
+        if context.function_name in ['ask', 'complete']:
             metadata["agent_should_terminate"] = "true"
             logger.debug(f"Marking tool status for '{context.function_name}' with termination signal.")
             self.trace.event(name="marking_tool_status_for_termination", level="DEFAULT", status_message=(f"Marking tool status for '{context.function_name}' with termination signal."))

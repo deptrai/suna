@@ -24,8 +24,8 @@ import {
   Pause
 } from 'lucide-react';
 import Link from 'next/link';
-import { TriggerWithAgent } from '@/hooks/react-query/triggers/use-all-triggers';
-import { useDeleteTrigger, useToggleTrigger, useUpdateTrigger } from '@/hooks/react-query/triggers';
+import { TriggerWithAgent } from '@/hooks/triggers/use-all-triggers';
+import { useDeleteTrigger, useToggleTrigger, useUpdateTrigger } from '@/hooks/triggers';
 import { TriggerCreationDialog } from './trigger-creation-dialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -47,8 +47,6 @@ interface SimplifiedTriggerDetailPanelProps {
 }
 
 const SCHEDULE_PRESETS = [
-  { cron: '*/15 * * * *', name: 'Every 15 minutes', icon: <Zap className="h-4 w-4" /> },
-  { cron: '*/30 * * * *', name: 'Every 30 minutes', icon: <Timer className="h-4 w-4" /> },
   { cron: '0 * * * *', name: 'Every hour', icon: <Timer className="h-4 w-4" /> },
   { cron: '0 9 * * *', name: 'Daily at 9 AM', icon: <Target className="h-4 w-4" /> },
   { cron: '0 9 * * 1-5', name: 'Weekdays at 9 AM', icon: <CalendarIcon className="h-4 w-4" /> },

@@ -82,8 +82,8 @@ class Configuration:
     
     # Environment mode
     ENV_MODE: Optional[EnvMode] = EnvMode.LOCAL
-    
-    
+
+
     # Subscription tier IDs - Production
     STRIPE_FREE_TIER_ID_PROD: Optional[str] = 'price_1RILb4G6l1KZGqIrK4QLrx9i'
     STRIPE_TIER_2_20_ID_PROD: Optional[str] = 'price_1RILb4G6l1KZGqIrhomjgDnO'
@@ -394,6 +394,9 @@ class Configuration:
     STRIPE_DEFAULT_PLAN_ID: Optional[str] = None
     STRIPE_DEFAULT_TRIAL_DAYS: Optional[int] = 14
     
+    # RevenueCat configuration
+    REVENUECAT_WEBHOOK_SECRET: Optional[str] = None
+    
     # Stripe Product IDs
     STRIPE_PRODUCT_ID_PROD: Optional[str] = 'prod_SCl7AQ2C8kK1CD'
     STRIPE_PRODUCT_ID_STAGING: Optional[str] = 'prod_SCgIj3G7yPOAWY'
@@ -425,6 +428,7 @@ class Configuration:
     # Webhook configuration
     WEBHOOK_BASE_URL: Optional[str] = None
     TRIGGER_WEBHOOK_SECRET: Optional[str] = None
+    SUPABASE_WEBHOOK_SECRET: Optional[str] = None  # Secret for Supabase database webhook authentication
     
     # Email configuration
     
@@ -531,7 +535,6 @@ class Configuration:
         elif self.ENV_MODE == EnvMode.STAGING:
             return 'https://staging.epsilon.com'
         else:
-            # Local mode
             return 'http://localhost:3000'
     
     def _generate_admin_api_key(self) -> str:
