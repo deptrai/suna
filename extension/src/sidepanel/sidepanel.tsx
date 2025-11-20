@@ -25,6 +25,7 @@ import { logBrowserInfo } from '../shared/browser-compat';
 // Lazy load heavy components for better initial load performance
 const CoinAnalysis = lazy(() => import('./components/CoinAnalysis').then(module => ({ default: module.CoinAnalysis })));
 const LoginForm = lazy(() => import('./components/LoginForm').then(module => ({ default: module.LoginForm })));
+const ChatInterface = lazy(() => import('./components/ChatInterface').then(module => ({ default: module.ChatInterface })));
 
 function SidePanelApp() {
   // Authentication state
@@ -186,69 +187,22 @@ function SidePanelApp() {
     );
   }
 
-  // Show authenticated content
+  // Show authenticated content - Chat Interface (Story 15.1)
   return (
-    <SidePanelLayout
-      title="ChainLens Coin Analysis"
-      onClose={handleClose}
-      footerActions={
-        <SidePanelFooter
-          onGenerateReport={handleGenerateReport}
-          isGeneratingReport={isGeneratingReport}
-          reportError={reportError}
-          actions={
-            <Button variant="outline" onClick={handleLogout}>
-              Logout
-            </Button>
-          }
-        />
-      }
-    >
-      <SidePanelContent>
-        {/* User info (optional) */}
-        <div className="mb-4 pb-4 border-b border-border">
-          <div className="text-sm text-muted-foreground">
-            Signed in as <span className="font-medium text-foreground">{user.email}</span>
+    <Suspense fallback={
+      <SidePanelLayout title="ChainLens Coin Analysis" onClose={handleClose}>
+        <SidePanelContent>
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-sm text-muted-foreground">Loading chat interface...</div>
           </div>
-        </div>
-
-        {coinInfo.name || isLoading || errorMessage ? (
-          <Suspense fallback={
-            <div className="flex items-center justify-center min-h-[400px]">
-              <div className="text-sm text-muted-foreground">Loading analysis...</div>
-            </div>
-          }>
-            <CoinAnalysis
-              data={analysisData}
-              isLoading={isLoading}
-              error={errorMessage}
-              onRetry={handleRetry}
-              onLogin={() => {
-                // Force re-check auth state
-                // The useAuthState hook will update automatically
-              }}
-            />
-          </Suspense>
-        ) : (
-          // Empty state - no coin selected yet
-          <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center text-muted-foreground">
-            <div className="space-y-4">
-              <div className="w-16 h-16 mx-auto bg-muted rounded-full flex items-center justify-center">
-                <span className="text-2xl">🔍</span>
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold text-foreground mb-2">
-                  Ready for Analysis
-                </h2>
-                <p className="text-sm">
-                  Click on a coin name on any crypto website to start analysis.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-      </SidePanelContent>
-    </SidePanelLayout>
+        </SidePanelContent>
+      </SidePanelLayout>
+    }>
+      <ChatInterface
+        onClose={handleClose}
+        coinInfo={coinInfo.name ? coinInfo : undefined}
+      />
+    </Suspense>
   );
 }
 

@@ -50,3 +50,7 @@
 **Endpoint Pattern**: `/api/api/{service}/{endpoint}` (double prefix)
 **Auth Method**: JWT Bearer token or API key (`x-api-key` header)
 
+
+
+
+

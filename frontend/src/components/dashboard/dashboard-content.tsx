@@ -231,6 +231,13 @@ export function DashboardContent() {
       if (options?.model_name) formData.append('model_name', options.model_name);
       formData.append('stream', 'true'); // Always stream for better UX
       formData.append('enable_context_manager', String(options?.enable_context_manager ?? false));
+      
+      // Add optimization_mode if available (default to 'optimized' for now, can be made configurable via UI)
+      // TODO: Add UI toggle for optimization mode selection
+      const optimizationMode = localStorage.getItem('optimization_mode') || 'optimized';
+      if (optimizationMode) {
+        formData.append('optimization_mode', optimizationMode);
+      }
 
       const result = await initiateAgentMutation.mutateAsync(formData);
 

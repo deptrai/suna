@@ -166,11 +166,14 @@ allow_origin_regex = None
 if config.ENV_MODE == EnvMode.LOCAL:
     allowed_origins.append("http://localhost:3000")
     allowed_origins.append("http://127.0.0.1:3000")
+    allowed_origins.append("http://localhost:3001")
+    allowed_origins.append("http://127.0.0.1:3001")
 
 # Add staging-specific origins
 if config.ENV_MODE == EnvMode.STAGING:
     allowed_origins.append("https://staging.chainlens.net")
     allowed_origins.append("http://localhost:3000")
+    allowed_origins.append("http://localhost:3001")
     # Allow Vercel preview deployments for both legacy and new project names
     allow_origin_regex = r"https://(chainlens|epsiloncom)-.*-prjcts\.vercel\.app"
 
@@ -178,6 +181,8 @@ if config.ENV_MODE == EnvMode.STAGING:
 if config.ENV_MODE == EnvMode.PRODUCTION:
     allowed_origins.append("http://localhost:3000")
     allowed_origins.append("http://127.0.0.1:3000")
+    allowed_origins.append("http://localhost:3001")
+    allowed_origins.append("http://127.0.0.1:3001")
 
 # Handle OPTIONS requests FIRST (add this middleware LAST so it runs FIRST in reverse order)
 @app.middleware("http")

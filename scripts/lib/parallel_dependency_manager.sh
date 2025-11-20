@@ -374,18 +374,86 @@ start_wave_services() {
         (
             case "$service" in
                 "redis")
-                    # Redis should already be running, just verify
-                    if ! redis-cli ping >/dev/null 2>&1; then
-                        log_structured "ERROR" "parallel_start" "Redis is not running"
+                    # Check if Redis is already running
+                    if redis-cli ping >/dev/null 2>&1; then
+                        log_structured "INFO" "parallel_start" "Redis is already running"
+                        set_service_value "SERVICE_STATUS" "$service" "$SERVICE_READY"
+                        echo "     ✅ Redis is already running"
+                        exit 0
+                    fi
+                    
+                    # Redis is not running, try to start it
+                    log_structured "INFO" "parallel_start" "Redis is not running, attempting to start..."
+                    echo "     🔄 Starting Redis..."
+                    
+                    local redis_started=false
+                    
+                    # Method 1: Try brew services (macOS)
+                    if command -v brew >/dev/null 2>&1; then
+                        if brew services start redis >/dev/null 2>&1; then
+                            log_structured "INFO" "parallel_start" "Redis started via brew services"
+                            redis_started=true
+                        fi
+                    fi
+                    
+                    # Method 2: Try redis-server directly (if not started via brew)
+                    if [[ "$redis_started" == false ]] && command -v redis-server >/dev/null 2>&1; then
+                        # Check if redis-server is already running as a process
+                        if ! pgrep -f "redis-server" >/dev/null 2>&1; then
+                            # Start redis-server in background
+                            redis-server --daemonize yes >/dev/null 2>&1 && redis_started=true || true
+                            if [[ "$redis_started" == true ]]; then
+                                log_structured "INFO" "parallel_start" "Redis started via redis-server"
+                            fi
+                        else
+                            # redis-server process exists but not responding - wait a bit
+                            sleep 2
+                            if redis-cli ping >/dev/null 2>&1; then
+                                redis_started=true
+                            fi
+                        fi
+                    fi
+                    
+                    # Method 3: Try docker-compose (if available and not started)
+                    if [[ "$redis_started" == false ]] && command -v docker >/dev/null 2>&1 && command -v docker-compose >/dev/null 2>&1; then
+                        if [[ -f "$PROJECT_ROOT/docker-compose.yaml" ]]; then
+                            cd "$PROJECT_ROOT" || exit 1
+                            if docker-compose up -d redis >/dev/null 2>&1; then
+                                log_structured "INFO" "parallel_start" "Redis started via docker-compose"
+                                redis_started=true
+                                # Wait for docker Redis to be ready
+                                sleep 3
+                            fi
+                            cd - >/dev/null || true
+                        fi
+                    fi
+                    
+                    # Verify Redis is now running
+                    local max_attempts=10
+                    local attempt=0
+                    while [[ $attempt -lt $max_attempts ]]; do
+                        if redis-cli ping >/dev/null 2>&1; then
+                            redis_started=true
+                            break
+                        fi
+                        sleep 1
+                        attempt=$((attempt + 1))
+                    done
+                    
+                    if [[ "$redis_started" == true ]] && redis-cli ping >/dev/null 2>&1; then
+                        set_service_value "SERVICE_STATUS" "$service" "$SERVICE_READY"
+                        log_structured "INFO" "parallel_start" "Redis started and verified successfully"
+                        echo "     ✅ Redis started and ready"
+                        exit 0
+                    else
+                        log_structured "ERROR" "parallel_start" "Failed to start Redis. Please start Redis manually: brew services start redis (macOS) or redis-server (Linux) or docker-compose up -d redis"
                         set_service_value "SERVICE_STATUS" "$service" "$SERVICE_FAILED"
+                        echo "     ❌ Failed to start Redis. Please start manually:"
+                        echo "        macOS: brew services start redis"
+                        echo "        Linux: redis-server --daemonize yes"
+                        echo "        Docker: docker-compose up -d redis"
                         exit 1
                     fi
-                    # Redis is external - mark as ready immediately after verification
-                    set_service_value "SERVICE_STATUS" "$service" "$SERVICE_READY"
-                    log_structured "INFO" "parallel_start" "Redis verified and ready"
-                    echo "     ✅ Redis verified and ready"
-                    # Skip the wait_for_service_ready for external services
-                    exit 0
                     ;;
                 "backend")
                     # Check if backend directory exists

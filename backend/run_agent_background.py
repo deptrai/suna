@@ -109,14 +109,41 @@ async def run_agent_background(
 
     effective_model = model_manager.resolve_model_id(model_name)
     
-    logger.info(f"🚀 Using model: {effective_model}")
-    
     client = await db.client
+    
+    # If "auto" wasn't resolved, get default model for user
+    if effective_model == "auto" or not effective_model or effective_model == model_name:
+        try:
+            # Get user_id from agent_run
+            agent_run_result = await client.table('agent_runs').select('user_id').eq('id', agent_run_id).limit(1).execute()
+            if agent_run_result.data and len(agent_run_result.data) > 0:
+                user_id = agent_run_result.data[0].get('user_id')
+                if user_id:
+                    effective_model = await model_manager.get_default_model_for_user(client, user_id)
+                    logger.info(f"🔄 Resolved 'auto' to default model: {effective_model}")
+        except Exception as e:
+            logger.warning(f"Failed to resolve 'auto' model, using fallback: {e}")
+            # Fallback to gpt-4o-mini for v98store
+            effective_model = "openai-compatible/gpt-4o-mini"
+    
+    logger.info(f"🚀 Using model: {effective_model}")
     start_time = datetime.now(timezone.utc)
     total_responses = 0
     pubsub = None
     stop_checker = None
     stop_signal_received = False
+    
+    # Load agent_run metadata to get optimization_mode if set
+    optimization_mode = None
+    try:
+        agent_run_result = await client.table('agent_runs').select('metadata').eq('id', agent_run_id).limit(1).execute()
+        if agent_run_result.data and len(agent_run_result.data) > 0:
+            metadata = agent_run_result.data[0].get('metadata', {})
+            optimization_mode = metadata.get('optimization_mode')
+            if optimization_mode:
+                logger.info(f"Using optimization_mode from agent_run metadata: {optimization_mode}")
+    except Exception as e:
+        logger.warning(f"Failed to load agent_run metadata: {e}")
 
     # Define Redis keys and channels
     response_list_key = f"agent_run:{agent_run_id}:responses"
@@ -171,12 +198,13 @@ async def run_agent_background(
         # Ensure active run key exists and has TTL
         await redis.set(instance_active_key, "running", ex=redis.REDIS_KEY_TTL)
 
-        # Initialize agent generator
+        # Initialize agent generator with optimization_mode
         agent_gen = run_agent(
             thread_id=thread_id, project_id=project_id,
             model_name=effective_model,
             agent_config=agent_config,
             trace=trace,
+            optimization_mode=optimization_mode,
         )
 
         async for response in agent_gen:

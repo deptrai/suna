@@ -698,6 +698,7 @@ export const unifiedAgentStart = async (options: {
   files?: File[];
   model_name?: string;
   agent_id?: string;
+  optimization_mode?: string;
 }): Promise<{ thread_id: string; agent_run_id: string; status: string }> => {
   try {
     const supabase = createClient();
@@ -732,6 +733,10 @@ export const unifiedAgentStart = async (options: {
     
     if (options.agent_id) {
       formData.append('agent_id', options.agent_id);
+    }
+    
+    if (options.optimization_mode) {
+      formData.append('optimization_mode', options.optimization_mode);
     }
     
     // Add files if provided

@@ -89,14 +89,40 @@ async def _load_agent_config(client, agent_id: Optional[str], account_id: str, u
             
             # Try to find the default agent (ChainLens)
             # Use limit(1) instead of maybe_single() to avoid "Missing response" error
+            # Note: RLS may block query if account doesn't exist or user doesn't have role
+            # Try query with service role context or bypass RLS if needed
             default_agent_result = await client.table('agents').select('agent_id').eq('account_id', account_id).eq('metadata->>is_chainlens_default', 'true').limit(1).execute()
             
             if default_agent_result.data and len(default_agent_result.data) > 0:
                 agent_data = await loader.load_agent(default_agent_result.data[0]['agent_id'], user_id, load_config=True)
                 logger.debug(f"Using default agent: {agent_data.name} ({agent_data.agent_id}) version {agent_data.version_name}")
             else:
-                logger.warning(f"[AGENT LOAD] No default agent found for account {account_id}")
-                raise HTTPException(status_code=404, detail="No default agent available. Please contact support.")
+                # If RLS blocks query, try to query directly using service role client
+                logger.warning(f"[AGENT LOAD] No default agent found for account {account_id} with regular client. Trying service role client...")
+                try:
+                    from supabase import create_client
+                    from core.utils.config import get_config
+                    config = get_config()
+                    if config.SUPABASE_SERVICE_ROLE_KEY:
+                        service_client = create_client(config.SUPABASE_URL, config.SUPABASE_SERVICE_ROLE_KEY)
+                        service_result = service_client.table('agents').select('agent_id').eq('account_id', account_id).eq('metadata->>is_chainlens_default', 'true').limit(1).execute()
+                        if service_result.data and len(service_result.data) > 0:
+                            agent_data = await loader.load_agent(service_result.data[0]['agent_id'], user_id, load_config=True)
+                            logger.debug(f"Using default agent (via service role): {agent_data.name} ({agent_data.agent_id}) version {agent_data.version_name}")
+                        else:
+                            raise HTTPException(status_code=404, detail="No default agent available. Please contact support.")
+                    else:
+                        raise HTTPException(status_code=404, detail="No default agent available. Please contact support.")
+                except Exception as service_error:
+                    logger.warning(f"[AGENT LOAD] Service role query also failed: {service_error}")
+                    # Check if account exists - if not, that's the issue
+                    try:
+                        account_check = await client.schema('basejump').table('accounts').select('id').eq('id', account_id).limit(1).execute()
+                        if not account_check.data:
+                            logger.warning(f"[AGENT LOAD] Account {account_id} not found in basejump.accounts - this may cause RLS to block agent queries")
+                    except:
+                        pass
+                    raise HTTPException(status_code=404, detail="No default agent available. Please contact support.")
         else:
             # For existing threads, try to load default agent (is_default flag)
             # Use limit(1) instead of maybe_single() to avoid "Missing response" error
@@ -202,7 +228,7 @@ async def _get_effective_model(model_name: Optional[str], agent_config: Optional
         return effective_model
 
 
-async def _create_agent_run_record(client, thread_id: str, agent_config: Optional[dict], effective_model: str) -> str:
+async def _create_agent_run_record(client, thread_id: str, agent_config: Optional[dict], effective_model: str, optimization_mode: Optional[str] = None) -> str:
     """
     Create an agent run record in the database.
     
@@ -211,19 +237,32 @@ async def _create_agent_run_record(client, thread_id: str, agent_config: Optiona
         thread_id: Thread ID to associate with
         agent_config: Agent configuration dict
         effective_model: Model name to use
+        optimization_mode: Optional optimization mode ("original", "optimized", "auto")
     
     Returns:
         agent_run_id: The created agent run ID
     """
+    metadata = {
+        "model_name": effective_model
+    }
+    
+    # Add optimization_mode to metadata if provided
+    if optimization_mode:
+        from core.utils.config import OptimizationMode
+        try:
+            # Validate optimization mode
+            mode = OptimizationMode(optimization_mode.lower())
+            metadata["optimization_mode"] = mode.value
+        except ValueError:
+            logger.warning(f"Invalid optimization_mode: {optimization_mode}, ignoring")
+    
     agent_run = await client.table('agent_runs').insert({
         "thread_id": thread_id,
         "status": "running",
         "started_at": datetime.now(timezone.utc).isoformat(),
         "agent_id": agent_config.get('agent_id') if agent_config else None,
         "agent_version_id": agent_config.get('current_version_id') if agent_config else None,
-        "metadata": {
-            "model_name": effective_model
-        }
+        "metadata": metadata
     }).execute()
 
     agent_run_id = agent_run.data[0]['id']
@@ -438,6 +477,7 @@ async def unified_agent_start(
     model_name: Optional[str] = Form(None),
     agent_id: Optional[str] = Form(None),
     files: List[UploadFile] = File(default=[]),
+    optimization_mode: Optional[str] = Form(None),
     user_id: str = Depends(verify_and_get_user_id_from_jwt)
 ):
     """
@@ -553,8 +593,8 @@ async def unified_agent_start(
                 }).execute()
                 logger.debug(f"Created user message for thread {thread_id}")
             
-            # Create agent run
-            agent_run_id = await _create_agent_run_record(client, thread_id, agent_config, effective_model)
+            # Create agent run with optimization mode in metadata
+            agent_run_id = await _create_agent_run_record(client, thread_id, agent_config, effective_model, optimization_mode)
             
             # Trigger background execution
             await _trigger_agent_background(agent_run_id, thread_id, project_id, effective_model, agent_config)
@@ -652,8 +692,8 @@ async def unified_agent_start(
                 "created_at": datetime.now(timezone.utc).isoformat()
             }).execute()
             
-            # Create agent run
-            agent_run_id = await _create_agent_run_record(client, thread_id, agent_config, effective_model)
+            # Create agent run with optimization mode in metadata
+            agent_run_id = await _create_agent_run_record(client, thread_id, agent_config, effective_model, optimization_mode)
             
             # Trigger background execution
             await _trigger_agent_background(agent_run_id, thread_id, project_id, effective_model, agent_config)

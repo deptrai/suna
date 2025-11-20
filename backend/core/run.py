@@ -56,6 +56,7 @@ class AgentConfig:
     model_name: str = "openai-compatible/gpt-4o-mini"  # Default to gpt-4o-mini for v98store
     agent_config: Optional[dict] = None
     trace: Optional[StatefulTraceClient] = None
+    optimization_mode: Optional[str] = None
 
 class ToolManager:
     def __init__(self, thread_manager: ThreadManager, project_id: str, thread_id: str, agent_config: Optional[dict] = None):
@@ -372,18 +373,31 @@ class PromptManager:
                                   mcp_wrapper_instance: Optional[MCPToolWrapper],
                                   client=None,
                                   tool_registry=None,
-                                  xml_tool_calling: bool = True) -> dict:
+                                  xml_tool_calling: bool = True,
+                                  optimization_mode: Optional[str] = None) -> dict:
         """
         Build system prompt with dual-mode support (Story 1.4).
         
-        Switches between ORIGINAL and OPTIMIZED modes based on OptimizationConfig.
+        Switches between ORIGINAL and OPTIMIZED modes based on optimization_mode parameter or OptimizationConfig.
         - ORIGINAL mode: Preserves current implementation exactly (baseline)
         - OPTIMIZED mode: Applies quality-preserving optimizations (Stories 1.1, 1.2, 1.3)
         - AUTO mode: Auto-selects based on metrics (future enhancement)
+        
+        Args:
+            optimization_mode: Optional optimization mode from request. If not provided, uses global config.
         """
         from core.utils.config import OptimizationConfig, OptimizationMode
         
-        mode = OptimizationConfig.OPTIMIZATION_MODE
+        # Use optimization_mode from parameter if provided, otherwise use global config
+        if optimization_mode:
+            try:
+                mode = OptimizationMode(optimization_mode.lower())
+                logger.debug(f"Using optimization_mode from request: {mode.value}")
+            except ValueError:
+                logger.warning(f"Invalid optimization_mode: {optimization_mode}, using global config")
+                mode = OptimizationConfig.OPTIMIZATION_MODE
+        else:
+            mode = OptimizationConfig.OPTIMIZATION_MODE
         
         if mode == OptimizationMode.ORIGINAL:
             # Original flow - preserve current implementation
@@ -864,12 +878,15 @@ class AgentRunner:
         await self.setup_tools()
         mcp_wrapper_instance = await self.setup_mcp_tools()
         
+        # Get optimization_mode from config if available
+        optimization_mode = getattr(self.config, 'optimization_mode', None)
         system_message = await PromptManager.build_system_prompt(
             self.config.model_name, self.config.agent_config, 
             self.config.thread_id, 
             mcp_wrapper_instance, self.client,
             tool_registry=self.thread_manager.tool_registry,
-            xml_tool_calling=True
+            xml_tool_calling=True,
+            optimization_mode=optimization_mode
         )
         logger.info(f"📝 System message built once: {len(str(system_message.get('content', '')))} chars")
         logger.debug(f"model_name received: {self.config.model_name}")
@@ -1056,7 +1073,8 @@ async def run_agent(
     max_iterations: int = 100,
     model_name: str = "openai-compatible/gpt-4o-mini",  # Default to gpt-4o-mini for v98store
     agent_config: Optional[dict] = None,    
-    trace: Optional[StatefulTraceClient] = None
+    trace: Optional[StatefulTraceClient] = None,
+    optimization_mode: Optional[str] = None
 ):
     effective_model = model_name
 
@@ -1076,7 +1094,8 @@ async def run_agent(
         max_iterations=max_iterations,
         model_name=effective_model,
         agent_config=agent_config,
-        trace=trace
+        trace=trace,
+        optimization_mode=optimization_mode
     )
     
     runner = AgentRunner(config)

@@ -17,12 +17,14 @@ export const useInitiateAgentMutation = createMutationHook<
     const prompt = formData.get('prompt') as string;
     const model_name = formData.get('model_name') as string | undefined;
     const agent_id = formData.get('agent_id') as string | undefined;
+    const optimization_mode = formData.get('optimization_mode') as string | undefined;
     const files = formData.getAll('files') as File[];
     
     return await unifiedAgentStart({
       prompt,
       model_name,
       agent_id,
+      optimization_mode,
       files: files.length > 0 ? files : undefined,
     });
   },

@@ -131,12 +131,24 @@ class ChainLensDefaultAgentService:
     async def _create_chainlens_agent_for_user(self, account_id: str) -> str:
         """Create a Chainlens agent for a user."""
         from core.chainlens_config import CHAINLENS_CONFIG
+        from supabase import create_client
+        from core.utils.config import get_config
         
         client = await self._db.client
         
+        # Try to use service role client to bypass RLS and foreign key constraints
+        config = get_config()
+        service_client = None
+        if config.SUPABASE_SERVICE_ROLE_KEY:
+            try:
+                service_client = create_client(config.SUPABASE_URL, config.SUPABASE_SERVICE_ROLE_KEY)
+                logger.debug(f"Using service role client to create agent for account {account_id}")
+            except Exception as service_error:
+                logger.warning(f"Failed to create service role client: {service_error}")
+        
         # Create agent record
         agent_data = {
-            "account_id": account_id,
+            "account_id": str(account_id),  # Ensure account_id is string
             "name": CHAINLENS_CONFIG["name"],
             "description": CHAINLENS_CONFIG["description"],
             "is_default": True,
@@ -151,17 +163,35 @@ class ChainLensDefaultAgentService:
             "version_count": 1
         }
         
-        result = await client.table('agents').insert(agent_data).execute()
-        
-        if not result.data:
-            raise Exception("Failed to create agent record")
-        
-        agent_id = result.data[0]['agent_id']
-        
-        # Create initial version
-        await self._create_initial_version(agent_id, account_id)
-        
-        return agent_id
+        try:
+            # Use service client if available, otherwise use regular client
+            insert_client = service_client if service_client else client
+            if service_client:
+                result = insert_client.table('agents').insert(agent_data).execute()
+                result_data = result.data if hasattr(result, 'data') else None
+            else:
+                result = await insert_client.table('agents').insert(agent_data).execute()
+                result_data = result.data if result.data else None
+            
+            if not result_data:
+                raise Exception("Failed to create agent record")
+            
+            agent_id = result_data[0]['agent_id']
+            
+            # Create initial version
+            await self._create_initial_version(agent_id, account_id)
+            
+            return agent_id
+        except Exception as insert_error:
+            # If foreign key constraint fails, it means account doesn't exist
+            # Log the error but don't raise - let caller handle it
+            error_msg = str(insert_error)
+            if 'foreign key constraint' in error_msg.lower() or '23503' in error_msg:
+                logger.error(f"Cannot create agent: account {account_id} does not exist in basejump.accounts. Error: {insert_error}")
+                return None
+            else:
+                # Re-raise for other errors
+                raise
     
     async def _create_initial_version(self, agent_id: str, account_id: str) -> None:
         """Create initial version for Chainlens agent."""

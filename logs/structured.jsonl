@@ -68,3 +68,288 @@
 {"timestamp":"2025-11-10T14:31:58.411Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"ChainLens Development Environment v3.1 startup completed successfully","extra":{}}
 {"timestamp":"2025-11-10T14:31:58.438Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Launching enhanced monitoring dashboard","extra":{}}
 {"timestamp":"2025-11-10T14:32:00.573Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Executing monitoring dashboard","extra":{"script":"/Users/mac_1/Documents/GitHub/suna/scripts/monitoring/enhanced_dashboard_monitor.sh"}}}
+{"timestamp":"2025-11-10T23:28:20.017Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"ChainLens Development Environment v3.1 starting","extra":{}}
+{"timestamp":"2025-11-10T23:28:20.039Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Creating necessary directories","extra":{}}
+{"timestamp":"2025-11-10T23:28:20.101Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Directories created successfully","extra":{}}
+{"timestamp":"2025-11-10T23:28:20.119Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Checking system requirements","extra":{}}
+{"timestamp":"2025-11-10T23:28:21.105Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"System requirements check passed","extra":{}}
+{"timestamp":"2025-11-10T23:28:21.166Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Validating environment configuration","extra":{}}
+{"timestamp":"2025-11-10T23:28:21.506Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Environment validation passed","extra":{}}
+{"timestamp":"2025-11-10T23:28:21.537Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Checking Supabase status","extra":{}}
+{"timestamp":"2025-11-10T23:28:22.114Z","level":"DEBUG","component":"health_check","category":"infrastructure","severity":"low","message":"Detected Supabase port from status: 54341","extra":{}}
+{"timestamp":"2025-11-10T23:28:22.123Z","level":"DEBUG","component":"health_check","category":"infrastructure","severity":"low","message":"Checking Supabase Realtime WebSocket (port: 54341)","extra":{}}
+{"timestamp":"2025-11-10T23:28:22.703Z","level":"INFO","component":"health_check","category":"infrastructure","severity":"low","message":"Supabase Realtime WebSocket endpoint is accessible (code: 403)","extra":{}}
+{"timestamp":"2025-11-10T23:28:22.712Z","level":"WARN","component":"startup_v3.1","category":"system","severity":"low","message":"Supabase Realtime not available","extra":{}}
+{"timestamp":"2025-11-10T23:28:22.720Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Setting up enhanced monitor script","extra":{}}
+{"timestamp":"2025-11-10T23:28:22.752Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Enhanced monitor script created and ready","extra":{}}
+{"timestamp":"2025-11-10T23:28:22.760Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Starting enhanced parallel cleanup","extra":{}}
+{"timestamp":"2025-11-10T23:28:22.772Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Initiating parallel graceful shutdown","extra":{}}
+{"timestamp":"2025-11-10T23:28:22.780Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Starting parallel kill of all services","extra":{}}
+{"timestamp":"2025-11-10T23:28:22.798Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Starting kill job for service: redis","extra":{}}
+{"timestamp":"2025-11-10T23:28:22.856Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Starting kill job for service: backend","extra":{}}
+{"timestamp":"2025-11-10T23:28:22.892Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Starting kill job for service: worker","extra":{}}
+{"timestamp":"2025-11-10T23:28:22.927Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Starting kill job for service: frontend","extra":{}}
+{"timestamp":"2025-11-10T23:28:22.968Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Starting kill job for service: monitor","extra":{}}
+{"timestamp":"2025-11-10T23:28:23.007Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Started 5 parallel kill jobs: 86478,86507,86536,86567,86596","extra":{}}
+{"timestamp":"2025-11-10T23:28:23.017Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Waiting for parallel kill completion","extra":{}}
+{"timestamp":"2025-11-10T23:28:24.060Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Kill job completed for service: monitor","extra":{}}
+{"timestamp":"2025-11-10T23:28:24.908Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Kill job completed for service: redis","extra":{}}
+{"timestamp":"2025-11-10T23:28:24.941Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Kill job completed for service: backend","extra":{}}
+{"timestamp":"2025-11-10T23:28:24.975Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Kill job completed for service: worker","extra":{}}
+{"timestamp":"2025-11-10T23:28:25.020Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Kill job completed for service: frontend","extra":{}}
+{"timestamp":"2025-11-10T23:28:25.137Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"All kill jobs completed successfully in 2s","extra":{}}
+{"timestamp":"2025-11-10T23:28:25.147Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Verifying kill completion","extra":{}}
+{"timestamp":"2025-11-10T23:28:25.961Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Kill verification passed - all processes terminated","extra":{}}
+{"timestamp":"2025-11-10T23:28:25.968Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Parallel graceful shutdown completed","extra":{}}
+{"timestamp":"2025-11-10T23:28:25.977Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Parallel cleanup completed successfully","extra":{}}
+{"timestamp":"2025-11-10T23:28:29.653Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Enhanced cleanup completed","extra":{}}
+{"timestamp":"2025-11-10T23:28:29.680Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Starting enhanced parallel startup","extra":{}}
+{"timestamp":"2025-11-10T23:28:29.714Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Initializing parallel dependency management system v3.1","extra":{}}
+{"timestamp":"2025-11-10T23:28:31.652Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Parallel dependency system initialized with enhanced process tracking","extra":{}}
+{"timestamp":"2025-11-10T23:28:31.673Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Starting parallel startup sequence","extra":{}}
+{"timestamp":"2025-11-10T23:28:31.702Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Calculating dependency waves for parallel startup","extra":{}}
+{"timestamp":"2025-11-10T23:28:31.911Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Calculated 2 dependency waves","extra":{}}
+{"timestamp":"2025-11-10T23:28:31.963Z","level":"INFO","component":"parallel_start","category":"system","severity":"low","message":"Starting wave 0 services: redis","extra":{}}
+{"timestamp":"2025-11-10T23:28:32.116Z","level":"INFO","component":"parallel_start","category":"system","severity":"low","message":"Redis verified and ready","extra":{}}
+{"timestamp":"2025-11-10T23:28:32.125Z","level":"INFO","component":"parallel_start","category":"system","severity":"low","message":"Wave 0 completed successfully","extra":{}}
+{"timestamp":"2025-11-10T23:28:34.165Z","level":"INFO","component":"parallel_start","category":"system","severity":"low","message":"Starting wave 1 services: backend worker frontend monitor","extra":{}}
+{"timestamp":"2025-11-10T23:28:34.319Z","level":"INFO","component":"parallel_start","category":"system","severity":"low","message":"Monitor started (optional service)","extra":{}}
+{"timestamp":"2025-11-10T23:28:35.235Z","level":"INFO","component":"parallel_start","category":"system","severity":"low","message":"Backend started with PID: 87702","extra":{}}
+{"timestamp":"2025-11-10T23:28:35.312Z","level":"INFO","component":"parallel_start","category":"system","severity":"low","message":"Worker started with PID: 87724","extra":{}}
+{"timestamp":"2025-11-10T23:28:35.331Z","level":"INFO","component":"parallel_start","category":"system","severity":"low","message":"Frontend started with PID: 87749","extra":{}}
+{"timestamp":"2025-11-10T23:28:35.456Z","level":"INFO","component":"parallel_start","category":"system","severity":"low","message":"Service worker started successfully","extra":{}}
+{"timestamp":"2025-11-10T23:28:36.554Z","level":"INFO","component":"parallel_start","category":"system","severity":"low","message":"Service monitor started (optional)","extra":{}}
+{"timestamp":"2025-11-10T23:29:55.003Z","level":"INFO","component":"parallel_start","category":"system","severity":"low","message":"Service backend started successfully","extra":{}}
+{"timestamp":"2025-11-10T23:31:07.468Z","level":"INFO","component":"parallel_start","category":"system","severity":"low","message":"Service frontend started successfully","extra":{}}
+{"timestamp":"2025-11-10T23:31:07.727Z","level":"INFO","component":"parallel_start","category":"system","severity":"low","message":"Wave 1 completed successfully","extra":{}}
+{"timestamp":"2025-11-10T23:31:10.061Z","level":"INFO","component":"parallel_startup","category":"system","severity":"low","message":"Parallel startup sequence completed successfully","extra":{}}
+{"timestamp":"2025-11-10T23:31:10.251Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Parallel startup completed successfully","extra":{}}
+{"timestamp":"2025-11-10T23:31:10.370Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Starting enhanced startup verification","extra":{}}
+{"timestamp":"2025-11-10T23:31:11.590Z","level":"INFO","component":"parallel_dependency_metrics","category":"system","severity":"low","message":"Enhanced service status with parallel info","extra":{"redis":{"status":"starting","pid":"","start_time":1762817312,"retries":0},"backend":{"status":"starting","pid":"","start_time":1762817314,"retries":0},"worker":{"status":"starting","pid":"","start_time":1762817314,"retries":0},"frontend":{"status":"starting","pid":"","start_time":1762817314,"retries":0},"monitor":{"status":"starting","pid":"","start_time":1762817314,"retries":0}}}}
+{"timestamp":"2025-11-10T23:31:11.895Z","level":"DEBUG","component":"health_check","category":"infrastructure","severity":"low","message":"Checking Redis health with enhanced logic","extra":{"timeout":3,"circuit_state":"CLOSED"}}}
+{"timestamp":"2025-11-10T23:31:12.828Z","level":"DEBUG","component":"health_check","category":"infrastructure","severity":"low","message":"Checking Backend health with enhanced logic","extra":{"host":"127.0.0.1","port":8000,"timeout":5}}}
+{"timestamp":"2025-11-10T23:31:13.161Z","level":"DEBUG","component":"health_check","category":"infrastructure","severity":"low","message":"Checking Worker health with enhanced logic","extra":{}}
+{"timestamp":"2025-11-10T23:31:14.465Z","level":"DEBUG","component":"health_check","category":"infrastructure","severity":"low","message":"Worker processes healthy","extra":{"dramatiq":2,"spawn":5}}}
+{"timestamp":"2025-11-10T23:31:14.773Z","level":"DEBUG","component":"health_check","category":"infrastructure","severity":"low","message":"Checking Frontend health with enhanced logic","extra":{"host":"localhost","port":3000,"timeout":5}}}
+{"timestamp":"2025-11-10T23:31:17.988Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Enhanced startup verification passed","extra":{}}
+{"timestamp":"2025-11-10T23:31:18.038Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Starting enhanced monitoring display","extra":{}}
+{"timestamp":"2025-11-10T23:31:18.066Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Enhanced monitor script confirmed ready","extra":{}}
+{"timestamp":"2025-11-10T23:31:18.130Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Enhanced monitoring display completed","extra":{}}
+{"timestamp":"2025-11-10T23:31:18.210Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"ChainLens Development Environment v3.1 startup completed successfully","extra":{}}
+{"timestamp":"2025-11-10T23:31:18.248Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Launching enhanced monitoring dashboard","extra":{}}
+{"timestamp":"2025-11-10T23:31:20.310Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Executing monitoring dashboard","extra":{"script":"/Users/mac_1/Documents/GitHub/suna/scripts/monitoring/enhanced_dashboard_monitor.sh"}}}
+{"timestamp":"2025-11-11T01:29:24.116Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"ChainLens Development Environment v3.1 starting","extra":{}}
+{"timestamp":"2025-11-11T01:29:24.139Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Creating necessary directories","extra":{}}
+{"timestamp":"2025-11-11T01:29:24.176Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Directories created successfully","extra":{}}
+{"timestamp":"2025-11-11T01:29:24.184Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Checking system requirements","extra":{}}
+{"timestamp":"2025-11-11T01:29:24.465Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"System requirements check passed","extra":{}}
+{"timestamp":"2025-11-11T01:29:24.481Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Validating environment configuration","extra":{}}
+{"timestamp":"2025-11-11T01:29:24.541Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Environment validation passed","extra":{}}
+{"timestamp":"2025-11-11T01:29:24.549Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Checking Supabase status","extra":{}}
+{"timestamp":"2025-11-11T01:29:25.481Z","level":"DEBUG","component":"health_check","category":"infrastructure","severity":"low","message":"Detected Supabase port from status: 54341","extra":{}}
+{"timestamp":"2025-11-11T01:29:25.490Z","level":"DEBUG","component":"health_check","category":"infrastructure","severity":"low","message":"Checking Supabase Realtime WebSocket (port: 54341)","extra":{}}
+{"timestamp":"2025-11-11T01:29:25.534Z","level":"INFO","component":"health_check","category":"infrastructure","severity":"low","message":"Supabase Realtime WebSocket endpoint is accessible (code: 403)","extra":{}}
+{"timestamp":"2025-11-11T01:29:25.545Z","level":"WARN","component":"startup_v3.1","category":"system","severity":"low","message":"Supabase Realtime not available","extra":{}}
+{"timestamp":"2025-11-11T01:29:25.555Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Setting up enhanced monitor script","extra":{}}
+{"timestamp":"2025-11-11T01:29:25.581Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Enhanced monitor script created and ready","extra":{}}
+{"timestamp":"2025-11-11T01:29:25.592Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Starting enhanced parallel cleanup","extra":{}}
+{"timestamp":"2025-11-11T01:29:25.602Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Initiating parallel graceful shutdown","extra":{}}
+{"timestamp":"2025-11-11T01:29:25.610Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Starting parallel kill of all services","extra":{}}
+{"timestamp":"2025-11-11T01:29:25.625Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Starting kill job for service: redis","extra":{}}
+{"timestamp":"2025-11-11T01:29:25.660Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Starting kill job for service: backend","extra":{}}
+{"timestamp":"2025-11-11T01:29:25.697Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Starting kill job for service: worker","extra":{}}
+{"timestamp":"2025-11-11T01:29:25.732Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Starting kill job for service: frontend","extra":{}}
+{"timestamp":"2025-11-11T01:29:25.765Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Starting kill job for service: monitor","extra":{}}
+{"timestamp":"2025-11-11T01:29:25.793Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Started 5 parallel kill jobs: 29370,29399,29428,29458,29487","extra":{}}
+{"timestamp":"2025-11-11T01:29:25.802Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Waiting for parallel kill completion","extra":{}}
+{"timestamp":"2025-11-11T01:29:26.845Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Kill job completed for service: monitor","extra":{}}
+{"timestamp":"2025-11-11T01:29:27.715Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Kill job completed for service: redis","extra":{}}
+{"timestamp":"2025-11-11T01:29:27.742Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Kill job completed for service: backend","extra":{}}
+{"timestamp":"2025-11-11T01:29:27.775Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Kill job completed for service: worker","extra":{}}
+{"timestamp":"2025-11-11T01:29:27.810Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Kill job completed for service: frontend","extra":{}}
+{"timestamp":"2025-11-11T01:29:27.914Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"All kill jobs completed successfully in 2s","extra":{}}
+{"timestamp":"2025-11-11T01:29:27.924Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Verifying kill completion","extra":{}}
+{"timestamp":"2025-11-11T01:29:28.371Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Kill verification passed - all processes terminated","extra":{}}
+{"timestamp":"2025-11-11T01:29:28.382Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Parallel graceful shutdown completed","extra":{}}
+{"timestamp":"2025-11-11T01:29:28.391Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Parallel cleanup completed successfully","extra":{}}
+{"timestamp":"2025-11-11T01:29:30.050Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Enhanced cleanup completed","extra":{}}
+{"timestamp":"2025-11-11T01:29:30.067Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Starting enhanced parallel startup","extra":{}}
+{"timestamp":"2025-11-11T01:29:30.085Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Initializing parallel dependency management system v3.1","extra":{}}
+{"timestamp":"2025-11-11T01:29:30.733Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Parallel dependency system initialized with enhanced process tracking","extra":{}}
+{"timestamp":"2025-11-11T01:29:30.742Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Starting parallel startup sequence","extra":{}}
+{"timestamp":"2025-11-11T01:29:30.752Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Calculating dependency waves for parallel startup","extra":{}}
+{"timestamp":"2025-11-11T01:29:30.867Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Calculated 2 dependency waves","extra":{}}
+{"timestamp":"2025-11-11T01:29:30.890Z","level":"INFO","component":"parallel_start","category":"system","severity":"low","message":"Starting wave 0 services: redis","extra":{}}
+{"timestamp":"2025-11-11T01:29:30.931Z","level":"ERROR","component":"parallel_start","category":"system","severity":"low","message":"Redis is not running","extra":{}}
+{"timestamp":"2025-11-11T01:29:30.955Z","level":"ERROR","component":"parallel_start","category":"system","severity":"low","message":"Wave 0 failed","extra":{}}
+{"timestamp":"2025-11-11T01:29:30.968Z","level":"ERROR","component":"parallel_startup","category":"system","severity":"low","message":"Wave 0 failed, aborting startup","extra":{}}
+{"timestamp":"2025-11-11T01:29:30.984Z","level":"ERROR","component":"startup_v3.1","category":"system","severity":"low","message":"Parallel startup failed","extra":{}}
+{"timestamp":"2025-11-11T01:29:31.000Z","level":"ERROR","component":"startup_v3.1","category":"system","severity":"low","message":"Enhanced startup failed","extra":{}}
+{"timestamp":"2025-11-11T02:59:23.146Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"ChainLens Development Environment v3.1 starting","extra":{}}
+{"timestamp":"2025-11-11T02:59:23.161Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Creating necessary directories","extra":{}}
+{"timestamp":"2025-11-11T02:59:23.213Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Directories created successfully","extra":{}}
+{"timestamp":"2025-11-11T02:59:23.222Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Checking system requirements","extra":{}}
+{"timestamp":"2025-11-11T02:59:23.688Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"System requirements check passed","extra":{}}
+{"timestamp":"2025-11-11T02:59:23.698Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Validating environment configuration","extra":{}}
+{"timestamp":"2025-11-11T02:59:23.741Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Environment validation passed","extra":{}}
+{"timestamp":"2025-11-11T02:59:23.751Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Checking Supabase status","extra":{}}
+{"timestamp":"2025-11-11T02:59:24.302Z","level":"DEBUG","component":"health_check","category":"infrastructure","severity":"low","message":"Detected Supabase port from status: 54341","extra":{}}
+{"timestamp":"2025-11-11T02:59:24.321Z","level":"DEBUG","component":"health_check","category":"infrastructure","severity":"low","message":"Checking Supabase Realtime WebSocket (port: 54341)","extra":{}}
+{"timestamp":"2025-11-11T02:59:24.388Z","level":"INFO","component":"health_check","category":"infrastructure","severity":"low","message":"Supabase Realtime WebSocket endpoint is accessible (code: 403)","extra":{}}
+{"timestamp":"2025-11-11T02:59:24.459Z","level":"WARN","component":"startup_v3.1","category":"system","severity":"low","message":"Supabase Realtime not available","extra":{}}
+{"timestamp":"2025-11-11T02:59:24.479Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Setting up enhanced monitor script","extra":{}}
+{"timestamp":"2025-11-11T02:59:24.526Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Enhanced monitor script created and ready","extra":{}}
+{"timestamp":"2025-11-11T02:59:24.548Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Starting enhanced parallel cleanup","extra":{}}
+{"timestamp":"2025-11-11T02:59:24.593Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Initiating parallel graceful shutdown","extra":{}}
+{"timestamp":"2025-11-11T02:59:24.610Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Starting parallel kill of all services","extra":{}}
+{"timestamp":"2025-11-11T02:59:24.650Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Starting kill job for service: redis","extra":{}}
+{"timestamp":"2025-11-11T02:59:24.702Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Starting kill job for service: backend","extra":{}}
+{"timestamp":"2025-11-11T02:59:24.759Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Starting kill job for service: worker","extra":{}}
+{"timestamp":"2025-11-11T02:59:24.825Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Starting kill job for service: frontend","extra":{}}
+{"timestamp":"2025-11-11T02:59:24.922Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Starting kill job for service: monitor","extra":{}}
+{"timestamp":"2025-11-11T02:59:24.960Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Started 5 parallel kill jobs: 81294,81323,81352,81381,81411","extra":{}}
+{"timestamp":"2025-11-11T02:59:24.971Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Waiting for parallel kill completion","extra":{}}
+{"timestamp":"2025-11-11T02:59:26.025Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Kill job completed for service: monitor","extra":{}}
+{"timestamp":"2025-11-11T02:59:26.760Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Kill job completed for service: redis","extra":{}}
+{"timestamp":"2025-11-11T02:59:26.805Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Kill job completed for service: backend","extra":{}}
+{"timestamp":"2025-11-11T02:59:26.875Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Kill job completed for service: worker","extra":{}}
+{"timestamp":"2025-11-11T02:59:26.977Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Kill job completed for service: frontend","extra":{}}
+{"timestamp":"2025-11-11T02:59:27.172Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"All kill jobs completed successfully in 3s","extra":{}}
+{"timestamp":"2025-11-11T02:59:27.199Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Verifying kill completion","extra":{}}
+{"timestamp":"2025-11-11T02:59:29.260Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Kill verification passed - all processes terminated","extra":{}}
+{"timestamp":"2025-11-11T02:59:29.295Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Parallel graceful shutdown completed","extra":{}}
+{"timestamp":"2025-11-11T02:59:29.323Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Parallel cleanup completed successfully","extra":{}}
+{"timestamp":"2025-11-11T02:59:30.954Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Enhanced cleanup completed","extra":{}}
+{"timestamp":"2025-11-11T02:59:30.976Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Starting enhanced parallel startup","extra":{}}
+{"timestamp":"2025-11-11T02:59:30.997Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Initializing parallel dependency management system v3.1","extra":{}}
+{"timestamp":"2025-11-11T02:59:32.520Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Parallel dependency system initialized with enhanced process tracking","extra":{}}
+{"timestamp":"2025-11-11T02:59:32.543Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Starting parallel startup sequence","extra":{}}
+{"timestamp":"2025-11-11T02:59:32.563Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Calculating dependency waves for parallel startup","extra":{}}
+{"timestamp":"2025-11-11T02:59:32.752Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Calculated 2 dependency waves","extra":{}}
+{"timestamp":"2025-11-11T02:59:32.811Z","level":"INFO","component":"parallel_start","category":"system","severity":"low","message":"Starting wave 0 services: redis","extra":{}}
+{"timestamp":"2025-11-11T02:59:32.929Z","level":"ERROR","component":"parallel_start","category":"system","severity":"low","message":"Redis is not running","extra":{}}
+{"timestamp":"2025-11-11T02:59:32.993Z","level":"ERROR","component":"parallel_start","category":"system","severity":"low","message":"Wave 0 failed","extra":{}}
+{"timestamp":"2025-11-11T02:59:33.027Z","level":"ERROR","component":"parallel_startup","category":"system","severity":"low","message":"Wave 0 failed, aborting startup","extra":{}}
+{"timestamp":"2025-11-11T02:59:33.068Z","level":"ERROR","component":"startup_v3.1","category":"system","severity":"low","message":"Parallel startup failed","extra":{}}
+{"timestamp":"2025-11-11T02:59:33.137Z","level":"ERROR","component":"startup_v3.1","category":"system","severity":"low","message":"Enhanced startup failed","extra":{}}
+{"timestamp":"2025-11-20T08:01:51.626Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"ChainLens Development Environment v3.1 starting","extra":{}}
+{"timestamp":"2025-11-20T08:01:51.645Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Creating necessary directories","extra":{}}
+{"timestamp":"2025-11-20T08:01:51.716Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Directories created successfully","extra":{}}
+{"timestamp":"2025-11-20T08:01:51.726Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Checking system requirements","extra":{}}
+{"timestamp":"2025-11-20T08:01:52.401Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"System requirements check passed","extra":{}}
+{"timestamp":"2025-11-20T08:01:52.440Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Validating environment configuration","extra":{}}
+{"timestamp":"2025-11-20T08:01:52.543Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Environment validation passed","extra":{}}
+{"timestamp":"2025-11-20T08:01:52.556Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Checking Supabase status","extra":{}}
+{"timestamp":"2025-11-20T08:01:56.255Z","level":"DEBUG","component":"health_check","category":"infrastructure","severity":"low","message":"Detected Supabase port from status: 54341","extra":{}}
+{"timestamp":"2025-11-20T08:01:56.275Z","level":"DEBUG","component":"health_check","category":"infrastructure","severity":"low","message":"Checking Supabase Realtime WebSocket (port: 54341)","extra":{}}
+{"timestamp":"2025-11-20T08:01:57.130Z","level":"INFO","component":"health_check","category":"infrastructure","severity":"low","message":"Supabase Realtime WebSocket endpoint is accessible (code: 403)","extra":{}}
+{"timestamp":"2025-11-20T08:01:57.140Z","level":"WARN","component":"startup_v3.1","category":"system","severity":"low","message":"Supabase Realtime not available","extra":{}}
+{"timestamp":"2025-11-20T08:01:57.151Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Setting up enhanced monitor script","extra":{}}
+{"timestamp":"2025-11-20T08:01:57.212Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Enhanced monitor script created and ready","extra":{}}
+{"timestamp":"2025-11-20T08:01:57.226Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Starting enhanced parallel cleanup","extra":{}}
+{"timestamp":"2025-11-20T08:01:57.247Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Initiating parallel graceful shutdown","extra":{}}
+{"timestamp":"2025-11-20T08:01:57.257Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Starting parallel kill of all services","extra":{}}
+{"timestamp":"2025-11-20T08:01:57.276Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Starting kill job for service: redis","extra":{}}
+{"timestamp":"2025-11-20T08:01:57.321Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Starting kill job for service: backend","extra":{}}
+{"timestamp":"2025-11-20T08:01:57.357Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Starting kill job for service: worker","extra":{}}
+{"timestamp":"2025-11-20T08:01:57.395Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Starting kill job for service: frontend","extra":{}}
+{"timestamp":"2025-11-20T08:01:57.435Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Starting kill job for service: monitor","extra":{}}
+{"timestamp":"2025-11-20T08:01:57.535Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Started 5 parallel kill jobs: 4755,4784,4813,4842,4882","extra":{}}
+{"timestamp":"2025-11-20T08:01:57.563Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Waiting for parallel kill completion","extra":{}}
+{"timestamp":"2025-11-20T08:01:58.566Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Kill job completed for service: monitor","extra":{}}
+{"timestamp":"2025-11-20T08:01:59.626Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Kill job completed for service: redis","extra":{}}
+{"timestamp":"2025-11-20T08:01:59.657Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Kill job completed for service: worker","extra":{}}
+{"timestamp":"2025-11-20T08:01:59.705Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Kill job completed for service: frontend","extra":{}}
+{"timestamp":"2025-11-20T08:01:59.709Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Kill job completed for service: backend","extra":{}}
+{"timestamp":"2025-11-20T08:01:59.788Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"All kill jobs completed successfully in 2s","extra":{}}
+{"timestamp":"2025-11-20T08:01:59.799Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Verifying kill completion","extra":{}}
+{"timestamp":"2025-11-20T08:02:00.543Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Kill verification passed - all processes terminated","extra":{}}
+{"timestamp":"2025-11-20T08:02:00.552Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Parallel graceful shutdown completed","extra":{}}
+{"timestamp":"2025-11-20T08:02:00.563Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Parallel cleanup completed successfully","extra":{}}
+{"timestamp":"2025-11-20T08:02:01.612Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Enhanced cleanup completed","extra":{}}
+{"timestamp":"2025-11-20T08:02:01.627Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Starting enhanced parallel startup","extra":{}}
+{"timestamp":"2025-11-20T08:02:01.638Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Initializing parallel dependency management system v3.1","extra":{}}
+{"timestamp":"2025-11-20T08:02:02.092Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Parallel dependency system initialized with enhanced process tracking","extra":{}}
+{"timestamp":"2025-11-20T08:02:02.105Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Starting parallel startup sequence","extra":{}}
+{"timestamp":"2025-11-20T08:02:02.118Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Calculating dependency waves for parallel startup","extra":{}}
+{"timestamp":"2025-11-20T08:02:02.232Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Calculated 2 dependency waves","extra":{}}
+{"timestamp":"2025-11-20T08:02:02.280Z","level":"INFO","component":"parallel_start","category":"system","severity":"low","message":"Starting wave 0 services: redis","extra":{}}
+{"timestamp":"2025-11-20T08:02:02.345Z","level":"ERROR","component":"parallel_start","category":"system","severity":"low","message":"Redis is not running","extra":{}}
+{"timestamp":"2025-11-20T08:02:02.369Z","level":"ERROR","component":"parallel_start","category":"system","severity":"low","message":"Wave 0 failed","extra":{}}
+{"timestamp":"2025-11-20T08:02:02.381Z","level":"ERROR","component":"parallel_startup","category":"system","severity":"low","message":"Wave 0 failed, aborting startup","extra":{}}
+{"timestamp":"2025-11-20T08:02:02.394Z","level":"ERROR","component":"startup_v3.1","category":"system","severity":"low","message":"Parallel startup failed","extra":{}}
+{"timestamp":"2025-11-20T08:02:02.406Z","level":"ERROR","component":"startup_v3.1","category":"system","severity":"low","message":"Enhanced startup failed","extra":{}}
+{"timestamp":"2025-11-20T08:13:30.715Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"ChainLens Development Environment v3.1 starting","extra":{}}
+{"timestamp":"2025-11-20T08:13:30.724Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Creating necessary directories","extra":{}}
+{"timestamp":"2025-11-20T08:13:30.763Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Directories created successfully","extra":{}}
+{"timestamp":"2025-11-20T08:13:30.773Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Checking system requirements","extra":{}}
+{"timestamp":"2025-11-20T08:13:31.011Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"System requirements check passed","extra":{}}
+{"timestamp":"2025-11-20T08:13:31.019Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Validating environment configuration","extra":{}}
+{"timestamp":"2025-11-20T08:13:31.056Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Environment validation passed","extra":{}}
+{"timestamp":"2025-11-20T08:13:31.063Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Checking Supabase status","extra":{}}
+{"timestamp":"2025-11-20T08:13:31.315Z","level":"DEBUG","component":"health_check","category":"infrastructure","severity":"low","message":"Detected Supabase port from status: 54341","extra":{}}
+{"timestamp":"2025-11-20T08:13:31.321Z","level":"DEBUG","component":"health_check","category":"infrastructure","severity":"low","message":"Checking Supabase Realtime WebSocket (port: 54341)","extra":{}}
+{"timestamp":"2025-11-20T08:13:31.352Z","level":"INFO","component":"health_check","category":"infrastructure","severity":"low","message":"Supabase Realtime WebSocket endpoint is accessible (code: 403)","extra":{}}
+{"timestamp":"2025-11-20T08:13:31.360Z","level":"WARN","component":"startup_v3.1","category":"system","severity":"low","message":"Supabase Realtime not available","extra":{}}
+{"timestamp":"2025-11-20T08:13:31.366Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Setting up enhanced monitor script","extra":{}}
+{"timestamp":"2025-11-20T08:13:31.383Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Enhanced monitor script created and ready","extra":{}}
+{"timestamp":"2025-11-20T08:13:31.396Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Starting enhanced parallel cleanup","extra":{}}
+{"timestamp":"2025-11-20T08:13:31.430Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Initiating parallel graceful shutdown","extra":{}}
+{"timestamp":"2025-11-20T08:13:31.440Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Starting parallel kill of all services","extra":{}}
+{"timestamp":"2025-11-20T08:13:31.455Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Starting kill job for service: redis","extra":{}}
+{"timestamp":"2025-11-20T08:13:31.482Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Starting kill job for service: backend","extra":{}}
+{"timestamp":"2025-11-20T08:13:31.512Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Starting kill job for service: worker","extra":{}}
+{"timestamp":"2025-11-20T08:13:31.540Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Starting kill job for service: frontend","extra":{}}
+{"timestamp":"2025-11-20T08:13:31.568Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Starting kill job for service: monitor","extra":{}}
+{"timestamp":"2025-11-20T08:13:31.597Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Started 5 parallel kill jobs: 27712,27743,27772,27802,27832","extra":{}}
+{"timestamp":"2025-11-20T08:13:31.608Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Waiting for parallel kill completion","extra":{}}
+{"timestamp":"2025-11-20T08:13:32.646Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Kill job completed for service: monitor","extra":{}}
+{"timestamp":"2025-11-20T08:13:33.525Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Kill job completed for service: redis","extra":{}}
+{"timestamp":"2025-11-20T08:13:33.546Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Kill job completed for service: backend","extra":{}}
+{"timestamp":"2025-11-20T08:13:33.580Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Kill job completed for service: worker","extra":{}}
+{"timestamp":"2025-11-20T08:13:33.603Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Kill job completed for service: frontend","extra":{}}
+{"timestamp":"2025-11-20T08:13:33.721Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"All kill jobs completed successfully in 2s","extra":{}}
+{"timestamp":"2025-11-20T08:13:33.728Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Verifying kill completion","extra":{}}
+{"timestamp":"2025-11-20T08:13:34.096Z","level":"INFO","component":"parallel_kill","category":"system","severity":"low","message":"Kill verification passed - all processes terminated","extra":{}}
+{"timestamp":"2025-11-20T08:13:34.103Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Parallel graceful shutdown completed","extra":{}}
+{"timestamp":"2025-11-20T08:13:34.110Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Parallel cleanup completed successfully","extra":{}}
+{"timestamp":"2025-11-20T08:13:35.295Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Enhanced cleanup completed","extra":{}}
+{"timestamp":"2025-11-20T08:13:35.305Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Starting enhanced parallel startup","extra":{}}
+{"timestamp":"2025-11-20T08:13:35.331Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Initializing parallel dependency management system v3.1","extra":{}}
+{"timestamp":"2025-11-20T08:13:36.005Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Parallel dependency system initialized with enhanced process tracking","extra":{}}
+{"timestamp":"2025-11-20T08:13:36.013Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Starting parallel startup sequence","extra":{}}
+{"timestamp":"2025-11-20T08:13:36.021Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Calculating dependency waves for parallel startup","extra":{}}
+{"timestamp":"2025-11-20T08:13:36.100Z","level":"INFO","component":"parallel_dependency_manager","category":"system","severity":"low","message":"Calculated 2 dependency waves","extra":{}}
+{"timestamp":"2025-11-20T08:13:36.119Z","level":"INFO","component":"parallel_start","category":"system","severity":"low","message":"Starting wave 0 services: redis","extra":{}}
+{"timestamp":"2025-11-20T08:13:36.148Z","level":"INFO","component":"parallel_start","category":"system","severity":"low","message":"Redis is not running, attempting to start...","extra":{}}
+{"timestamp":"2025-11-20T08:13:37.652Z","level":"INFO","component":"parallel_start","category":"system","severity":"low","message":"Redis started via redis-server","extra":{}}
+{"timestamp":"2025-11-20T08:13:37.681Z","level":"INFO","component":"parallel_start","category":"system","severity":"low","message":"Redis started and verified successfully","extra":{}}
+{"timestamp":"2025-11-20T08:13:37.689Z","level":"INFO","component":"parallel_start","category":"system","severity":"low","message":"Wave 0 completed successfully","extra":{}}
+{"timestamp":"2025-11-20T08:13:39.712Z","level":"INFO","component":"parallel_start","category":"system","severity":"low","message":"Starting wave 1 services: backend worker frontend monitor","extra":{}}
+{"timestamp":"2025-11-20T08:13:39.845Z","level":"INFO","component":"parallel_start","category":"system","severity":"low","message":"Monitor started (optional service)","extra":{}}
+{"timestamp":"2025-11-20T08:13:40.807Z","level":"INFO","component":"parallel_start","category":"system","severity":"low","message":"Backend started with PID: 29172","extra":{}}
+{"timestamp":"2025-11-20T08:13:40.830Z","level":"INFO","component":"parallel_start","category":"system","severity":"low","message":"Worker started with PID: 29197","extra":{}}
+{"timestamp":"2025-11-20T08:13:40.893Z","level":"INFO","component":"parallel_start","category":"system","severity":"low","message":"Frontend started with PID: 29223","extra":{}}
+{"timestamp":"2025-11-20T08:13:41.013Z","level":"INFO","component":"parallel_start","category":"system","severity":"low","message":"Service worker started successfully","extra":{}}
+{"timestamp":"2025-11-20T08:13:41.949Z","level":"INFO","component":"parallel_start","category":"system","severity":"low","message":"Service monitor started (optional)","extra":{}}
+{"timestamp":"2025-11-20T08:13:43.107Z","level":"INFO","component":"parallel_start","category":"system","severity":"low","message":"Service frontend started successfully","extra":{}}
+{"timestamp":"2025-11-20T08:13:55.754Z","level":"INFO","component":"parallel_start","category":"system","severity":"low","message":"Service backend started successfully","extra":{}}
+{"timestamp":"2025-11-20T08:13:55.766Z","level":"INFO","component":"parallel_start","category":"system","severity":"low","message":"Wave 1 completed successfully","extra":{}}
+{"timestamp":"2025-11-20T08:13:57.783Z","level":"INFO","component":"parallel_startup","category":"system","severity":"low","message":"Parallel startup sequence completed successfully","extra":{}}
+{"timestamp":"2025-11-20T08:13:57.794Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Parallel startup completed successfully","extra":{}}
+{"timestamp":"2025-11-20T08:13:57.809Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Starting enhanced startup verification","extra":{}}
+{"timestamp":"2025-11-20T08:13:57.934Z","level":"INFO","component":"parallel_dependency_metrics","category":"system","severity":"low","message":"Enhanced service status with parallel info","extra":{"redis":{"status":"starting","pid":"","start_time":1763626416,"retries":0},"backend":{"status":"starting","pid":"","start_time":1763626419,"retries":0},"worker":{"status":"starting","pid":"","start_time":1763626419,"retries":0},"frontend":{"status":"starting","pid":"","start_time":1763626419,"retries":0},"monitor":{"status":"starting","pid":"","start_time":1763626419,"retries":0}}}}
+{"timestamp":"2025-11-20T08:13:58.027Z","level":"DEBUG","component":"health_check","category":"infrastructure","severity":"low","message":"Checking Redis health with enhanced logic","extra":{"timeout":3,"circuit_state":"CLOSED"}}}
+{"timestamp":"2025-11-20T08:13:58.069Z","level":"DEBUG","component":"health_check","category":"infrastructure","severity":"low","message":"Checking Backend health with enhanced logic","extra":{"host":"127.0.0.1","port":8000,"timeout":5}}}
+{"timestamp":"2025-11-20T08:13:58.130Z","level":"DEBUG","component":"health_check","category":"infrastructure","severity":"low","message":"Checking Worker health with enhanced logic","extra":{}}
+{"timestamp":"2025-11-20T08:13:58.362Z","level":"DEBUG","component":"health_check","category":"infrastructure","severity":"low","message":"Worker processes healthy","extra":{"dramatiq":2,"spawn":5}}}
+{"timestamp":"2025-11-20T08:13:58.387Z","level":"DEBUG","component":"health_check","category":"infrastructure","severity":"low","message":"Checking Frontend health with enhanced logic","extra":{"host":"localhost","port":3000,"timeout":5}}}
+{"timestamp":"2025-11-20T08:13:58.441Z","level":"DEBUG","component":"retry","category":"system","severity":"low","message":"Attempt 1 failed, retrying in 1s","extra":{"attempt":1,"max_attempts":3,"delay":1}}}
+{"timestamp":"2025-11-20T08:13:59.487Z","level":"DEBUG","component":"retry","category":"system","severity":"low","message":"Attempt 2 failed, retrying in 2s","extra":{"attempt":2,"max_attempts":3,"delay":2}}}
+{"timestamp":"2025-11-20T08:14:01.535Z","level":"WARN","component":"startup_v3.1","category":"system","severity":"low","message":"Enhanced startup verification partial","extra":{}}
+{"timestamp":"2025-11-20T08:14:01.545Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Starting enhanced monitoring display","extra":{}}
+{"timestamp":"2025-11-20T08:14:01.554Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Enhanced monitor script confirmed ready","extra":{}}
+{"timestamp":"2025-11-20T08:14:01.589Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Enhanced monitoring display completed","extra":{}}
+{"timestamp":"2025-11-20T08:14:01.598Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"ChainLens Development Environment v3.1 startup completed successfully","extra":{}}
+{"timestamp":"2025-11-20T08:14:01.616Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Launching enhanced monitoring dashboard","extra":{}}
+{"timestamp":"2025-11-20T08:14:03.633Z","level":"INFO","component":"startup_v3.1","category":"system","severity":"low","message":"Executing monitoring dashboard","extra":{"script":"/Users/mac_1/Documents/GitHub/chainlens/scripts/monitoring/enhanced_dashboard_monitor.sh"}}}

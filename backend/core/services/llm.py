@@ -185,6 +185,9 @@ def setup_litellm_redis_cache() -> None:
     cache_enabled = getattr(config, 'LITELLM_CACHE_ENABLED', True)
     if not cache_enabled:
         logger.info("LiteLLM Redis caching is disabled (LITELLM_CACHE_ENABLED=False)")
+        # Explicitly disable cache to prevent LiteLLM from using it
+        import litellm
+        litellm.cache = None
         _litellm_cache_configured = True
         return
     
