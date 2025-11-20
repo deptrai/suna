@@ -7,11 +7,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { PricingSection } from '@/components/home/sections/pricing-section';
 import { AlertTriangle, Clock, CreditCard, LogOut } from 'lucide-react';
 import { EpsilonLoader } from '@/components/ui/chainlens-loader';
-=======
 import { PricingSection } from '@/components/billing/pricing';
 import { LogOut } from 'lucide-react';
 import { KortixLoader } from '@/components/ui/kortix-loader';
->>>>>>> upstream/main
 import { useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EpsilonLogo } from '@/components/sidebar/chainlens-logo';
@@ -136,7 +134,6 @@ export default function SubscriptionRequiredPage() {
         <div className="text-center text-sm text-muted-foreground -mt-10">
           <p>
             Questions? Contact us at{' '}
-<<<<<<< HEAD
             <a href="mailto:support@epsilon.ai" className="underline hover:text-primary">
               support@epsilon.ai
             </a>

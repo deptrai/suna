@@ -136,6 +136,7 @@ async def run_agent_background(
     pubsub = None
     stop_checker = None
     stop_signal_received = False
+    cancellation_event = asyncio.Event()
     
     # Load agent_run metadata to get optimization_mode if set
     optimization_mode = None
@@ -214,8 +215,11 @@ async def run_agent_background(
             optimization_mode=optimization_mode,
             cancellation_event=cancellation_event,
         )
+        
+        logger.info(f"🚀 Agent generator created, starting iteration for run {agent_run_id}")
 
         async for response in agent_gen:
+            logger.debug(f"📦 Received response chunk: type={response.get('type')}, keys={list(response.keys())}")
             if stop_signal_received:
                 logger.debug(f"Agent run {agent_run_id} stopped by signal.")
                 final_status = "stopped"

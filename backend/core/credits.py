@@ -76,28 +76,30 @@ class CreditService:
                 try:
                     logger.info(f"Creating account for new user {user_id} with tier='none'")
                     
-                    await client.from_('credit_ledger').insert({
-                        'account_id': user_id,
-                        'amount': str(FREE_TIER_INITIAL_CREDITS),
-                        'type': 'tier_grant',
-                        'description': 'Welcome to Chainlens! Free tier initial credits',
-                        'balance_after': str(FREE_TIER_INITIAL_CREDITS)
-                    }).execute()
-                else:
-                    account_data = {
-                        'account_id': user_id,
-                        'balance': '0',
-                        'tier': 'free'
-                    }
+                    # Try to insert ledger entry first
                     try:
-                        test_data = {**account_data, 'last_grant_date': datetime.now(timezone.utc).isoformat()}
-                        await client.from_('credit_accounts').insert(test_data).execute()
-                        logger.info(f"Successfully created account for user {user_id}")
-                    except Exception as e1:
-                        logger.warning(f"Creating account without last_grant_date: {e1}")
-                        await client.from_('credit_accounts').insert(account_data).execute()
-                        logger.info(f"Successfully created minimal account for user {user_id}")
-                    
+                        await client.from_('credit_ledger').insert({
+                            'account_id': user_id,
+                            'amount': str(FREE_TIER_INITIAL_CREDITS),
+                            'type': 'tier_grant',
+                            'description': 'Welcome to Chainlens! Free tier initial credits',
+                            'balance_after': str(FREE_TIER_INITIAL_CREDITS)
+                        }).execute()
+                    except Exception:
+                        # If ledger insert fails, create account without initial credits
+                        account_data = {
+                            'account_id': user_id,
+                            'balance': '0',
+                            'tier': 'free'
+                        }
+                        try:
+                            test_data = {**account_data, 'last_grant_date': datetime.now(timezone.utc).isoformat()}
+                            await client.from_('credit_accounts').insert(test_data).execute()
+                            logger.info(f"Successfully created account for user {user_id}")
+                        except Exception as e1:
+                            logger.warning(f"Creating account without last_grant_date: {e1}")
+                            await client.from_('credit_accounts').insert(account_data).execute()
+                            logger.info(f"Successfully created minimal account for user {user_id}")
                         
                 except Exception as e:
                     logger.error(f"Failed to create account for user {user_id}: {e}")

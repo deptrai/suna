@@ -36,9 +36,6 @@ export const metadata: Metadata = {
   },
   description:
     'Epsilon is a fully open source AI assistant that helps you accomplish real-world tasks with ease. Through natural conversation, Epsilon becomes your digital companion for research, data analysis, and everyday challenges.',
-=======
-  description: siteConfig.description,
->>>>>>> upstream/main
   keywords: [
     'AI assistant',
     'open source AI',
@@ -101,7 +98,6 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-<<<<<<< HEAD
     title: 'Epsilon - Open Source Generalist AI Worker',
     description:
       'Epsilon is a fully open source AI assistant that helps you accomplish real-world tasks with ease through natural conversation.',

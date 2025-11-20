@@ -1,5 +1,10 @@
 import { FlickeringGrid } from '@/components/ui/flickering-grid';
 import { config } from '@/lib/config';
+import { FirstBentoAnimation } from '@/components/home/first-bento-animation';
+import { SecondBentoAnimation } from '@/components/home/second-bento-animation';
+import { ThirdBentoAnimation } from '@/components/home/third-bento-animation';
+import { motion } from 'framer-motion';
+import { Globe } from 'lucide-react';
 
 interface UpgradePlan {
   /** @deprecated */
@@ -536,7 +541,7 @@ export const siteConfig = {
       },
       {
         id: 4,
-        content: <FourthBentoAnimation once={false} />,
+        content: <ThirdBentoAnimation once={false} />,
         title: 'Complete Customization',
         description:
           'Tailor Epsilon to your specific needs. As an open source solution, you have full control over its capabilities, integrations, and implementation.',

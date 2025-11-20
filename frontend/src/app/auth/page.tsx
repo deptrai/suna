@@ -32,11 +32,7 @@ import {
 } from '@/components/ui/dialog';
 import GitHubSignIn from '@/components/GithubSignIn';
 import { EpsilonLogo } from '@/components/sidebar/chainlens-logo';
-import { AnimatedBg } from '@/components/home/ui/AnimatedBg';
-=======
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
 import { AnimatedBg } from '@/components/ui/animated-bg';
->>>>>>> upstream/main
 import { ReleaseBadge } from '@/components/auth/release-badge';
 
 function LoginContent() {
@@ -338,7 +334,6 @@ function LoginContent() {
                       htmlFor="gdprConsent" 
                       className="text-sm text-muted-foreground leading-none cursor-pointer select-none"
                     >
-<<<<<<< HEAD
                       I accept the{' '}
                       <a 
                         href="https://www.epsilon.com/legal?tab=privacy" 

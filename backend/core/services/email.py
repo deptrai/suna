@@ -27,9 +27,6 @@ class EmailService:
             user_name = user_email.split('@')[0].title()
         
         subject = "🎉 Welcome to Chainlens — Let's Get Started "
-=======
-        subject = "🎉 Welcome to Kortix — Let's Get Started "
->>>>>>> upstream/main
         html_content = self._get_welcome_email_template(user_name)
         text_content = self._get_welcome_email_text(user_name)
         
@@ -140,7 +137,6 @@ class EmailService:
 <body>
   <div class="container">
     <div class="logo-container">
-<<<<<<< HEAD
       <img src="https://i.postimg.cc/WdNtRx5Z/epsilon-chainlens-logo.png" alt="Epsilon Chainlens Logo" class="logo">
     </div>
     <h1>Welcome to Epsilon Chainlens!</h1>

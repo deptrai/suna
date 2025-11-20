@@ -3,11 +3,11 @@
 import { useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { EpsilonLoader } from '@/components/ui/chainlens-loader';
-import { useApiHealth } from '@/hooks/react-query';
+import { useApiHealth } from '@/hooks/usage/use-health';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { isLocalMode } from '@/lib/config';
-import { AnimatedBg } from '@/components/home/ui/AnimatedBg';
+import { AnimatedBg } from '@/components/ui/animated-bg';
 import { EpsilonLogo } from '@/components/sidebar/chainlens-logo';
 
 export function MaintenancePage() {

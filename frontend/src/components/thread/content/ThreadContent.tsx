@@ -468,29 +468,12 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
     const getAgentInfo = useCallback(() => {
 
         // Check if this is a ChainLens default agent from metadata
-        const isChainLensDefaultAgent = agentMetadata?.is_chainlens_default || false;
+        const isChainLensDefaultAgent = threadMetadata?.is_chainlens_default || false;
 
         // Then check recent messages for agent info
         const recentAssistantWithAgent = [...displayMessages].reverse().find(msg =>
             msg.type === 'assistant' && msg.agents?.name
         );
-
-        if (agentData && !isChainLensDefaultAgent) {
-            // Use modern icon system for agent display
-            const avatar = (
-                <div className="h-5 w-5 flex items-center justify-center rounded text-xs">
-                    <EpsilonLogo size={16} />
-                </div>
-            );
-            return {
-                name: 'Agent Builder',
-                avatar: (
-                    <div className="h-5 w-5 flex items-center justify-center rounded text-xs">
-                        <span className="text-lg">🤖</span>
-                    </div>
-                )
-            };
-        }
 
         if (recentAssistantWithAgent?.agents?.name) {
             const isChainLensAgent = recentAssistantWithAgent.agents.name === 'ChainLens' || isChainLensDefaultAgent;

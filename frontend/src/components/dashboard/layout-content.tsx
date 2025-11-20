@@ -7,7 +7,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { useMaintenanceNoticeQuery } from '@/hooks/edge-flags';
 import { useRouter } from 'next/navigation';
 import { EpsilonLoader } from '@/components/ui/chainlens-loader';
-import { useApiHealth } from '@/hooks/react-query';
+import { useApiHealth } from '@/hooks/usage/use-health';
 import { MaintenancePage } from '@/components/maintenance/maintenance-page';
 import { StatusOverlay } from '@/components/ui/status-overlay';
 import { useAdminRole } from '@/hooks/admin';

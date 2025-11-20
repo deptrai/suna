@@ -24,10 +24,8 @@ import {
 } from '@/components/ui/drawer';
 import { useDocumentModalStore } from '@/stores/use-document-modal-store';
 
-// ============================================================================
-// Types & Interfaces
-// ============================================================================
-
+// =====================================================================// Types & Interfaces
+// =====================================================================
 export interface ToolCallInput {
   assistantCall: {
     content?: string;
@@ -77,17 +75,13 @@ interface ToolCallSnapshot {
 type NavigationMode = 'live' | 'manual';
 type ViewType = 'tools' | 'browser';
 
-// ============================================================================
-// Constants
-// ============================================================================
-
+// =====================================================================// Constants
+// =====================================================================
 const FLOATING_LAYOUT_ID = 'tool-panel-float';
 const CONTENT_LAYOUT_ID = 'tool-panel-content';
 
-// ============================================================================
-// Sub-components
-// ============================================================================
-
+// =====================================================================// Sub-components
+// =====================================================================
 interface ViewToggleProps {
   currentView: ViewType;
   onViewChange: (view: ViewType) => void;
@@ -251,8 +245,7 @@ const PanelHeader = memo(function PanelHeader({
 
 PanelHeader.displayName = 'PanelHeader';
 
-// ============================================================================
-
+// =====================================================================
 interface NavigationControlsProps {
   displayIndex: number;
   displayTotalCalls: number;
@@ -416,8 +409,7 @@ const NavigationControls = memo(function NavigationControls({
 
 NavigationControls.displayName = 'NavigationControls';
 
-// ============================================================================
-
+// =====================================================================
 interface EmptyStateProps {
   t: (key: string) => string;
 }
@@ -449,8 +441,7 @@ const EmptyState = memo(function EmptyState({ t }: EmptyStateProps) {
 
 EmptyState.displayName = 'EmptyState';
 
-// ============================================================================
-
+// =====================================================================
 interface LoadingStateProps {
   agentName?: string;
   onClose: () => void;
@@ -508,10 +499,8 @@ const LoadingState = memo(function LoadingState({ agentName, onClose, isMobile }
 
 LoadingState.displayName = 'LoadingState';
 
-// ============================================================================
-// Main Component
-// ============================================================================
-
+// =====================================================================// Main Component
+// =====================================================================
 export function ToolCallSidePanel({
   isOpen,
   onClose,

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { billingKeys } from '@/hooks/billing/use-subscription';
 import {
   ChatInput,
@@ -23,13 +24,12 @@ import { useAuth } from '@/components/AuthProvider';
 import { config, isLocalMode, isStagingMode } from '@/lib/config';
 import { useInitiateAgentWithInvalidation, useThreadLimit } from '@/hooks/dashboard/use-initiate-agent';
 
-import { useAgents } from '@/hooks/react-query/agents/use-agents';
+import { useAgents } from '@/hooks/agents/use-agents';
 import { cn } from '@/lib/utils';
-import { BillingModal } from '@/components/billing/billing-modal';
-import { useAgentSelection } from '@/lib/stores/agent-selection-store';
+import { useAgentSelection } from '@/stores/agent-selection-store';
 import { ChainLensModesPanel } from './chainlens-modes-panel';
 import { AIWorkerTemplates } from './ai-worker-templates';
-import { useThreadQuery } from '@/hooks/react-query/threads/use-threads';
+import { useThreadQuery } from '@/hooks/threads/use-threads';
 import { normalizeFilenameToNFC } from '@/lib/utils/unicode';
 import { EpsilonLogo } from '@/components/sidebar/chainlens-logo';
 import { AgentRunLimitDialog } from '@/components/thread/agent-run-limit-dialog';
@@ -110,7 +110,6 @@ export function DashboardContent() {
   const { user } = useAuth();
   const chatInputRef = React.useRef<ChatInputHandles>(null);
   const initiateAgentMutation = useInitiateAgentWithInvalidation();
-  const pricingModalStore = usePricingModalStore();
 
   const { data: agentsResponse } = useAgents({
     limit: 100,
@@ -128,7 +127,6 @@ export function DashboardContent() {
 
   const threadQuery = useThreadQuery(initiatedThreadId || '');
   const { data: threadLimit, isLoading: isThreadLimitLoading } = useThreadLimit();
-  const { data: limits } = useLimits();
   const canCreateThread = threadLimit?.can_create || false;
   
   const isDismissed = typeof window !== 'undefined' && sessionStorage.getItem('threadLimitAlertDismissed') === 'true';
@@ -268,15 +266,9 @@ export function DashboardContent() {
     } catch (error: any) {
       console.error('Error during submission process:', error);
       if (error instanceof ProjectLimitError) {
-        pricingModalStore.openPricingModal({ 
-          isAlert: true,
-          alertTitle: `${tBilling('reachedLimit')} ${tBilling('projectLimit', { current: error.detail.current_count, limit: error.detail.limit })}` 
-        });
+        toast.error(`${tBilling('reachedLimit')} - Project limit reached`);
       } else if (error instanceof ThreadLimitError) {
-        pricingModalStore.openPricingModal({ 
-          isAlert: true,
-          alertTitle: `${tBilling('reachedLimit')} ${tBilling('threadLimit', { current: error.detail.current_count, limit: error.detail.limit })}` 
-        });
+        toast.error(`${tBilling('reachedLimit')} - Thread limit reached`);
       } else if (error instanceof BillingError) {
         const message = error.detail?.message?.toLowerCase() || '';
         const isCreditsExhausted = 
@@ -286,10 +278,7 @@ export function DashboardContent() {
           message.includes('out of credits') ||
           message.includes('no credits');
         
-        pricingModalStore.openPricingModal({ 
-          isAlert: true,
-          alertTitle: isCreditsExhausted ? 'You ran out of credits. Upgrade now.' : 'Pick the plan that works for you.'
-        });
+        toast.error(isCreditsExhausted ? 'You ran out of credits. Upgrade now.' : 'Billing error occurred');
       } else if (error instanceof AgentRunLimitError) {
         const { running_thread_ids, running_count } = error.detail;
         setAgentLimitData({
@@ -334,67 +323,10 @@ export function DashboardContent() {
 
   return (
     <>
-      <PlanSelectionModal />
+      {/* <PlanSelectionModal /> - Commented out: component not found */}
 
       <div className="flex flex-col h-screen w-full overflow-hidden relative">
-        {/* Credits Display - Top right corner */}
-        <div className="absolute flex items-center gap-2 top-4 right-4 z-10">
-          <CreditsDisplay />
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button size='icon' variant='outline'>
-                <Info className='h-4 w-4'/>
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent align='end' className="w-70">
-              <div>
-                <h2 className="text-md font-medium mb-4">{t('usageLimits')}</h2>
-                <div className="space-y-2">
-                  <div className='space-y-2'>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">{t('threads')}</span>
-                      <span className="font-medium">{limits?.thread_count?.current_count || 0} / {limits?.thread_count?.limit || 0}</span>
-                    </div>
-                    <Progress 
-                      className='h-1'
-                      value={((limits?.thread_count?.current_count || 0) / (limits?.thread_count?.limit || 1)) * 100} 
-                    />
-                  </div>
-                  <div className='space-y-2'>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Custom Workers</span>
-                      <span className="font-medium">{limits?.agent_count?.current_count || 0} / {limits?.agent_count?.limit || 0}</span>
-                    </div>
-                    <Progress 
-                      className='h-1'
-                      value={((limits?.agent_count?.current_count || 0) / (limits?.agent_count?.limit || 1)) * 100} 
-                    />
-                  </div>
-                  <div className='space-y-2'>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">{t('scheduledTriggers')}</span>
-                      <span className="font-medium">{limits?.trigger_count?.scheduled?.current_count || 0} / {limits?.trigger_count?.scheduled?.limit || 0}</span>
-                    </div>
-                    <Progress 
-                      className='h-1'
-                      value={((limits?.trigger_count?.scheduled?.current_count || 0) / (limits?.trigger_count?.scheduled?.limit || 1)) * 100} 
-                    />
-                  </div>
-                  <div className='space-y-2'>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">{t('appTriggers')}</span>
-                      <span className="font-medium">{limits?.trigger_count?.app?.current_count || 0} / {limits?.trigger_count?.app?.limit || 0}</span>
-                    </div>
-                    <Progress 
-                      className='h-1'
-                      value={((limits?.trigger_count?.app?.current_count || 0) / (limits?.trigger_count?.app?.limit || 1)) * 100} 
-                    />
-                  </div>
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
-        </div>
+        {/* Credits Display - Top right corner - Commented out: components not found */}
 
         <div className="flex-1 overflow-y-auto">
           <div className="min-h-full flex flex-col">
@@ -485,13 +417,13 @@ export function DashboardContent() {
                           >
                             <span className='-mb-3.5 dark:text-amber-500 text-amber-700 text-sm'>{t('limitsExceeded')}</span>
                             <div className='flex items-center -mb-3.5'>
-                              <Button 
+                              {/* <Button 
                                 size='sm' 
                                 className='h-6 text-xs'
                                 onClick={() => pricingModalStore.openPricingModal()}
                               >
                                 {tCommon('upgrade')}
-                                </Button>
+                              </Button> */}
                               {/* <Button 
                                 size='icon' 
                                 variant='ghost' 

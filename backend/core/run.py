@@ -914,7 +914,6 @@ class AgentRunner:
             tool_registry=self.thread_manager.tool_registry,
             xml_tool_calling=True,
             optimization_mode=optimization_mode
-            user_id=self.account_id
         )
         logger.info(f"📝 System message built once: {len(str(system_message.get('content', '')))} chars")
         logger.debug(f"model_name received: {self.config.model_name}")
@@ -1109,7 +1108,7 @@ async def run_agent(
     model_name: str = "openai-compatible/gpt-4o-mini",  # Default to gpt-4o-mini for v98store
     agent_config: Optional[dict] = None,    
     trace: Optional[StatefulTraceClient] = None,
-    optimization_mode: Optional[str] = None
+    optimization_mode: Optional[str] = None,
     cancellation_event: Optional[asyncio.Event] = None
 ):
     effective_model = model_name

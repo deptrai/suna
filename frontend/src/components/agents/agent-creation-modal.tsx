@@ -9,8 +9,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { useCreateNewAgent } from '@/hooks/react-query/agents/use-agents';
-import { useEpsilonTeamTemplates } from '@/hooks/react-query/secure-mcp/use-secure-mcp';
+import { useCreateNewAgent } from '@/hooks/agents/use-agents';
+import { useEpsilonTeamTemplates } from '@/hooks/secure-mcp/use-secure-mcp';
 import { AgentCountLimitError } from '@/lib/api';
 import { toast } from 'sonner';
 import { UnifiedAgentCard } from '@/components/ui/unified-agent-card';

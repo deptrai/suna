@@ -332,13 +332,13 @@ class AgentLoader:
     async def _load_agent_config(self, agent: AgentData, user_id: str):
         """Load full configuration for a single agent."""
         if agent.is_chainlens_default:
-            self._load_chainlens_config(agent)
+            await self._load_chainlens_config(agent, user_id)
         else:
             await self._load_custom_config(agent, user_id)
         
         agent.config_loaded = True
     
-    def _load_chainlens_config(self, agent: AgentData):
+    async def _load_chainlens_config(self, agent: AgentData, user_id: str):
         """Load ChainLens central configuration."""
         from core.chainlens_config import CHAINLENS_CONFIG
         from core.config_helper import _extract_agentpress_tools_for_run

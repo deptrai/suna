@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useAgentFromCache } from '@/hooks/react-query/agents/use-agents';
+import { useAgentFromCache } from '@/hooks/agents/use-agents';
 import { EpsilonLogo } from '@/components/sidebar/chainlens-logo';
 import { DynamicIcon } from 'lucide-react/dynamic';
 import { cn } from '@/lib/utils';

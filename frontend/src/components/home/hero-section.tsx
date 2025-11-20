@@ -29,8 +29,8 @@ import { useQuery } from '@tanstack/react-query';
 import { agentKeys } from '@/hooks/agents/keys';
 import { getAgents } from '@/hooks/agents/utils';
 import { AgentRunLimitDialog } from '@/components/thread/agent-run-limit-dialog';
-import { SunaModesPanel } from '@/components/dashboard/suna-modes-panel';
-import { useSunaModePersistence } from '@/stores/suna-modes-store';
+import { ChainLensModesPanel } from '@/components/dashboard/chainlens-modes-panel';
+import { useChainLensModePersistence } from '@/hooks/use-chainlens-modes-persistence';
 import { useAgentSelection } from '@/stores/agent-selection-store';
 import { useTranslations } from 'next-intl';
 
