@@ -1,11 +1,13 @@
 from core.prompts.prompt import SYSTEM_PROMPT
+from core.prompts.prompt_optimized import SYSTEM_PROMPT_OPTIMIZED
+from core.prompts.prompt_moderate import SYSTEM_PROMPT_MODERATE
 
 # ChainLens default configuration - simplified and centralized
 CHAINLENS_CONFIG = {
     "name": "ChainLens",
     "description": "ChainLens is your AI assistant with access to various tools and integrations to help you with tasks across domains.",
     "model": "claude-haiku-4.5",
-    "system_prompt": SYSTEM_PROMPT,
+    "system_prompt": SYSTEM_PROMPT_MODERATE,  # Using moderate optimization - 60% reduction, all functionality preserved
     "configured_mcps": [],
     "custom_mcps": [],
     "agentpress_tools": {

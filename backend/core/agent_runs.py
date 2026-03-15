@@ -294,15 +294,41 @@ async def _trigger_agent_background(agent_run_id: str, thread_id: str, project_i
     """
     request_id = structlog.contextvars.get_contextvars().get('request_id')
 
-    run_agent_background.send(
+    logger.info(
+        f"🚀 QUEUING task to Dramatiq",
         agent_run_id=agent_run_id,
         thread_id=thread_id,
         instance_id=utils.instance_id,
         project_id=project_id,
         model_name=effective_model,
-        agent_config=agent_config,
-        request_id=request_id,
+        request_id=request_id
     )
+    
+    try:
+        run_agent_background.send(
+            agent_run_id=agent_run_id,
+            thread_id=thread_id,
+            instance_id=utils.instance_id,
+            project_id=project_id,
+            model_name=effective_model,
+            agent_config=agent_config,
+            request_id=request_id,
+        )
+        logger.info(
+            f"✅ Task QUEUED successfully to Dramatiq",
+            agent_run_id=agent_run_id,
+            thread_id=thread_id,
+            request_id=request_id
+        )
+    except Exception as e:
+        logger.error(
+            f"❌ FAILED to queue task to Dramatiq",
+            agent_run_id=agent_run_id,
+            thread_id=thread_id,
+            error=str(e),
+            request_id=request_id
+        )
+        raise
 
 
 async def _handle_file_uploads(files: List[UploadFile], sandbox, project_id: str, prompt: str = "") -> str:
@@ -606,10 +632,14 @@ async def unified_agent_start(
                 logger.debug(f"Created user message for thread {thread_id}")
             
             # Create agent run with optimization mode in metadata
+            logger.info(f"📝 [EXISTING THREAD] Creating agent run record for thread {thread_id}")
             agent_run_id = await _create_agent_run_record(client, thread_id, agent_config, effective_model, optimization_mode)
+            logger.info(f"✅ [EXISTING THREAD] Agent run record created: {agent_run_id}")
             
             # Trigger background execution
+            logger.info(f"🎬 [EXISTING THREAD] About to trigger background execution for agent_run_id={agent_run_id}")
             await _trigger_agent_background(agent_run_id, thread_id, project_id, effective_model, agent_config)
+            logger.info(f"✅ [EXISTING THREAD] Background execution triggered successfully for agent_run_id={agent_run_id}")
             
             return {
                 "thread_id": thread_id,
@@ -720,10 +750,14 @@ async def unified_agent_start(
             }).execute()
             
             # Create agent run with optimization mode in metadata
+            logger.info(f"📝 [NEW THREAD] Creating agent run record for thread {thread_id}")
             agent_run_id = await _create_agent_run_record(client, thread_id, agent_config, effective_model, optimization_mode)
+            logger.info(f"✅ [NEW THREAD] Agent run record created: {agent_run_id}")
             
             # Trigger background execution
+            logger.info(f"🎬 [NEW THREAD] About to trigger background execution for agent_run_id={agent_run_id}")
             await _trigger_agent_background(agent_run_id, thread_id, project_id, effective_model, agent_config)
+            logger.info(f"✅ [NEW THREAD] Background execution triggered successfully for agent_run_id={agent_run_id}")
             
             return {
                 "thread_id": thread_id,

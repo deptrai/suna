@@ -1,6 +1,17 @@
 from dotenv import load_dotenv
 load_dotenv()
 
+# CRITICAL: Import and configure Dramatiq broker BEFORE importing any actors
+# This ensures the backend API uses the same broker instance as the worker
+import dramatiq
+from dramatiq.brokers.redis import RedisBroker
+import os as _os
+_redis_host = _os.getenv('REDIS_HOST', 'localhost')
+_redis_port = int(_os.getenv('REDIS_PORT', 6379))
+_redis_broker = RedisBroker(host=_redis_host, port=_redis_port, middleware=[dramatiq.middleware.AsyncIO()])
+dramatiq.set_broker(_redis_broker)
+print(f"🔧 [API] Dramatiq broker configured: {_redis_host}:{_redis_port}")
+
 from fastapi import FastAPI, Request, HTTPException, Response, Depends, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse, FileResponse

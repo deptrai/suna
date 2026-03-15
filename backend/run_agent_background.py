@@ -30,6 +30,7 @@ logger.info(f"🔧 Configuring Dramatiq broker with Redis at {redis_host}:{redis
 redis_broker = RedisBroker(host=redis_host, port=redis_port, middleware=[dramatiq.middleware.AsyncIO()])
 
 dramatiq.set_broker(redis_broker)
+logger.info(f"✅ Dramatiq broker configured successfully")
 
 _initialized = False
 db = DBConnection()
@@ -73,6 +74,13 @@ async def run_agent_background(
     request_id: Optional[str] = None
 ):
     """Run the agent in the background using Redis for state."""
+    logger.info(
+        f"🔔 ACTOR INVOKED: run_agent_background",
+        agent_run_id=agent_run_id,
+        thread_id=thread_id,
+        actor_name=run_agent_background.actor_name,
+        queue_name=run_agent_background.queue_name
+    )
     structlog.contextvars.clear_contextvars()
     structlog.contextvars.bind_contextvars(
         agent_run_id=agent_run_id,
@@ -107,6 +115,14 @@ async def run_agent_background(
 
     sentry.sentry.set_tag("thread_id", thread_id)
 
+    logger.info(
+        f"🎯 WORKER RECEIVED TASK from Dramatiq queue",
+        agent_run_id=agent_run_id,
+        thread_id=thread_id,
+        instance_id=instance_id,
+        model_name=model_name,
+        request_id=request_id
+    )
     logger.info(f"Starting background agent run: {agent_run_id} for thread: {thread_id} (Instance: {instance_id})")
     
     from core.ai_models import model_manager
