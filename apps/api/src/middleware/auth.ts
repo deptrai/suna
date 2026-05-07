@@ -165,6 +165,11 @@ export async function combinedAuth(c: Context, next: Next) {
   const previewSandboxId = extractPreviewSandboxId(c.req.path);
 
   if (isLocalPreviewBypassRequest(c, previewSandboxId)) {
+    // Local dev bypass: no JWT required, but we still need a userId for the
+    // signed user-context header forwarded to epsilon-master.  Use a well-known
+    // local-dev platform admin UUID so the sandbox sees a valid context.
+    c.set('userId', 'local-dev-admin');
+    c.set('userEmail', 'local-dev@epsilon.local');
     await next();
     return;
   }

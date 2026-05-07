@@ -20,12 +20,36 @@ async function buildSignedUserContextHeader(
   userId: string | undefined,
   serviceKey: string | undefined,
 ): Promise<Record<string, string>> {
-  if (!userId || !serviceKey) {
+  if (!serviceKey) {
     console.log(
-      `[PREVIEW] skip sign userId=${userId ?? 'none'} hasServiceKey=${!!serviceKey} sandbox=${sandboxId}`,
+      `[PREVIEW] skip sign userId=${userId ?? 'none'} hasServiceKey=false sandbox=${sandboxId}`,
     );
     return {};
   }
+
+  // Local dev bypass: isLocalPreviewBypassRequest sets userId to 'local-dev-admin'.
+  // Skip the DB lookup and sign a platform_admin context directly.
+  if (userId === 'local-dev-admin') {
+    const payload = {
+      userId: 'local-dev-admin',
+      sandboxId,
+      sandboxRole: 'platform_admin' as const,
+      scopes: ['*'] as string[],
+    };
+    const signed = encodeEpsilonUserContext(payload, serviceKey);
+    console.log(
+      `[PREVIEW] local-dev platform_admin context signed sandbox=${sandboxId} tokenPrefix=${signed.slice(0, 16)}`,
+    );
+    return { [EPSILON_USER_CONTEXT_HEADER]: signed };
+  }
+
+  if (!userId) {
+    console.log(
+      `[PREVIEW] skip sign userId=none hasServiceKey=true sandbox=${sandboxId}`,
+    );
+    return {};
+  }
+
   const payload = await resolvePreviewUserContext(sandboxId, userId);
   if (!payload) {
     console.log(
