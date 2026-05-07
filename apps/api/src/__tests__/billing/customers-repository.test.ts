@@ -8,11 +8,11 @@ type Row = {
   active?: boolean | null;
 };
 
-let kortixRows: Row[] = [];
+let epsilonRows: Row[] = [];
 let basejumpRows: Row[] = [];
 
 const billingCustomers = {
-  __table: 'kortix.billing_customers',
+  __table: 'epsilon.billing_customers',
   accountId: { field: 'accountId' },
   id: { field: 'id' },
   provider: { field: 'provider' },
@@ -52,7 +52,7 @@ mock.module('drizzle-orm', () => ({
   and: (...conditions: any[]) => ({ op: 'and', conditions }),
 }));
 
-mock.module('@kortix/db', () => ({
+mock.module('@epsilon/db', () => ({
   billingCustomers,
   billingCustomersInBasejump,
 }));
@@ -62,7 +62,7 @@ mock.module('../../shared/db', () => ({
     select() {
       return {
         from(table: any) {
-          const source = table.__table === 'basejump.billing_customers' ? basejumpRows : kortixRows;
+          const source = table.__table === 'basejump.billing_customers' ? basejumpRows : epsilonRows;
           return {
             where(condition: any) {
               return makeQuery(source.filter((row) => matches(row, condition)));
@@ -72,7 +72,7 @@ mock.module('../../shared/db', () => ({
       };
     },
     insert(table: any) {
-      const source = table.__table === 'basejump.billing_customers' ? basejumpRows : kortixRows;
+      const source = table.__table === 'basejump.billing_customers' ? basejumpRows : epsilonRows;
       return {
         values(data: Row) {
           return {
@@ -90,7 +90,7 @@ mock.module('../../shared/db', () => ({
       };
     },
     update(table: any) {
-      const source = table.__table === 'basejump.billing_customers' ? basejumpRows : kortixRows;
+      const source = table.__table === 'basejump.billing_customers' ? basejumpRows : epsilonRows;
       return {
         set(data: Partial<Row>) {
           return {
@@ -114,7 +114,7 @@ const {
 
 describe('billing customer repository', () => {
   beforeEach(() => {
-    kortixRows = [];
+    epsilonRows = [];
     basejumpRows = [];
   });
 
@@ -130,12 +130,12 @@ describe('billing customer repository', () => {
     const customer = await getCustomerByAccountId('acc_1');
 
     expect(customer?.id).toBe('cus_legacy');
-    expect(kortixRows).toEqual([
+    expect(epsilonRows).toEqual([
       expect.objectContaining({ accountId: 'acc_1', id: 'cus_legacy', provider: 'stripe', active: true }),
     ]);
   });
 
-  test('prefers legacy customer over wrong kortix duplicate and deactivates duplicate', async () => {
+  test('prefers legacy customer over wrong epsilon duplicate and deactivates duplicate', async () => {
     basejumpRows.push({
       accountId: 'acc_2',
       id: 'cus_old',
@@ -143,7 +143,7 @@ describe('billing customer repository', () => {
       provider: 'stripe',
       active: true,
     });
-    kortixRows.push({
+    epsilonRows.push({
       accountId: 'acc_2',
       id: 'cus_new',
       email: 'user@example.com',
@@ -154,8 +154,8 @@ describe('billing customer repository', () => {
     const customer = await getCustomerByAccountId('acc_2');
 
     expect(customer?.id).toBe('cus_old');
-    expect(kortixRows.find((row) => row.id === 'cus_old')?.active).toBe(true);
-    expect(kortixRows.find((row) => row.id === 'cus_new')?.active).toBe(false);
+    expect(epsilonRows.find((row) => row.id === 'cus_old')?.active).toBe(true);
+    expect(epsilonRows.find((row) => row.id === 'cus_new')?.active).toBe(false);
   });
 
   test('upsertCustomer does not replace canonical customer mapping with new duplicate', async () => {
@@ -176,8 +176,8 @@ describe('billing customer repository', () => {
     });
 
     expect(preserved?.id).toBe('cus_old');
-    expect(kortixRows.find((row) => row.id === 'cus_new')).toBeUndefined();
-    expect(kortixRows.find((row) => row.id === 'cus_old')?.active).toBe(true);
+    expect(epsilonRows.find((row) => row.id === 'cus_new')).toBeUndefined();
+    expect(epsilonRows.find((row) => row.id === 'cus_old')?.active).toBe(true);
   });
 
   test('falls back by stripe id to legacy customer and lazy-migrates it', async () => {
@@ -192,6 +192,6 @@ describe('billing customer repository', () => {
     const customer = await getCustomerByStripeId('cus_legacy_by_id');
 
     expect(customer?.accountId).toBe('acc_4');
-    expect(kortixRows.find((row) => row.id === 'cus_legacy_by_id')?.accountId).toBe('acc_4');
+    expect(epsilonRows.find((row) => row.id === 'cus_legacy_by_id')?.accountId).toBe('acc_4');
   });
 });

@@ -11,7 +11,7 @@ import { motion, useScroll, useTransform } from 'framer-motion';
 import { useAuth } from '@/components/AuthProvider';
 import { Reveal } from '@/components/home/reveal';
 
-const INSTALL_CMD = 'curl -fsSL https://kortix.com/install | bash';
+const INSTALL_CMD = 'curl -fsSL https://epsilon.com/install | bash';
 
 /* ─── Google Favicon helper ─── */
 const favicon = (domain: string) =>
@@ -103,7 +103,7 @@ export default function Home() {
                 className="h-12 px-8 text-sm rounded-full transition-colors"
                 onClick={handleLaunch}
               >
-                Launch Your Kortix<ArrowRight className="ml-1.5 size-3.5" />
+                Launch Your Epsilon<ArrowRight className="ml-1.5 size-3.5" />
               </Button>
               <button
                 onClick={handleCopy}
@@ -152,7 +152,7 @@ export default function Home() {
               <div className="relative aspect-video bg-black">
                 <iframe
                   src="https://www.youtube.com/embed/Eu5mYMavctM"
-                  title="Kortix launch video"
+                  title="Epsilon launch video"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
                   className="absolute inset-0 w-full h-full"
@@ -163,7 +163,7 @@ export default function Home() {
           </Reveal>
           */}
 
-        {/* ═══════════════ WHAT IS KORTIX ═══════════════ */}
+        {/* ═══════════════ WHAT IS EPSILON ═══════════════ */}
         <section className="max-w-3xl mx-auto px-6 py-10 sm:py-14">
           <Reveal>
           <p className="text-2xl sm:text-3xl md:text-4xl font-medium text-foreground leading-snug tracking-tight">
@@ -177,7 +177,7 @@ export default function Home() {
           </Reveal>
           <Reveal delay={0.15}>
           <p className="mt-3 text-base sm:text-lg text-muted-foreground leading-relaxed max-w-2xl">
-            A Kortix <em>is</em> a company. One shared machine where every agent sees the same filesystem, the same databases, the same history. Context isn&apos;t siloed per tool or per session — it&apos;s shared across the entire system, compounding over time. Coding agents operating inside a full Linux environment are the optimal harness for all knowledge work — not just engineering, but sales, finance, ops, legal, support, and everything in between. We&apos;re building this as our own internal operating system to run our own companies, and open-sourcing the whole thing.
+            A Epsilon <em>is</em> a company. One shared machine where every agent sees the same filesystem, the same databases, the same history. Context isn&apos;t siloed per tool or per session — it&apos;s shared across the entire system, compounding over time. Coding agents operating inside a full Linux environment are the optimal harness for all knowledge work — not just engineering, but sales, finance, ops, legal, support, and everything in between. We&apos;re building this as our own internal operating system to run our own companies, and open-sourcing the whole thing.
           </p>
           </Reveal>
         </section>
@@ -241,7 +241,7 @@ export default function Home() {
                 <span className="text-sm font-semibold text-foreground">Connect everything</span>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed mb-4 max-w-xl">
-                Every tool your company uses — OAuth apps, MCP servers, REST APIs, CLI tools, environment variables. If it has an interface, Kortix connects to it. 3,000+ integrations available, and custom ones are trivial to add.
+                Every tool your company uses — OAuth apps, MCP servers, REST APIs, CLI tools, environment variables. If it has an interface, Epsilon connects to it. 3,000+ integrations available, and custom ones are trivial to add.
               </p>
               <div className="flex flex-wrap gap-2">
                 <IntegrationPill domain="gmail.com" name="Gmail" />
@@ -332,7 +332,7 @@ export default function Home() {
             className="group hidden sm:flex items-center gap-2 h-8 px-3 rounded-full hover:bg-foreground/[0.08] transition-colors cursor-pointer"
           >
             <span className="font-mono text-[11px] text-muted-foreground select-none">$</span>
-            <code className="text-[11px] font-mono text-foreground tracking-tight">curl -fsSL kortix.com/install</code>
+            <code className="text-[11px] font-mono text-foreground tracking-tight">curl -fsSL epsilon.com/install</code>
             {copied
               ? <Check className="size-3 text-emerald-500" />
               : <Copy className="size-3 text-muted-foreground group-hover:text-foreground transition-colors" />
@@ -340,7 +340,7 @@ export default function Home() {
           </button>
           <span className="hidden sm:block w-px h-5 bg-border" />
           <a
-            href="https://github.com/kortix-ai/suna"
+            href="https://github.com/epsilon-ai/chainlens"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-center size-8 rounded-full hover:bg-foreground/[0.08] transition-colors"
@@ -353,7 +353,7 @@ export default function Home() {
             className="px-5 text-xs rounded-full font-medium"
             onClick={handleLaunch}
           >
-            Launch Your Kortix<ArrowRight className="ml-1.5 size-3" />
+            Launch Your Epsilon<ArrowRight className="ml-1.5 size-3" />
           </Button>
         </div>
       </div>

@@ -1,11 +1,11 @@
 # Auth E2E Test Suite
 
-End-to-end tests for the Kortix sandbox authentication system.
+End-to-end tests for the Epsilon sandbox authentication system.
 
 ## Quick Start
 
 ```bash
-# Run all tests (requires sandbox + kortix-api running)
+# Run all tests (requires sandbox + epsilon-api running)
 ./computer/scripts/tests/test-auth-e2e.sh
 
 # Run a specific section
@@ -21,11 +21,11 @@ End-to-end tests for the Kortix sandbox authentication system.
 
 | Requirement | How to start |
 |-------------|-------------|
-| Docker container `kortix-sandbox` on `127.0.0.1:14000` | `docker compose -f core/docker/docker-compose.yml up -d` in `computer/` |
-| kortix-api on `127.0.0.1:8008` | `pnpm run dev` in `computer/apps/api/` |
+| Docker container `epsilon-sandbox` on `127.0.0.1:14000` | `docker compose -f core/docker/docker-compose.yml up -d` in `computer/` |
+| epsilon-api on `127.0.0.1:8008` | `pnpm run dev` in `computer/apps/api/` |
 | `jq` | `brew install jq` |
-| `/tmp/sandbox_token.txt` | Contains `kortix_sb_*` token (optional — skips section 4 if missing) |
-| `/tmp/api_key.txt` | Contains `kortix_*` user API key (optional — skips sections 5/11 if missing) |
+| `/tmp/sandbox_token.txt` | Contains `epsilon_sb_*` token (optional — skips section 4 if missing) |
+| `/tmp/api_key.txt` | Contains `epsilon_*` user API key (optional — skips sections 5/11 if missing) |
 
 ## Environment Variables
 
@@ -73,36 +73,36 @@ Verifies that health and docs endpoints are accessible without authentication.
 
 | # | Route | Expected |
 |---|-------|----------|
-| 2.1 | `/kortix/health` | 200 (no auth) |
+| 2.1 | `/epsilon/health` | 200 (no auth) |
 | 2.2 | `/docs` | 200 (Scalar UI) |
 | 2.3 | `/docs/openapi.json` | 200 (merged spec, >50 paths) |
 
 ### Section 2b: Protected Routes Reject Without Auth
 Verifies every major route category returns 401 without credentials.
 
-Routes tested: `/env/list`, `/lss/search`, `/file/content`, `/kortix/ports`, `/session`, `/memory/search`
+Routes tested: `/env/list`, `/lss/search`, `/file/content`, `/epsilon/ports`, `/session`, `/memory/search`
 
 ### Section 3: Authed Route Categories
 Verifies all route categories respond correctly with valid auth.
 
-Routes tested: `/env/list`, `/kortix/ports`, `/session`, `/agent`, `/file/content`, `/lss/search`, `/memory/search`, `/kortix/update/status`
+Routes tested: `/env/list`, `/epsilon/ports`, `/session`, `/agent`, `/file/content`, `/lss/search`, `/memory/search`, `/epsilon/update/status`
 
-### Section 4: KORTIX_TOKEN (Sandbox → API)
-Tests the sandbox-to-API authentication token (`kortix_sb_*` prefix).
+### Section 4: EPSILON_TOKEN (Sandbox → API)
+Tests the sandbox-to-API authentication token (`epsilon_sb_*` prefix).
 
 | # | Test | Expected |
 |---|------|----------|
-| 4.1 | Token has `kortix_sb_` prefix | Pass |
+| 4.1 | Token has `epsilon_sb_` prefix | Pass |
 | 4.2 | Token length >= 40 chars | Pass |
 | 4.3 | API accepts token | Non-401 |
 | 4.4 | Old `sbt_` prefix rejected | 401/403/404 |
 
 ### Section 5: User API Key Auth
-Tests user API keys (`kortix_*` prefix) against kortix-api.
+Tests user API keys (`epsilon_*` prefix) against epsilon-api.
 
 | # | Test | Expected |
 |---|------|----------|
-| 5.1 | Key has `kortix_` prefix | Pass |
+| 5.1 | Key has `epsilon_` prefix | Pass |
 | 5.2 | API accepts key | Non-401 |
 | 5.3 | Wrong key rejected | 401/403 |
 
@@ -133,7 +133,7 @@ Static checks verifying the self-healing auth infrastructure exists.
 
 | # | Test | File |
 |---|------|------|
-| 8.1 | `sandbox-health.ts` exists | kortix-api |
+| 8.1 | `sandbox-health.ts` exists | epsilon-api |
 | 8.2 | Periodic health interval | sandbox-health.ts |
 | 8.3 | Retry with backoff | sandbox-health.ts |
 | 8.4 | Key sync function | sandbox-health.ts |
@@ -152,11 +152,11 @@ Validates token format patterns.
 | Token | Expected Format |
 |-------|----------------|
 | INTERNAL_SERVICE_KEY | 64-char lowercase hex (`[0-9a-f]{64}`) |
-| SANDBOX_TOKEN | `kortix_sb_` + 32 alphanumeric |
-| User API Key | `kortix_` + 32 alphanumeric |
+| SANDBOX_TOKEN | `epsilon_sb_` + 32 alphanumeric |
+| User API Key | `epsilon_` + 32 alphanumeric |
 
-### Section 11: Proxy Chain (kortix-api → sandbox)
-Tests the full proxy chain from kortix-api through to the sandbox.
+### Section 11: Proxy Chain (epsilon-api → sandbox)
+Tests the full proxy chain from epsilon-api through to the sandbox.
 
 > **Note:** These tests require the API proxy routes to be configured. They skip gracefully if routes return 404.
 
@@ -172,9 +172,9 @@ Static source code checks for WebSocket authentication.
 ## Auth Architecture
 
 ```
-Frontend ──[Supabase JWT]──→ kortix-api ──[INTERNAL_SERVICE_KEY]──→ sandbox
-CLI/API  ──[kortix_ key]───→ kortix-api ──[INTERNAL_SERVICE_KEY]──→ sandbox
-Sandbox  ──[KORTIX_TOKEN]──→ kortix-api ──→ LLM providers / integrations
+Frontend ──[Supabase JWT]──→ epsilon-api ──[INTERNAL_SERVICE_KEY]──→ sandbox
+CLI/API  ──[epsilon_ key]───→ epsilon-api ──[INTERNAL_SERVICE_KEY]──→ sandbox
+Sandbox  ──[EPSILON_TOKEN]──→ epsilon-api ──→ LLM providers / integrations
 ```
 
 ### Token Types
@@ -182,17 +182,17 @@ Sandbox  ──[KORTIX_TOKEN]──→ kortix-api ──→ LLM providers / inte
 | Token | Format | Direction | Purpose |
 |-------|--------|-----------|---------|
 | Supabase JWT | `eyJhbGci...` | Browser → API | Dashboard auth |
-| User API Key | `kortix_` + 32 | CLI → API | Programmatic access |
-| Sandbox Token | `kortix_sb_` + 32 | Sandbox → API | Identity + billing |
+| User API Key | `epsilon_` + 32 | CLI → API | Programmatic access |
+| Sandbox Token | `epsilon_sb_` + 32 | Sandbox → API | Identity + billing |
 | INTERNAL_SERVICE_KEY | 64-char hex | API → Sandbox | Platform-to-sandbox auth |
 
 ### Self-Healing Flow
 
-1. kortix-api sends request to sandbox with `INTERNAL_SERVICE_KEY`
+1. epsilon-api sends request to sandbox with `INTERNAL_SERVICE_KEY`
 2. If sandbox returns 401 → key mismatch detected
 3. `sandbox-health.ts` triggers `attemptKeySync()`:
    - Writes key to `/run/s6/container_environment/INTERNAL_SERVICE_KEY` via `docker exec`
-   - Restarts `kortix-master` via `s6-svc -r`
+   - Restarts `epsilon-master` via `s6-svc -r`
 4. Progressive backoff: 3 retries at 2s, 5s, 10s intervals
 5. Periodic health monitor runs every 60s to catch drift
 
@@ -201,21 +201,21 @@ Sandbox  ──[KORTIX_TOKEN]──→ kortix-api ──→ LLM providers / inte
 ### Sandbox returns 401 for everything
 ```bash
 # Check what key the sandbox has
-docker exec kortix-sandbox cat /run/s6/container_environment/INTERNAL_SERVICE_KEY
+docker exec epsilon-sandbox cat /run/s6/container_environment/INTERNAL_SERVICE_KEY
 
 # Check what key the API has
 grep INTERNAL_SERVICE_KEY computer/apps/api/.env
 
 # If they differ, sync manually:
-docker exec kortix-sandbox bash -c "echo '<api-key>' > /run/s6/container_environment/INTERNAL_SERVICE_KEY"
-docker exec kortix-sandbox sudo s6-svc -r /run/service/svc-kortix-master
+docker exec epsilon-sandbox bash -c "echo '<api-key>' > /run/s6/container_environment/INTERNAL_SERVICE_KEY"
+docker exec epsilon-sandbox sudo s6-svc -r /run/service/svc-epsilon-master
 ```
 
 ### CORS returns `*` instead of allowlist
 The updated sandbox code hasn't been deployed. Run:
 ```bash
-docker cp computer/core/kortix-master/src/index.ts kortix-sandbox:/ephemeral/kortix-master/src/index.ts
-docker exec kortix-sandbox sudo s6-svc -r /run/service/svc-kortix-master
+docker cp computer/core/epsilon-master/src/index.ts epsilon-sandbox:/ephemeral/epsilon-master/src/index.ts
+docker exec epsilon-sandbox sudo s6-svc -r /run/service/svc-epsilon-master
 ```
 
 ### Ports bound to 0.0.0.0
@@ -228,5 +228,5 @@ cd computer && docker compose -f core/docker/docker-compose.yml down && docker c
 OpenCode ignores SIGTERM so it can't be restarted. The tools read the key from the filesystem:
 ```bash
 # Verify the key file exists inside the container
-docker exec kortix-sandbox cat /run/s6/container_environment/INTERNAL_SERVICE_KEY
+docker exec epsilon-sandbox cat /run/s6/container_environment/INTERNAL_SERVICE_KEY
 ```

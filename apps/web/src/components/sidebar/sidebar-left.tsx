@@ -36,7 +36,7 @@ import { useGlobalSandboxUpdate } from '@/hooks/platform/use-global-sandbox-upda
 import { useUpdateDialogStore } from '@/stores/update-dialog-store';
 
 import { UserMenu } from '@/components/sidebar/user-menu';
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { EpsilonLogo } from '@/components/sidebar/epsilon-logo';
 import { ThreadIcon } from '@/components/sidebar/thread-icon';
 import {
   CurrentWorkspaceAvatar,
@@ -81,14 +81,14 @@ import { useDocumentModalStore } from '@/stores/use-document-modal-store';
 import { isBillingEnabled } from '@/lib/config';
 
 import { useCreateOpenCodeSession, useOpenCodeSessions } from '@/hooks/opencode/use-opencode-sessions';
-import { useKortixProjects, type KortixProject } from '@/hooks/kortix/use-kortix-projects';
+import { useEpsilonProjects, type EpsilonProject } from '@/hooks/epsilon/use-epsilon-projects';
 import {
   useProjectActivity,
   useUserHandle,
   computeUnread,
   readLastSeen,
   LAST_SEEN_EVENT,
-} from '@/hooks/kortix/use-kortix-tickets';
+} from '@/hooks/epsilon/use-epsilon-tickets';
 import { openTabAndNavigate } from '@/stores/tab-store';
 import { useServerStore } from '@/stores/server-store';
 import { useOpenCodePendingStore } from '@/stores/opencode-pending-store';
@@ -378,7 +378,7 @@ function ProjectsFlyout() {
   // The collapsed-sidebar flyout is only ever rendered when the multi-project
   // flag is on (see CollapsedIconButton wrap below), but we still gate the
   // query as belt-and-braces for any future non-flagged caller.
-  const { data: projects } = useKortixProjects(undefined, { enabled: featureFlags.enableMultiProject });
+  const { data: projects } = useEpsilonProjects(undefined, { enabled: featureFlags.enableMultiProject });
 
   const sorted = React.useMemo(() => {
     if (!projects || !Array.isArray(projects)) return [];
@@ -570,7 +570,7 @@ function SidebarUpdateIndicator({ collapsed }: { collapsed: boolean }) {
           <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
         </span>
         <span className="text-xs font-semibold text-foreground truncate min-w-0">
-          {currentChannel === 'dev' ? 'New dev build' : 'New Kortix version'}
+          {currentChannel === 'dev' ? 'New dev build' : 'New Epsilon version'}
         </span>
         <span className="flex-1" />
         <span className="text-[10px] text-muted-foreground flex-shrink-0">v{latestVersion}</span>
@@ -651,11 +651,11 @@ function SidebarSections() {
   const pathname = normalizeAppPathname(usePathname());
   const { isMobile, setOpenMobile } = useSidebar();
 
-  // Projects data — Kortix projects are the source of truth.
+  // Projects data — Epsilon projects are the source of truth.
   // Skip the query entirely when the multi-project paradigm is off so the
-  // sidebar in default mode never hits /kortix/projects (which 503s when
+  // sidebar in default mode never hits /epsilon/projects (which 503s when
   // sandbox-side PROJECTS_ENABLED is also off).
-  const { data: projectsData } = useKortixProjects(undefined, { enabled: featureFlags.enableMultiProject });
+  const { data: projectsData } = useEpsilonProjects(undefined, { enabled: featureFlags.enableMultiProject });
   const sortedProjects = React.useMemo(() => {
     if (!projectsData || !Array.isArray(projectsData)) return [];
     return [...projectsData].sort((a, b) =>
@@ -663,7 +663,7 @@ function SidebarSections() {
     );
   }, [projectsData]);
 
-  const handleProjectClick = React.useCallback((project: KortixProject) => {
+  const handleProjectClick = React.useCallback((project: EpsilonProject) => {
     openTabAndNavigate({
       id: `project:${project.id}`,
       title: project.name,
@@ -872,7 +872,7 @@ function SidebarProjectRow({
   active,
   onClick,
 }: {
-  project: KortixProject & { sessionCount?: number };
+  project: EpsilonProject & { sessionCount?: number };
   active?: boolean;
   onClick: () => void;
 }) {
@@ -894,7 +894,7 @@ function SidebarProjectRow({
     };
     // Cross-tab updates still come through the native storage event.
     const onStorage = (e: StorageEvent) => {
-      if (!e.key?.startsWith('kortix:activity-last-seen:')) return;
+      if (!e.key?.startsWith('epsilon:activity-last-seen:')) return;
       setLastSeen(readLastSeen(project.id, userHandle));
     };
     window.addEventListener(LAST_SEEN_EVENT, onCustom);
@@ -1093,7 +1093,7 @@ function SidebarConfigDegradationNotice({ collapsed, onExpand }: { collapsed: bo
     queryKey: ['sidebar', 'sandbox-config-projects', activeSandbox?.sandbox_id, sandboxUrl],
     enabled: !!sandboxUrl && !!configStatusQuery.data && !configStatusQuery.data.valid,
     queryFn: async () => {
-      const data = await sidebarSandboxRequestJson<unknown>(sandboxUrl!, '/kortix/projects');
+      const data = await sidebarSandboxRequestJson<unknown>(sandboxUrl!, '/epsilon/projects');
       return Array.isArray(data) ? data as SidebarProjectSummary[] : [];
     },
     staleTime: 30_000,
@@ -1116,7 +1116,7 @@ function SidebarConfigDegradationNotice({ collapsed, onExpand }: { collapsed: bo
       if (!activeSandbox || !sandboxUrl || !configStatus || configStatus.valid) {
         throw new Error('No invalid config source is currently being skipped.');
       }
-      const targetProject = configFixProject ?? await sidebarSandboxRequestJson<SidebarProjectSummary>(sandboxUrl, '/kortix/projects', {
+      const targetProject = configFixProject ?? await sidebarSandboxRequestJson<SidebarProjectSummary>(sandboxUrl, '/epsilon/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1126,7 +1126,7 @@ function SidebarConfigDegradationNotice({ collapsed, onExpand }: { collapsed: bo
         }),
       });
 
-      const task = await sidebarSandboxRequestJson<{ id: string }>(sandboxUrl, '/kortix/tasks', {
+      const task = await sidebarSandboxRequestJson<{ id: string }>(sandboxUrl, '/epsilon/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1138,7 +1138,7 @@ function SidebarConfigDegradationNotice({ collapsed, onExpand }: { collapsed: bo
         }),
       });
 
-      await sidebarSandboxRequestJson(sandboxUrl, `/kortix/tasks/${encodeURIComponent(task.id)}/start`, {
+      await sidebarSandboxRequestJson(sandboxUrl, `/epsilon/tasks/${encodeURIComponent(task.id)}/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -1395,7 +1395,7 @@ export function SidebarLeft({ ...props }: React.ComponentProps<typeof Sidebar>) 
       {/* ====== HEADER: Logo + collapse/expand ====== */}
       <SidebarHeader className="pt-3 pb-0 overflow-visible">
         <div className="relative flex h-[32px] items-center px-3 justify-between">
-          {/* Collapsed: Kortix symbol (always visible), chevron on hover */}
+          {/* Collapsed: Epsilon symbol (always visible), chevron on hover */}
           {effectiveState === 'collapsed' && (
             <div
               className="group/collapsed absolute inset-0 flex items-center justify-center cursor-pointer"
@@ -1416,7 +1416,7 @@ export function SidebarLeft({ ...props }: React.ComponentProps<typeof Sidebar>) 
                 }, router);
                 if (isMobile) setOpenMobile(false);
               }} className="flex items-center justify-center group-hover/collapsed:hidden">
-                <KortixLogo
+                <EpsilonLogo
                   variant="symbol"
                   size={20}
                   className="flex-shrink-0"
@@ -1439,7 +1439,7 @@ export function SidebarLeft({ ...props }: React.ComponentProps<typeof Sidebar>) 
               }, router);
               if (isMobile) setOpenMobile(false);
             }} className="flex items-center">
-              <KortixLogo
+              <EpsilonLogo
                 variant="logomark"
                 size={16}
                 className="flex-shrink-0"

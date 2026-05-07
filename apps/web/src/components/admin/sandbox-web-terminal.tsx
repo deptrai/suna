@@ -11,7 +11,7 @@ interface SandboxWebTerminalProps {
   externalId: string | null;
   status: string | null;
   ip?: string | null;
-  /** Full terminal URL from JustAVPS (e.g. https://slug.kortix.cloud/_terminal). If omitted, fetched via proxy-token endpoint. */
+  /** Full terminal URL from JustAVPS (e.g. https://slug.epsilon.cloud/_terminal). If omitted, fetched via proxy-token endpoint. */
   terminalUrl?: string | null;
   label?: string;
 }

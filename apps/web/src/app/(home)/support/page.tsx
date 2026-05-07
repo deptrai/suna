@@ -60,7 +60,7 @@ function SupportPageContent() {
         <Reveal delay={0.08}>
           <p className="text-base text-muted-foreground leading-relaxed max-w-xl">
             Email us at{' '}
-            <a href="mailto:support@kortix.com" className={linkClass}>support@kortix.com</a>.
+            <a href="mailto:support@epsilon.com" className={linkClass}>support@epsilon.com</a>.
             {' '}We typically respond within 24 hours on business days.
           </p>
         </Reveal>
@@ -73,27 +73,27 @@ function SupportPageContent() {
             </h2>
             <div>
               <FAQItem
-                question="What is Kortix?"
+                question="What is Epsilon?"
                 answer="A 24/7 cloud computer where AI agents do the actual work of running a company. You connect your tools, define your agents, set their schedules and triggers — and the machine operates whether you're there or not."
               />
               <FAQItem
-                question="How is Kortix different from other AI platforms?"
-                answer="Most AI platforms are chat interfaces that give you suggestions. Kortix is a persistent computer that runs agents autonomously — they browse the web, execute code, call APIs, manage files, and coordinate across your tools. They work while you sleep."
+                question="How is Epsilon different from other AI platforms?"
+                answer="Most AI platforms are chat interfaces that give you suggestions. Epsilon is a persistent computer that runs agents autonomously — they browse the web, execute code, call APIs, manage files, and coordinate across your tools. They work while you sleep."
               />
               <FAQItem
-                question="Can Kortix connect to my apps?"
-                answer="Yes. 3,000+ integrations via OAuth, MCP servers, REST APIs, CLI tools, and environment variables. If it has an interface, Kortix connects to it."
+                question="Can Epsilon connect to my apps?"
+                answer="Yes. 3,000+ integrations via OAuth, MCP servers, REST APIs, CLI tools, and environment variables. If it has an interface, Epsilon connects to it."
               />
               <FAQItem
                 question="How do I request a feature or report a bug?"
                 answer={
-                  <>Email <a href="mailto:support@kortix.com" className={linkClass}>support@kortix.com</a> with details. For bugs, include steps to reproduce and any error messages. Screenshots help.</>
+                  <>Email <a href="mailto:support@epsilon.com" className={linkClass}>support@epsilon.com</a> with details. For bugs, include steps to reproduce and any error messages. Screenshots help.</>
                 }
               />
               <FAQItem
                 question="What if I don't get credits after paying?"
                 answer={
-                  <>Contact <a href="mailto:support@kortix.com" className={linkClass}>support@kortix.com</a> immediately. We prioritize billing issues and typically resolve them within a few hours.</>
+                  <>Contact <a href="mailto:support@epsilon.com" className={linkClass}>support@epsilon.com</a> immediately. We prioritize billing issues and typically resolve them within a few hours.</>
                 }
               />
             </div>
@@ -108,7 +108,7 @@ function SupportPageContent() {
             </h2>
             <p className="text-base text-muted-foreground leading-relaxed mb-4">
               To delete your account, either email{' '}
-              <a href="mailto:support@kortix.com" className={linkClass}>support@kortix.com</a>
+              <a href="mailto:support@epsilon.com" className={linkClass}>support@epsilon.com</a>
               {' '}or do it yourself from settings:
             </p>
             <ol className="text-sm text-muted-foreground leading-relaxed space-y-2 list-decimal ml-4">
@@ -150,11 +150,11 @@ function SupportPageContent() {
               Still need help? Reach out.
             </p>
             <div className="flex flex-col gap-1.5 mt-3">
-              <a href="mailto:support@kortix.com" className={`text-base ${linkClass} w-fit`}>
-                support@kortix.com
+              <a href="mailto:support@epsilon.com" className={`text-base ${linkClass} w-fit`}>
+                support@epsilon.com
               </a>
-              <a href="mailto:security@kortix.com" className={`text-base ${linkClass} w-fit`}>
-                security@kortix.com
+              <a href="mailto:security@epsilon.com" className={`text-base ${linkClass} w-fit`}>
+                security@epsilon.com
               </a>
             </div>
           </div>

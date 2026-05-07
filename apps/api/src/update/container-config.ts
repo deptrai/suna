@@ -14,11 +14,11 @@ export interface ContainerConfig {
   securityOpt: string[];
 }
 
-const CONFIG_PATH = '/workspace/.kortix/container.json';
+const CONFIG_PATH = '/workspace/.epsilon/container.json';
 
 export const JUSTAVPS_ENV_FILE = '/etc/justavps/env';
 export const JUSTAVPS_SERVICE_NAME = 'justavps-docker';
-export const JUSTAVPS_STARTUP_PATCH_HOST = '/usr/local/bin/kortix-startup-patch.sh';
+export const JUSTAVPS_STARTUP_PATCH_HOST = '/usr/local/bin/epsilon-startup-patch.sh';
 export const JUSTAVPS_STARTUP_PATCH_MOUNT = `${JUSTAVPS_STARTUP_PATCH_HOST}:/ephemeral/startup.sh:ro`;
 
 export const DEFAULT_PORTS = [
@@ -91,7 +91,7 @@ export async function writeContainerConfig(
   const b64 = Buffer.from(json).toString('base64');
   await execOnHost(
     endpoint,
-    `mkdir -p /workspace/.kortix && echo '${b64}' | base64 -d > ${CONFIG_PATH}`,
+    `mkdir -p /workspace/.epsilon && echo '${b64}' | base64 -d > ${CONFIG_PATH}`,
     5,
   );
 }
@@ -99,7 +99,7 @@ export async function writeContainerConfig(
 export async function buildFromInspect(
   endpoint: ResolvedEndpoint,
 ): Promise<ContainerConfig | null> {
-  const names = [config.SANDBOX_CONTAINER_NAME, 'kortix-sandbox', 'justavps-workload'];
+  const names = [config.SANDBOX_CONTAINER_NAME, 'epsilon-sandbox', 'justavps-workload'];
   for (const name of names) {
     const result = await execOnHost(
       endpoint,
@@ -129,7 +129,7 @@ export async function buildFromInspect(
       return {
         image: containerConfig.Image || '',
         name,
-        volumes: volumes.length > 0 ? volumes : ['kortix-data:/workspace', 'kortix-data:/config'],
+        volumes: volumes.length > 0 ? volumes : ['epsilon-data:/workspace', 'epsilon-data:/config'],
         ports: mergedPorts.length > 0 ? mergedPorts : DEFAULT_PORTS,
         privileged: Boolean(hostConfig.Privileged),
         caps: (hostConfig.CapAdd || []) as string[],
@@ -186,7 +186,7 @@ function buildDockerRunCommandWithMode(config: ContainerConfig, detached: boolea
   const imageTag = config.image.includes(':') ? config.image.split(':').pop() : 'unknown';
   args.push(`-e SANDBOX_VERSION=${sq(imageTag!)}`);
   if (isJustAVPSManagedConfig(config)) {
-    args.push('-e KORTIX_ENABLE_INNER_DOCKER=0');
+    args.push('-e EPSILON_ENABLE_INNER_DOCKER=0');
   }
   if (config.privileged) args.push('--privileged');
 
@@ -223,8 +223,8 @@ export function buildManagedServiceStartScript(config: ContainerConfig): string 
     '    if [ "$ENV_MTIME" -gt "$BOOT_TIME" ]; then',
     '      break',
     '    fi',
-    '    if grep -Eq "^(INTERNAL_SERVICE_KEY|KORTIX_TOKEN|KORTIX_API_URL)=" "$ENV_FILE" 2>/dev/null; then',
-    '      echo "[kortix] Reusing persisted env file $ENV_FILE"',
+    '    if grep -Eq "^(INTERNAL_SERVICE_KEY|EPSILON_TOKEN|EPSILON_API_URL)=" "$ENV_FILE" 2>/dev/null; then',
+    '      echo "[epsilon] Reusing persisted env file $ENV_FILE"',
     '      break',
     '    fi',
     '  fi',

@@ -6,8 +6,8 @@ import {
   type ProxyServiceConfig,
 } from '../config/proxy-services';
 import { validateSecretKey } from '../../repositories/api-keys';
-import { isKortixToken } from '../../shared/crypto';
-import { config, KORTIX_MARKUP, PLATFORM_FEE_MARKUP } from '../../config';
+import { isEpsilonToken } from '../../shared/crypto';
+import { config, EPSILON_MARKUP, PLATFORM_FEE_MARKUP } from '../../config';
 import { checkCredits, deductToolCredits, deductLLMCredits } from '../services/billing';
 import { getModel, type ModelConfig } from '../config/models';
 import { calculateCost, extractUsage } from '../services/llm';
@@ -34,14 +34,14 @@ for (const [prefix, serviceConfig] of Object.entries(services)) {
 //
 // Three authentication/billing modes:
 //
-// 1. Kortix token (kortix_/kortix_sb_ in our DB) in Authorization header
-//    → Inject Kortix's API key, forward, bill at KORTIX_MARKUP (1.2×).
+// 1. Epsilon token (epsilon_/epsilon_sb_ in our DB) in Authorization header
+//    → Inject Epsilon's API key, forward, bill at EPSILON_MARKUP (1.2×).
 //
-// 2. User's own API key in Authorization + Kortix token in X-Kortix-Token header
+// 2. User's own API key in Authorization + Epsilon token in X-Epsilon-Token header
 //    → Passthrough (no key injection), bill at PLATFORM_FEE_MARKUP (0.1×).
 //
-// 3. User's own API key, no Kortix token anywhere
-//    → Pure passthrough. No billing, no gating (self-hosted / non-Kortix user).
+// 3. User's own API key, no Epsilon token anywhere
+//    → Pure passthrough. No billing, no gating (self-hosted / non-Epsilon user).
 
 async function handleProxy(c: any, service: ProxyServiceConfig, prefix: string) {
   const fullPath = new URL(c.req.url).pathname;
@@ -56,18 +56,18 @@ async function handleProxy(c: any, service: ProxyServiceConfig, prefix: string) 
 
   const auth = await tryAuthenticate(c);
 
-  if (auth.isKortixUser && auth.accountId && !auth.isPassthrough) {
-    // Mode 1: Kortix-owned key — inject our key, bill at 1.2×
-    return handleKortixProxy(c, service, subPath, queryString, method, auth.accountId);
+  if (auth.isEpsilonUser && auth.accountId && !auth.isPassthrough) {
+    // Mode 1: Epsilon-owned key — inject our key, bill at 1.2×
+    return handleEpsilonProxy(c, service, subPath, queryString, method, auth.accountId);
   } else if (auth.isPassthrough && auth.accountId) {
     // Mode 2: User's own key — passthrough, bill at 0.1×
-    return handleKortixPassthrough(c, service, subPath, queryString, method, auth.accountId);
+    return handleEpsilonPassthrough(c, service, subPath, queryString, method, auth.accountId);
   } else {
-    // Mode 3: No Kortix token — pure passthrough, no billing.
-    // In cloud mode, reject: only kortix_ tokens with billing are accepted.
+    // Mode 3: No Epsilon token — pure passthrough, no billing.
+    // In cloud mode, reject: only epsilon_ tokens with billing are accepted.
     if (config.isCloud()) {
       throw new HTTPException(401, {
-        message: 'Kortix API key required. Get one at https://kortix.com',
+        message: 'Epsilon API key required. Get one at https://epsilon.com',
       });
     }
     // Local/self-hosted: allow passthrough for BYOC users with their own API keys.
@@ -75,9 +75,9 @@ async function handleProxy(c: any, service: ProxyServiceConfig, prefix: string) 
   }
 }
 
-// === Kortix User: match allowed route, inject our key, bill with route-specific pricing ===
+// === Epsilon User: match allowed route, inject our key, bill with route-specific pricing ===
 
-async function handleKortixProxy(
+async function handleEpsilonProxy(
   c: any,
   service: ProxyServiceConfig,
   subPath: string,
@@ -107,30 +107,30 @@ async function handleKortixProxy(
     throw new HTTPException(402, { message: creditCheck.message });
   }
 
-  const kortixKey = service.getKortixApiKey();
-  if (!kortixKey) {
+  const epsilonKey = service.getEpsilonApiKey();
+  if (!epsilonKey) {
     throw new HTTPException(503, {
       message: `${service.name} not configured`,
     });
   }
 
-  // Use alternate target/key injection for Kortix-managed if configured (e.g. OpenRouter)
-  const baseUrl = service.kortixTargetBaseUrl || service.targetBaseUrl;
+  // Use alternate target/key injection for Epsilon-managed if configured (e.g. OpenRouter)
+  const baseUrl = service.epsilonTargetBaseUrl || service.targetBaseUrl;
   const targetUrl = `${baseUrl}${subPath}${queryString}`;
   const headers = buildForwardHeaders(c);
-  // Strip Kortix-specific and auth headers — upstream gets injected key only
-  headers.delete('x-kortix-token');
+  // Strip Epsilon-specific and auth headers — upstream gets injected key only
+  headers.delete('x-epsilon-token');
   headers.delete('x-api-key');
   headers.delete('authorization');
   let body = await getRequestBody(c, method);
 
-  body = injectApiKey(service, headers, body, /* useKortixInjection */ true);
+  body = injectApiKey(service, headers, body, /* useEpsilonInjection */ true);
   body = maybeNormalizeOpenAIResponsesInput(service, method, subPath, body, headers);
 
   // Route-specific billing overrides service default
   const billingToolName = matchedRoute.billingToolName || service.billingToolName;
 
-  console.log(`[PROXY] ${service.name} (kortix:${accountId}) ${method} ${subPath} → ${targetUrl} [bill:${billingToolName}]`);
+  console.log(`[PROXY] ${service.name} (epsilon:${accountId}) ${method} ${subPath} → ${targetUrl} [bill:${billingToolName}]`);
 
   const upstream = await fetch(targetUrl, {
     method,
@@ -140,13 +140,13 @@ async function handleKortixProxy(
     duplex: 'half',
   });
 
-  // LLM services: bill per-token at KORTIX_MARKUP (1.2×)
+  // LLM services: bill per-token at EPSILON_MARKUP (1.2×)
   if (service.isLlm === true) {
     if (upstream.ok) {
-      return billLlmKortixProxy(upstream, service, subPath, accountId, actor);
+      return billLlmEpsilonProxy(upstream, service, subPath, accountId, actor);
     }
     // Upstream error — don't bill for failed requests
-    console.warn(`[PROXY] LLM kortix proxy ${service.name} upstream error ${upstream.status} — no billing`);
+    console.warn(`[PROXY] LLM epsilon proxy ${service.name} upstream error ${upstream.status} — no billing`);
     return new Response(upstream.body, {
       status: upstream.status,
       statusText: upstream.statusText,
@@ -171,13 +171,13 @@ async function handleKortixProxy(
   });
 }
 
-// === Kortix-managed LLM Billing ===
+// === Epsilon-managed LLM Billing ===
 //
 // Handles both response formats based on upstream:
 // - OpenAI-compatible: usage.prompt_tokens / completion_tokens
 // - Anthropic-native: usage.input_tokens / output_tokens
 
-async function billLlmKortixProxy(
+async function billLlmEpsilonProxy(
   upstream: Response,
   service: ProxyServiceConfig,
   subPath: string,
@@ -196,7 +196,7 @@ async function billLlmKortixProxy(
     const [clientStream, billingStream] = upstreamBody.tee();
 
     // Fire-and-forget: extract usage from billing stream
-    extractUsageFromKortixProxyStream(billingStream, service, subPath, accountId, actor);
+    extractUsageFromEpsilonProxyStream(billingStream, service, subPath, accountId, actor);
 
     return new Response(clientStream, {
       status: upstream.status,
@@ -239,7 +239,7 @@ async function billLlmKortixProxy(
       completionTokens,
       cachedTokens,
       cacheWriteTokens,
-      KORTIX_MARKUP,
+      EPSILON_MARKUP,
     );
 
     deductLLMCredits(
@@ -256,11 +256,11 @@ async function billLlmKortixProxy(
           );
         }
       })
-      .catch((err) => console.error(`[PROXY] LLM kortix billing error: ${err}`));
+      .catch((err) => console.error(`[PROXY] LLM epsilon billing error: ${err}`));
 
-    console.log(`[PROXY] LLM kortix ${modelId}: ${promptTokens}/${completionTokens} tokens, cost=$${cost.toFixed(6)} (${KORTIX_MARKUP}x)`);
+    console.log(`[PROXY] LLM epsilon ${modelId}: ${promptTokens}/${completionTokens} tokens, cost=$${cost.toFixed(6)} (${EPSILON_MARKUP}x)`);
   } else {
-    console.warn(`[PROXY] LLM kortix ${service.name}: no usage data in response — billing skipped`);
+    console.warn(`[PROXY] LLM epsilon ${service.name}: no usage data in response — billing skipped`);
   }
 
   return new Response(JSON.stringify(responseBody), {
@@ -270,11 +270,11 @@ async function billLlmKortixProxy(
 }
 
 /**
- * Extract usage from an SSE stream and bill at KORTIX_MARKUP.
+ * Extract usage from an SSE stream and bill at EPSILON_MARKUP.
  * Handles both OpenAI-compatible and Anthropic-native SSE formats.
  * Runs in background (fire-and-forget).
  */
-async function extractUsageFromKortixProxyStream(
+async function extractUsageFromEpsilonProxyStream(
   stream: ReadableStream<Uint8Array>,
   service: ProxyServiceConfig,
   subPath: string,
@@ -331,48 +331,48 @@ async function extractUsageFromKortixProxyStream(
 
     if (isAnthropic) {
       if (!(anthropicInputTokens > 0 || anthropicOutputTokens > 0)) {
-        console.warn(`[PROXY] LLM kortix stream (${service.name}): zero tokens — billing skipped`);
+        console.warn(`[PROXY] LLM epsilon stream (${service.name}): zero tokens — billing skipped`);
         return;
       }
       const modelConfig = getModel(detectedModel);
-      const cost = calculateCost(modelConfig, anthropicInputTokens, anthropicOutputTokens, 0, 0, KORTIX_MARKUP);
+      const cost = calculateCost(modelConfig, anthropicInputTokens, anthropicOutputTokens, 0, 0, EPSILON_MARKUP);
       const res = await deductLLMCredits(accountId, detectedModel, anthropicInputTokens, anthropicOutputTokens, cost);
       if (res.success && actor && cost > 0) {
         applyActorSpend(actor.sandboxId, actor.userId, dollarsToCents(cost)).catch(
           (err) => console.error('[PROXY] Actor spend attribution failed:', err),
         );
       }
-      console.log(`[PROXY] LLM kortix stream ${detectedModel}: ${anthropicInputTokens}/${anthropicOutputTokens} tokens, cost=$${cost.toFixed(6)} (${KORTIX_MARKUP}x)`);
+      console.log(`[PROXY] LLM epsilon stream ${detectedModel}: ${anthropicInputTokens}/${anthropicOutputTokens} tokens, cost=$${cost.toFixed(6)} (${EPSILON_MARKUP}x)`);
       return;
     }
 
     if (!lastUsage) {
-      console.warn(`[PROXY] LLM kortix stream (${service.name}): no usage data — billing skipped`);
+      console.warn(`[PROXY] LLM epsilon stream (${service.name}): no usage data — billing skipped`);
       return;
     }
 
     const { promptTokens, completionTokens, cachedTokens, cacheWriteTokens } = lastUsage;
     if (promptTokens > 0 || completionTokens > 0) {
       const modelConfig = getModel(detectedModel);
-      const cost = calculateCost(modelConfig, promptTokens, completionTokens, cachedTokens, cacheWriteTokens, KORTIX_MARKUP);
+      const cost = calculateCost(modelConfig, promptTokens, completionTokens, cachedTokens, cacheWriteTokens, EPSILON_MARKUP);
       const res = await deductLLMCredits(accountId, detectedModel, promptTokens, completionTokens, cost);
       if (res.success && actor && cost > 0) {
         applyActorSpend(actor.sandboxId, actor.userId, dollarsToCents(cost)).catch(
           (err) => console.error('[PROXY] Actor spend attribution failed:', err),
         );
       }
-      console.log(`[PROXY] LLM kortix stream ${detectedModel}: ${promptTokens}/${completionTokens} tokens, cost=$${cost.toFixed(6)} (${KORTIX_MARKUP}x)`);
+      console.log(`[PROXY] LLM epsilon stream ${detectedModel}: ${promptTokens}/${completionTokens} tokens, cost=$${cost.toFixed(6)} (${EPSILON_MARKUP}x)`);
     } else {
-      console.warn(`[PROXY] LLM kortix stream (${service.name}): zero tokens — billing skipped`);
+      console.warn(`[PROXY] LLM epsilon stream (${service.name}): zero tokens — billing skipped`);
     }
   } catch (err) {
-    console.error(`[PROXY] Error extracting usage from kortix proxy stream:`, err);
+    console.error(`[PROXY] Error extracting usage from epsilon proxy stream:`, err);
   }
 }
 
-// === Kortix user with own key: passthrough + bill at platform fee (0.1×) ===
+// === Epsilon user with own key: passthrough + bill at platform fee (0.1×) ===
 
-async function handleKortixPassthrough(
+async function handleEpsilonPassthrough(
   c: any,
   service: ProxyServiceConfig,
   subPath: string,
@@ -387,8 +387,8 @@ async function handleKortixPassthrough(
 
   const targetUrl = `${service.targetBaseUrl}${subPath}${queryString}`;
   const headers = buildForwardHeaders(c);
-  // Remove X-Kortix-Token from forwarded headers — upstream doesn't need it
-  headers.delete('x-kortix-token');
+  // Remove X-Epsilon-Token from forwarded headers — upstream doesn't need it
+  headers.delete('x-epsilon-token');
   let body = await getRequestBody(c, method);
 
   body = maybeNormalizeOpenAIResponsesInput(service, method, subPath, body, headers);
@@ -438,7 +438,7 @@ async function handleKortixPassthrough(
   });
 }
 
-// === Not Kortix user: pure passthrough ===
+// === Not Epsilon user: pure passthrough ===
 
 async function handlePassthrough(
   c: any,
@@ -655,9 +655,9 @@ async function extractUsageFromPassthroughStream(
 // === Helpers ===
 
 interface AuthResult {
-  isKortixUser: boolean;
+  isEpsilonUser: boolean;
   accountId?: string;
-  /** True when the user's own API key is in Authorization (passthrough) but we identified the account via X-Kortix-Token. */
+  /** True when the user's own API key is in Authorization (passthrough) but we identified the account via X-Epsilon-Token. */
   isPassthrough?: boolean;
 }
 
@@ -665,71 +665,71 @@ async function tryAuthenticate(c: any): Promise<AuthResult> {
   const authHeader = c.req.header('Authorization');
   const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : undefined;
 
-  // --- Mode 1: Kortix token directly in Authorization header ---
-  // The user sent kortix_ or kortix_sb_ as the Bearer token — full Kortix-managed flow.
-  // If it looks like a Kortix token but fails validation → hard reject.
+  // --- Mode 1: Epsilon token directly in Authorization header ---
+  // The user sent epsilon_ or epsilon_sb_ as the Bearer token — full Epsilon-managed flow.
+  // If it looks like a Epsilon token but fails validation → hard reject.
 
-  if (bearerToken && isKortixToken(bearerToken) && config.DATABASE_URL) {
+  if (bearerToken && isEpsilonToken(bearerToken) && config.DATABASE_URL) {
     try {
       const result = await validateSecretKey(bearerToken);
       if (result.isValid && result.accountId) {
-        return { isKortixUser: true, accountId: result.accountId };
+        return { isEpsilonUser: true, accountId: result.accountId };
       }
     } catch {
       // Fall through to reject below
     }
-    // Looks like a Kortix token but didn't validate — reject.
-    // Never allow an invalid Kortix token to fall through to free passthrough.
-    throw new HTTPException(401, { message: 'Invalid Kortix token' });
+    // Looks like a Epsilon token but didn't validate — reject.
+    // Never allow an invalid Epsilon token to fall through to free passthrough.
+    throw new HTTPException(401, { message: 'Invalid Epsilon token' });
   }
 
-  // --- Mode 1a: Kortix token in Authorization: Token <token> (Replicate SDK) ---
+  // --- Mode 1a: Epsilon token in Authorization: Token <token> (Replicate SDK) ---
   // The Replicate SDK uses "Token " prefix instead of "Bearer ".
   const tokenPrefixed = authHeader?.startsWith('Token ') ? authHeader.slice(6) : undefined;
-  if (tokenPrefixed && isKortixToken(tokenPrefixed) && config.DATABASE_URL) {
+  if (tokenPrefixed && isEpsilonToken(tokenPrefixed) && config.DATABASE_URL) {
     try {
       const result = await validateSecretKey(tokenPrefixed);
       if (result.isValid && result.accountId) {
-        return { isKortixUser: true, accountId: result.accountId };
+        return { isEpsilonUser: true, accountId: result.accountId };
       }
     } catch {
       // Fall through to reject below
     }
-    throw new HTTPException(401, { message: 'Invalid Kortix token' });
+    throw new HTTPException(401, { message: 'Invalid Epsilon token' });
   }
 
-  // --- Mode 1b: Kortix token in x-api-key header (Anthropic SDK) ---
+  // --- Mode 1b: Epsilon token in x-api-key header (Anthropic SDK) ---
   // The Anthropic SDK sends the API key via x-api-key instead of Authorization.
-  // If the value is a Kortix token, treat it as Mode 1 (Kortix-managed).
+  // If the value is a Epsilon token, treat it as Mode 1 (Epsilon-managed).
   const xApiKey = c.req.header('x-api-key');
-  if (xApiKey && isKortixToken(xApiKey) && config.DATABASE_URL) {
+  if (xApiKey && isEpsilonToken(xApiKey) && config.DATABASE_URL) {
     try {
       const result = await validateSecretKey(xApiKey);
       if (result.isValid && result.accountId) {
-        return { isKortixUser: true, accountId: result.accountId };
+        return { isEpsilonUser: true, accountId: result.accountId };
       }
     } catch {
       // Fall through to reject below
     }
-    throw new HTTPException(401, { message: 'Invalid Kortix token in x-api-key' });
+    throw new HTTPException(401, { message: 'Invalid Epsilon token in x-api-key' });
   }
 
-  // --- Mode 1c: Kortix token in JSON body field (Tavily SDK) ---
+  // --- Mode 1c: Epsilon token in JSON body field (Tavily SDK) ---
   // The Tavily SDK sends the API key in the JSON body as "api_key" instead of a header.
-  // Check the body for a Kortix token so sandbox tools can auth through the proxy.
+  // Check the body for a Epsilon token so sandbox tools can auth through the proxy.
   if (config.DATABASE_URL && c.req.method === 'POST') {
     try {
       const cloned = c.req.raw.clone();
       const bodyText = await cloned.text();
-      if (bodyText && bodyText.includes('kortix_')) {
+      if (bodyText && bodyText.includes('epsilon_')) {
         const json = JSON.parse(bodyText);
         const bodyApiKey = json?.api_key;
-        if (bodyApiKey && isKortixToken(bodyApiKey)) {
+        if (bodyApiKey && isEpsilonToken(bodyApiKey)) {
           const result = await validateSecretKey(bodyApiKey);
           if (result.isValid && result.accountId) {
-            return { isKortixUser: true, accountId: result.accountId };
+            return { isEpsilonUser: true, accountId: result.accountId };
           }
-          throw new HTTPException(401, { message: 'Invalid Kortix token in request body' });
+          throw new HTTPException(401, { message: 'Invalid Epsilon token in request body' });
         }
       }
     } catch (e) {
@@ -738,29 +738,29 @@ async function tryAuthenticate(c: any): Promise<AuthResult> {
     }
   }
 
-  // --- Mode 2: User's own key + Kortix token in X-Kortix-Token ---
+  // --- Mode 2: User's own key + Epsilon token in X-Epsilon-Token ---
   // The user's own API key is in Authorization (Bearer) or a provider-specific
-  // header (e.g. Anthropic's x-api-key). The Kortix token rides in
-  // X-Kortix-Token so we can identify the account for platform-fee billing.
-  // If X-Kortix-Token looks like a Kortix token but fails → hard reject.
+  // header (e.g. Anthropic's x-api-key). The Epsilon token rides in
+  // X-Epsilon-Token so we can identify the account for platform-fee billing.
+  // If X-Epsilon-Token looks like a Epsilon token but fails → hard reject.
 
   if (config.DATABASE_URL) {
-    const kortixTokenHeader = c.req.header('X-Kortix-Token');
-    if (kortixTokenHeader && isKortixToken(kortixTokenHeader)) {
+    const epsilonTokenHeader = c.req.header('X-Epsilon-Token');
+    if (epsilonTokenHeader && isEpsilonToken(epsilonTokenHeader)) {
       try {
-        const result = await validateSecretKey(kortixTokenHeader);
+        const result = await validateSecretKey(epsilonTokenHeader);
         if (result.isValid && result.accountId) {
-          return { isKortixUser: true, accountId: result.accountId, isPassthrough: true };
+          return { isEpsilonUser: true, accountId: result.accountId, isPassthrough: true };
         }
       } catch {
         // Fall through to reject below
       }
-      throw new HTTPException(401, { message: 'Invalid X-Kortix-Token' });
+      throw new HTTPException(401, { message: 'Invalid X-Epsilon-Token' });
     }
   }
 
-  // --- Mode 3: No Kortix token anywhere — pure passthrough, no billing ---
-  return { isKortixUser: false };
+  // --- Mode 3: No Epsilon token anywhere — pure passthrough, no billing ---
+  return { isEpsilonUser: false };
 }
 
 /**
@@ -874,10 +874,10 @@ function injectApiKey(
   service: ProxyServiceConfig,
   headers: Headers,
   body: ArrayBuffer | string | undefined,
-  useKortixInjection = false,
+  useEpsilonInjection = false,
 ): ArrayBuffer | string | undefined {
-  const injection = (useKortixInjection && service.kortixKeyInjection) || service.keyInjection;
-  const key = service.getKortixApiKey();
+  const injection = (useEpsilonInjection && service.epsilonKeyInjection) || service.keyInjection;
+  const key = service.getEpsilonApiKey();
 
   switch (injection.type) {
     case 'header': {

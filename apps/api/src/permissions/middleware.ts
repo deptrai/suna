@@ -1,5 +1,5 @@
 import type { Context, MiddlewareHandler } from 'hono';
-import type { Database } from '@kortix/db';
+import type { Database } from '@epsilon/db';
 
 import { NotAuthorizedError } from '../teams/domain/errors';
 import type { UserTeamContext } from '../teams/services/access';

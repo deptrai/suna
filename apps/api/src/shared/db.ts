@@ -1,4 +1,4 @@
-import { createDb, type Database } from '@kortix/db';
+import { createDb, type Database } from '@epsilon/db';
 import { config } from '../config';
 
 /**

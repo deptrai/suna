@@ -29,7 +29,7 @@ import {
     Camera,
     Upload,
 } from 'lucide-react';
-import { KortixLoader } from '@/components/ui/kortix-loader';
+import { EpsilonLoader } from '@/components/ui/epsilon-loader';
 import { cn } from '@/lib/utils';
 import {
     Tooltip,
@@ -89,7 +89,7 @@ import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogHea
 
 import { cancelSandbox, reactivateSandbox } from '@/lib/platform-client';
 
-import { formatCredits } from '@kortix/shared';
+import { formatCredits } from '@epsilon/shared';
 import { LanguageSwitcher } from './language-switcher';
 import { useTranslations } from 'next-intl';
 // import { ReferralsTab } from '@/components/referrals/referrals-tab';
@@ -604,7 +604,7 @@ function GeneralTab({ onClose }: { onClose: () => void }) {
                                 className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 h-auto"
                             >
                                 {isUploadingAvatar ? (
-                                    <KortixLoader size="small" variant="white" />
+                                    <EpsilonLoader size="small" variant="white" />
                                 ) : (
                                     <Camera className="h-5 w-5 text-white" />
                                 )}
@@ -970,7 +970,7 @@ function SoundsTab() {
     const packs: { id: SoundPack; label: string; description: string }[] = [
         { id: 'off', label: 'Off', description: 'All sounds disabled' },
         { id: 'opencode', label: 'Default', description: 'Default sound pack' },
-        { id: 'kortix', label: 'Seshion Pack', description: 'Whistlin' },
+        { id: 'epsilon', label: 'Seshion Pack', description: 'Whistlin' },
     ];
 
     const events: { id: SoundEvent; label: string; description: string }[] = [
@@ -1156,14 +1156,14 @@ function NotificationsTab() {
                                     <NotificationToggle
                                         icon={HelpCircle}
                                         label="Questions"
-                                        description="When Kortix needs your input to continue"
+                                        description="When Epsilon needs your input to continue"
                                         enabled={preferences.onQuestion}
                                         onToggle={(v) => setPreference('onQuestion', v)}
                                     />
                                     <NotificationToggle
                                         icon={ShieldCheck}
                                         label="Permission Requests"
-                                        description="When Kortix needs permission to use a tool"
+                                        description="When Epsilon needs permission to use a tool"
                                         enabled={preferences.onPermission}
                                         onToggle={(v) => setPreference('onPermission', v)}
                                     />
@@ -1280,7 +1280,7 @@ function InstancesSection({ accountState, onRefetch }: { accountState: any; onRe
                         onClick={() => useNewInstanceModalStore.getState().openNewInstanceModal()}
                     >
                         <Plus className="size-3 mr-1" />
-                        New Kortix
+                        New Epsilon
                     </Button>
                 )}
             </div>
@@ -1627,13 +1627,13 @@ function BillingTab({ returnUrl, isActive }: { returnUrl: string; isActive: bool
                 </div>
             </div>
 
-            {/* ── Kortix YOLO (shown between Credits and Top-up actions) ── */}
+            {/* ── Epsilon YOLO (shown between Credits and Top-up actions) ── */}
             {yoloUsage && (
                 <div className="border-t border-border pt-4 space-y-2">
                     <div className="flex items-center justify-between">
-                        <p className="text-xs uppercase tracking-widest text-muted-foreground">Kortix YOLO</p>
+                        <p className="text-xs uppercase tracking-widest text-muted-foreground">Epsilon YOLO</p>
                         <a
-                            href="https://yolo.kortix.com"
+                            href="https://yolo.epsilon.com"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
@@ -1648,14 +1648,14 @@ function BillingTab({ returnUrl, isActive }: { returnUrl: string; isActive: bool
                             : '5h window starts on first request'}
                     </p>
                     <p className="text-xs text-muted-foreground/70 leading-relaxed pt-1">
-                        Every Kortix subscription includes{' '}
+                        Every Epsilon subscription includes{' '}
                         <a
-                            href="https://yolo.kortix.com"
+                            href="https://yolo.epsilon.com"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="font-medium text-foreground/80 underline underline-offset-2 decoration-foreground/30 hover:decoration-foreground/60"
                         >
-                            Kortix YOLO
+                            Epsilon YOLO
                         </a>{' '}—
                         an all-you-can-use AI model subscription powered by our in-house model router.
                         Choose between <span className="font-medium text-foreground/80">Fast</span> and{' '}
@@ -1776,7 +1776,7 @@ function TransactionsTab() {
             <div>
                 <h3 className="text-lg font-medium tracking-tight mb-0.5">Credit ledger</h3>
                 <p className="text-sm text-muted-foreground">
-                    Ledger-backed account events from the Kortix schema: purchases, grants, usage, expirations, refunds, and bonuses.
+                    Ledger-backed account events from the Epsilon schema: purchases, grants, usage, expirations, refunds, and bonuses.
                 </p>
             </div>
             <CreditTransactions />

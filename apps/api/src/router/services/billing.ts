@@ -38,7 +38,7 @@ export async function checkCredits(
 }
 
 /**
- * Deduct credits for a Kortix tool call.
+ * Deduct credits for a Epsilon tool call.
  *
  * Uses direct DB atomic deduction via Drizzle. Requires DATABASE_URL to be configured.
  */
@@ -57,7 +57,7 @@ export async function deductToolCredits(
 
   const baseDescription =
     description ||
-    `Kortix ${toolName.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}`;
+    `Epsilon ${toolName.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}`;
   const deductDescription = sessionId ? `${baseDescription} [session:${sessionId}]` : baseDescription;
 
   if (!config.DATABASE_URL) {
@@ -71,7 +71,7 @@ export async function deductToolCredits(
   // are running their own dev stack (no Stripe, no real subscriptions),
   // and billing on a $0 balance just stalls everything with
   // InsufficientCreditsError. Cloud mode (ENV_MODE=cloud) still bills.
-  if (!config.KORTIX_BILLING_INTERNAL_ENABLED) {
+  if (!config.EPSILON_BILLING_INTERNAL_ENABLED) {
     return { success: true, cost: 0, newBalance: 0 };
   }
 
@@ -121,7 +121,7 @@ export async function deductLLMCredits(
   }
 
   // Skip deduction in local mode (see deductToolCredits for full rationale).
-  if (!config.KORTIX_BILLING_INTERNAL_ENABLED) {
+  if (!config.EPSILON_BILLING_INTERNAL_ENABLED) {
     return { success: true, cost: 0, newBalance: 0 };
   }
 

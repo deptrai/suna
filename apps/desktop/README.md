@@ -1,9 +1,9 @@
-# @kortix/desktop
+# @epsilon/desktop
 
-Tauri 2 shell that wraps the existing Kortix web app. The desktop window is a
+Tauri 2 shell that wraps the existing Epsilon web app. The desktop window is a
 WebView pointed at the web app — there's no separate frontend to bundle. The
 web app detects it's running in the desktop via the user-agent string
-(`KortixDesktop/...`) and renders a custom titlebar.
+(`EpsilonDesktop/...`) and renders a custom titlebar.
 
 ## Prereqs
 
@@ -28,19 +28,19 @@ pnpm dev:desktop
 ```
 
 The shell loads `http://localhost:3000` and sets the user-agent to
-`KortixDesktop/0.1.0`. The web app picks that up and renders the desktop
+`EpsilonDesktop/0.1.0`. The web app picks that up and renders the desktop
 titlebar.
 
 ## Pointing at production
 
 Edit `src-tauri/tauri.conf.json` → `app.windows[0].url` for prod builds, or
-override at runtime via the `KORTIX_DESKTOP_URL` env var (read in
+override at runtime via the `EPSILON_DESKTOP_URL` env var (read in
 `src-tauri/src/lib.rs`).
 
 ## Build
 
 ```sh
-pnpm --filter @kortix/desktop build
+pnpm --filter @epsilon/desktop build
 ```
 
 Outputs a `.dmg` (macOS), `.msi` (Windows), or `.AppImage` (Linux) in
@@ -53,7 +53,7 @@ Apple-spec drop shadow) is generated from the iOS App Icon master via:
 
 ```sh
 python3 apps/desktop/scripts/build-icon.py     # → src-tauri/icons/source.png
-pnpm --filter @kortix/desktop icons src-tauri/icons/source.png
+pnpm --filter @epsilon/desktop icons src-tauri/icons/source.png
 ```
 
 `build-icon.py` requires Pillow (`pip install Pillow`). Edit the script to
@@ -61,17 +61,17 @@ tweak background gradient, gloss intensity, or bevel highlight.
 
 ## Phase 2 — patterns ported forward from the legacy Electron shell
 
-The pre-`SUNA-LEGACY-cutoff` app shipped these features. Each maps cleanly to a
+The pre-`CHAINLENS-LEGACY-cutoff` app shipped these features. Each maps cleanly to a
 Tauri 2 plugin when we want to bring them back:
 
-- **Custom URL scheme `kortix://`** for deep links (auth callbacks, email
+- **Custom URL scheme `epsilon://`** for deep links (auth callbacks, email
   magic links, "open in app" buttons) → `tauri-plugin-deep-link`. The legacy
-  detection helper rewrote auth callback URLs to `kortix://auth/callback`
+  detection helper rewrote auth callback URLs to `epsilon://auth/callback`
   when running in Electron; the same swap belongs in `lib/desktop.ts` once
   the protocol is registered.
 - **OAuth popup interception** via `webContents.on('will-navigate')` →
   Tauri's `WindowEvent::Navigation` or letting the IDP redirect back to a
-  registered `kortix://` URL.
+  registered `epsilon://` URL.
 - **System tray, global shortcuts, native menus** → `tauri-plugin-tray`,
   `tauri-plugin-global-shortcut`, `tauri::menu`.
 - **Auto-update from a hosted manifest** → `tauri-plugin-updater`.

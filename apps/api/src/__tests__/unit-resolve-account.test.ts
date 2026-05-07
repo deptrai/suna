@@ -56,7 +56,7 @@ mock.module('drizzle-orm', () => ({
   eq: (column: string, value: unknown) => ({ column, value }),
 }));
 
-mock.module('@kortix/db', () => ({
+mock.module('@epsilon/db', () => ({
   accounts,
   accountMembers,
   accountUser,

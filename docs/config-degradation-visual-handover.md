@@ -17,7 +17,7 @@ The functionality is already wired up and working. This is now a **visual / UX r
 - Runtime remains healthy:
   - `/config/status` => `valid: false`
   - `/session/status` => `200`
-  - `/kortix/health` => `runtimeReady: true`
+  - `/epsilon/health` => `runtimeReady: true`
 
 ## Primary UI location
 
@@ -28,7 +28,7 @@ The user explicitly wants this to feel:
 - **hyperminimal**
 - **clean**
 - **elegant**
-- clearly on **Kortix brand**
+- clearly on **Epsilon brand**
 
 Avoid a loud, bulky, clunky warning block in the main sidebar body.
 
@@ -36,7 +36,7 @@ Avoid a loud, bulky, clunky warning block in the main sidebar body.
 
 - `apps/web/src/components/sidebar/sidebar-left.tsx`
 - `apps/web/src/app/instances/_components/instance-settings-modal.tsx`
-- `core/kortix-master/src/routes/projects.ts`
+- `core/epsilon-master/src/routes/projects.ts`
 
 ## What already exists
 
@@ -47,7 +47,7 @@ In the sidebar warning we already have:
 - source path + error message
 - `Copy fix prompt`
 - `Start fix task`
-- automatic creation of a `/workspace` Kortix project if none exists yet
+- automatic creation of a `/workspace` Epsilon project if none exists yet
 
 ## What should improve
 

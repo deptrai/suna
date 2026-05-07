@@ -34,7 +34,7 @@ test('suppresses runtime messaging noise from browser events', () => {
 test('suppresses extension-backed Sentry events', () => {
   assert.equal(
     shouldIgnoreSentryBrowserNoise({
-      request: { url: 'https://app.kortix.com/auth' },
+      request: { url: 'https://app.epsilon.com/auth' },
       exception: {
         values: [
           {
@@ -56,7 +56,7 @@ test('does not suppress real application errors', () => {
   assert.equal(
     shouldIgnoreBrowserRuntimeNoise({
       message: 'TypeError: Cannot read properties of undefined (reading id)',
-      filename: 'https://app.kortix.com/_next/static/chunk.js',
+      filename: 'https://app.epsilon.com/_next/static/chunk.js',
     }),
     false,
   )

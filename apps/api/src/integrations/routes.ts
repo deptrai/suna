@@ -542,7 +542,7 @@ export function createIntegrationsTokenRouter(): Hono<SandboxEnv> {
     const accountId = c.get('accountId') as string;
 
     if (!sandboxId) {
-      throw new HTTPException(403, { message: 'This endpoint requires a sandbox token (kortix_sb_)' });
+      throw new HTTPException(403, { message: 'This endpoint requires a sandbox token (epsilon_sb_)' });
     }
 
     const body = await c.req.json();
@@ -598,7 +598,7 @@ export function createIntegrationsTokenRouter(): Hono<SandboxEnv> {
     const accountId = c.get('accountId') as string;
 
     if (!sandboxId) {
-      throw new HTTPException(403, { message: 'This endpoint requires a sandbox token (kortix_sb_)' });
+      throw new HTTPException(403, { message: 'This endpoint requires a sandbox token (epsilon_sb_)' });
     }
 
     const body = await c.req.json();
@@ -644,7 +644,7 @@ export function createIntegrationsTokenRouter(): Hono<SandboxEnv> {
     const accountId = c.get('accountId') as string;
 
     if (!sandboxId) {
-      throw new HTTPException(403, { message: 'This endpoint requires a sandbox token (kortix_sb_)' });
+      throw new HTTPException(403, { message: 'This endpoint requires a sandbox token (epsilon_sb_)' });
     }
 
     let linked = await listSandboxIntegrations(sandboxId, accountId);
@@ -682,7 +682,7 @@ export function createIntegrationsTokenRouter(): Hono<SandboxEnv> {
     const accountId = c.get('accountId') as string;
 
     if (!sandboxId) {
-      throw new HTTPException(403, { message: 'This endpoint requires a sandbox token (kortix_sb_)' });
+      throw new HTTPException(403, { message: 'This endpoint requires a sandbox token (epsilon_sb_)' });
     }
 
     const appSlug = c.req.query('app');
@@ -708,7 +708,7 @@ export function createIntegrationsTokenRouter(): Hono<SandboxEnv> {
     const accountId = c.get('accountId') as string;
 
     if (!sandboxId) {
-      throw new HTTPException(403, { message: 'This endpoint requires a sandbox token (kortix_sb_)' });
+      throw new HTTPException(403, { message: 'This endpoint requires a sandbox token (epsilon_sb_)' });
     }
 
     const body = await c.req.json();
@@ -742,7 +742,7 @@ export function createIntegrationsTokenRouter(): Hono<SandboxEnv> {
     const accountId = c.get('accountId') as string;
 
     if (!sandboxId) {
-      throw new HTTPException(403, { message: 'This endpoint requires a sandbox token (kortix_sb_)' });
+      throw new HTTPException(403, { message: 'This endpoint requires a sandbox token (epsilon_sb_)' });
     }
 
     const query = c.req.query('q');
@@ -763,7 +763,7 @@ export function createIntegrationsTokenRouter(): Hono<SandboxEnv> {
     const accountId = c.get('accountId') as string;
 
     if (!sandboxId) {
-      throw new HTTPException(403, { message: 'This endpoint requires a sandbox token (kortix_sb_)' });
+      throw new HTTPException(403, { message: 'This endpoint requires a sandbox token (epsilon_sb_)' });
     }
 
     const body = await c.req.json();
@@ -828,7 +828,7 @@ export function createIntegrationsTokenRouter(): Hono<SandboxEnv> {
     const accountId = c.get('accountId') as string;
 
     if (!sandboxId) {
-      throw new HTTPException(403, { message: 'This endpoint requires a sandbox token (kortix_sb_)' });
+      throw new HTTPException(403, { message: 'This endpoint requires a sandbox token (epsilon_sb_)' });
     }
 
     const body = await c.req.json();

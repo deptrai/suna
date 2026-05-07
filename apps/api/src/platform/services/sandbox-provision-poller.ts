@@ -14,7 +14,7 @@
  */
 
 import { eq, and, inArray, ne } from 'drizzle-orm';
-import { sandboxes } from '@kortix/db';
+import { sandboxes } from '@epsilon/db';
 import { db } from '../../shared/db';
 import { config } from '../../config';
 import { sandboxEventBus } from './sandbox-events';
@@ -66,7 +66,7 @@ export function startProvisionPoller(): void {
   // setup this background reconciler would sweep every stale remote JustAVPS
   // row in the shared DB, spam "machine 404", and mutate records unrelated to
   // the local sandbox. Only cloud API runtimes should run the cloud provisioner.
-  if (config.isLocal() || process.env.KORTIX_LOCAL_DEV === '1') {
+  if (config.isLocal() || process.env.EPSILON_LOCAL_DEV === '1') {
     console.log('[provision-poller] Local dev runtime, skipping cloud provision polling');
     return;
   }
@@ -271,7 +271,7 @@ async function pollSingleSandbox(sandbox: typeof sandboxes.$inferSelect): Promis
       const proxyToken = meta.justavpsProxyToken as string | undefined;
       const serviceKey = ((sandbox.config as Record<string, unknown> | null)?.serviceKey as string | undefined) || '';
       if (slug && proxyToken) {
-        const proxyDomain = config.JUSTAVPS_PROXY_DOMAIN || 'kortix.cloud';
+        const proxyDomain = config.JUSTAVPS_PROXY_DOMAIN || 'epsilon.cloud';
         const publicBaseUrl = `https://8000--${slug}.${proxyDomain}?__proxy_token=${proxyToken}`;
         try {
           const envRes = await fetch(`https://8000--${slug}.${proxyDomain}/env/PUBLIC_BASE_URL`, {

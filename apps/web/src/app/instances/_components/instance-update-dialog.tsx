@@ -110,7 +110,7 @@ export function InstanceUpdateDialog({
         return;
       }
     } catch {
-      // kortix-api may be momentarily unreachable during container recreate —
+      // epsilon-api may be momentarily unreachable during container recreate —
       // keep polling, the next tick usually recovers.
     }
     if (pollActiveRef.current) {

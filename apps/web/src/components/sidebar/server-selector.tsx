@@ -99,9 +99,9 @@ function useConnectionStatus(url: string, enabled: boolean) {
 			}
       setStatus('connected');
 
-      // Try to get version from /kortix/health
+      // Try to get version from /epsilon/health
       try {
-        const hres = await authenticatedFetch(`${url}/kortix/health`, {
+        const hres = await authenticatedFetch(`${url}/epsilon/health`, {
           signal: AbortSignal.timeout(3000),
         }, { retryOnAuthError: false });
         if (hres.ok) {
@@ -222,7 +222,7 @@ const copyIconButtonBaseClass =
 const codeCopyButtonClass =
   'absolute top-2.5 right-2.5 z-10 inline-flex items-center justify-center h-5 w-5 p-0 rounded-md border border-white/30 bg-slate-950/55 text-white backdrop-blur-sm transition-colors hover:bg-slate-950/80 hover:border-white/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60 cursor-pointer';
 
-const SSH_META_STORAGE_KEY = 'kortix:ssh-access-meta:v1';
+const SSH_META_STORAGE_KEY = 'epsilon:ssh-access-meta:v1';
 
 type SSHAccessMeta = {
   ssh_command: string;
@@ -559,7 +559,7 @@ export function InstanceManagerDialog({
   const [creatingProvider, setCreatingProvider] = React.useState<SandboxProviderName | null>(null);
   const [sandboxError, setSandboxError] = React.useState<string | null>(null);
   const [sandboxProgress, setSandboxProgress] = React.useState<SandboxCreateProgress | null>(null);
-  // Track the cloud sandbox's current version (from /kortix/health, fetched by DialogInstanceRow)
+  // Track the cloud sandbox's current version (from /epsilon/health, fetched by DialogInstanceRow)
   const [sandboxVersion, setSandboxVersion] = React.useState<string | null>(null);
 
   // SSH state
@@ -777,7 +777,7 @@ export function InstanceManagerDialog({
           });
 
       // Managed VPS providers can report as active before services are actually ready.
-      // Do not route to dashboard until /kortix/health returns a real version.
+      // Do not route to dashboard until /epsilon/health returns a real version.
       if (isManagedVpsProvider) {
         if (managedVpsProgressTimer) {
           clearInterval(managedVpsProgressTimer);
@@ -800,7 +800,7 @@ export function InstanceManagerDialog({
 
           try {
             const res = await authenticatedFetch(
-              `${sandboxUrl}/kortix/health`,
+              `${sandboxUrl}/epsilon/health`,
               { signal: AbortSignal.timeout(5000) },
               { retryOnAuthError: false },
             );
@@ -941,9 +941,9 @@ export function InstanceManagerDialog({
 
   // Compute description text based on mode
   const modeDescription: Record<string, string> = {
-    list: 'Manage your Kortix instances.',
+    list: 'Manage your Epsilon instances.',
     add: 'Choose how to connect.',
-    custom: 'Connect to a Kortix instance by entering its address.',
+    custom: 'Connect to a Epsilon instance by entering its address.',
     edit: 'Update the connection details for this instance.',
     ssh: 'Connect via SSH or VS Code Remote SSH.',
   };
@@ -1231,7 +1231,7 @@ export function InstanceManagerDialog({
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground">Custom URL</p>
                   <p className="text-xs text-muted-foreground/70 mt-0.5">
-                    Connect to any Kortix instance by address
+                    Connect to any Epsilon instance by address
                   </p>
                 </div>
               </button>
@@ -1266,14 +1266,14 @@ export function InstanceManagerDialog({
                 </label>
                 <input type="text"
                   ref={urlInputRef}
-                  placeholder="http://localhost:8008/v1/p/kortix-sandbox/8000"
+                  placeholder="http://localhost:8008/v1/p/epsilon-sandbox/8000"
                   value={formUrl}
                   onChange={(e) => setFormUrl(e.target.value)}
                   className="w-full h-9 px-3 text-sm font-mono rounded-lg bg-muted/30 border border-border/60 outline-none placeholder:text-muted-foreground/30 focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-colors"
                   required
                 />
                 <p className="text-[10px] text-muted-foreground/50">
-                  The full URL of the Kortix server, e.g. http://192.168.1.50:8008/v1/p/kortix-sandbox/8000
+                  The full URL of the Epsilon server, e.g. http://192.168.1.50:8008/v1/p/epsilon-sandbox/8000
                 </p>
               </div>
 

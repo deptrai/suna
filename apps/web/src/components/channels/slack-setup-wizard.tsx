@@ -23,7 +23,7 @@ import { authenticatedFetch } from '@/lib/auth-token';
 import { AgentSelector, flattenModels } from '@/components/session/session-chat-input';
 import { ModelSelector } from '@/components/session/model-selector';
 import { useVisibleAgents, useOpenCodeProviders } from '@/hooks/opencode/use-opencode-sessions';
-import { useKortixProjects } from '@/hooks/kortix/use-kortix-projects';
+import { useEpsilonProjects } from '@/hooks/epsilon/use-epsilon-projects';
 import { ChannelProjectPicker } from './channel-project-picker';
 
 interface SlackSetupWizardProps {
@@ -49,7 +49,7 @@ const BOT_NAMES = [
 function defaultBotName(seed: string): string {
   let hash = 0;
   for (const char of seed) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-  return `Kortix ${BOT_NAMES[hash % BOT_NAMES.length]}`;
+  return `Epsilon ${BOT_NAMES[hash % BOT_NAMES.length]}`;
 }
 
 export function SlackSetupWizard({ onCreated, onBack, initialProjectId = null }: SlackSetupWizardProps) {
@@ -57,7 +57,7 @@ export function SlackSetupWizard({ onCreated, onBack, initialProjectId = null }:
   const [step, setStep] = useState(1);
   const [botName, setBotName] = useState(() => defaultBotName(botNameSeed));
   const [projectId, setProjectId] = useState<string | null>(initialProjectId);
-  const [agentName, setAgentName] = useState<string | null>('kortix');
+  const [agentName, setAgentName] = useState<string | null>('epsilon');
   const [selectedModel, setSelectedModel] = useState<{ providerID: string; modelID: string } | null>(null);
   const [manifest, setManifest] = useState<Record<string, unknown> | null>(null);
   const [webhookUrl, setWebhookUrl] = useState('');
@@ -68,7 +68,7 @@ export function SlackSetupWizard({ onCreated, onBack, initialProjectId = null }:
   const [isGenerating, setIsGenerating] = useState(false);
 
   const slackConnect = useSlackConnect();
-  const { data: projects = [] } = useKortixProjects(undefined, { enabled: featureFlags.enableMultiProject });
+  const { data: projects = [] } = useEpsilonProjects(undefined, { enabled: featureFlags.enableMultiProject });
   const projectDirectory = useMemo(
     () => projects.find((p) => p.id === projectId)?.path,
     [projects, projectId],
@@ -82,7 +82,7 @@ export function SlackSetupWizard({ onCreated, onBack, initialProjectId = null }:
     if (!agentName) return;
     if (agents.length === 0) return;
     const stillValid = agents.some((a) => a.name === agentName);
-    if (!stillValid) setAgentName('kortix');
+    if (!stillValid) setAgentName('epsilon');
   }, [agents, agentName]);
 
   const handleGenerateManifest = async () => {
@@ -95,7 +95,7 @@ export function SlackSetupWizard({ onCreated, onBack, initialProjectId = null }:
         });
         return;
       }
-      const res = await authenticatedFetch(`${baseUrl}/kortix/channels/slack-manifest`, {
+      const res = await authenticatedFetch(`${baseUrl}/epsilon/channels/slack-manifest`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ publicUrl: '', botName: botName.trim() || undefined, projectId }),
@@ -232,7 +232,7 @@ export function SlackSetupWizard({ onCreated, onBack, initialProjectId = null }:
               <Label htmlFor="slack-bot-name">Bot Name</Label>
               <Input
                 id="slack-bot-name"
-                placeholder="Kortix Agent"
+                placeholder="Epsilon Agent"
                 value={botName}
                 onChange={(e) => setBotName(e.target.value)}
               />

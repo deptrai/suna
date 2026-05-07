@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS "kortix"."sandbox_invites" (
+CREATE TABLE IF NOT EXISTS "epsilon"."sandbox_invites" (
     "invite_id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
     "sandbox_id" uuid NOT NULL,
     "account_id" uuid NOT NULL,
@@ -9,18 +9,18 @@ CREATE TABLE IF NOT EXISTS "kortix"."sandbox_invites" (
 );
 
 DO $$ BEGIN
-  ALTER TABLE "kortix"."sandbox_invites"
+  ALTER TABLE "epsilon"."sandbox_invites"
     ADD CONSTRAINT "sandbox_invites_sandbox_id_sandboxes_sandbox_id_fk"
-    FOREIGN KEY ("sandbox_id") REFERENCES "kortix"."sandboxes"("sandbox_id")
+    FOREIGN KEY ("sandbox_id") REFERENCES "epsilon"."sandboxes"("sandbox_id")
     ON DELETE cascade ON UPDATE no action;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 CREATE INDEX IF NOT EXISTS "idx_sandbox_invites_email"
-  ON "kortix"."sandbox_invites" (lower("email"));
+  ON "epsilon"."sandbox_invites" (lower("email"));
 CREATE INDEX IF NOT EXISTS "idx_sandbox_invites_sandbox"
-  ON "kortix"."sandbox_invites" ("sandbox_id");
+  ON "epsilon"."sandbox_invites" ("sandbox_id");
 
 CREATE UNIQUE INDEX IF NOT EXISTS "idx_sandbox_invites_pending_unique"
-  ON "kortix"."sandbox_invites" ("sandbox_id", lower("email"))
+  ON "epsilon"."sandbox_invites" ("sandbox_id", lower("email"))
   WHERE "accepted_at" IS NULL;

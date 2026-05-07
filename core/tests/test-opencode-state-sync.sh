@@ -4,10 +4,10 @@ set -euo pipefail
 ROOT="$(mktemp -d)"
 trap 'rm -rf "$ROOT"' EXIT
 
-export KORTIX_PERSISTENT_ROOT="$ROOT/persistent"
-export OPENCODE_STORAGE_BASE="$KORTIX_PERSISTENT_ROOT/opencode"
-export OPENCODE_SHADOW_STORAGE_BASE="$KORTIX_PERSISTENT_ROOT/opencode-shadow"
-export KORTIX_OPENCODE_ARCHIVE_DIR="$KORTIX_PERSISTENT_ROOT/opencode-archive"
+export EPSILON_PERSISTENT_ROOT="$ROOT/persistent"
+export OPENCODE_STORAGE_BASE="$EPSILON_PERSISTENT_ROOT/opencode"
+export OPENCODE_SHADOW_STORAGE_BASE="$EPSILON_PERSISTENT_ROOT/opencode-shadow"
+export EPSILON_OPENCODE_ARCHIVE_DIR="$EPSILON_PERSISTENT_ROOT/opencode-archive"
 
 mkdir -p "$OPENCODE_STORAGE_BASE"
 
@@ -24,11 +24,11 @@ db.commit()
 db.close()
 PY
 
-python3 core/scripts/kortix-opencode-state sync >/dev/null
+python3 core/scripts/epsilon-opencode-state sync >/dev/null
 
 python3 - <<'PY'
 import json, os, subprocess
-out = subprocess.check_output(['python3', 'core/scripts/kortix-opencode-state', 'status'], text=True)
+out = subprocess.check_output(['python3', 'core/scripts/epsilon-opencode-state', 'status'], text=True)
 data = json.loads(out)
 assert data['shadow']['sessions'] == 1, data
 assert data['shadow']['messages'] == 1, data
@@ -43,11 +43,11 @@ db.commit()
 db.close()
 PY
 
-python3 core/scripts/kortix-opencode-state guard >/dev/null
+python3 core/scripts/epsilon-opencode-state guard >/dev/null
 
 python3 - <<'PY'
 import json, subprocess
-out = subprocess.check_output(['python3', 'core/scripts/kortix-opencode-state', 'status'], text=True)
+out = subprocess.check_output(['python3', 'core/scripts/epsilon-opencode-state', 'status'], text=True)
 data = json.loads(out)
 assert data['live']['sessions'] == 1, data
 assert data['live']['messages'] == 1, data
@@ -61,11 +61,11 @@ db.commit()
 db.close()
 PY
 
-python3 core/scripts/kortix-opencode-state guard >/dev/null
+python3 core/scripts/epsilon-opencode-state guard >/dev/null
 
 python3 - <<'PY'
 import json, subprocess
-out = subprocess.check_output(['python3', 'core/scripts/kortix-opencode-state', 'status'], text=True)
+out = subprocess.check_output(['python3', 'core/scripts/epsilon-opencode-state', 'status'], text=True)
 data = json.loads(out)
 assert data['live']['sessions'] == 1, data
 assert data['live']['messages'] == 1, data
@@ -95,11 +95,11 @@ make_db(os.environ['OPENCODE_STORAGE_BASE'], 'ses_live_newer', 2000, ['msg_live_
 make_db(os.environ['OPENCODE_SHADOW_STORAGE_BASE'], 'ses_shadow_old', 1000, ['msg_shadow_old_1', 'msg_shadow_old_2'])
 PY
 
-python3 core/scripts/kortix-opencode-state guard >/dev/null
+python3 core/scripts/epsilon-opencode-state guard >/dev/null
 
 python3 - <<'PY'
 import json, subprocess
-out = subprocess.check_output(['python3', 'core/scripts/kortix-opencode-state', 'status'], text=True)
+out = subprocess.check_output(['python3', 'core/scripts/epsilon-opencode-state', 'status'], text=True)
 data = json.loads(out)
 assert data['live']['latest_session_update'] == 2000, data
 assert data['live']['messages'] == 1, data
@@ -128,11 +128,11 @@ os._exit(0)
 PY
 
 test -s "$OPENCODE_STORAGE_BASE/opencode.db-wal"
-python3 core/scripts/kortix-opencode-state sync >/dev/null
+python3 core/scripts/epsilon-opencode-state sync >/dev/null
 
 python3 - <<'PY'
 import json, os, subprocess
-out = subprocess.check_output(['python3', 'core/scripts/kortix-opencode-state', 'status'], text=True)
+out = subprocess.check_output(['python3', 'core/scripts/epsilon-opencode-state', 'status'], text=True)
 data = json.loads(out)
 assert data['shadow']['sessions'] == 1, data
 assert data['shadow']['messages'] == 1, data

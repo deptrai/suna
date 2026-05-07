@@ -42,8 +42,8 @@ import { SelectableMarkdownText } from '@/components/ui/selectable-markdown';
 import { autoLinkUrls } from '@agentpress/shared';
 import { FileAttachmentsGrid } from './FileAttachmentRenderer';
 import { CheckCircle2, AlertCircle, Info, CircleDashed } from 'lucide-react-native';
-import { KortixLoader } from '@/components/ui/kortix-loader';
-import { KortixLogo } from '@/components/ui/KortixLogo';
+import { EpsilonLoader } from '@/components/ui/epsilon-loader';
+import { EpsilonLogo } from '@/components/ui/EpsilonLogo';
 import { AgentLoader } from './AgentLoader';
 import { StreamingToolCard } from './StreamingToolCard';
 import { CompactToolCard, CompactStreamingToolCard } from './CompactToolCard';
@@ -55,8 +55,8 @@ import { TaskCompletedFeedback } from './tool-views/complete-tool/TaskCompletedF
 import { renderAssistantMessage } from './assistant-message-renderer';
 import { PromptExamples } from '@/components/shared';
 import { ReasoningSection } from './ReasoningSection';
-import { useKortixComputerStore } from '@/stores/kortix-computer-store';
-import { isKortixDefaultAgentId } from '@/lib/agents';
+import { useEpsilonComputerStore } from '@/stores/epsilon-computer-store';
+import { isEpsilonDefaultAgentId } from '@/lib/agents';
 import { log } from '@/lib/logger';
 
 export interface ToolMessagePair {
@@ -271,7 +271,7 @@ const MarkdownContent = React.memo(function MarkdownContent({
               <View className="flex-row items-start gap-2.5 rounded-xl border border-border bg-muted/40 px-3 py-2.5 dark:bg-muted/20">
                 <Icon as={Info} size={16} className="mt-0.5 flex-shrink-0 text-muted-foreground" />
                 <Text className="flex-1 font-roobert text-sm leading-relaxed text-muted-foreground">
-                  Kortix will automatically continue working once you provide your response.
+                  Epsilon will automatically continue working once you provide your response.
                 </Text>
               </View>
 
@@ -470,7 +470,7 @@ const ToolCard = React.memo(function ToolCard({
         disabled={!onPress}
         className="flex-row items-center gap-3 rounded-3xl border border-border bg-card p-3">
         <View className="h-8 w-8 items-center justify-center rounded-xl border border-border bg-background">
-          <KortixLoader size="small" />
+          <EpsilonLoader size="small" />
         </View>
         <View className="flex-1">
           <Text className="mb-0.5 font-roobert-medium text-sm text-foreground">{displayName}</Text>
@@ -614,7 +614,7 @@ const StreamingToolCallIndicator = React.memo(function StreamingToolCallIndicato
           {isCompleted ? (
             <Icon as={CheckCircle2} size={16} className="text-emerald-500" />
           ) : (
-            <KortixLoader size="small" />
+            <EpsilonLoader size="small" />
           )}
         </View>
         
@@ -665,7 +665,7 @@ const StreamingToolCallIndicator = React.memo(function StreamingToolCallIndicato
       {isCompleted ? (
         <Icon as={CheckCircle2} size={16} className="text-emerald-500" />
       ) : (
-        <KortixLoader size="small" />
+        <EpsilonLoader size="small" />
       )}
     </View>
   );
@@ -717,7 +717,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = React.memo(
     streamHookStatus = 'idle',
     sandboxId,
     sandboxUrl,
-    agentName = 'Kortix',
+    agentName = 'Epsilon',
     onPromptFill,
     isSendingMessage = false,
     onRequestScroll,
@@ -805,12 +805,12 @@ export const ThreadContent: React.FC<ThreadContentProps> = React.memo(
 
     // Helper to render agent indicator based on agent type
     const renderAgentIndicator = useCallback((agentId: string | null | undefined) => {
-      // Default Kortix agent or no agent ID - show full logomark
-      const isKortixDefault = isKortixDefaultAgentId(agentId, agents);
+      // Default Epsilon agent or no agent ID - show full logomark
+      const isEpsilonDefault = isEpsilonDefaultAgentId(agentId, agents);
       
-      if (isKortixDefault) {
-        // Full Kortix logomark (icon + text) - same height as symbol+text combo
-        return <KortixLogo size={14} variant="logomark" color={isDark ? 'dark' : 'light'} />;
+      if (isEpsilonDefault) {
+        // Full Epsilon logomark (icon + text) - same height as symbol+text combo
+        return <EpsilonLogo size={14} variant="logomark" color={isDark ? 'dark' : 'light'} />;
       }
       
       // Custom agent - show symbol + name
@@ -819,7 +819,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = React.memo(
       
       return (
         <View className="flex-row items-center gap-1.5">
-          <KortixLogo size={16} variant="symbol" color={isDark ? 'dark' : 'light'} />
+          <EpsilonLogo size={16} variant="symbol" color={isDark ? 'dark' : 'light'} />
           <Text className="text-sm font-medium text-muted-foreground">{displayName}</Text>
         </View>
       );
@@ -970,7 +970,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = React.memo(
       return maps;
     }, [groupedMessages]);
 
-    const { navigateToToolCall } = useKortixComputerStore();
+    const { navigateToToolCall } = useEpsilonComputerStore();
 
     const handleToolPressInternal = useCallback(
       (clickedToolMsg: UnifiedMessage) => {
@@ -1275,14 +1275,14 @@ export const ThreadContent: React.FC<ThreadContentProps> = React.memo(
                                   style={{ borderRadius: 16 }}
                                 >
                                   <View className="bg-white/20 rounded-full p-2">
-                                    <KortixLoader size="small" />
+                                    <EpsilonLoader size="small" />
                                   </View>
                                 </View>
                               )}
                             </>
                           ) : (
                             <View className="flex-1 items-center justify-center bg-card">
-                              {isUploading && <KortixLoader size="small" />}
+                              {isUploading && <EpsilonLoader size="small" />}
                               <Text className="text-xs text-muted-foreground text-center px-2 mt-2" numberOfLines={2}>
                                 {attachment.name}
                               </Text>
@@ -1475,7 +1475,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = React.memo(
 
             return (
               <View key={group.key} className="mb-6">
-                {/* Reasoning section with integrated Kortix icon (like frontend) */}
+                {/* Reasoning section with integrated Epsilon icon (like frontend) */}
                 {reasoningSectionElement}
                 {/* Show agent header only when reasoning section is NOT displayed */}
                 {!reasoningSectionElement && (
@@ -1976,7 +1976,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = React.memo(
           return (
             <View className="mb-6">
               {/* Show agent header only when reasoning section is NOT displayed */}
-              {/* ReasoningSection has its own Kortix logo, so we hide the header when showing reasoning */}
+              {/* ReasoningSection has its own Epsilon logo, so we hide the header when showing reasoning */}
               {!showReasoning && (
                 <View className="mb-3 flex-row items-center">
                   {renderAgentIndicator(null)}

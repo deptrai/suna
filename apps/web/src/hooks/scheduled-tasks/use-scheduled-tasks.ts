@@ -191,7 +191,7 @@ async function resolveSandboxBaseUrl(instanceId?: string | null): Promise<string
 }
 
 async function getTriggersBaseUrl(instanceId?: string | null): Promise<string> {
-  return `${await resolveSandboxBaseUrl(instanceId)}/kortix/triggers`;
+  return `${await resolveSandboxBaseUrl(instanceId)}/epsilon/triggers`;
 }
 
 async function fetchTriggersJson<T>(path: string, init?: RequestInit, instanceId?: string | null): Promise<T> {

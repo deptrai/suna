@@ -18,7 +18,7 @@ export const SCOPE_CATALOG = {
   },
   'sandbox:upgrade': {
     label: 'Run instance updates',
-    description: 'Apply Kortix platform updates to this instance.',
+    description: 'Apply Epsilon platform updates to this instance.',
     group: 'sandbox',
   },
 

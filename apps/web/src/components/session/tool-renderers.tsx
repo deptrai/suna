@@ -6056,7 +6056,7 @@ function SessionSpawnTool({ part, forceOpen }: ToolProps) {
   const input = partInput(part);
   const status = partStatus(part);
 
-  const agentName = (input.agent as string) || 'kortix';
+  const agentName = (input.agent as string) || 'epsilon';
   const description = (input.description as string) || '';
   const projectName = (input.project as string) || '';
   const fullPrompt = (input.prompt as string) || '';
@@ -6843,7 +6843,7 @@ ToolRegistry.register('oc-project_delete', ProjectDeleteTool);
 ToolRegistry.register('oc-project-delete', ProjectDeleteTool);
 
 // ============================================================================
-// AgentSpawnTool — Kortix agent delegation (replaces native task tool)
+// AgentSpawnTool — Epsilon agent delegation (replaces native task tool)
 // Same UX as TaskTool: compact card, live shimmer, SubSessionModal
 // ============================================================================
 
@@ -6861,9 +6861,9 @@ function cleanWorkerOutput(raw: string): string {
   // Strip autowork plugin-injected wrappers and the structured completion
   // contract so the rendered UI stays readable. These are protocol messages,
   // not user-facing content.
-  text = text.replace(/<kortix_autowork_system[^>]*>[\s\S]*?<\/kortix_autowork_system>/g, '');
-  text = text.replace(/<kortix_autowork_request[^>]*>[\s\S]*?<\/kortix_autowork_request>/g, '');
-  text = text.replace(/<kortix_autowork_complete[^>]*>[\s\S]*?<\/kortix_autowork_complete>/g, '');
+  text = text.replace(/<epsilon_autowork_system[^>]*>[\s\S]*?<\/epsilon_autowork_system>/g, '');
+  text = text.replace(/<epsilon_autowork_request[^>]*>[\s\S]*?<\/epsilon_autowork_request>/g, '');
+  text = text.replace(/<epsilon_autowork_complete[^>]*>[\s\S]*?<\/epsilon_autowork_complete>/g, '');
   // Strip agent_task bookkeeping output
   text = text.replace(/^Task \*\*task-[a-z0-9]+\*\* created and started\..*$/gm, '');
   text = text.replace(/^Task \*\*task-[a-z0-9]+\*\* created:.*$/gm, '');
@@ -7674,7 +7674,7 @@ function SkillTool({ part, forceOpen }: ToolProps) {
 ToolRegistry.register('skill', SkillTool);
 
 // ============================================================================
-// Project Tools — Kortix Orchestrator project management
+// Project Tools — Epsilon Orchestrator project management
 // ============================================================================
 
 import {
@@ -7682,7 +7682,7 @@ import {
   parseProjectSelectOutput,
   parseProjectCreateOutput,
   type ProjectEntry,
-} from '@/lib/utils/kortix-tool-output';
+} from '@/lib/utils/epsilon-tool-output';
 
 function ProjectListTool({ part, defaultOpen, forceOpen }: ToolProps) {
   const output = partOutput(part);
@@ -7847,7 +7847,7 @@ ToolRegistry.register('oc-project_create', ProjectCreateTool);
 ToolRegistry.register('oc-project-create', ProjectCreateTool);
 
 // ============================================================================
-// Connector Tools — Kortix Connectors plugin
+// Connector Tools — Epsilon Connectors plugin
 // ============================================================================
 
 import {
@@ -7855,7 +7855,7 @@ import {
   parseConnectorGetOutput,
   parseConnectorSetupOutput,
   type ConnectorEntry,
-} from '@/lib/utils/kortix-tool-output';
+} from '@/lib/utils/epsilon-tool-output';
 
 function ConnectorListTool({ part, defaultOpen, forceOpen }: ToolProps) {
   const input = partInput(part);
@@ -8042,7 +8042,7 @@ ToolRegistry.register('oc-connector_setup', ConnectorSetupTool);
 ToolRegistry.register('oc-connector-setup', ConnectorSetupTool);
 
 // ============================================================================
-// TriggersTool — Kortix trigger management (create, list, delete, etc.)
+// TriggersTool — Epsilon trigger management (create, list, delete, etc.)
 // ============================================================================
 
 function TriggersTool({ part, defaultOpen, forceOpen }: ToolProps) {

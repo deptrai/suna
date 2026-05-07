@@ -1,0 +1,8 @@
+{
+  "name": "epsilon-ocx-registry",
+  "version": "1.0.0",
+  "namespace": "epsilon",
+  "author": "epsilon",
+  "description": "Epsilon Marketplace - Skills for Epsilon AI Agents",
+  "components": []
+}

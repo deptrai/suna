@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { eq, and, ne } from 'drizzle-orm';
-import { sandboxes } from '@kortix/db';
+import { sandboxes } from '@epsilon/db';
 import { getDaytona } from '../../shared/daytona';
 import { db } from '../../shared/db';
 import {
@@ -9,9 +9,9 @@ import {
   resolvePreviewUserContext,
 } from '../../shared/preview-ownership';
 import {
-  encodeKortixUserContext,
-  KORTIX_USER_CONTEXT_HEADER,
-} from '../../shared/kortix-user-context';
+  encodeEpsilonUserContext,
+  EPSILON_USER_CONTEXT_HEADER,
+} from '../../shared/epsilon-user-context';
 
 interface PreviewProxyContext {
   userId: string;
@@ -66,14 +66,14 @@ function setCachedPreviewLink(sandboxId: string, port: number, url: string, toke
   previewLinkCache.set(key, { url, token, expiresAt: Date.now() + CACHE_TTL_MS });
 }
 
-// === Ownership verification via kortix.sandboxes ===
+// === Ownership verification via epsilon.sandboxes ===
 //
 // Delegates to the shared helper so the Daytona proxy path, the preview
 // auth middleware, and the subdomain token validator all agree on a
 // single definition of "user X can hit sandbox Y". See the rationale in
 // `shared/preview-ownership.ts`: we used to do a global "who owns
 // externalId=X" lookup, which broke in local-docker mode where every
-// user shares the `kortix-sandbox` container name and a stale row from
+// user shares the `epsilon-sandbox` container name and a stale row from
 // a previous user would lock everyone else out with 403.
 
 async function verifyOwnership(sandboxId: string, userId: string): Promise<boolean> {
@@ -190,13 +190,13 @@ export async function proxyToDaytona(
       if (previewToken) {
         headers.set('X-Daytona-Preview-Token', previewToken);
       }
-      // Authenticate to the sandbox using the stored service key (= KORTIX_TOKEN).
+      // Authenticate to the sandbox using the stored service key (= EPSILON_TOKEN).
       // This replaces the user's Supabase JWT with the sandbox's INTERNAL_SERVICE_KEY.
       if (serviceKey) {
         headers.set('Authorization', `Bearer ${serviceKey}`);
       }
 
-      // Forward a signed identity context so kortix-master can enforce
+      // Forward a signed identity context so epsilon-master can enforce
       // per-user authorization (project ACL + session scoping) without
       // calling back to the API on every request. Only attached when we
       // have both a real user and a shared secret — anonymous/service-only
@@ -204,10 +204,10 @@ export async function proxyToDaytona(
       if (userId && serviceKey) {
         const payload = await resolvePreviewUserContext(sandboxId, userId);
         if (payload) {
-          const signed = encodeKortixUserContext(payload, serviceKey);
-          headers.set(KORTIX_USER_CONTEXT_HEADER, signed);
+          const signed = encodeEpsilonUserContext(payload, serviceKey);
+          headers.set(EPSILON_USER_CONTEXT_HEADER, signed);
           console.log(
-            `[PREVIEW] signing X-Kortix-User-Context user=${userId} sandbox=${sandboxId} role=${payload.sandboxRole} tokenPrefix=${signed.slice(0, 16)}`,
+            `[PREVIEW] signing X-Epsilon-User-Context user=${userId} sandbox=${sandboxId} role=${payload.sandboxRole} tokenPrefix=${signed.slice(0, 16)}`,
           );
         } else {
           console.log(

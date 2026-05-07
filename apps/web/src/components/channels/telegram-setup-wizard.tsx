@@ -18,7 +18,7 @@ import { useTelegramVerifyToken, useTelegramConnect } from '@/hooks/channels/use
 import { AgentSelector, flattenModels } from '@/components/session/session-chat-input';
 import { ModelSelector } from '@/components/session/model-selector';
 import { useVisibleAgents, useOpenCodeProviders } from '@/hooks/opencode/use-opencode-sessions';
-import { useKortixProjects } from '@/hooks/kortix/use-kortix-projects';
+import { useEpsilonProjects } from '@/hooks/epsilon/use-epsilon-projects';
 import { ChannelProjectPicker } from './channel-project-picker';
 
 interface TelegramSetupWizardProps {
@@ -32,7 +32,7 @@ export function TelegramSetupWizard({ onCreated, onBack, initialProjectId = null
   const [botToken, setBotToken] = useState('');
   const [botInfo, setBotInfo] = useState<{ id: number; username: string; firstName: string } | null>(null);
   const [projectId, setProjectId] = useState<string | null>(initialProjectId);
-  const [agentName, setAgentName] = useState<string | null>('kortix');
+  const [agentName, setAgentName] = useState<string | null>('epsilon');
   const [selectedModel, setSelectedModel] = useState<{ providerID: string; modelID: string } | null>(null);
 
   const verifyToken = useTelegramVerifyToken();
@@ -40,7 +40,7 @@ export function TelegramSetupWizard({ onCreated, onBack, initialProjectId = null
 
   // Project list — used to resolve the project's working directory so the
   // agent picker shows that project's per-role agents (engineer, qa, …).
-  const { data: projects = [] } = useKortixProjects(undefined, { enabled: featureFlags.enableMultiProject });
+  const { data: projects = [] } = useEpsilonProjects(undefined, { enabled: featureFlags.enableMultiProject });
   const projectDirectory = useMemo(
     () => projects.find((p) => p.id === projectId)?.path,
     [projects, projectId],
@@ -52,12 +52,12 @@ export function TelegramSetupWizard({ onCreated, onBack, initialProjectId = null
 
   // When the project changes, the available agent set changes — reset the
   // picked agent if it isn't valid for the new scope so we never persist
-  // a stale slug. `kortix` is always present, so it's a safe default.
+  // a stale slug. `epsilon` is always present, so it's a safe default.
   useEffect(() => {
     if (!agentName) return;
     if (agents.length === 0) return;
     const stillValid = agents.some((a) => a.name === agentName);
-    if (!stillValid) setAgentName('kortix');
+    if (!stillValid) setAgentName('epsilon');
   }, [agents, agentName]);
 
   const handleVerify = async () => {

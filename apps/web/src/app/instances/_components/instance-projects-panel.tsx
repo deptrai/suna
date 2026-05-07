@@ -38,7 +38,7 @@ import {
   IconInvite,
   IconLoader,
   IconProject,
-} from '@/components/ui/kortix-icons';
+} from '@/components/ui/epsilon-icons';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { UserRow } from '@/components/ui/user-row';
 import { useCan } from '@/hooks/platform/use-can';
@@ -50,7 +50,7 @@ import { useCan } from '@/hooks/platform/use-can';
  *   - a project list (with avatar-stacks showing who's on each project)
  *   - a per-project members panel with a back button + autocomplete
  *
- * All project-ACL mutations go to kortix-master inside the sandbox via the
+ * All project-ACL mutations go to epsilon-master inside the sandbox via the
  * preview proxy — the ACL table lives in that sqlite database (co-located
  * with the projects themselves). Emails aren't known inside the sandbox;
  * we join against the sandbox-level member list for display.

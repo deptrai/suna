@@ -1,7 +1,7 @@
 /**
  * Security Scan: Cloud API - CORS Probing
  *
- * LIVE scan against https://computer-preview-api.kortix.com
+ * LIVE scan against https://computer-preview-api.epsilon.com
  * Tests CORS configuration by sending requests from various origins.
  *
  * FINDINGS:
@@ -15,7 +15,7 @@
 
 import { describe, test, expect } from 'bun:test';
 
-const CLOUD = 'https://computer-preview-api.kortix.com';
+const CLOUD = 'https://computer-preview-api.epsilon.com';
 
 async function probeWithOrigin(
   method: string,
@@ -44,25 +44,25 @@ async function probeWithOrigin(
 describe('Cloud Scan: CORS Probing', () => {
 
   describe('Legitimate origins', () => {
-    test('computer-preview.kortix.com gets allow-origin', async () => {
-      const r = await probeWithOrigin('GET', '/v1/health', 'https://computer-preview.kortix.com');
-      expect(r.headers['access-control-allow-origin']).toBe('https://computer-preview.kortix.com');
+    test('computer-preview.epsilon.com gets allow-origin', async () => {
+      const r = await probeWithOrigin('GET', '/v1/health', 'https://computer-preview.epsilon.com');
+      expect(r.headers['access-control-allow-origin']).toBe('https://computer-preview.epsilon.com');
       expect(r.headers['access-control-allow-credentials']).toBe('true');
     });
 
-    test('kortix.com gets allow-origin', async () => {
-      const r = await probeWithOrigin('GET', '/v1/health', 'https://kortix.com');
-      expect(r.headers['access-control-allow-origin']).toBe('https://kortix.com');
+    test('epsilon.com gets allow-origin', async () => {
+      const r = await probeWithOrigin('GET', '/v1/health', 'https://epsilon.com');
+      expect(r.headers['access-control-allow-origin']).toBe('https://epsilon.com');
     });
 
-    test('www.kortix.com gets allow-origin', async () => {
-      const r = await probeWithOrigin('GET', '/v1/health', 'https://www.kortix.com');
-      expect(r.headers['access-control-allow-origin']).toBe('https://www.kortix.com');
+    test('www.epsilon.com gets allow-origin', async () => {
+      const r = await probeWithOrigin('GET', '/v1/health', 'https://www.epsilon.com');
+      expect(r.headers['access-control-allow-origin']).toBe('https://www.epsilon.com');
     });
 
-    test('staging.kortix.com gets allow-origin', async () => {
-      const r = await probeWithOrigin('GET', '/v1/health', 'https://staging.kortix.com');
-      expect(r.headers['access-control-allow-origin']).toBe('https://staging.kortix.com');
+    test('staging.epsilon.com gets allow-origin', async () => {
+      const r = await probeWithOrigin('GET', '/v1/health', 'https://staging.epsilon.com');
+      expect(r.headers['access-control-allow-origin']).toBe('https://staging.epsilon.com');
     });
   });
 
@@ -77,8 +77,8 @@ describe('Cloud Scan: CORS Probing', () => {
       expect(r.headers['access-control-allow-origin']).toBeUndefined();
     });
 
-    test('evil subdomain evil.kortix.com does NOT get allow-origin', async () => {
-      const r = await probeWithOrigin('GET', '/v1/health', 'https://evil.kortix.com');
+    test('evil subdomain evil.epsilon.com does NOT get allow-origin', async () => {
+      const r = await probeWithOrigin('GET', '/v1/health', 'https://evil.epsilon.com');
       expect(r.headers['access-control-allow-origin']).toBeUndefined();
     });
 
@@ -87,25 +87,25 @@ describe('Cloud Scan: CORS Probing', () => {
       expect(r.headers['access-control-allow-origin']).toBeUndefined();
     });
 
-    test('HTTP downgrade http://kortix.com does NOT get allow-origin', async () => {
-      const r = await probeWithOrigin('GET', '/v1/health', 'http://kortix.com');
+    test('HTTP downgrade http://epsilon.com does NOT get allow-origin', async () => {
+      const r = await probeWithOrigin('GET', '/v1/health', 'http://epsilon.com');
       expect(r.headers['access-control-allow-origin']).toBeUndefined();
     });
 
-    test('kortix.com.evil.com does NOT get allow-origin', async () => {
-      const r = await probeWithOrigin('GET', '/v1/health', 'https://kortix.com.evil.com');
+    test('epsilon.com.evil.com does NOT get allow-origin', async () => {
+      const r = await probeWithOrigin('GET', '/v1/health', 'https://epsilon.com.evil.com');
       expect(r.headers['access-control-allow-origin']).toBeUndefined();
     });
   });
 
   describe('Preflight (OPTIONS) requests', () => {
     test('OPTIONS from legit origin gets full CORS headers', async () => {
-      const r = await probeWithOrigin('OPTIONS', '/v1/accounts', 'https://computer-preview.kortix.com', {
+      const r = await probeWithOrigin('OPTIONS', '/v1/accounts', 'https://computer-preview.epsilon.com', {
         'Access-Control-Request-Method': 'POST',
         'Access-Control-Request-Headers': 'Authorization',
       });
       expect(r.status).toBe(204);
-      expect(r.headers['access-control-allow-origin']).toBe('https://computer-preview.kortix.com');
+      expect(r.headers['access-control-allow-origin']).toBe('https://computer-preview.epsilon.com');
       expect(r.headers['access-control-allow-methods']).toContain('POST');
       expect(r.headers['access-control-allow-headers']).toContain('Authorization');
     });
@@ -122,9 +122,9 @@ describe('Cloud Scan: CORS Probing', () => {
 
   describe('CORS on error responses', () => {
     test('401 from legit origin still includes CORS headers', async () => {
-      const r = await probeWithOrigin('GET', '/v1/accounts', 'https://computer-preview.kortix.com');
+      const r = await probeWithOrigin('GET', '/v1/accounts', 'https://computer-preview.epsilon.com');
       expect(r.status).toBe(401);
-      expect(r.headers['access-control-allow-origin']).toBe('https://computer-preview.kortix.com');
+      expect(r.headers['access-control-allow-origin']).toBe('https://computer-preview.epsilon.com');
     });
 
     test('401 from evil origin does NOT include allow-origin', async () => {
@@ -136,7 +136,7 @@ describe('Cloud Scan: CORS Probing', () => {
 
   describe('Vary header', () => {
     test('responses include Vary: Origin', async () => {
-      const r = await probeWithOrigin('GET', '/v1/health', 'https://computer-preview.kortix.com');
+      const r = await probeWithOrigin('GET', '/v1/health', 'https://computer-preview.epsilon.com');
       expect(r.headers['vary']).toContain('Origin');
     });
   });

@@ -4,7 +4,7 @@ import { useState, useEffect, FormEvent } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { KortixLoader } from '@/components/ui/kortix-loader';
+import { EpsilonLoader } from '@/components/ui/epsilon-loader';
 import { selfHostedSignIn, installOwner } from '@/app/auth/actions';
 import { resetClient } from '@/lib/opencode-sdk';
 import { invalidateTokenCache } from '@/lib/auth-token';
@@ -214,7 +214,7 @@ export function SelfHostedForm({ returnUrl, installed }: SelfHostedFormProps) {
   const [pending, setPending] = useState(false);
 
   if (installed === null) {
-    return <KortixLoader size="medium" />;
+    return <EpsilonLoader size="medium" />;
   }
 
   const isInstaller = !installed;
@@ -305,7 +305,7 @@ export function SelfHostedForm({ returnUrl, installed }: SelfHostedFormProps) {
         window.location.href = safeReturnUrl;
         return;
       } else {
-        setErrorMessage('This instance still needs its initial owner account. Run the Kortix installer/CLI bootstrap first.');
+        setErrorMessage('This instance still needs its initial owner account. Run the Epsilon installer/CLI bootstrap first.');
         setPending(false);
       }
     } catch (err: any) {
@@ -352,7 +352,7 @@ export function SelfHostedForm({ returnUrl, installed }: SelfHostedFormProps) {
     <div className="w-full max-w-sm">
       <div className="flex flex-col items-center mb-6">
         <h1 className="text-[17px] font-medium text-foreground/90 tracking-tight">
-          Sign in to Kortix
+          Sign in to Epsilon
         </h1>
         <p className="text-[13px] text-foreground/40 mt-0.5">
           Your AI Computer

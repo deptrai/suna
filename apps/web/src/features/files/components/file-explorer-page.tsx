@@ -202,7 +202,7 @@ export function FileExplorerPage() {
   }, [toggleSearch, closeSearch, isSearchOpen]);
 
   // Elevated system directories — always pinned at the top
-  const ELEVATED_DIRS = new Set(['.kortix', '.opencode']);
+  const ELEVATED_DIRS = new Set(['.epsilon', '.opencode']);
 
   // Sort and separate dirs and files
   const { elevatedDirs, dirs, fileItems } = useMemo(() => {

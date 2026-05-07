@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import postgres from 'postgres';
 import { db } from '../shared/db';
-import { accessRequests } from '@kortix/db';
+import { accessRequests } from '@epsilon/db';
 import { areSignupsEnabled, canSignUp } from '../shared/access-control-cache';
 import { config } from '../config';
 

@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useKortixProjects } from '@/hooks/kortix/use-kortix-projects';
+import { useEpsilonProjects } from '@/hooks/epsilon/use-epsilon-projects';
 
 const WORKSPACE_OPTION = '__workspace__';
 
@@ -24,12 +24,12 @@ interface ChannelProjectPickerProps {
 /**
  * Project selector for channels. The "Workspace" option means the channel
  * is global (no project_id) and dispatches against opencode's workspace
- * agent set (kortix, general, …). Picking a project scopes the dispatch
+ * agent set (epsilon, general, …). Picking a project scopes the dispatch
  * to that project's working directory so per-project agents (engineer,
  * qa, tech-lead, …) become discoverable.
  */
 export function ChannelProjectPicker({ value, onChange, className }: ChannelProjectPickerProps) {
-  const { data: projects = [], isLoading } = useKortixProjects();
+  const { data: projects = [], isLoading } = useEpsilonProjects();
 
   const visibleProjects = projects.filter((p) => p.id !== 'proj-workspace');
 
@@ -56,7 +56,7 @@ export function ChannelProjectPicker({ value, onChange, className }: ChannelProj
         <SelectItem value={WORKSPACE_OPTION}>
           <div className="flex flex-col">
             <span className="text-sm font-medium">Workspace</span>
-            <span className="text-[11px] text-muted-foreground">Global agents (kortix, general, …)</span>
+            <span className="text-[11px] text-muted-foreground">Global agents (epsilon, general, …)</span>
           </div>
         </SelectItem>
         {visibleProjects.map((p) => (

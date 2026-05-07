@@ -20,7 +20,7 @@ import {
 } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { Icon } from '@/components/ui/icon';
-import { KortixLoader } from '@/components/ui';
+import { EpsilonLoader } from '@/components/ui';
 import {
   Upload,
   FolderPlus,
@@ -719,7 +719,7 @@ export const FilesPage = forwardRef<FilesPageRef, FilesPageProps>(function Files
                 }}
                 className={`text-sm ${isAtRoot ? 'font-roobert-medium' : 'font-roobert'}`}
               >
-                My Kortix
+                My Epsilon
               </Text>
             </Pressable>
 
@@ -768,7 +768,7 @@ export const FilesPage = forwardRef<FilesPageRef, FilesPageProps>(function Files
       <View className="flex-1">
         {isLoading ? (
           <View className="flex-1 items-center justify-center">
-            <KortixLoader size="large" />
+            <EpsilonLoader size="large" />
             <Text
               className="text-sm mt-4 font-roobert"
               style={{
@@ -1121,7 +1121,7 @@ export const FilesPage = forwardRef<FilesPageRef, FilesPageProps>(function Files
                 }}
                 numberOfLines={1}
               >
-                {currentPath === '/workspace' ? 'My Kortix' : currentPath.split('/').pop()}
+                {currentPath === '/workspace' ? 'My Epsilon' : currentPath.split('/').pop()}
               </Text>
             </View>
           </View>

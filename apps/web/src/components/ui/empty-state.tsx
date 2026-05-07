@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Kortix <EmptyState> — centered empty view.
+ * Epsilon <EmptyState> — centered empty view.
  *
  * Minimal. An icon, a one-line headline, an optional body, and up to two
  * actions (primary + secondary). A calm teaching moment rather than a
@@ -17,7 +17,7 @@
 
 import { cn } from '@/lib/utils';
 import type { ReactNode } from 'react';
-import type { Icon } from '@/components/ui/kortix-icons';
+import type { Icon } from '@/components/ui/epsilon-icons';
 
 export interface EmptyStateProps {
   icon?: Icon;

@@ -9,7 +9,7 @@ import { featureFlags } from '@/lib/feature-flags';
  * Project-only agents — surfaced only when the multi-project paradigm is on.
  * These agents' bodies still contain project/ticket workflow knowledge; the
  * runtime gates the project tools they reference (project_*, ticket_*, etc.)
- * separately via KORTIX_PROJECTS_ENABLED on the sandbox. Hiding them in the
+ * separately via EPSILON_PROJECTS_ENABLED on the sandbox. Hiding them in the
  * UI matches what the sandbox would refuse to do anyway, and keeps the
  * picker simple in default mode (general agent only).
  *

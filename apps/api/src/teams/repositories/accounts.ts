@@ -1,5 +1,5 @@
 import { and, eq } from 'drizzle-orm';
-import { accountMembers, type Database } from '@kortix/db';
+import { accountMembers, type Database } from '@epsilon/db';
 import type { AccountRole, Membership } from '../domain/types';
 
 export async function listUserMemberships(

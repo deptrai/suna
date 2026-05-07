@@ -1,9 +1,9 @@
 import { eq, and, or, isNull, lte, ne, sql } from 'drizzle-orm';
-import { creditAccounts } from '@kortix/db';
+import { creditAccounts } from '@epsilon/db';
 import { db } from '../../shared/db';
 
 /**
- * Read tier from the OLD public.credit_accounts (Suna billing schema).
+ * Read tier from the OLD public.credit_accounts (ChainLens billing schema).
  * Used ONLY for claim-computer eligibility in cloud env.
  */
 export async function getPublicSchemaTier(accountId: string): Promise<string | null> {

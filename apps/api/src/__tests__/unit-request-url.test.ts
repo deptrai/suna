@@ -12,20 +12,20 @@ describe('getRequestUrl', () => {
 
   it('normalizes relative Bun request URLs using host header', () => {
     const req = new Request('http://placeholder.invalid', {
-      headers: { host: 'api.kortix.com' },
+      headers: { host: 'api.epsilon.com' },
     });
     Object.defineProperty(req, 'url', { value: '/', configurable: true });
 
     const url = getRequestUrl(req, 8008);
 
-    expect(url.toString()).toBe('http://api.kortix.com/');
+    expect(url.toString()).toBe('http://api.epsilon.com/');
   });
 
   it('prefers forwarded proto and host when present', () => {
     const req = new Request('http://placeholder.invalid', {
       headers: {
         host: 'internal:8008',
-        'x-forwarded-host': 'kortix.com',
+        'x-forwarded-host': 'epsilon.com',
         'x-forwarded-proto': 'https',
       },
     });
@@ -33,6 +33,6 @@ describe('getRequestUrl', () => {
 
     const url = getRequestUrl(req, 8008);
 
-    expect(url.toString()).toBe('https://kortix.com/status?full=1');
+    expect(url.toString()).toBe('https://epsilon.com/status?full=1');
   });
 });

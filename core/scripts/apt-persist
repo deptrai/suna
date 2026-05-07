@@ -6,12 +6,12 @@
 #         apt-persist --list          Show saved packages
 #         apt-persist --remove <pkg>  Remove from manifest (doesn't uninstall)
 #
-# Manifest: /workspace/.kortix/packages/apt-packages.txt
+# Manifest: /workspace/.epsilon/packages/apt-packages.txt
 # One package per line. Restored at boot by 99-restore-packages init script.
 
 set -e
 
-MANIFEST="/workspace/.kortix/packages/apt-packages.txt"
+MANIFEST="/workspace/.epsilon/packages/apt-packages.txt"
 mkdir -p "$(dirname "$MANIFEST")"
 touch "$MANIFEST"
 

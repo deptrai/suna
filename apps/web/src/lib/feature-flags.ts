@@ -31,7 +31,7 @@ export const featureFlags = {
    *
    * When NEXT_PUBLIC_ENABLE_MULTI_PROJECT=true, the legacy multi-project UI
    * (board, milestones, members, project agents/credentials/templates) is
-   * surfaced. The sandbox MUST also have KORTIX_PROJECTS_ENABLED=true for the
+   * surfaced. The sandbox MUST also have EPSILON_PROJECTS_ENABLED=true for the
    * LLM-side project/ticket tools to register; without that the UI exists but
    * tool calls 503.
    */

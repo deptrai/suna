@@ -6,7 +6,7 @@
  * { messages: Message[], parts: Record<messageId, Part[]>, updatedAt: number }
  */
 
-const DB_NAME = "kortix-session-cache";
+const DB_NAME = "epsilon-session-cache";
 const DB_VERSION = 1;
 const STORE_NAME = "sessions";
 const MAX_CACHED_SESSIONS = 50;

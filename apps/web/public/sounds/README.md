@@ -9,7 +9,7 @@ sounds/
     error.mp3        <-- plays on session error
     notification.mp3 <-- plays for questions / permission requests
     send.mp3         <-- plays when user sends a message
-  kortix/            <-- Kortix branded pack
+  epsilon/            <-- Epsilon branded pack
     completion.mp3
     error.mp3
     notification.mp3

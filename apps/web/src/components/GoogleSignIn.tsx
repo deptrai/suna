@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { authRedirectUrl } from '@/lib/desktop';
 import { toast } from '@/lib/toast';
-import { KortixLoader } from '@/components/ui/kortix-loader';
+import { EpsilonLoader } from '@/components/ui/epsilon-loader';
 import { Button } from '@/components/ui/button';
 import { useTranslations } from 'next-intl';
 
@@ -53,7 +53,7 @@ export default function GoogleSignIn({ returnUrl, referralCode }: GoogleSignInPr
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          // Desktop: bounce back via the kortix:// scheme so the OS hands
+          // Desktop: bounce back via the epsilon:// scheme so the OS hands
           // the callback to the desktop app. The OAuth navigation itself is
           // intercepted by the Tauri shell and opened in the system browser
           // (Google rejects embedded webviews with `disallowed_useragent`).
@@ -81,7 +81,7 @@ export default function GoogleSignIn({ returnUrl, referralCode }: GoogleSignInPr
       type="button"
     >
       {isLoading ? (
-        <KortixLoader size="small" />
+        <EpsilonLoader size="small" />
       ) : (
         <GoogleIcon className="w-4 h-4" />
       )}

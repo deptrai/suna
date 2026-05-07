@@ -1,7 +1,7 @@
 /**
- * @kortix/shared
+ * @epsilon/shared
  *
- * Shared TypeScript code for Kortix frontend applications.
+ * Shared TypeScript code for Epsilon frontend applications.
  * Contains utilities, error classes, and tool metadata.
  */
 

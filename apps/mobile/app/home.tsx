@@ -1,5 +1,5 @@
 /**
- * Home — Main app screen for Kortix Computer Mobile.
+ * Home — Main app screen for Epsilon Computer Mobile.
  *
  * Uses a drawer layout:
  * - Drawer: Session list + "New Session" button
@@ -56,7 +56,7 @@ import { ViewChangesSheet } from '@/components/session/ViewChangesSheet';
 import { ExportTranscriptSheet } from '@/components/session/ExportTranscriptSheet';
 import { ProjectsPage } from '@/components/pages/ProjectsPage';
 import { ProjectDetailPage } from '@/components/pages/ProjectDetailPage';
-import { useKortixProjects, type KortixProject } from '@/lib/kortix';
+import { useEpsilonProjects, type EpsilonProject } from '@/lib/epsilon';
 import { LegacyChatsSection } from '@/components/menu/LegacyChatsSection';
 import { haptics } from '@/lib/haptics';
 import { useGlobalSandboxUpdate } from '@/hooks/useSandboxUpdate';
@@ -91,7 +91,7 @@ import {
 } from 'lucide-react-native';
 import type { BottomBarMenuItem } from '@/components/session/BottomBar';
 import { log } from '@/lib/logger';
-import { KortixLogo } from '@/components/ui/KortixLogo';
+import { EpsilonLogo } from '@/components/ui/EpsilonLogo';
 import { useTabScreenshotStore, validatePersistedScreenshots } from '@/stores/tab-screenshot-store';
 
 // Safe import of react-native-view-shot — requires native rebuild.
@@ -244,7 +244,7 @@ function ConnectingToWorkspace({
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: isDark ? '#09090b' : '#FFFFFF', paddingHorizontal: 40 }}>
       <View style={{ flexDirection: 'column', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-        <KortixLogo size={22} variant="symbol" color={isDark ? 'dark' : 'light'} />
+        <EpsilonLogo size={22} variant="symbol" color={isDark ? 'dark' : 'light'} />
         <Text style={{ fontSize: 13, fontFamily: 'Roobert', letterSpacing: 2, textTransform: 'uppercase', color: isDark ? 'rgba(248,248,248,0.3)' : 'rgba(18,18,21,0.3)' }}>
           Connecting to Workspace
         </Text>
@@ -593,7 +593,7 @@ export default function HomeScreen() {
       // Check if we previously completed setup (persisted across app restarts).
       // If so, keep polling longer before showing wizard — the sandbox is likely
       // just booting and the env isn't populated yet.
-      const SETUP_DONE_KEY = 'kortix-instance-setup-done';
+      const SETUP_DONE_KEY = 'epsilon-instance-setup-done';
       const wasSetupDone = (await AsyncStorage.getItem(SETUP_DONE_KEY)) === '1';
       const maxWaitMs = wasSetupDone ? 90_000 : 60_000;
       const pollMs = 3_000;
@@ -719,7 +719,7 @@ export default function HomeScreen() {
 
   const handleSetupComplete = useCallback(() => {
     // Persist that setup completed so we don't show wizard on next boot
-    AsyncStorage.setItem('kortix-instance-setup-done', '1').catch(() => {});
+    AsyncStorage.setItem('epsilon-instance-setup-done', '1').catch(() => {});
     setSetupState('onboarding');
   }, []);
 
@@ -809,13 +809,13 @@ export default function HomeScreen() {
   // Data
   const { data: sessions = [], isLoading: sessionsLoading } =
     useSessions(sandboxUrl);
-  const { data: kortixProjects } = useKortixProjects(sandboxUrl);
+  const { data: epsilonProjects } = useEpsilonProjects(sandboxUrl);
   const sortedProjects = useMemo(() => {
-    if (!kortixProjects || !Array.isArray(kortixProjects)) return [];
-    return [...kortixProjects].sort(
-      (a: KortixProject, b: KortixProject) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    if (!epsilonProjects || !Array.isArray(epsilonProjects)) return [];
+    return [...epsilonProjects].sort(
+      (a: EpsilonProject, b: EpsilonProject) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
     );
-  }, [kortixProjects]);
+  }, [epsilonProjects]);
   const createSession = useCreateSession(sandboxUrl);
   const deleteSession = useDeleteSession(sandboxUrl);
   const archiveSession = useArchiveSession(sandboxUrl);
@@ -946,7 +946,7 @@ export default function HomeScreen() {
     setDrawerOpen(false);
   }, [navigateToSession]);
 
-  const handleProjectPress = useCallback((project: KortixProject) => {
+  const handleProjectPress = useCallback((project: EpsilonProject) => {
     const pageId = `page:project:${project.id}`;
     useTabStore.getState().setTabState(pageId, { projectName: project.name });
     useTabStore.getState().navigateToPage(pageId);
@@ -1161,7 +1161,7 @@ export default function HomeScreen() {
     if (isSigningOut) return;
     Alert.alert(
       'Sign out',
-      'Sign out of Kortix?',
+      'Sign out of Epsilon?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -1192,9 +1192,9 @@ export default function HomeScreen() {
         className="flex-1 bg-chrome-background"
         style={{ paddingTop: insets.top }}
       >
-        {/* Kortix wordmark */}
+        {/* Epsilon wordmark */}
         <View className="flex-row items-center justify-between px-5 pt-3 pb-4">
-          <KortixLogo variant="logomark" size={18} color={isDark ? 'dark' : 'light'} />
+          <EpsilonLogo variant="logomark" size={18} color={isDark ? 'dark' : 'light'} />
         </View>
 
         {/* Top-level actions: New session / Search / Files */}
@@ -1239,7 +1239,7 @@ export default function HomeScreen() {
 
             <AnimatedCollapsible expanded={projectsExpanded}>
               <View className="px-2 pb-2">
-                {sortedProjects.map((project: KortixProject) => (
+                {sortedProjects.map((project: EpsilonProject) => (
                   <TouchableOpacity
                     key={project.id}
                     onPress={() => { haptics.tap(); handleProjectPress(project); }}
@@ -1873,7 +1873,7 @@ export default function HomeScreen() {
                       <Ionicons name="menu" size={24} color={isDark ? '#F8F8F8' : '#121215'} />
                     </TouchableOpacity>
                     <Text className="text-lg font-bold text-foreground">
-                      Kortix
+                      Epsilon
                     </Text>
                   </View>
                   <TouchableOpacity

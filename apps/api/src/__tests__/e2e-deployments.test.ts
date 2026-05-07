@@ -1,7 +1,7 @@
 /**
  * E2E tests for deployment routes — CRUD, lifecycle, cross-user isolation.
  *
- * Requires TEST_DATABASE_URL + KORTIX_TEST_DB_CONFIRM for DB-backed deployment tests.
+ * Requires TEST_DATABASE_URL + EPSILON_TEST_DB_CONFIRM for DB-backed deployment tests.
  *
  * Freestyle API calls will fail (no real API key in tests) — deployments are
  * created in DB with status 'failed'. This tests the full request/response

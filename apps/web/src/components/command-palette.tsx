@@ -43,7 +43,7 @@ import {
 import { useSidebar } from '@/components/ui/sidebar';
 import {
   useOpenCodeSessions,
-  // useOpenCodeProjects — replaced by Kortix projects
+  // useOpenCodeProjects — replaced by Epsilon projects
   useOpenCodeAgents,
   useOpenCodeProviders,
 } from '@/hooks/opencode/use-opencode-sessions';
@@ -71,11 +71,11 @@ import {
   MODEL_SELECTOR_PROVIDER_IDS,
 } from '@/components/providers/provider-branding';
 import { useWorkspaceSearch, useFilesStore } from '@/features/files';
-import { useKortixProjects, type KortixProject } from '@/hooks/kortix/use-kortix-projects';
+import { useEpsilonProjects, type EpsilonProject } from '@/hooks/epsilon/use-epsilon-projects';
 import { useOpenCodeMessages } from '@/hooks/opencode/use-opencode-sessions';
 import { useMessageJumpStore } from '@/stores/message-jump-store';
 import { groupMessagesIntoTurns, isTextPart, type TextPart } from '@/ui';
-import { stripKortixSystemTags } from '@/lib/utils/kortix-system-tags';
+import { stripEpsilonSystemTags } from '@/lib/utils/epsilon-system-tags';
 
 import { getFileIcon } from '@/features/files/components/file-icon';
 import type { FindMatch } from '@/features/files';
@@ -288,7 +288,7 @@ function MessagesPage({
       .map((turn) => {
         const textParts = turn.userMessage.parts.filter(isTextPart) as TextPart[];
         const raw = textParts.map((p) => p.text).join(' ');
-        const stripped = stripKortixSystemTags(raw).replace(/<[^>]+>/g, '').trim();
+        const stripped = stripEpsilonSystemTags(raw).replace(/<[^>]+>/g, '').trim();
         return {
           id: turn.userMessage.info.id,
           text: stripped,
@@ -378,8 +378,8 @@ export function CommandPalette() {
   const { data: sessions } = useOpenCodeSessions();
   // Skip the projects query when the multi-project paradigm is off — the
   // palette never lists projects in default mode and the sandbox-side
-  // /kortix/projects route 503s in that mode.
-  const { data: projects } = useKortixProjects(undefined, { enabled: featureFlags.enableMultiProject });
+  // /epsilon/projects route 503s in that mode.
+  const { data: projects } = useEpsilonProjects(undefined, { enabled: featureFlags.enableMultiProject });
   const { data: agents } = useOpenCodeAgents();
   const { data: providers } = useOpenCodeProviders();
 
@@ -897,7 +897,7 @@ export function CommandPalette() {
   const handleRestartConfig = useCallback(() => {
     close();
     const serverUrl = useServerStore.getState().getActiveServerUrl();
-    authenticatedFetch(`${serverUrl}/kortix/services/system/reload`, {
+    authenticatedFetch(`${serverUrl}/epsilon/services/system/reload`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mode: 'dispose-only' }),
     }).then((res) => {
@@ -909,7 +909,7 @@ export function CommandPalette() {
   const handleRestartFull = useCallback(() => {
     close();
     const serverUrl = useServerStore.getState().getActiveServerUrl();
-    authenticatedFetch(`${serverUrl}/kortix/services/system/reload`, {
+    authenticatedFetch(`${serverUrl}/epsilon/services/system/reload`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mode: 'full' }),
     }).then((res) => {

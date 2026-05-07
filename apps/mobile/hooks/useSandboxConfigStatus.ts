@@ -3,7 +3,7 @@
  * data flow (apps/web/src/components/sidebar/sidebar-left.tsx).
  *
  * Polls the sandbox's /config/status endpoint (fail-soft diagnostics) and
- * exposes a mutation that creates + starts a Kortix task to repair the
+ * exposes a mutation that creates + starts a Epsilon task to repair the
  * skipped config source, mirroring the web "Fix" / "Prompt" behavior.
  */
 
@@ -106,7 +106,7 @@ export function useSandboxConfigStatus() {
     queryKey: ['sandbox-config-projects', sandboxId, sandboxUrl],
     enabled: !!sandboxUrl && hasProblem,
     queryFn: async () => {
-      const data = await opencodeFetch<unknown>(sandboxUrl!, '/kortix/projects');
+      const data = await opencodeFetch<unknown>(sandboxUrl!, '/epsilon/projects');
       return Array.isArray(data) ? data as SandboxProjectSummary[] : [];
     },
     staleTime: 30_000,
@@ -127,7 +127,7 @@ export function useSandboxConfigStatus() {
       if (!sandboxUrl || !configStatus || configStatus.valid) {
         throw new Error('No invalid config source is currently being skipped.');
       }
-      const targetProject = configFixProject ?? await opencodeFetch<SandboxProjectSummary>(sandboxUrl, '/kortix/projects', {
+      const targetProject = configFixProject ?? await opencodeFetch<SandboxProjectSummary>(sandboxUrl, '/epsilon/projects', {
         method: 'POST',
         body: JSON.stringify({
           name: 'Workspace',
@@ -136,7 +136,7 @@ export function useSandboxConfigStatus() {
         }),
       });
 
-      const task = await opencodeFetch<{ id: string }>(sandboxUrl, '/kortix/tasks', {
+      const task = await opencodeFetch<{ id: string }>(sandboxUrl, '/epsilon/tasks', {
         method: 'POST',
         body: JSON.stringify({
           project_id: targetProject.id,
@@ -149,7 +149,7 @@ export function useSandboxConfigStatus() {
         }),
       });
 
-      await opencodeFetch(sandboxUrl, `/kortix/tasks/${encodeURIComponent(task.id)}/start`, {
+      await opencodeFetch(sandboxUrl, `/epsilon/tasks/${encodeURIComponent(task.id)}/start`, {
         method: 'POST',
       });
 

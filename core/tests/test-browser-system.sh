@@ -5,7 +5,7 @@
 #
 # Tests the persistent browser infrastructure end-to-end:
 #   - Chrome persistent instance (CDP on 9222)
-#   - agent-browser daemon (session "kortix", stream on 9223)
+#   - agent-browser daemon (session "epsilon", stream on 9223)
 #   - agent-browser viewer (HTTP on 9224)
 #   - Selkies desktop stream (HTTP on 6080)
 #
@@ -14,10 +14,10 @@
 #   bash /opt/tests/test-browser-system.sh
 #
 #   # Run from the host (against running container):
-#   docker exec kortix-sandbox bash /opt/tests/test-browser-system.sh
+#   docker exec epsilon-sandbox bash /opt/tests/test-browser-system.sh
 #
 #   # Run from the repo root:
-#   docker exec kortix-sandbox bash /workspace/computer/core/tests/test-browser-system.sh
+#   docker exec epsilon-sandbox bash /workspace/computer/core/tests/test-browser-system.sh
 #
 # Exit codes:
 #   0 = all tests passed
@@ -153,7 +153,7 @@ else
   fail "Daemon process running" "no daemon found"
 fi
 
-SOCKET_IN_KERNEL=$(grep -c "kortix.sock" /proc/net/unix 2>/dev/null || echo "0")
+SOCKET_IN_KERNEL=$(grep -c "epsilon.sock" /proc/net/unix 2>/dev/null || echo "0")
 if [ "$SOCKET_IN_KERNEL" -ge 1 ]; then
   pass "Daemon socket exists in kernel"
 else
@@ -214,7 +214,7 @@ echo "▸ 5. Viewer HTTP Server (port 9224)"
 assert_http_ok "Viewer serves HTML" "http://127.0.0.1:9224/"
 
 SESSIONS=$(curl -sf http://127.0.0.1:9224/sessions 2>/dev/null || echo "")
-assert_contains "Sessions API returns kortix" "kortix" "$SESSIONS"
+assert_contains "Sessions API returns epsilon" "epsilon" "$SESSIONS"
 assert_contains "Sessions API has port 9223" "9223" "$SESSIONS"
 
 # Test SSE stream endpoint
@@ -237,7 +237,7 @@ echo ""
 echo "▸ 7. Environment Variables"
 # --------------------------------------------------------------------------
 
-assert_eq "AGENT_BROWSER_SESSION=kortix" "kortix" "${AGENT_BROWSER_SESSION:-}"
+assert_eq "AGENT_BROWSER_SESSION=epsilon" "epsilon" "${AGENT_BROWSER_SESSION:-}"
 assert_eq "AGENT_BROWSER_HEADED=0" "0" "${AGENT_BROWSER_HEADED:-}"
 assert_eq "AGENT_BROWSER_SOCKET_DIR set" "/dev/shm/agent-browser" "${AGENT_BROWSER_SOCKET_DIR:-}"
 assert_eq "AGENT_BROWSER_IDLE_TIMEOUT_MS=0" "0" "${AGENT_BROWSER_IDLE_TIMEOUT_MS:-}"

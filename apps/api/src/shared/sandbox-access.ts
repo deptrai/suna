@@ -1,5 +1,5 @@
 import { and, desc, eq, sql } from 'drizzle-orm';
-import { sandboxes } from '@kortix/db';
+import { sandboxes } from '@epsilon/db';
 import { db } from './db';
 import { resolveAccountId } from './resolve-account';
 import { isPlatformAdmin } from './platform-roles';

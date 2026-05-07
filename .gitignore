@@ -66,10 +66,10 @@ dump.rdb
 test/
 
 # Core runtime data
-.kortix/
-apps/api/.kortix-data/
+.epsilon/
+apps/api/.epsilon-data/
 apps/api/.sandbox-auth-token.json
-core/kortix-master/opencode/.kortix/
+core/epsilon-master/opencode/.epsilon/
 **/.buildx-cache/
 
 .nx/

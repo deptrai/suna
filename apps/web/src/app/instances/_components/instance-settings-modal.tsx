@@ -257,7 +257,7 @@ function ConfigDegradationPanel({
       <div className="text-[11px] text-muted-foreground">
         {taskTargetLabel
           ? `The fix task will be created and started in ${taskTargetLabel}.`
-          : 'If this instance has no project yet, Kortix will create a Workspace project automatically before starting the fix task.'}
+          : 'If this instance has no project yet, Epsilon will create a Workspace project automatically before starting the fix task.'}
       </div>
     </section>
   );
@@ -437,7 +437,7 @@ export function InstanceSettingsModal({
   const isMobile = useIsMobile();
   const { data: adminRole } = useAdminRole();
   const isAdmin = !!adminRole?.isAdmin;
-  // Live version from /kortix/health for the currently-viewed instance.
+  // Live version from /epsilon/health for the currently-viewed instance.
   // The DB's metadata.version is a cache written once at create time and only
   // refreshed on successful updates — it can be null for older sandboxes and
   // drifts after an update landed inside the image without a DB write. The
@@ -572,7 +572,7 @@ export function InstanceSettingsModal({
     queryKey: ['sandbox', 'config-status-projects', sandbox?.sandbox_id, sandboxUrl],
     enabled: open && !!sandboxUrl && !!configStatusQuery.data && !configStatusQuery.data.valid,
     queryFn: async () => {
-      const data = await requestSandboxJson<unknown>(sandboxUrl!, '/kortix/projects');
+      const data = await requestSandboxJson<unknown>(sandboxUrl!, '/epsilon/projects');
       return Array.isArray(data) ? data as SandboxProjectSummary[] : [];
     },
     staleTime: 30_000,
@@ -595,7 +595,7 @@ export function InstanceSettingsModal({
       if (!configStatusQuery.data || configStatusQuery.data.valid) {
         throw new Error('No invalid config source is currently being skipped.');
       }
-      const targetProject = configFixProject ?? await requestSandboxJson<SandboxProjectSummary>(sandboxUrl, '/kortix/projects', {
+      const targetProject = configFixProject ?? await requestSandboxJson<SandboxProjectSummary>(sandboxUrl, '/epsilon/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -605,7 +605,7 @@ export function InstanceSettingsModal({
         }),
       });
 
-      const task = await requestSandboxJson<{ id: string }>(sandboxUrl, '/kortix/tasks', {
+      const task = await requestSandboxJson<{ id: string }>(sandboxUrl, '/epsilon/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -617,7 +617,7 @@ export function InstanceSettingsModal({
         }),
       });
 
-      await requestSandboxJson(sandboxUrl, `/kortix/tasks/${encodeURIComponent(task.id)}/start`, {
+      await requestSandboxJson(sandboxUrl, `/epsilon/tasks/${encodeURIComponent(task.id)}/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -1413,14 +1413,14 @@ export function InstanceSettingsModal({
               <div className="rounded-xl border border-border/60 bg-muted/10 p-4 space-y-3">
                 <div className="text-sm font-medium">Deep debugging</div>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  If you SSH into the host machine itself, you can inspect the running Kortix container directly. Typical flow: run <span className="font-mono text-foreground">docker ps</span>, identify the <span className="font-mono text-foreground">kortix/computer</span> container or <span className="font-mono text-foreground">justavps-workload</span> name, then exec into it for full root access inside the container.
+                  If you SSH into the host machine itself, you can inspect the running Epsilon container directly. Typical flow: run <span className="font-mono text-foreground">docker ps</span>, identify the <span className="font-mono text-foreground">epsilon/computer</span> container or <span className="font-mono text-foreground">justavps-workload</span> name, then exec into it for full root access inside the container.
                 </p>
                 <div className="grid gap-3 md:grid-cols-2">
                   <CopyField label="List running containers" value="docker ps" />
-                  <CopyField label="Open running Kortix container" value="docker exec -it justavps-workload bash" />
+                  <CopyField label="Open running Epsilon container" value="docker exec -it justavps-workload bash" />
                 </div>
                 <div className="rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-[11px] text-muted-foreground">
-                  Inside the container, you can inspect <span className="font-mono text-foreground">/workspace</span>, verify runtime state, and debug the live Kortix environment directly.
+                  Inside the container, you can inspect <span className="font-mono text-foreground">/workspace</span>, verify runtime state, and debug the live Epsilon environment directly.
                 </div>
               </div>
           </div>

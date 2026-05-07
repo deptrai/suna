@@ -76,7 +76,7 @@ export function ChannelSettingsDialog({ channel, open, onOpenChange, onUpdated }
   useEffect(() => {
     if (channel) {
       setName(channel.name);
-      setAgentName(channel.default_agent || 'kortix');
+      setAgentName(channel.default_agent || 'epsilon');
       setBridgeInstructions(channel.bridge_instructions || '');
       setInstructions(channel.instructions || '');
       setEnabled(channel.enabled);
@@ -86,7 +86,7 @@ export function ChannelSettingsDialog({ channel, open, onOpenChange, onUpdated }
         const [providerID, ...rest] = channel.default_model.split('/');
         setSelectedModel({ providerID, modelID: rest.join('/') });
       } else if (channel.default_model) {
-        setSelectedModel({ providerID: 'kortix', modelID: channel.default_model });
+        setSelectedModel({ providerID: 'epsilon', modelID: channel.default_model });
       } else {
         setSelectedModel(null);
       }
@@ -105,7 +105,7 @@ export function ChannelSettingsDialog({ channel, open, onOpenChange, onUpdated }
         ? `${selectedModel.providerID}/${selectedModel.modelID}`
         : '';
 
-      const res = await authenticatedFetch(`${url}/kortix/channels/${channel.id}`, {
+      const res = await authenticatedFetch(`${url}/epsilon/channels/${channel.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

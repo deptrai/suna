@@ -16,26 +16,26 @@
 # For pure code changes (TypeScript, agents, skills, tools):
 #   Edit the file → it's already live in the container
 #   Restart the service if needed:
-#     docker exec kortix-sandbox s6-svc -r /run/service/svc-kortix-master
+#     docker exec epsilon-sandbox s6-svc -r /run/service/svc-epsilon-master
 #
 # Note: volume host paths are relative to this compose file's directory (core/docker/)
 
 services:
   desktop:
     environment:
-      - KORTIX_DEV_MODE=1
+      - EPSILON_DEV_MODE=1
     volumes:
       # Bind-mount local source over the prebaked /opt dirs
-      # All packages now live inside core/kortix-master/
-      - ../kortix-master/src:/ephemeral/kortix-master/src:ro
-      - ../kortix-master/opencode/plugin:/ephemeral/kortix-master/opencode/plugin:ro
-      - ../kortix-master/opencode/agents:/ephemeral/kortix-master/opencode/agents:ro
-      - ../kortix-master/opencode/commands:/ephemeral/kortix-master/opencode/commands:ro
-      - ../kortix-master/opencode/skills:/ephemeral/kortix-master/opencode/skills:ro
-      - ../kortix-master/opencode/tools:/ephemeral/kortix-master/opencode/tools:ro
-      - ../kortix-master/opencode/patches:/ephemeral/kortix-master/opencode/patches:ro
-      - ../kortix-master/opencode/opencode.jsonc:/ephemeral/kortix-master/opencode/opencode.jsonc:ro
-      - ../kortix-master/channels/src:/ephemeral/kortix-master/channels/src:ro
-      - ../kortix-master/triggers/src:/ephemeral/kortix-master/triggers/src:ro
+      # All packages now live inside core/epsilon-master/
+      - ../epsilon-master/src:/ephemeral/epsilon-master/src:ro
+      - ../epsilon-master/opencode/plugin:/ephemeral/epsilon-master/opencode/plugin:ro
+      - ../epsilon-master/opencode/agents:/ephemeral/epsilon-master/opencode/agents:ro
+      - ../epsilon-master/opencode/commands:/ephemeral/epsilon-master/opencode/commands:ro
+      - ../epsilon-master/opencode/skills:/ephemeral/epsilon-master/opencode/skills:ro
+      - ../epsilon-master/opencode/tools:/ephemeral/epsilon-master/opencode/tools:ro
+      - ../epsilon-master/opencode/patches:/ephemeral/epsilon-master/opencode/patches:ro
+      - ../epsilon-master/opencode/opencode.jsonc:/ephemeral/epsilon-master/opencode/opencode.jsonc:ro
+      - ../epsilon-master/channels/src:/ephemeral/epsilon-master/channels/src:ro
+      - ../epsilon-master/triggers/src:/ephemeral/epsilon-master/triggers/src:ro
       # Service scripts (baked-in JS for static-web, agent-browser-viewer)
       - ../services:/ephemeral/services:ro

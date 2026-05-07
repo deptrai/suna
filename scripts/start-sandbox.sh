@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# start-sandbox.sh — Kortix sandbox Docker workload setup
+# start-sandbox.sh — Epsilon sandbox Docker workload setup
 #
 # Runs once during image build. The snapshot preserves everything for future boots.
 # On boot from snapshot, the systemd service waits for fresh env vars before starting.
@@ -18,7 +18,7 @@ PORTS_FILE="/etc/justavps/docker-host-ports"
 CONTAINER="justavps-workload"
 VOLUME="justavps-data"
 SERVICE="justavps-docker"
-STARTUP_PATCH="/usr/local/bin/kortix-startup-patch.sh"
+STARTUP_PATCH="/usr/local/bin/epsilon-startup-patch.sh"
 
 # ── Sandbox port map ─────────────────────────────────────────────────────
 PORTS=(
@@ -43,12 +43,12 @@ stage_callback() {
 
 wait_for() {
   local desc="$1"; shift
-  echo "[kortix] Waiting for ${desc}..."
+  echo "[epsilon] Waiting for ${desc}..."
   for i in $(seq 1 120); do
     "$@" && return 0
     sleep 2
   done
-  echo "[kortix] Timed out waiting for ${desc}"
+  echo "[epsilon] Timed out waiting for ${desc}"
 }
 
 # ── Build port args ───────────────────────────────────────────────────────
@@ -60,7 +60,7 @@ for mapping in "${PORTS[@]}"; do
 done
 
 # ── Write docker start script (baked into snapshot) ───────────────────────
-curl -fsSL https://raw.githubusercontent.com/kortix-ai/suna/main/core/startup.sh -o "${STARTUP_PATCH}"
+curl -fsSL https://raw.githubusercontent.com/epsilon-ai/chainlens/main/core/startup.sh -o "${STARTUP_PATCH}"
 chmod +x "${STARTUP_PATCH}"
 
 cat > /usr/local/bin/${SERVICE}-start.sh << STARTEOF
@@ -73,8 +73,8 @@ for i in \$(seq 1 120); do
     if [ "\$ENV_MTIME" -gt "\$BOOT_TIME" ]; then
       break
     fi
-    if grep -Eq '^(INTERNAL_SERVICE_KEY|KORTIX_TOKEN|KORTIX_API_URL)=' "${ENV_FILE}" 2>/dev/null; then
-      echo "[kortix] Reusing persisted env file ${ENV_FILE}"
+    if grep -Eq '^(INTERNAL_SERVICE_KEY|EPSILON_TOKEN|EPSILON_API_URL)=' "${ENV_FILE}" 2>/dev/null; then
+      echo "[epsilon] Reusing persisted env file ${ENV_FILE}"
       break
     fi
   fi
@@ -82,7 +82,7 @@ for i in \$(seq 1 120); do
 done
 [ -s "${ENV_FILE}" ] || touch "${ENV_FILE}"
 docker rm -f ${CONTAINER} 2>/dev/null || true
-exec docker run --rm --name ${CONTAINER} --env-file "${ENV_FILE}" -e KORTIX_ENABLE_INNER_DOCKER=0 \\
+exec docker run --rm --name ${CONTAINER} --env-file "${ENV_FILE}" -e EPSILON_ENABLE_INNER_DOCKER=0 \\
   --privileged --cap-add SYS_ADMIN --security-opt seccomp=unconfined --shm-size 2g \\
   -v ${STARTUP_PATCH}:/ephemeral/startup.sh:ro -v ${VOLUME}:/workspace -v ${VOLUME}:/config ${PORT_ARGS} \\
   ${DOCKER_IMAGE}
@@ -92,7 +92,7 @@ chmod +x /usr/local/bin/${SERVICE}-start.sh
 # ── Systemd service ───────────────────────────────────────────────────────
 cat > /etc/systemd/system/${SERVICE}.service << SVCEOF
 [Unit]
-Description=Kortix sandbox workload
+Description=Epsilon sandbox workload
 After=network-online.target docker.service
 Requires=docker.service
 Wants=network-online.target
@@ -116,8 +116,8 @@ printf '%s\n' "${HOST_PORTS[@]}" > "$PORTS_FILE"
 
 docker volume create ${VOLUME} 2>/dev/null || true
 WS=$(docker volume inspect ${VOLUME} --format '{{.Mountpoint}}')
-mkdir -p "${WS}/.kortix"
-cat > "${WS}/.kortix/container.json" << CFGEOF
+mkdir -p "${WS}/.epsilon"
+cat > "${WS}/.epsilon/container.json" << CFGEOF
 {
   "image": "${DOCKER_IMAGE}",
   "name": "${CONTAINER}",
@@ -132,7 +132,7 @@ CFGEOF
 
 # ── Pull image ────────────────────────────────────────────────────────────
 stage_callback "docker_pulling" "Pulling Docker image..."
-echo "[kortix] Pulling $DOCKER_IMAGE..."
+echo "[epsilon] Pulling $DOCKER_IMAGE..."
 docker pull "$DOCKER_IMAGE"
 
 # ── Host SSH bridge into the sandbox container ───────────────────────────
@@ -143,16 +143,16 @@ id -u abc >/dev/null 2>&1 || useradd -m -s /bin/bash abc
 passwd -l abc >/dev/null 2>&1 || true
 usermod -aG docker abc >/dev/null 2>&1 || true
 
-cat > /usr/local/bin/kortix-authorized-keys << 'AUTHORIZEDKEYSEOF'
+cat > /usr/local/bin/epsilon-authorized-keys << 'AUTHORIZEDKEYSEOF'
 #!/bin/bash
 set -euo pipefail
 USER_NAME="${1:-}"
 [ "$USER_NAME" = "abc" ] || exit 0
 docker exec justavps-workload sh -lc 'cat /config/.ssh/authorized_keys 2>/dev/null' || true
 AUTHORIZEDKEYSEOF
-chmod +x /usr/local/bin/kortix-authorized-keys
+chmod +x /usr/local/bin/epsilon-authorized-keys
 
-cat > /usr/local/bin/kortix-container-shell << 'CONTAINERSHELLEOF'
+cat > /usr/local/bin/epsilon-container-shell << 'CONTAINERSHELLEOF'
 #!/bin/bash
 set -euo pipefail
 TTY_ARGS=(-i)
@@ -170,20 +170,20 @@ exec docker exec "${TTY_ARGS[@]}" \
   -e TERM="${TERM:-xterm-256color}" \
   justavps-workload bash -l
 CONTAINERSHELLEOF
-chmod +x /usr/local/bin/kortix-container-shell
+chmod +x /usr/local/bin/epsilon-container-shell
 
 mkdir -p /etc/ssh/sshd_config.d
-cat > /etc/ssh/sshd_config.d/kortix-sandbox.conf << 'SSHEOF'
+cat > /etc/ssh/sshd_config.d/epsilon-sandbox.conf << 'SSHEOF'
 Match User abc
     PasswordAuthentication no
     PubkeyAuthentication yes
-    AuthorizedKeysCommand /usr/local/bin/kortix-authorized-keys %u
+    AuthorizedKeysCommand /usr/local/bin/epsilon-authorized-keys %u
     AuthorizedKeysCommandUser root
     PermitTTY yes
     X11Forwarding no
     PermitTunnel no
     GatewayPorts no
-    ForceCommand /usr/local/bin/kortix-container-shell
+    ForceCommand /usr/local/bin/epsilon-container-shell
 SSHEOF
 
 systemctl reload ssh 2>/dev/null || systemctl reload sshd 2>/dev/null || true
@@ -197,7 +197,7 @@ wait_for "container" sh -c "docker ps --format '{{.Names}}' 2>/dev/null | grep -
 stage_callback "docker_running" "Docker container started"
 
 stage_callback "services_starting" "Services booting..."
-wait_for "services" sh -c "curl -sf http://localhost:8000/kortix/health >/dev/null 2>&1"
+wait_for "services" sh -c "curl -sf http://localhost:8000/epsilon/health >/dev/null 2>&1"
 stage_callback "services_ready" "All services are up"
 
-echo "[kortix] Sandbox ready."
+echo "[epsilon] Sandbox ready."

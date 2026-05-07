@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║  Kortix — Full Self-Hosted E2E Test                                        ║
+# ║  Epsilon — Full Self-Hosted E2E Test                                        ║
 # ║                                                                            ║
 # ║  Runs the complete flow a real user would experience:                      ║
 # ║    1. Clean slate (nuke any existing install)                              ║
 # ║    2. Build local Docker images                                            ║
-# ║    3. Run get-kortix.sh installer                                          ║
+# ║    3. Run get-epsilon.sh installer                                          ║
 # ║    4. Wait for all services to be healthy                                  ║
 # ║    5. Run Playwright browser tests (auth, wizard, dashboard)               ║
 # ║                                                                            ║
@@ -20,16 +20,16 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-INSTALL_DIR="$HOME/.kortix"
+INSTALL_DIR="$HOME/.epsilon"
 INSTALL_LOG="$REPO_ROOT/test-results/install.log"
 
 # ── Config ────────────────────────────────────────────────────────────────────
-export E2E_OWNER_EMAIL="${E2E_OWNER_EMAIL:-test-e2e@kortix.ai}"
+export E2E_OWNER_EMAIL="${E2E_OWNER_EMAIL:-test-e2e@epsilon.ai}"
 export E2E_OWNER_PASSWORD="${E2E_OWNER_PASSWORD:-e2e-testpass-123}"
 export E2E_BASE_URL="${E2E_BASE_URL:-http://localhost:13737}"
 export E2E_API_URL="${E2E_API_URL:-http://localhost:13738/v1}"
 export E2E_SUPABASE_URL="${E2E_SUPABASE_URL:-http://localhost:13740}"
-export E2E_SANDBOX_HEALTH_URL="${E2E_SANDBOX_HEALTH_URL:-http://localhost:14000/kortix/health}"
+export E2E_SANDBOX_HEALTH_URL="${E2E_SANDBOX_HEALTH_URL:-http://localhost:14000/epsilon/health}"
 
 # ── Flags ─────────────────────────────────────────────────────────────────────
 SKIP_BUILD=false
@@ -60,7 +60,7 @@ mkdir -p test-results
 echo ""
 echo "${BOLD}${CYAN}"
 echo "  ╔═══════════════════════════════════════════════╗"
-echo "  ║  Kortix Self-Hosted E2E Test Suite            ║"
+echo "  ║  Epsilon Self-Hosted E2E Test Suite            ║"
 echo "  ╚═══════════════════════════════════════════════╝"
 echo "${NC}"
 
@@ -70,13 +70,13 @@ echo "${NC}"
 if [ "$BROWSER_ONLY" = "false" ] && [ "$SKIP_INSTALL" = "false" ]; then
   step "PHASE 1: Clean slate"
 
-  info "Stopping existing Kortix containers..."
-  docker ps -a --format '{{.Names}}' | grep -E '^kortix-' | xargs -r docker rm -f 2>/dev/null || true
+  info "Stopping existing Epsilon containers..."
+  docker ps -a --format '{{.Names}}' | grep -E '^epsilon-' | xargs -r docker rm -f 2>/dev/null || true
 
   info "Removing Docker volumes..."
-  docker volume ls --format '{{.Name}}' | grep -E 'kortix' | xargs -r docker volume rm -f 2>/dev/null || true
+  docker volume ls --format '{{.Name}}' | grep -E 'epsilon' | xargs -r docker volume rm -f 2>/dev/null || true
 
-  info "Removing Kortix installation dir..."
+  info "Removing Epsilon installation dir..."
   rm -rf "$INSTALL_DIR"
 
   info "Freeing ports..."
@@ -100,17 +100,17 @@ if [ "$SKIP_BUILD" = "false" ]; then
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# PHASE 3: Run get-kortix.sh installer
+# PHASE 3: Run get-epsilon.sh installer
 # ═══════════════════════════════════════════════════════════════════════════════
 if [ "$SKIP_INSTALL" = "false" ]; then
-  step "PHASE 3: Run get-kortix.sh installer"
+  step "PHASE 3: Run get-epsilon.sh installer"
 
-  export KORTIX_OWNER_EMAIL="$E2E_OWNER_EMAIL"
-  export KORTIX_OWNER_PASSWORD="$E2E_OWNER_PASSWORD"
+  export EPSILON_OWNER_EMAIL="$E2E_OWNER_EMAIL"
+  export EPSILON_OWNER_PASSWORD="$E2E_OWNER_PASSWORD"
 
   info "Running installer (local mode, Docker DB, skip integrations)..."
   # stdin: 1=local, 1=docker db, testpass123=confirm password, n=skip integrations
-  printf "1\n1\n${E2E_OWNER_PASSWORD}\nn\n" | bash scripts/get-kortix.sh --local >"$INSTALL_LOG" 2>&1 || {
+  printf "1\n1\n${E2E_OWNER_PASSWORD}\nn\n" | bash scripts/get-epsilon.sh --local >"$INSTALL_LOG" 2>&1 || {
     fail "Installer failed. Log: $INSTALL_LOG"
     tail -30 "$INSTALL_LOG"
     exit 1
@@ -145,8 +145,8 @@ wait_for_url() {
 wait_for_supabase_auth() {
   local base_url="$1" label="$2" max="${3:-60}"
   local anon_key=""
-  if [ -f "$HOME/.kortix/.env" ]; then
-    anon_key=$(grep -m1 '^SUPABASE_ANON_KEY=' "$HOME/.kortix/.env" | cut -d= -f2- || true)
+  if [ -f "$HOME/.epsilon/.env" ]; then
+    anon_key=$(grep -m1 '^SUPABASE_ANON_KEY=' "$HOME/.epsilon/.env" | cut -d= -f2- || true)
   fi
 
   for i in $(seq 1 "$max"); do

@@ -9,8 +9,8 @@ function DocsLogo() {
     <Link href="/docs" className="flex items-center gap-2.5 no-underline">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src="/kortix-symbol.svg"
-        alt="Kortix"
+        src="/epsilon-symbol.svg"
+        alt="Epsilon"
         className="dark:invert flex-shrink-0"
         style={{ width: 18, height: 18 }}
       />
@@ -41,7 +41,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           },
           {
             text: 'GitHub',
-            url: 'https://github.com/kortix-ai/suna',
+            url: 'https://github.com/epsilon-ai/chainlens',
             external: true,
           },
         ]}

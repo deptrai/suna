@@ -14,10 +14,10 @@ afterEach(() => {
 
 describe('JustAVPS provider bootstrap script resolution', () => {
   test('buildCustomerCloudInitScript embeds sandbox bootstrap', () => {
-    const script = buildCustomerCloudInitScript('kortix/computer:0.8.20');
-    expect(script).toContain('/usr/local/bin/kortix-start-sandbox.sh');
-    expect(script).toContain('kortix/computer:0.8.20');
-    expect(script).toContain('raw.githubusercontent.com/kortix-ai/suna/main/scripts/start-sandbox.sh');
+    const script = buildCustomerCloudInitScript('epsilon/computer:0.8.20');
+    expect(script).toContain('/usr/local/bin/epsilon-start-sandbox.sh');
+    expect(script).toContain('epsilon/computer:0.8.20');
+    expect(script).toContain('raw.githubusercontent.com/epsilon-ai/chainlens/main/scripts/start-sandbox.sh');
   });
 
   test('buildJustAVPSHostRecoveryCommand restarts the workload and verifies health', () => {
@@ -25,7 +25,7 @@ describe('JustAVPS provider bootstrap script resolution', () => {
     expect(command).toContain('systemctl start docker.service');
     expect(command).toContain('systemctl restart justavps-docker');
     expect(command).toContain('docker inspect --format="{{.State.Status}}" justavps-workload');
-    expect(command).toContain('curl -fsS http://localhost:8000/kortix/health');
+    expect(command).toContain('curl -fsS http://localhost:8000/epsilon/health');
   });
 
   test('create recovers a machine after provider returns 500 but machine exists', async () => {
@@ -43,7 +43,7 @@ describe('JustAVPS provider bootstrap script resolution', () => {
         return new Response(JSON.stringify({
           images: [{
             id: 'img-ready',
-            name: 'kortix-computer-v9.9.9',
+            name: 'epsilon-computer-v9.9.9',
             status: 'ready',
             created_at: new Date().toISOString(),
           }],
@@ -72,7 +72,7 @@ describe('JustAVPS provider bootstrap script resolution', () => {
             price_monthly: null,
             backups_enabled: true,
             source: 'user',
-            kortix_sandbox_id: null,
+            epsilon_sandbox_id: null,
             created_at: new Date().toISOString(),
             ready_at: null,
             urls: null,
@@ -101,7 +101,7 @@ describe('JustAVPS provider bootstrap script resolution', () => {
       accountId: 'acc12345-0000-4000-a000-000000000001',
       userId: 'user-1',
       name: 'Recovered sandbox',
-      envVars: { KORTIX_TOKEN: 'kortix_sb_test' },
+      envVars: { EPSILON_TOKEN: 'epsilon_sb_test' },
     } as any);
 
     expect(result.externalId).toBe('machine-recovered');

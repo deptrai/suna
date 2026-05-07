@@ -12,7 +12,7 @@ export const SANDBOX_VERSION = process.env.SANDBOX_VERSION || 'unknown';
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 export type SandboxProviderName = 'daytona' | 'local_docker' | 'justavps';
-export type InternalKortixEnv = 'dev' | 'staging' | 'prod';
+export type InternalEpsilonEnv = 'dev' | 'staging' | 'prod';
 
 // ─── Zod Helpers ────────────────────────────────────────────────────────────
 
@@ -49,7 +49,7 @@ const optBoolFalse = z.string().optional().default('false').transform((v) => v =
 
 // ─── Env Schema ─────────────────────────────────────────────────────────────
 //
-// Every env var that kortix-api reads is declared here.
+// Every env var that epsilon-api reads is declared here.
 // Categories:
 //   - REQUIRED:    server will not start without these
 //   - CONDITIONAL: required when a related feature is enabled
@@ -75,9 +75,9 @@ const envSchema = z.object({
   API_KEY_SECRET: z.string().min(1, 'API_KEY_SECRET is required — API key hashing will fail'),
 
   // ── Internal Deployment Controls (optional, safe defaults for self-hosted) ─
-  INTERNAL_KORTIX_ENV:              z.enum(['dev', 'staging', 'prod']).optional().default('dev'),
-  KORTIX_BILLING_INTERNAL_ENABLED:  optBoolFalse,  // NOTE: overridden by ENV_MODE=cloud below
-  KORTIX_DEPLOYMENTS_ENABLED:       optBoolFalse,
+  INTERNAL_EPSILON_ENV:              z.enum(['dev', 'staging', 'prod']).optional().default('dev'),
+  EPSILON_BILLING_INTERNAL_ENABLED:  optBoolFalse,  // NOTE: overridden by ENV_MODE=cloud below
+  EPSILON_DEPLOYMENTS_ENABLED:       optBoolFalse,
 
   // ── Search Providers (optional — features degrade gracefully) ────────────
   TAVILY_API_URL:              optUrl('https://api.tavily.com'),
@@ -126,31 +126,31 @@ const envSchema = z.object({
   // ── JustAVPS — Sandbox provisioning via JustAVPS API (conditional: required if justavps provider enabled) ──
   JUSTAVPS_API_URL:                   optStrDefault('http://localhost:3001'),
   JUSTAVPS_API_KEY:                   optStr,
-  JUSTAVPS_IMAGE_ID:                  optStr,   // Optional pin — if unset, auto-resolves latest kortix-computer-v* image from JustAVPS
+  JUSTAVPS_IMAGE_ID:                  optStr,   // Optional pin — if unset, auto-resolves latest epsilon-computer-v* image from JustAVPS
   JUSTAVPS_DEFAULT_LOCATION:          optStrDefault('hel1'),
   JUSTAVPS_DEFAULT_SERVER_TYPE:       optStrDefault('pro'),
-  JUSTAVPS_PROXY_DOMAIN:              optStrDefault('kortix.cloud'),  // CF Worker proxy domain ({slug}.kortix.cloud)
+  JUSTAVPS_PROXY_DOMAIN:              optStrDefault('epsilon.cloud'),  // CF Worker proxy domain ({slug}.epsilon.cloud)
   JUSTAVPS_WEBHOOK_SECRET:            optStr,   // HMAC secret for verifying JustAVPS webhook signatures
-  JUSTAVPS_WEBHOOK_URL:               optStr,   // URL where JustAVPS should send webhook events (e.g. https://api.kortix.com/v1/platform/webhooks/justavps)
+  JUSTAVPS_WEBHOOK_URL:               optStr,   // URL where JustAVPS should send webhook events (e.g. https://api.epsilon.com/v1/platform/webhooks/justavps)
 
   // ── Sandbox Pool (optional — pre-provision sandboxes for instant claiming) ──
   POOL_ENABLED:                optBoolFalse,
   POOL_MAX_AGE_HOURS:          optInt(24),
 
   // ── Sandbox Platform ──────────────────────────────────────────────────────
-  // KORTIX_URL is auto-derived from PORT if not explicitly set (see validateEnv).
-  KORTIX_URL:                  optStr,
-  KORTIX_YOLO_URL:             optUrl('https://api-yolo.kortix.com/v1'),
+  // EPSILON_URL is auto-derived from PORT if not explicitly set (see validateEnv).
+  EPSILON_URL:                  optStr,
+  EPSILON_YOLO_URL:             optUrl('https://api-yolo.epsilon.com/v1'),
   ALLOWED_SANDBOX_PROVIDERS:   optStrDefault('local_docker'),
   SANDBOX_IMAGE:               optStr,  // overridden below if empty
-  KORTIX_LOCAL_IMAGES:         optBoolFalse,
+  EPSILON_LOCAL_IMAGES:         optBoolFalse,
   DOCKER_HOST:                 optStr,
   SANDBOX_NETWORK:             optStr,
   SANDBOX_PORT_BASE:           optInt(14000),
   // Container name for the local Docker sandbox — configurable so dev and
   // self-hosted instances can coexist on the same Docker daemon.
   // Empty string treated as unset so env_file with missing key is safe.
-  SANDBOX_CONTAINER_NAME:      z.string().optional().transform(v => v || undefined).default('kortix-sandbox'),
+  SANDBOX_CONTAINER_NAME:      z.string().optional().transform(v => v || undefined).default('epsilon-sandbox'),
 
   // ── Internal Service Key (auto-generated if missing — never fails) ───────
   INTERNAL_SERVICE_KEY:        optStr,
@@ -189,8 +189,8 @@ const envSchema = z.object({
 
   // ── Mailtrap (optional — provisioning email notifications) ────────────────
   MAILTRAP_API_TOKEN:          optStr,
-  MAILTRAP_FROM_EMAIL:         optStrDefault('noreply@kortix.com'),
-  MAILTRAP_FROM_NAME:          optStrDefault('Kortix'),
+  MAILTRAP_FROM_EMAIL:         optStrDefault('noreply@epsilon.com'),
+  MAILTRAP_FROM_NAME:          optStrDefault('Epsilon'),
 
   // ── Better Stack Observability (optional — graceful degradation) ────────
   BETTERSTACK_API_LOG_TOKEN:   optStr,  // Logtail source token for structured logs
@@ -199,9 +199,9 @@ const envSchema = z.object({
 
   // ── Stray env vars used directly in other files (centralized here) ───────
   CORS_ALLOWED_ORIGINS:        optStr,
-  KORTIX_MASTER_URL:           optStr,
+  EPSILON_MASTER_URL:           optStr,
   OPENCODE_URL:                optStr,
-  KORTIX_DATA_DIR:             optStr,
+  EPSILON_DATA_DIR:             optStr,
 });
 
 // ─── Validation + Conditional Checks ────────────────────────────────────────
@@ -255,7 +255,7 @@ function validateEnv(): z.infer<typeof envSchema> {
   // ── Conditional: justavps → need JustAVPS keys ────────────────────────
   if (providers.includes('justavps')) {
     if (!raw.JUSTAVPS_API_KEY) issues.push({ var: 'JUSTAVPS_API_KEY', message: 'Required when ALLOWED_SANDBOX_PROVIDERS includes "justavps"', level: 'error' });
-    // JUSTAVPS_IMAGE_ID is optional — if unset, the provider auto-resolves the latest kortix-computer-v* image at runtime.
+    // JUSTAVPS_IMAGE_ID is optional — if unset, the provider auto-resolves the latest epsilon-computer-v* image at runtime.
   }
 
   // ── Conditional: Pipedream integration → warn if credentials missing ────
@@ -268,7 +268,7 @@ function validateEnv(): z.infer<typeof envSchema> {
   }
 
   // ── Conditional: Billing enabled → need Stripe keys ────────────────────
-  const billingWillBeEnabled = (raw as any).KORTIX_BILLING_INTERNAL_ENABLED === 'true' || (raw as any).KORTIX_BILLING_INTERNAL_ENABLED === true || (raw as any).ENV_MODE === 'cloud';
+  const billingWillBeEnabled = (raw as any).EPSILON_BILLING_INTERNAL_ENABLED === 'true' || (raw as any).EPSILON_BILLING_INTERNAL_ENABLED === true || (raw as any).ENV_MODE === 'cloud';
   if (billingWillBeEnabled) {
     if (!raw.STRIPE_SECRET_KEY)    issues.push({ var: 'STRIPE_SECRET_KEY',    message: 'Required when billing is enabled (ENV_MODE=cloud)', level: 'error' });
     if (!raw.STRIPE_WEBHOOK_SECRET) issues.push({ var: 'STRIPE_WEBHOOK_SECRET', message: 'Required when billing is enabled (ENV_MODE=cloud)', level: 'error' });
@@ -280,22 +280,22 @@ function validateEnv(): z.infer<typeof envSchema> {
     issues.push({ var: 'TUNNEL_SIGNING_SECRET', message: 'Required when tunnel is enabled — used for HMAC signing key derivation', level: 'error' });
   }
 
-  // ── Conditional: KORTIX_URL — required for sandbox routing ──────────────
+  // ── Conditional: EPSILON_URL — required for sandbox routing ──────────────
   // Used by every sandbox provider (local_docker, daytona, justavps),
   // channels webhook URL generation, pool env injection, and sandbox health.
   // Auto-derive from PORT in local mode if not set — fatal in cloud mode.
-  if (!raw.KORTIX_URL) {
+  if (!raw.EPSILON_URL) {
     const envMode = (raw as any).ENV_MODE || 'local';
     const port = (raw as any).PORT || '8008';
     if (envMode === 'cloud') {
-      issues.push({ var: 'KORTIX_URL', message: 'Required in cloud mode — sandbox routing, channels webhooks, and health checks will break', level: 'error' });
+      issues.push({ var: 'EPSILON_URL', message: 'Required in cloud mode — sandbox routing, channels webhooks, and health checks will break', level: 'error' });
     } else {
       // Auto-derive for local mode so it "just works"
       const derived = `http://localhost:${port}/v1/router`;
-      process.env.KORTIX_URL = derived;
-      if (result.success) (result.data as any).KORTIX_URL = derived;
-      console.warn(`[config] KORTIX_URL not set — auto-derived: ${derived}`);
-      issues.push({ var: 'KORTIX_URL', message: `Not set — auto-derived to ${derived} (add to .env to silence this)`, level: 'warn' });
+      process.env.EPSILON_URL = derived;
+      if (result.success) (result.data as any).EPSILON_URL = derived;
+      console.warn(`[config] EPSILON_URL not set — auto-derived: ${derived}`);
+      issues.push({ var: 'EPSILON_URL', message: `Not set — auto-derived to ${derived} (add to .env to silence this)`, level: 'warn' });
     }
   }
 
@@ -311,7 +311,7 @@ function validateEnv(): z.infer<typeof envSchema> {
   if (warnings.length > 0) {
     console.warn('');
     console.warn('\x1b[33m' + '='.repeat(70) + '\x1b[0m');
-    console.warn('\x1b[33m  kortix-api: Environment warnings\x1b[0m');
+    console.warn('\x1b[33m  epsilon-api: Environment warnings\x1b[0m');
     console.warn('\x1b[33m' + '='.repeat(70) + '\x1b[0m');
     for (const w of warnings) {
       console.warn(`\x1b[33m  ${w.var.padEnd(40)} ${w.message}\x1b[0m`);
@@ -323,7 +323,7 @@ function validateEnv(): z.infer<typeof envSchema> {
   if (errors.length > 0) {
     console.error('');
     console.error('\x1b[31m' + '='.repeat(70) + '\x1b[0m');
-    console.error('\x1b[31m  kortix-api: Environment validation FAILED — server cannot start\x1b[0m');
+    console.error('\x1b[31m  epsilon-api: Environment validation FAILED — server cannot start\x1b[0m');
     console.error('\x1b[31m' + '='.repeat(70) + '\x1b[0m');
     for (const e of errors) {
       console.error(`\x1b[31m  ${e.var.padEnd(40)} ${e.message}\x1b[0m`);
@@ -360,10 +360,10 @@ export const config = {
   ENV_MODE: env.ENV_MODE,
 
   // ─── Internal Deployment Controls ─────────────────────────────────────────
-  INTERNAL_KORTIX_ENV: env.INTERNAL_KORTIX_ENV as InternalKortixEnv,
+  INTERNAL_EPSILON_ENV: env.INTERNAL_EPSILON_ENV as InternalEpsilonEnv,
   // Billing is enabled when ENV_MODE is 'cloud' — no separate env var needed.
-  KORTIX_BILLING_INTERNAL_ENABLED: env.KORTIX_BILLING_INTERNAL_ENABLED || env.ENV_MODE === 'cloud',
-  KORTIX_DEPLOYMENTS_ENABLED: env.KORTIX_DEPLOYMENTS_ENABLED,
+  EPSILON_BILLING_INTERNAL_ENABLED: env.EPSILON_BILLING_INTERNAL_ENABLED || env.ENV_MODE === 'cloud',
+  EPSILON_DEPLOYMENTS_ENABLED: env.EPSILON_DEPLOYMENTS_ENABLED,
 
   // ─── Database ──────────────────────────────────────────────────────────────
   DATABASE_URL: env.DATABASE_URL,
@@ -417,7 +417,7 @@ export const config = {
   DAYTONA_API_KEY: env.DAYTONA_API_KEY,
   DAYTONA_SERVER_URL: env.DAYTONA_SERVER_URL,
   DAYTONA_TARGET: env.DAYTONA_TARGET,
-  DAYTONA_SNAPSHOT: env.DAYTONA_SNAPSHOT || `kortix-sandbox-v${SANDBOX_VERSION}`,
+  DAYTONA_SNAPSHOT: env.DAYTONA_SNAPSHOT || `epsilon-sandbox-v${SANDBOX_VERSION}`,
 
   // ─── JustAVPS (VPS Sandbox provisioning via JustAVPS) ────────────────────
   JUSTAVPS_API_URL: env.JUSTAVPS_API_URL,
@@ -434,25 +434,25 @@ export const config = {
   POOL_MAX_AGE_HOURS: env.POOL_MAX_AGE_HOURS,
 
   // ─── Sandbox Provisioning (Platform) ──────────────────────────────────────
-  KORTIX_URL: env.KORTIX_URL,
-  KORTIX_YOLO_URL: env.KORTIX_YOLO_URL,
+  EPSILON_URL: env.EPSILON_URL,
+  EPSILON_YOLO_URL: env.EPSILON_YOLO_URL,
   ALLOWED_SANDBOX_PROVIDERS: allowedProviders,
-  SANDBOX_IMAGE: env.SANDBOX_IMAGE || 'kortix/computer:latest',
-  KORTIX_LOCAL_IMAGES: env.KORTIX_LOCAL_IMAGES,
+  SANDBOX_IMAGE: env.SANDBOX_IMAGE || 'epsilon/computer:latest',
+  EPSILON_LOCAL_IMAGES: env.EPSILON_LOCAL_IMAGES,
   DOCKER_HOST: env.DOCKER_HOST,
   SANDBOX_NETWORK: env.SANDBOX_NETWORK,
   SANDBOX_PORT_BASE: env.SANDBOX_PORT_BASE,
   SANDBOX_CONTAINER_NAME: env.SANDBOX_CONTAINER_NAME,
 
   /**
-   * INTERNAL_SERVICE_KEY -- direction: kortix-api -> sandbox.
+   * INTERNAL_SERVICE_KEY -- direction: epsilon-api -> sandbox.
    *
-   * This is how kortix-api authenticates itself TO the sandbox. Every request
-   * from kortix-api to the sandbox (proxy, cron, health, queue drain, etc.)
+   * This is how epsilon-api authenticates itself TO the sandbox. Every request
+   * from epsilon-api to the sandbox (proxy, cron, health, queue drain, etc.)
    * includes `Authorization: Bearer <INTERNAL_SERVICE_KEY>`. The sandbox's
-   * kortix-master middleware validates it.
+   * epsilon-master middleware validates it.
    *
-   * Counterpart: KORTIX_TOKEN goes the other direction (sandbox -> kortix-api).
+   * Counterpart: EPSILON_TOKEN goes the other direction (sandbox -> epsilon-api).
    *
    * Auto-generated at startup if not provided -- always present.
    * Persisted to .env so the same key survives process restarts.
@@ -529,9 +529,9 @@ export const config = {
 
   // ─── Stray env vars (centralized from other files) ────────────────────────
   CORS_ALLOWED_ORIGINS: env.CORS_ALLOWED_ORIGINS,
-  KORTIX_MASTER_URL: env.KORTIX_MASTER_URL,
+  EPSILON_MASTER_URL: env.EPSILON_MASTER_URL,
   OPENCODE_URL: env.OPENCODE_URL,
-  KORTIX_DATA_DIR: env.KORTIX_DATA_DIR,
+  EPSILON_DATA_DIR: env.EPSILON_DATA_DIR,
 
   // ─── Helper Methods ────────────────────────────────────────────────────────
 
@@ -572,11 +572,11 @@ export const config = {
 // ─── Billing Markup Constants ────────────────────────────────────────────────
 //
 // Two pricing modes based on whose API key is used:
-//   * Kortix keys (user uses our keys):  1.2x provider cost (20% markup)
+//   * Epsilon keys (user uses our keys):  1.2x provider cost (20% markup)
 //   * User's own keys (passthrough):     0.1x provider cost (10% platform fee)
 
-/** Markup when Kortix provides the API key. */
-export const KORTIX_MARKUP = 1.2;
+/** Markup when Epsilon provides the API key. */
+export const EPSILON_MARKUP = 1.2;
 
 /** Platform fee when user provides their own API key. */
 export const PLATFORM_FEE_MARKUP = 0.1;

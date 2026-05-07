@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ─── Kortix env setup ───────────────────────────────────────────────────────
+# ─── Epsilon env setup ───────────────────────────────────────────────────────
 # Reads the root .env and generates per-service .env files.
 #
 # Usage:
@@ -66,8 +66,8 @@ write_env "apps/api/.env" \
   "# Core" \
   "PORT=8008" \
   "$(kv ENV_MODE local)" \
-  "$(kv INTERNAL_KORTIX_ENV dev)" \
-  "$(kv KORTIX_BILLING_INTERNAL_ENABLED false)" \
+  "$(kv INTERNAL_EPSILON_ENV dev)" \
+  "$(kv EPSILON_BILLING_INTERNAL_ENABLED false)" \
   "" \
   "# Database + Supabase (REQUIRED)" \
   "$(kv DATABASE_URL)" \
@@ -81,7 +81,7 @@ write_env "apps/api/.env" \
   "# Sandbox" \
   "$(kv ALLOWED_SANDBOX_PROVIDERS local_docker)" \
   "$(kv DOCKER_HOST)" \
-  "$(kv KORTIX_URL)" \
+  "$(kv EPSILON_URL)" \
   "$(kv FRONTEND_URL "$(e NEXT_PUBLIC_URL http://localhost:3000)")" \
   "" \
   "# Daytona (conditional — only if daytona provider enabled)" \
@@ -97,7 +97,7 @@ write_env "apps/api/.env" \
   "$(kv JUSTAVPS_DEFAULT_SERVER_TYPE pro)" \
   "$(kv JUSTAVPS_IMAGE_BUILD_LOCATION)" \
   "$(kv JUSTAVPS_IMAGE_BUILD_SERVER_TYPE)" \
-  "$(kv JUSTAVPS_PROXY_DOMAIN kortix.cloud)" \
+  "$(kv JUSTAVPS_PROXY_DOMAIN epsilon.cloud)" \
   "$(kv JUSTAVPS_WEBHOOK_SECRET)" \
   "$(kv JUSTAVPS_WEBHOOK_URL)" \
   "" \
@@ -144,11 +144,11 @@ write_env "apps/web/.env" \
   "$(kv NEXT_PUBLIC_APP_URL "$(e NEXT_PUBLIC_URL http://localhost:3000)")" \
   "$(kv NEXT_PUBLIC_URL http://localhost:3000)" \
   "$(kv NEXT_PUBLIC_BACKEND_URL http://localhost:8008/v1)" \
-  "$(kv NEXT_PUBLIC_SANDBOX_ID "$(e SANDBOX_CONTAINER_NAME kortix-sandbox)")" \
+  "$(kv NEXT_PUBLIC_SANDBOX_ID "$(e SANDBOX_CONTAINER_NAME epsilon-sandbox)")" \
   "" \
   "$(kv NEXT_PUBLIC_GOOGLE_CLIENT_ID)" \
   "$(kv NEXT_PUBLIC_POSTHOG_KEY)" \
-  "$(kv KORTIX_ADMIN_API_KEY)" \
+  "$(kv EPSILON_ADMIN_API_KEY)" \
   "" \
 
 echo ""

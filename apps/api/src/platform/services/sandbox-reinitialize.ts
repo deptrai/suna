@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { sandboxes, type Database } from '@kortix/db';
+import { sandboxes, type Database } from '@epsilon/db';
 import { createApiKey } from '../../repositories/api-keys';
 import type { SandboxProvider, SandboxStatus } from '../providers';
 import {
@@ -48,7 +48,7 @@ export async function reprovisionFailedJustAvpsSandbox(opts: {
     serverType: typeof existingMeta.serverType === 'string' ? existingMeta.serverType : undefined,
     location: typeof existingMeta.location === 'string' ? existingMeta.location : undefined,
     envVars: {
-      KORTIX_TOKEN: serviceKey,
+      EPSILON_TOKEN: serviceKey,
     },
   }, {
     onAttemptStart: async (attempt) => {

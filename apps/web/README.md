@@ -1,4 +1,4 @@
-# Kortix Frontend
+# Epsilon Frontend
 
 ## Quick Setup
 

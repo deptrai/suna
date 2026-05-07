@@ -1,5 +1,5 @@
 import { and, eq } from 'drizzle-orm';
-import { kortixApiKeys, sandboxes } from '@kortix/db';
+import { epsilonApiKeys, sandboxes } from '@epsilon/db';
 import { db } from '../shared/db';
 import { createApiKey } from '../repositories/api-keys';
 import { config, SANDBOX_VERSION } from '../config';
@@ -16,17 +16,17 @@ function getArg(flag: string): string | null {
 }
 
 function buildEnvPayload(serviceKey: string, metadata: Record<string, unknown>): Record<string, string> {
-  const sandboxApiBase = config.KORTIX_URL.replace(/\/v1\/router\/?$/, '');
+  const sandboxApiBase = config.EPSILON_URL.replace(/\/v1\/router\/?$/, '');
   const routerBase = `${sandboxApiBase}/v1/router`;
   const payload: Record<string, string> = {
-    KORTIX_API_URL: sandboxApiBase,
+    EPSILON_API_URL: sandboxApiBase,
     ENV_MODE: 'cloud',
     INTERNAL_SERVICE_KEY: serviceKey,
-    KORTIX_TOKEN: serviceKey,
-    KORTIX_SANDBOX_VERSION: SANDBOX_VERSION,
+    EPSILON_TOKEN: serviceKey,
+    EPSILON_SANDBOX_VERSION: SANDBOX_VERSION,
     SANDBOX_VERSION,
-    KORTIX_YOLO_API_KEY: serviceKey,
-    KORTIX_YOLO_URL: config.KORTIX_YOLO_URL,
+    EPSILON_YOLO_API_KEY: serviceKey,
+    EPSILON_YOLO_URL: config.EPSILON_YOLO_URL,
     TAVILY_API_URL: `${routerBase}/tavily`,
     REPLICATE_API_URL: `${routerBase}/replicate`,
     SERPER_API_URL: `${routerBase}/serper`,
@@ -103,12 +103,12 @@ for (const row of filtered) {
     }
 
     const existingKeys = await db
-      .select({ keyId: kortixApiKeys.keyId })
-      .from(kortixApiKeys)
-      .where(and(eq(kortixApiKeys.sandboxId, row.sandboxId), eq(kortixApiKeys.type, 'sandbox')));
+      .select({ keyId: epsilonApiKeys.keyId })
+      .from(epsilonApiKeys)
+      .where(and(eq(epsilonApiKeys.sandboxId, row.sandboxId), eq(epsilonApiKeys.type, 'sandbox')));
 
     for (const existing of existingKeys) {
-      await db.delete(kortixApiKeys).where(eq(kortixApiKeys.keyId, existing.keyId));
+      await db.delete(epsilonApiKeys).where(eq(epsilonApiKeys.keyId, existing.keyId));
     }
 
     const created = await createApiKey({
@@ -144,7 +144,7 @@ for (const row of filtered) {
       throw new Error(`Toolbox returned ${response.status}: ${await response.text()}`);
     }
 
-    const verify = await fetch(`https://8000--${slug}.${config.JUSTAVPS_PROXY_DOMAIN}/kortix/health`, {
+    const verify = await fetch(`https://8000--${slug}.${config.JUSTAVPS_PROXY_DOMAIN}/epsilon/health`, {
       headers: {
         'X-Proxy-Token': freshMetadata.justavpsProxyToken as string,
         Authorization: `Bearer ${created.secretKey}`,

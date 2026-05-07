@@ -1,6 +1,6 @@
 /**
  * useSandboxReachability — lightweight poller that tracks whether the
- * sandbox's /kortix/health endpoint is currently reachable.
+ * sandbox's /epsilon/health endpoint is currently reachable.
  *
  * Mirrors the web's sandbox-connection-store reachability tracking, but
  * scoped to a single hook call: the caller passes the sandboxUrl and we
@@ -19,7 +19,7 @@ const INITIAL_GRACE_MS = 3_000;
 export interface SandboxReachability {
   /** True once we've completed at least one probe. */
   checked: boolean;
-  /** Last known reachability. `true` = /kortix/health returned 200. */
+  /** Last known reachability. `true` = /epsilon/health returned 200. */
   reachable: boolean;
   /** ms timestamp when the sandbox first became unreachable. `null` when up. */
   downSince: number | null;

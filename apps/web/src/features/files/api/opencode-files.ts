@@ -1,11 +1,11 @@
 /**
- * OpenCode File API — filesystem access via the SDK client + kortix-master.
+ * OpenCode File API — filesystem access via the SDK client + epsilon-master.
  *
  * Read endpoints (list, read, status, find) go through the upstream
  * `@opencode-ai/sdk` client singleton which proxies to OpenCode.
  *
  * Write endpoints (upload, delete, mkdir, rename) and binary downloads
- * use `authenticatedFetch()` to hit kortix-master's /file/* routes
+ * use `authenticatedFetch()` to hit epsilon-master's /file/* routes
  * directly, since the upstream SDK has no write methods.
  */
 
@@ -339,7 +339,7 @@ export async function mkdirFile(dirPath: string): Promise<boolean> {
  * Upload a file to a specific path using the field-name-as-path convention.
  *
  * Sets the FormData field name to the desired relative path so
- * kortix-master's /file/upload endpoint places it correctly.
+ * epsilon-master's /file/upload endpoint places it correctly.
  */
 async function uploadToPath(
   filePath: string,

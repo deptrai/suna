@@ -22,7 +22,7 @@ import { useWebNotifications } from "@/hooks/use-web-notifications";
 import { backendApi } from "@/lib/api-client";
 import { getClient } from "@/lib/opencode-sdk";
 import { Button } from "@/components/ui/button";
-import { KortixLoader } from "@/components/ui/kortix-loader";
+import { EpsilonLoader } from "@/components/ui/epsilon-loader";
 import { featureFlags } from "@/lib/feature-flags";
 import { buildInstancePath, getActiveInstanceIdFromCookie, getCurrentInstanceIdFromPathname, normalizeAppPathname, setActiveInstanceCookie } from "@/lib/instance-routes";
 import { cn } from "@/lib/utils";
@@ -537,7 +537,7 @@ export default function DashboardLayoutContent({
 		try {
 			return (
 				localStorage.getItem(
-					`kortix-onboarding-complete:${routeInstanceId || "default"}`,
+					`epsilon-onboarding-complete:${routeInstanceId || "default"}`,
 				) === "true"
 			);
 		} catch {
@@ -581,7 +581,7 @@ export default function DashboardLayoutContent({
 		try {
 			const cached =
 				localStorage.getItem(
-					`kortix-onboarding-complete:${routeInstanceId || "default"}`,
+					`epsilon-onboarding-complete:${routeInstanceId || "default"}`,
 				) === "true";
 			setOnboardingChecked(cached);
 		} catch {
@@ -614,11 +614,11 @@ export default function DashboardLayoutContent({
 		// Persist skip/redo intent in sessionStorage so it survives auth redirects.
 		// The auth callback strips query params, so we stash the intent before redirect
 		// and check it after login when we land back on the dashboard.
-		if (wantsSkip) sessionStorage.setItem("kortix-onboarding-skip", "1");
-		if (wantsRedo) sessionStorage.setItem("kortix-onboarding-redo", "1");
+		if (wantsSkip) sessionStorage.setItem("epsilon-onboarding-skip", "1");
+		if (wantsRedo) sessionStorage.setItem("epsilon-onboarding-redo", "1");
 
-		const storedSkip = sessionStorage.getItem("kortix-onboarding-skip") === "1";
-		const storedRedo = sessionStorage.getItem("kortix-onboarding-redo") === "1";
+		const storedSkip = sessionStorage.getItem("epsilon-onboarding-skip") === "1";
+		const storedRedo = sessionStorage.getItem("epsilon-onboarding-redo") === "1";
 		const shouldSkip = wantsSkip || storedSkip;
 		const shouldRedo = wantsRedo || storedRedo;
 
@@ -635,7 +635,7 @@ export default function DashboardLayoutContent({
 			if (shouldSkip) {
 				const ok = await persistEnv("ONBOARDING_COMPLETE", "true");
 				if (!ok) return; // sandbox unreachable — keep intent, retry on next activeServerId change
-				sessionStorage.removeItem("kortix-onboarding-skip");
+				sessionStorage.removeItem("epsilon-onboarding-skip");
 				// Clean URL and let the normal check pass through
 				const clean = new URL(window.location.href);
 				clean.searchParams.delete("onboarding-skip");
@@ -647,7 +647,7 @@ export default function DashboardLayoutContent({
 				if (!ok) return; // sandbox unreachable — keep intent, retry on next activeServerId change
 				await persistEnv("ONBOARDING_SESSION_ID", "");
 				await persistEnv("ONBOARDING_COMMAND_FIRED", "");
-				sessionStorage.removeItem("kortix-onboarding-redo");
+				sessionStorage.removeItem("epsilon-onboarding-redo");
 				const clean = new URL(window.location.href);
 				clean.searchParams.delete("onboarding-redo");
 				window.history.replaceState({}, "", clean.pathname + clean.search);
@@ -695,7 +695,7 @@ export default function DashboardLayoutContent({
 					// Persist so subsequent cold loads skip this round-trip.
 					try {
 						localStorage.setItem(
-							`kortix-onboarding-complete:${routeInstanceId || "default"}`,
+							`epsilon-onboarding-complete:${routeInstanceId || "default"}`,
 							"true",
 						);
 					} catch {
@@ -707,7 +707,7 @@ export default function DashboardLayoutContent({
 					// Also clear any stale "onboarding complete" cache for this instance.
 					try {
 						localStorage.removeItem(
-							`kortix-onboarding-complete:${routeInstanceId || "default"}`,
+							`epsilon-onboarding-complete:${routeInstanceId || "default"}`,
 						);
 					} catch {
 						/* non-fatal */
@@ -756,7 +756,7 @@ export default function DashboardLayoutContent({
 				}
 
 				if (!sid) {
-					const s = await createSessionRef.current.mutateAsync({ title: "Kortix Onboarding" });
+					const s = await createSessionRef.current.mutateAsync({ title: "Epsilon Onboarding" });
 					persistEnv("ONBOARDING_SESSION_ID", s.id);
 					sid = s.id;
 					needsCmd = true;
@@ -770,7 +770,7 @@ export default function DashboardLayoutContent({
 				}
 
 				ob.setSessionId(sid);
-				useTabStore.getState().openTab({ id: sid, title: "Kortix Onboarding", type: "session", href: `/sessions/${sid}` });
+				useTabStore.getState().openTab({ id: sid, title: "Epsilon Onboarding", type: "session", href: `/sessions/${sid}` });
 			} catch (err) {
 				obCreating.current = false;
 				obRetries.current++;
@@ -1086,7 +1086,7 @@ export default function DashboardLayoutContent({
 						{ob.active && !ob.sessionId && !ob.showBoot && !ob.showSetup && (
 							<div className="absolute inset-0 z-10 flex items-center justify-center bg-background">
 								<div className="flex flex-col items-center gap-3">
-									<KortixLoader size="medium" />
+									<EpsilonLoader size="medium" />
 									<p className="text-xs text-muted-foreground">Setting up your workspace…</p>
 								</div>
 							</div>

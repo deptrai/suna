@@ -1916,7 +1916,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "kortix-desktop"
+name = "epsilon-desktop"
 version = "0.1.0"
 dependencies = [
  "darling",

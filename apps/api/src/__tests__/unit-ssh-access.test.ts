@@ -10,16 +10,16 @@ describe('ssh access helpers', () => {
       provider: 'justavps',
     });
 
-    expect(connection.key_name).toBe('kortix_204-168-249-53');
-    expect(connection.host_alias).toBe('kortix-204-168-249-53');
-    expect(connection.reconnect_command).toContain('ssh -i ~/.ssh/kortix_204-168-249-53');
+    expect(connection.key_name).toBe('epsilon_204-168-249-53');
+    expect(connection.host_alias).toBe('epsilon-204-168-249-53');
+    expect(connection.reconnect_command).toContain('ssh -i ~/.ssh/epsilon_204-168-249-53');
     expect(connection.reconnect_command).toContain('-p 22 abc@204.168.249.53');
-    expect(connection.ssh_config_entry).toContain('Host kortix-204-168-249-53');
+    expect(connection.ssh_config_entry).toContain('Host epsilon-204-168-249-53');
   });
 
   test('builds setup payload around the stable connection info', () => {
     const connection = buildSSHConnectionInfo({
-      host: 'api.kortix.dev',
+      host: 'api.epsilon.dev',
       port: 14007,
       username: 'abc',
       provider: 'local_docker',
@@ -28,10 +28,10 @@ describe('ssh access helpers', () => {
       connection,
       privateKey: 'PRIVATE-KEY',
       publicKey: 'ssh-ed25519 AAAA comment',
-      keyComment: 'kortix-api-kortix-dev',
+      keyComment: 'epsilon-api-epsilon-dev',
     });
 
-    expect(payload.setup_command).toContain('cat > ~/.ssh/kortix_api-kortix-dev');
+    expect(payload.setup_command).toContain('cat > ~/.ssh/epsilon_api-epsilon-dev');
     expect(payload.setup_command).toContain(connection.reconnect_command);
     expect(payload.agent_prompt).toContain(connection.host_alias);
     expect(payload.ssh_command).toBe(connection.reconnect_command);
@@ -41,13 +41,13 @@ describe('ssh access helpers', () => {
     const c = {
       req: {
         header(name: string) {
-          if (name === 'x-forwarded-host') return 'ssh.kortix.dev:8008';
+          if (name === 'x-forwarded-host') return 'ssh.epsilon.dev:8008';
           if (name === 'host') return 'localhost:8008';
           return null;
         },
       },
     } as any;
 
-    expect(resolvePublicSSHHost(c)).toBe('ssh.kortix.dev');
+    expect(resolvePublicSSHHost(c)).toBe('ssh.epsilon.dev');
   });
 });

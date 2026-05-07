@@ -12,19 +12,19 @@
 # ║    supabase stop           (stop all containers)                           ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 
-project_id = "kortix-local"
+project_id = "epsilon-local"
 
 # ─── API (PostgREST) ─────────────────────────────────────────────────────────
 [api]
 enabled = true
-port = 54321
-schemas = ["public", "kortix"]
+port = 54331
+schemas = ["public", "epsilon"]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
 
 # ─── Database ─────────────────────────────────────────────────────────────────
 [db]
-port = 54322
+port = 54332
 major_version = 17
 
 [db.pooler]
@@ -56,12 +56,12 @@ enabled = false
 # ─── Studio (Dashboard UI) ───────────────────────────────────────────────────
 [studio]
 enabled = true
-port = 54323
+port = 54333
 
 # ─── Inbucket (Email testing) ────────────────────────────────────────────────
 [inbucket]
 enabled = true
-port = 54324
+port = 54334
 
 # ─── Analytics ────────────────────────────────────────────────────────────────
 [analytics]

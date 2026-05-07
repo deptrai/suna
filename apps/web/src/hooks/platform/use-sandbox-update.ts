@@ -6,10 +6,10 @@
  *   - If running a stable build, compares against latest stable
  *
  * Docker image-based update flow:
- *   - `currentVersion` is provided by the caller (from /kortix/health)
+ *   - `currentVersion` is provided by the caller (from /epsilon/health)
  *   - `latestVersion` is fetched from the platform API (channel-aware)
  *   - Frontend compares them → `updateAvailable`
- *   - `update()` POSTs to kortix-api which pulls new image + recreates container
+ *   - `update()` POSTs to epsilon-api which pulls new image + recreates container
  *   - Polls GET /platform/sandbox/update/status every 2s → live phase + progress
  *   - On complete/failed, stops polling and surfaces result
  */
@@ -177,7 +177,7 @@ export function useSandboxUpdate(currentVersion: string | null) {
   const pollStatus = useCallback(async () => {
     if (!pollActiveRef.current) return;
     try {
-      // Poll kortix-api for update status (not the sandbox directly)
+      // Poll epsilon-api for update status (not the sandbox directly)
       const status = await getSandboxUpdateStatus(sandbox ?? undefined);
       setLiveStatus(status);
 

@@ -45,7 +45,7 @@ let mockDeletionError: Error | null = null;
 mock.module('../middleware/auth', () => ({
   supabaseAuth: async (c: any, next: any) => {
     c.set('userId', TEST_USER_ID);
-    c.set('userEmail', 'test@kortix.dev');
+    c.set('userEmail', 'test@epsilon.dev');
     await next();
   },
   apiKeyAuth: async (c: any, next: any) => { await next(); },
@@ -158,10 +158,10 @@ mock.module('../config', () => ({
   config: {
     STRIPE_WEBHOOK_SECRET: 'whsec_test',
     ENV_MODE: 'cloud',
-    INTERNAL_KORTIX_ENV: 'staging',
+    INTERNAL_EPSILON_ENV: 'staging',
     DATABASE_URL: '',
     FRONTEND_URL: 'http://localhost:3000',
-    KORTIX_BILLING_INTERNAL_ENABLED: true,
+    EPSILON_BILLING_INTERNAL_ENABLED: true,
     ALLOWED_SANDBOX_PROVIDERS: ['local_docker'],
     isLocal: () => false,
     isCloud: () => true,
@@ -173,7 +173,7 @@ mock.module('../config', () => ({
 
 // Customers repository mock
 mock.module('../billing/repositories/customers', () => ({
-  getCustomerByAccountId: async () => ({ id: 'cus_test_123', accountId: TEST_USER_ID, email: 'test@kortix.dev', provider: 'stripe', active: true }),
+  getCustomerByAccountId: async () => ({ id: 'cus_test_123', accountId: TEST_USER_ID, email: 'test@epsilon.dev', provider: 'stripe', active: true }),
   getCustomerByStripeId: async () => null,
   upsertCustomer: async () => {},
 }));

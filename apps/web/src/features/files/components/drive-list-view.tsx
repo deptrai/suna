@@ -328,7 +328,7 @@ interface DriveListViewProps {
 
 /** Descriptions for elevated system directories */
 const ELEVATED_DIR_META: Record<string, string> = {
-  '.kortix': 'Project config, tasks, context',
+  '.epsilon': 'Project config, tasks, context',
   '.opencode': 'Agents, skills, commands',
 };
 

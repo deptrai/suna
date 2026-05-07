@@ -1,8 +1,8 @@
 /**
- * Backfill a single RevenueCat subscriber into kortix.credit_accounts.
+ * Backfill a single RevenueCat subscriber into epsilon.credit_accounts.
  *
  * Use when diagnose-stripe-user.ts shows the user has an active RevenueCat
- * entitlement but kortix.credit_accounts is empty — meaning the INITIAL_PURCHASE
+ * entitlement but epsilon.credit_accounts is empty — meaning the INITIAL_PURCHASE
  * webhook never landed, OR it landed but mapRevenueCatProductToTier() returned
  * null for the product_id (e.g. Play Store products like "plus" / "pro" / "ultra"
  * that our REVENUECAT_PRODUCT_MAPPING in tiers.ts doesn't cover).
@@ -23,7 +23,7 @@ import { db } from '../src/shared/db';
 import { upsertCreditAccount, getCreditAccount } from '../src/billing/repositories/credit-accounts';
 import { grantCredits } from '../src/billing/services/credits';
 import { getTier, MACHINE_CREDIT_BONUS } from '../src/billing/services/tiers';
-import { AUTO_TOPUP_DEFAULT_AMOUNT, AUTO_TOPUP_DEFAULT_THRESHOLD } from '@kortix/shared';
+import { AUTO_TOPUP_DEFAULT_AMOUNT, AUTO_TOPUP_DEFAULT_THRESHOLD } from '@epsilon/shared';
 
 const email = process.argv[2]?.trim().toLowerCase();
 const apply = process.argv.includes('--apply');
@@ -43,18 +43,18 @@ if (!rcKey) {
 // handle bare Play Store product IDs we've seen in the wild.
 const PRODUCT_TO_TIER: Record<string, string> = {
   plus: 'tier_2_20',
-  kortix_plus_monthly: 'tier_2_20',
-  kortix_plus_yearly: 'tier_2_20',
+  epsilon_plus_monthly: 'tier_2_20',
+  epsilon_plus_yearly: 'tier_2_20',
   'plus:plus-monthly': 'tier_2_20',
 
   pro: 'pro',
-  kortix_pro_monthly: 'pro',
-  kortix_pro_yearly: 'pro',
+  epsilon_pro_monthly: 'pro',
+  epsilon_pro_yearly: 'pro',
   'pro:pro-monthly': 'pro',
 
   ultra: 'tier_25_200',
-  kortix_ultra_monthly: 'tier_25_200',
-  kortix_ultra_yearly: 'tier_25_200',
+  epsilon_ultra_monthly: 'tier_25_200',
+  epsilon_ultra_yearly: 'tier_25_200',
   'ultra:ultra-monthly': 'tier_25_200',
 };
 
@@ -64,7 +64,7 @@ const userRows = (await db.execute(
       u.id::text as user_id,
       coalesce(am.account_id, au.account_id)::text as account_id
     from auth.users u
-    left join kortix.account_members am on am.user_id = u.id
+    left join epsilon.account_members am on am.user_id = u.id
     left join basejump.account_user au on au.user_id = u.id
     where lower(u.email) = ${email}
       and coalesce(am.account_id, au.account_id) is not null
@@ -144,7 +144,7 @@ const planned = {
   store: chosen.store,
   planType: periodType,
   expiresAt: new Date(chosen.expiresAt).toISOString(),
-  existingKortixRow: existing
+  existingEpsilonRow: existing
     ? { tier: existing.tier, provider: existing.provider, paymentStatus: existing.paymentStatus }
     : null,
 };
@@ -157,7 +157,7 @@ if (existing?.provider === 'revenuecat' && existing?.tier === tierKey && existin
 }
 
 if (!apply) {
-  console.log('Dry run. Re-run with --apply to upsert the kortix.credit_accounts row and grant credits.');
+  console.log('Dry run. Re-run with --apply to upsert the epsilon.credit_accounts row and grant credits.');
   process.exit(0);
 }
 

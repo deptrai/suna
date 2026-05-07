@@ -50,9 +50,9 @@ export const metadata: Metadata = {
   },
   description: siteMetadata.description,
   keywords: siteMetadata.keywords,
-  authors: [{ name: 'Kortix Team', url: 'https://www.kortix.com' }],
-  creator: 'Kortix Team',
-  publisher: 'Kortix Team',
+  authors: [{ name: 'Epsilon Team', url: 'https://www.epsilon.com' }],
+  creator: 'Epsilon Team',
+  publisher: 'Epsilon Team',
   applicationName: siteMetadata.name,
   robots: {
     index: true,
@@ -85,8 +85,8 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: siteMetadata.title,
     description: siteMetadata.description,
-    creator: '@kortix',
-    site: '@kortix',
+    creator: '@epsilon',
+    site: '@epsilon',
     images: ['/banner.png'],
   },
   icons: {
@@ -118,7 +118,7 @@ export default async function RootLayout({
             Docker images get correct env vars regardless of build-time defaults. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `window.__KORTIX_RUNTIME_CONFIG=${JSON.stringify(runtimeEnv)};window.__RUNTIME_ENV=window.__KORTIX_RUNTIME_CONFIG;`,
+            __html: `window.__EPSILON_RUNTIME_CONFIG=${JSON.stringify(runtimeEnv)};window.__RUNTIME_ENV=window.__EPSILON_RUNTIME_CONFIG;`,
           }}
         />
 
@@ -196,25 +196,25 @@ export default async function RootLayout({
         />
 
         {/* Static SEO meta tags - rendered in initial HTML */}
-        <title>Kortix – The Autonomous Company Operating System</title>
+        <title>Epsilon – The Autonomous Company Operating System</title>
         <meta name="description" content="A cloud computer where AI agents run your company. Connect 3,000+ tools, configure autonomous agents, set triggers — and the machine operates 24/7 with persistent memory." />
-        <meta name="keywords" content="Kortix, autonomous company operating system, AI agents, self-driving company, cloud computer, AI automation, agent orchestration, autowork, AI triggers, persistent memory, autonomous workforce, AI operations" />
-        <meta property="og:title" content="Kortix – The Autonomous Company Operating System" />
+        <meta name="keywords" content="Epsilon, autonomous company operating system, AI agents, self-driving company, cloud computer, AI automation, agent orchestration, autowork, AI triggers, persistent memory, autonomous workforce, AI operations" />
+        <meta property="og:title" content="Epsilon – The Autonomous Company Operating System" />
         <meta property="og:description" content="A cloud computer where AI agents run your company. Connect 3,000+ tools, configure autonomous agents, set triggers — and the machine operates 24/7 with persistent memory." />
-        <meta property="og:image" content="https://kortix.com/banner.png" />
-        <meta property="og:url" content="https://kortix.com" />
+        <meta property="og:image" content="https://epsilon.com/banner.png" />
+        <meta property="og:url" content="https://epsilon.com" />
         <meta property="og:type" content="website" />
-        <meta property="og:site_name" content="Kortix" />
+        <meta property="og:site_name" content="Epsilon" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Kortix – The Autonomous Company Operating System" />
+        <meta name="twitter:title" content="Epsilon – The Autonomous Company Operating System" />
         <meta name="twitter:description" content="A cloud computer where AI agents run your company. Connect 3,000+ tools, configure autonomous agents, set triggers — and the machine operates 24/7 with persistent memory." />
-        <meta name="twitter:image" content="https://kortix.com/banner.png" />
-        <meta name="twitter:site" content="@kortix" />
-        <link rel="canonical" href="https://kortix.com" />
+        <meta name="twitter:image" content="https://epsilon.com/banner.png" />
+        <meta name="twitter:site" content="@epsilon" />
+        <link rel="canonical" href="https://epsilon.com" />
 
         {/* iOS Smart App Banner - shows native install banner in Safari */}
         {!featureFlags.disableMobileAdvertising ? (
-          <meta name="apple-itunes-app" content="app-id=6754448524, app-argument=kortix://" />
+          <meta name="apple-itunes-app" content="app-id=6754448524, app-argument=epsilon://" />
         ) : null}
 
 
@@ -226,15 +226,15 @@ export default async function RootLayout({
               '@context': 'https://schema.org',
               '@type': 'Organization',
               name: siteMetadata.name,
-              alternateName: ['Kortix', 'Kortix AI', 'Kortix – The Autonomous Company Operating System'],
+              alternateName: ['Epsilon', 'Epsilon AI', 'Epsilon – The Autonomous Company Operating System'],
               url: siteMetadata.url,
               logo: `${siteMetadata.url}/favicon.png`,
               description: siteMetadata.description,
               foundingDate: '2024',
               sameAs: [
-                'https://github.com/kortix-ai/suna',
-                'https://x.com/kortix',
-                'https://linkedin.com/company/kortix',
+                'https://github.com/epsilon-ai/chainlens',
+                'https://x.com/epsilon',
+                'https://linkedin.com/company/epsilon',
               ],
               contactPoint: {
                 '@type': 'ContactPoint',
@@ -252,7 +252,7 @@ export default async function RootLayout({
               '@context': 'https://schema.org',
               '@type': 'SoftwareApplication',
               name: siteMetadata.title,
-              alternateName: [siteMetadata.name, 'Kortix'],
+              alternateName: [siteMetadata.name, 'Epsilon'],
               applicationCategory: 'BusinessApplication',
               operatingSystem: 'Web, macOS, Windows, Linux',
               description: siteMetadata.description,

@@ -1,9 +1,9 @@
 'use client';
 
 import { lazy, Suspense, useMemo, type ComponentType } from 'react';
-import { KortixLoader } from '@/components/ui/kortix-loader';
+import { EpsilonLoader } from '@/components/ui/epsilon-loader';
 
-const DEPLOYMENTS_ENABLED = process.env.NEXT_PUBLIC_KORTIX_DEPLOYMENTS_ENABLED === 'true';
+const DEPLOYMENTS_ENABLED = process.env.NEXT_PUBLIC_EPSILON_DEPLOYMENTS_ENABLED === 'true';
 
 // ---------------------------------------------------------------------------
 // Lazy-load every route-based page component so they can be pre-mounted in the
@@ -202,7 +202,7 @@ export function PageTabContent({ href }: { href: string }) {
 		<Suspense
 			fallback={
 				<div className="flex-1 flex items-center justify-center">
-					<KortixLoader size="medium" />
+					<EpsilonLoader size="medium" />
 				</div>
 			}
 		>

@@ -32,7 +32,7 @@ import {
   type LspDiagnostic,
   type DiagnosticSeverity,
 } from '@/stores/diagnostics-store';
-import { useKortixComputerStore } from '@/stores/kortix-computer-store';
+import { useEpsilonComputerStore } from '@/stores/epsilon-computer-store';
 
 // ============================================================================
 // Constants & Helpers
@@ -231,7 +231,7 @@ export function DiagnosticsBadge() {
   const byFile = useDiagnosticsStore((s) => s.byFile);
   const [open, setOpen] = useState(false);
 
-  const openFileInComputer = useKortixComputerStore((s) => s.openFileInComputer);
+  const openFileInComputer = useEpsilonComputerStore((s) => s.openFileInComputer);
 
   const allDiagnostics = useMemo(() => {
     const all: LspDiagnostic[] = [];
@@ -352,7 +352,7 @@ interface DiagnosticsDialogProps {
 
 export function DiagnosticsDialog({ open, onOpenChange }: DiagnosticsDialogProps) {
   const byFile = useDiagnosticsStore((s) => s.byFile);
-  const openFileInComputer = useKortixComputerStore((s) => s.openFileInComputer);
+  const openFileInComputer = useEpsilonComputerStore((s) => s.openFileInComputer);
 
   const allDiagnostics = useMemo(() => {
     const all: LspDiagnostic[] = [];

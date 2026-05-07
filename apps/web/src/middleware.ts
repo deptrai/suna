@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { locales, defaultLocale, type Locale } from '@/i18n/config';
 import { detectBestLocaleFromHeaders } from '@/lib/utils/geo-detection-server';
-import { KORTIX_SUPABASE_AUTH_COOKIE } from '@/lib/supabase/constants';
+import { EPSILON_SUPABASE_AUTH_COOKIE } from '@/lib/supabase/constants';
 import {
   ACTIVE_INSTANCE_COOKIE,
   buildInstancePath,
@@ -234,14 +234,14 @@ export async function middleware(request: NextRequest) {
   // used for server-side auth calls. SUPABASE_URL / NEXT_PUBLIC_SUPABASE_URL is the
   // public-facing URL that the browser uses. The middleware runs server-side inside
   // the Docker container, so it needs the internal URL to reach Supabase.
-  const supabaseUrl = process.env.SUPABASE_SERVER_URL || process.env.SUPABASE_URL || process.env.KORTIX_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.KORTIX_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const supabaseUrl = process.env.SUPABASE_SERVER_URL || process.env.SUPABASE_URL || process.env.EPSILON_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.EPSILON_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
   const supabase = createServerClient(
     supabaseUrl,
     supabaseAnonKey,
     {
       cookieOptions: {
-        name: KORTIX_SUPABASE_AUTH_COOKIE,
+        name: EPSILON_SUPABASE_AUTH_COOKIE,
         path: '/',
         sameSite: 'lax',
       },
@@ -302,7 +302,7 @@ export async function middleware(request: NextRequest) {
   // boots at /dashboard, but any internal nav back to / (logo click, history
   // back, etc.) gets bounced too. Unauthenticated users hit the existing auth
   // gate on /dashboard and land on /auth — no special-casing needed.
-  if (pathname === '/' && request.headers.get('user-agent')?.includes('KortixDesktop')) {
+  if (pathname === '/' && request.headers.get('user-agent')?.includes('EpsilonDesktop')) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 

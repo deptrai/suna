@@ -9,7 +9,7 @@
  *   never appears for RC Pro subscribers.
  *
  * What this script does:
- *   Flips kortix.credit_accounts.tier from 'pro' → 'tier_6_50' for the target
+ *   Flips epsilon.credit_accounts.tier from 'pro' → 'tier_6_50' for the target
  *   account. tier_6_50 IS a legacy tier, so isLegacyPaidTier() returns true
  *   and the button appears. tier_6_50 also matches the mobile advertisement
  *   for Pro ($50/mo, 100 credits).
@@ -63,7 +63,7 @@ try {
       ca.payment_status
     from auth.users u
     join public.account_members am on am.user_id = u.id
-    left join kortix.credit_accounts ca on ca.account_id = am.account_id
+    left join epsilon.credit_accounts ca on ca.account_id = am.account_id
     where lower(u.email) = ${email}
     limit 2
   `;
@@ -99,13 +99,13 @@ try {
   }
 
   if (!apply) {
-    console.log(`Dry run: would update kortix.credit_accounts.tier from 'pro' to '${TARGET_TIER}' for account_id=${row.account_id}.`);
+    console.log(`Dry run: would update epsilon.credit_accounts.tier from 'pro' to '${TARGET_TIER}' for account_id=${row.account_id}.`);
     console.log('Re-run with --apply to commit.');
     process.exit(0);
   }
 
   const [updated] = await sql<{ account_id: string; tier: string }[]>`
-    update kortix.credit_accounts
+    update epsilon.credit_accounts
     set tier = ${TARGET_TIER}, updated_at = now()
     where account_id = ${row.account_id}::uuid
       and tier = 'pro'

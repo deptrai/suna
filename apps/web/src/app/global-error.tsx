@@ -280,7 +280,7 @@ export default function GlobalError({
     if (shouldIgnoreBrowserRuntimeNoise({ message: error.message, error })) {
       return;
     }
-    console.error('[Kortix Global Error]', error);
+    console.error('[Epsilon Global Error]', error);
 
     const loc = typeof window !== 'undefined' ? window.location : undefined;
     const nav = typeof navigator !== 'undefined' ? navigator : undefined;
@@ -317,7 +317,7 @@ export default function GlobalError({
       viewport,
       online: typeof nav?.onLine === 'boolean' ? (nav.onLine ? 'yes' : 'no') : EMPTY,
       env:
-        process.env.NEXT_PUBLIC_KORTIX_ENV ||
+        process.env.NEXT_PUBLIC_EPSILON_ENV ||
         process.env.NEXT_PUBLIC_ENV_MODE ||
         'dev',
       sentryEventId: eventId || EMPTY,
@@ -420,7 +420,7 @@ export default function GlobalError({
 
           <p className="fault-support">
             If this persists, contact{' '}
-            <a href="mailto:support@kortix.ai">support@kortix.ai</a>
+            <a href="mailto:support@epsilon.ai">support@epsilon.ai</a>
           </p>
         </main>
       </body>

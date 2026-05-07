@@ -19,7 +19,7 @@ import { useServerStore } from '@/stores/server-store';
 import { getEnv } from '@/lib/env-config';
 import type { UpdatePhase } from '@/hooks/platform/use-sandbox-update';
 import type { ChangelogEntry } from '@/lib/platform-client';
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { EpsilonLogo } from '@/components/sidebar/epsilon-logo';
 import { UpdateChangelogPreview } from '@/components/update-changelog-preview';
 
 type DialogStep = 'confirm' | 'updating' | 'done' | 'failed';
@@ -164,7 +164,7 @@ export function UpdateDialog({
     if (playedCompletionRef.current) return;
     playedCompletionRef.current = true;
     try {
-      const audio = new Audio('/sounds/kortix/bootup.wav');
+      const audio = new Audio('/sounds/epsilon/bootup.wav');
       audio.volume = 0.6;
       audio.play().catch(() => {});
     } catch {}
@@ -183,7 +183,7 @@ export function UpdateDialog({
 
   const copyCliCommand = async () => {
     try {
-      await navigator.clipboard.writeText('kortix update');
+      await navigator.clipboard.writeText('epsilon update');
     } catch {}
   };
 
@@ -215,7 +215,7 @@ export function UpdateDialog({
               transition={{ duration: 0.4 }}
               className="flex flex-col items-center"
             >
-              <KortixLogo size={28} variant="symbol" />
+              <EpsilonLogo size={28} variant="symbol" />
               <p className="mt-5 text-[13px] font-medium text-foreground/90 tracking-tight">
                 {activeLabel}
               </p>
@@ -335,10 +335,10 @@ export function UpdateDialog({
                   <AlertTitle>Self-hosted updates run from the host</AlertTitle>
                   <AlertDescription>
                     <p>
-                      If you installed Kortix via the CLI, updates should be run from your terminal so the full stack updates together.
+                      If you installed Epsilon via the CLI, updates should be run from your terminal so the full stack updates together.
                     </p>
                     <div className="mt-2 rounded-xl bg-muted/40 px-3 py-2 font-mono text-xs text-foreground/80">
-                      kortix update
+                      epsilon update
                     </div>
                   </AlertDescription>
                 </Alert>

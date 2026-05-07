@@ -160,7 +160,7 @@ export function CommandPalette({
     const doReload = async () => {
       try {
         const token = await getAuthToken();
-        const res = await fetch(`${sandboxUrl}/kortix/services/system/reload`, {
+        const res = await fetch(`${sandboxUrl}/epsilon/services/system/reload`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -186,7 +186,7 @@ export function CommandPalette({
     if (mode === 'full') {
       Alert.alert(
         'Full Restart',
-        'This will kill and restart every service (OpenCode, static server, kortix-master). Active sessions will be interrupted.',
+        'This will kill and restart every service (OpenCode, static server, epsilon-master). Active sessions will be interrupted.',
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Restart', style: 'destructive', onPress: doReload },

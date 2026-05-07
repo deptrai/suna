@@ -1,4 +1,4 @@
-import { config, KORTIX_MARKUP } from '../../config';
+import { config, EPSILON_MARKUP } from '../../config';
 import { getModel, getAllModels, resolveOpenRouterId, type ModelConfig } from '../config/models';
 
 /**
@@ -6,7 +6,7 @@ import { getModel, getAllModels, resolveOpenRouterId, type ModelConfig } from '.
  * When cache metrics are available, uses differential pricing for cached/written tokens.
  *
  * @param markup - Multiplier applied to the raw provider cost.
- *   Defaults to KORTIX_MARKUP (1.2× = 20% markup) when Kortix provides the key.
+ *   Defaults to EPSILON_MARKUP (1.2× = 20% markup) when Epsilon provides the key.
  *   Pass PLATFORM_FEE_MARKUP (0.1× = 10% platform fee) for user-owned keys.
  */
 export function calculateCost(
@@ -15,7 +15,7 @@ export function calculateCost(
   completionTokens: number,
   cachedTokens: number = 0,
   cacheWriteTokens: number = 0,
-  markup: number = KORTIX_MARKUP,
+  markup: number = EPSILON_MARKUP,
 ): number {
   // When we have cache metrics and the model has cache pricing, compute differential cost
   if ((cachedTokens > 0 || cacheWriteTokens > 0) && modelConfig.cacheReadPer1M != null) {
@@ -58,8 +58,8 @@ export async function proxyToOpenRouter(
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${config.OPENROUTER_API_KEY}`,
-      'HTTP-Referer': config.FRONTEND_URL || 'https://kortix.ai',
-      'X-Title': 'Kortix',
+      'HTTP-Referer': config.FRONTEND_URL || 'https://epsilon.ai',
+      'X-Title': 'Epsilon',
     },
     body: JSON.stringify(forwardBody),
   });

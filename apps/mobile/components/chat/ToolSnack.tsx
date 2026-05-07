@@ -118,7 +118,7 @@ export function extractToolFromStreamingMessage(message: UnifiedMessage | null):
 export const ToolSnack = React.memo(function ToolSnack({
   toolData,
   isAgentRunning,
-  agentName = 'Suna',
+  agentName = 'ChainLens',
   onPress,
   onDismiss,
 }: ToolSnackProps) {

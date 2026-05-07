@@ -29,27 +29,27 @@ mock.module('../shared/platform-roles', () => ({
 
 mock.module('../repositories/api-keys', () => ({
   validateSecretKey: async (token: string) => {
-    if (token === 'kortix_owner') {
+    if (token === 'epsilon_owner') {
       return { isValid: true, accountId: 'acct-owner' };
     }
-    if (token === 'kortix_other') {
+    if (token === 'epsilon_other') {
       return { isValid: true, accountId: 'acct-other' };
     }
-    return { isValid: false, error: 'Invalid Kortix token' };
+    return { isValid: false, error: 'Invalid Epsilon token' };
   },
 }));
 
 mock.module('../shared/crypto', () => ({
-  isKortixToken: (token: string) => token.startsWith('kortix_'),
+  isEpsilonToken: (token: string) => token.startsWith('epsilon_'),
 }));
 
 mock.module('../shared/jwt-verify', () => ({
   verifySupabaseJwt: async (token: string) => {
     if (token === 'jwt-owner') {
-      return { ok: true, userId: 'user-owner', email: 'owner@kortix.dev' };
+      return { ok: true, userId: 'user-owner', email: 'owner@epsilon.dev' };
     }
     if (token === 'jwt-other') {
-      return { ok: true, userId: 'user-other', email: 'other@kortix.dev' };
+      return { ok: true, userId: 'user-other', email: 'other@epsilon.dev' };
     }
     if (token === 'jwt-fallback-owner' || token === 'jwt-fallback-other') {
       return { ok: false, reason: 'no-keys' };
@@ -69,7 +69,7 @@ mock.module('../shared/supabase', () => ({
 mock.module('../config', () => ({
   config: {
     isLocalDockerEnabled: () => true,
-    SANDBOX_CONTAINER_NAME: 'kortix-sandbox',
+    SANDBOX_CONTAINER_NAME: 'epsilon-sandbox',
   },
 }));
 
@@ -104,42 +104,42 @@ describe('preview auth ownership', () => {
     expect(res.status).toBe(401);
   });
 
-  test('allows owner via Bearer kortix token', async () => {
+  test('allows owner via Bearer epsilon token', async () => {
     const app = createApp();
     const res = await app.request('/v1/p/8c70e5be-2f95-45ae-bd8d-5d07b65c631b/8000/session/status', {
-      headers: { Authorization: 'Bearer kortix_owner' },
+      headers: { Authorization: 'Bearer epsilon_owner' },
     });
     expect(res.status).toBe(200);
   });
 
-  test('allows owner via X-Kortix-Token header', async () => {
+  test('allows owner via X-Epsilon-Token header', async () => {
     const app = createApp();
     const res = await app.request('/v1/p/8c70e5be-2f95-45ae-bd8d-5d07b65c631b/8000/session/status', {
-      headers: { 'X-Kortix-Token': 'kortix_owner' },
+      headers: { 'X-Epsilon-Token': 'epsilon_owner' },
     });
     expect(res.status).toBe(200);
   });
 
-  test('allows owner via preview session cookie with kortix token', async () => {
+  test('allows owner via preview session cookie with epsilon token', async () => {
     const app = createApp();
     const res = await app.request('/v1/p/8c70e5be-2f95-45ae-bd8d-5d07b65c631b/8000/session/status', {
-      headers: { Cookie: '__preview_session=kortix_owner' },
+      headers: { Cookie: '__preview_session=epsilon_owner' },
     });
     expect(res.status).toBe(200);
   });
 
-  test('rejects non-owner kortix token', async () => {
+  test('rejects non-owner epsilon token', async () => {
     const app = createApp();
     const res = await app.request('/v1/p/8c70e5be-2f95-45ae-bd8d-5d07b65c631b/8000/session/status', {
-      headers: { Authorization: 'Bearer kortix_other' },
+      headers: { Authorization: 'Bearer epsilon_other' },
     });
     expect(res.status).toBe(403);
   });
 
-  test('rejects invalid X-Kortix-Token', async () => {
+  test('rejects invalid X-Epsilon-Token', async () => {
     const app = createApp();
     const res = await app.request('/v1/p/8c70e5be-2f95-45ae-bd8d-5d07b65c631b/8000/session/status', {
-      headers: { 'X-Kortix-Token': 'kortix_invalid' },
+      headers: { 'X-Epsilon-Token': 'epsilon_invalid' },
     });
     expect(res.status).toBe(401);
   });
@@ -172,11 +172,11 @@ describe('preview auth ownership', () => {
     expect(res.status).toBe(200);
   });
 
-  test('allows admin kortix token without direct ownership', async () => {
+  test('allows admin epsilon token without direct ownership', async () => {
     const app = createApp();
     mockAdminAccounts = new Set(['acct-other']);
     const res = await app.request('/v1/p/8c70e5be-2f95-45ae-bd8d-5d07b65c631b/8000/session/status', {
-      headers: { Authorization: 'Bearer kortix_other' },
+      headers: { Authorization: 'Bearer epsilon_other' },
     });
     expect(res.status).toBe(200);
   });
@@ -193,7 +193,7 @@ describe('preview auth ownership', () => {
   test('allows jwt owner via Supabase fallback path', async () => {
     const app = createApp();
     mockResolvedAccountId = 'acct-owner';
-    mockSupabaseUser = { id: 'user-fallback-owner', email: 'fallback@kortix.dev' };
+    mockSupabaseUser = { id: 'user-fallback-owner', email: 'fallback@epsilon.dev' };
     const res = await app.request('/v1/p/8c70e5be-2f95-45ae-bd8d-5d07b65c631b/8000/session/status', {
       headers: { Authorization: 'Bearer jwt-fallback-owner' },
     });
@@ -203,7 +203,7 @@ describe('preview auth ownership', () => {
   test('rejects jwt via Supabase fallback without ownership', async () => {
     const app = createApp();
     mockResolvedAccountId = 'acct-other';
-    mockSupabaseUser = { id: 'user-fallback-other', email: 'other@kortix.dev' };
+    mockSupabaseUser = { id: 'user-fallback-other', email: 'other@epsilon.dev' };
     const res = await app.request('/v1/p/8c70e5be-2f95-45ae-bd8d-5d07b65c631b/8000/session/status', {
       headers: { Authorization: 'Bearer jwt-fallback-other' },
     });
@@ -214,7 +214,7 @@ describe('preview auth ownership', () => {
     const app = createApp();
     mockSandboxAccountId = null;
     const res = await app.request('/v1/p/8c70e5be-2f95-45ae-bd8d-5d07b65c631b/8000/session/status', {
-      headers: { Authorization: 'Bearer kortix_owner' },
+      headers: { Authorization: 'Bearer epsilon_owner' },
     });
     expect(res.status).toBe(403);
   });
@@ -224,20 +224,20 @@ describe('preview auth ownership', () => {
     mockSandboxAccountId = null;
     const res = await app.request('/v1/p/share', {
       method: 'POST',
-      headers: { Authorization: 'Bearer kortix_owner' },
+      headers: { Authorization: 'Bearer epsilon_owner' },
     });
     expect(res.status).toBe(200);
   });
 
   test('allows localhost local-sandbox preview without auth', async () => {
     const app = createApp();
-    const res = await app.request('http://localhost/v1/p/kortix-sandbox/8000/session/status');
+    const res = await app.request('http://localhost/v1/p/epsilon-sandbox/8000/session/status');
     expect(res.status).toBe(200);
   });
 
   test('still requires auth for remote hosts hitting the local sandbox route', async () => {
     const app = createApp();
-    const res = await app.request('https://app.kortix.com/v1/p/kortix-sandbox/8000/session/status');
+    const res = await app.request('https://app.epsilon.com/v1/p/epsilon-sandbox/8000/session/status');
     expect(res.status).toBe(401);
   });
 });

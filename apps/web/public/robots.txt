@@ -1,9 +1,9 @@
-# Kortix Robots.txt
+# Epsilon Robots.txt
 User-agent: *
 Allow: /
 
 # Sitemap
-Sitemap: https://kortix.com/sitemap.xml
+Sitemap: https://epsilon.com/sitemap.xml
 
 # Disallow sensitive routes
 Disallow: /api/
@@ -11,5 +11,5 @@ Disallow: /_next/
 Disallow: /admin/
 
 # Allow crawling of public pages
-Allow: /suna/
+Allow: /chainlens/
 

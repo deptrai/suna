@@ -1,0 +1,10 @@
+{
+  "$schema": "https://registry.epsilon.com/schema.json",
+  "version": "1.0.0",
+  "name": "epsilon-ocx-registry",
+  "description": "Epsilon Marketplace - Skills for Epsilon AI Agents",
+  "updated": "2026-03-22",
+  "registryUrl": "https://epsilon-registry-6om.pages.dev",
+  "repository": "https://github.com/epsilon-ai/epsilon-ocx-registry",
+  "skills": []
+}

@@ -443,7 +443,7 @@ function FileCard({
 
 /** Descriptions for elevated system directories */
 const ELEVATED_DIR_META: Record<string, { description: string; icon: typeof FolderCog }> = {
-  '.kortix': { description: 'Project config, tasks, context', icon: FolderCog },
+  '.epsilon': { description: 'Project config, tasks, context', icon: FolderCog },
   '.opencode': { description: 'Agents, skills, commands', icon: FolderCog },
 };
 

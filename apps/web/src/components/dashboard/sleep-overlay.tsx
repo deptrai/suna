@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef, useSyncExternalStore } from '
 import { WallpaperBackground } from '@/components/ui/wallpaper-background';
 import { createClient } from '@/lib/supabase/client';
 
-const SLEEP_KEY = 'kortix-sleep-active-v1';
+const SLEEP_KEY = 'epsilon-sleep-active-v1';
 
 const listeners = new Set<() => void>();
 

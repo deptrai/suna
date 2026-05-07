@@ -149,10 +149,10 @@ function setLSCache(key: string, value: unknown): void {
   }
 }
 
-const LS_SESSIONS = 'kortix_cache_sessions';
-const LS_AGENTS = 'kortix_cache_agents';
-const LS_COMMANDS = 'kortix_cache_commands';
-const LS_PROVIDERS = 'kortix_cache_providers';
+const LS_SESSIONS = 'epsilon_cache_sessions';
+const LS_AGENTS = 'epsilon_cache_agents';
+const LS_COMMANDS = 'epsilon_cache_commands';
+const LS_PROVIDERS = 'epsilon_cache_providers';
 
 export function useOpenCodeSessions() {
   return useQuery<Session[]>({

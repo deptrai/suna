@@ -48,11 +48,11 @@ import {
   type Command,
   type McpStatus,
 } from '@/hooks/opencode/use-opencode-sessions';
-import { useKortixProjects, type KortixProject } from '@/hooks/kortix/use-kortix-projects';
-import { useKortixConnectors, type KortixConnector } from '@/hooks/kortix/use-kortix-connectors';
+import { useEpsilonProjects, type EpsilonProject } from '@/hooks/epsilon/use-epsilon-projects';
+import { useEpsilonConnectors, type EpsilonConnector } from '@/hooks/epsilon/use-epsilon-connectors';
 
 // Re-export as Project for backward compat in this file
-type Project = KortixProject;
+type Project = EpsilonProject;
 import { useSkills } from '@/features/skills/hooks';
 import { getSkillSource, type Skill } from '@/features/skills/types';
 import { openTabAndNavigate } from '@/stores/tab-store';
@@ -75,7 +75,7 @@ interface WorkspaceItem {
   kind: ItemKind;
   scope: ItemScope;
   meta?: string;
-  raw?: Agent | Skill | Command | Project | KortixConnector | { toolId: string; server?: string } | { serverName: string; status: McpStatus };
+  raw?: Agent | Skill | Command | Project | EpsilonConnector | { toolId: string; server?: string } | { serverName: string; status: McpStatus };
 }
 
 const COMPOSER_PRESETS: Record<WorkspaceComposerKind, { title: string; prompt: string }> = {
@@ -190,7 +190,7 @@ function DetailSheet({
     }
   }
   if (item?.kind === 'connector' && item.raw) {
-    const c = item.raw as unknown as KortixConnector;
+    const c = item.raw as unknown as EpsilonConnector;
     if (c.source) rows.push({ label: 'Source', value: c.source });
     if (c.pipedream_slug) rows.push({ label: 'Pipedream', value: c.pipedream_slug, mono: true });
     if (c.env_keys?.length) rows.push({ label: 'Env', value: c.env_keys.join(', '), mono: true });
@@ -412,11 +412,11 @@ export default function WorkspacePage() {
     }
   }, [createSession]);
 
-  // Data — Kortix projects are the source of truth.
+  // Data — Epsilon projects are the source of truth.
   // Skip the query when the multi-project paradigm is off so the workspace
-  // page in default mode never hits /kortix/projects (which 503s when sandbox-
+  // page in default mode never hits /epsilon/projects (which 503s when sandbox-
   // side PROJECTS_ENABLED is also off).
-  const { data: projects,  isLoading: lProjects, error: projectsError  } = useKortixProjects(undefined, { enabled: featureFlags.enableMultiProject });
+  const { data: projects,  isLoading: lProjects, error: projectsError  } = useEpsilonProjects(undefined, { enabled: featureFlags.enableMultiProject });
   // Debug: log to browser console if projects fail to load
   if (typeof window !== 'undefined') {
     if (projectsError) console.error('[workspace] projects error:', projectsError);
@@ -427,7 +427,7 @@ export default function WorkspacePage() {
   const { data: commands,  isLoading: lCommands  } = useOpenCodeCommands();
   const { data: toolIds,   isLoading: lTools     } = useOpenCodeToolIds();
   const { data: mcpStatus, isLoading: lMcp       } = useOpenCodeMcpStatus();
-  const { data: connectors, isLoading: lConnectors } = useKortixConnectors();
+  const { data: connectors, isLoading: lConnectors } = useEpsilonConnectors();
 
   const isLoading = lProjects || lAgents || lSkills || lCommands || lTools || lMcp || lConnectors;
 

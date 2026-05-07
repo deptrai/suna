@@ -1,10 +1,10 @@
 /**
- * Test helpers for kortix-api E2E tests.
+ * Test helpers for epsilon-api E2E tests.
  *
  * Provides:
  * - createTestApp() — Hono app mimicking the monolith with auth bypassed + injectable mock providers
  * - getTestDb()     — shared Drizzle DB instance for assertions
- * - cleanupTestData() — deletes all test rows from the shared kortix schema
+ * - cleanupTestData() — deletes all test rows from the shared epsilon schema
  * - Mock provider factories
  * - Request helpers (jsonPost, jsonGet, jsonPatch, jsonDelete)
  *
@@ -20,11 +20,11 @@ import {
   type Database,
   sandboxes,
   deployments,
-  kortixApiKeys,
+  epsilonApiKeys,
   accounts,
   accountMembers,
   integrationCredentials,
-} from '@kortix/db';
+} from '@epsilon/db';
 import { sql, inArray } from 'drizzle-orm';
 import { BillingError } from '../errors';
 import type { AuthVariables } from '../types';
@@ -62,9 +62,9 @@ export interface SandboxProvider {
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 export const TEST_USER_ID = '00000000-0000-4000-a000-000000000001';
-export const TEST_USER_EMAIL = 'test@kortix.dev';
+export const TEST_USER_EMAIL = 'test@epsilon.dev';
 export const OTHER_USER_ID = '00000000-0000-4000-a000-000000000002';
-export const OTHER_USER_EMAIL = 'other@kortix.dev';
+export const OTHER_USER_EMAIL = 'other@epsilon.dev';
 
 // ─── DB ──────────────────────────────────────────────────────────────────────
 
@@ -74,7 +74,7 @@ const TEST_DB_CONFIRMATION = 'I_UNDERSTAND_THIS_DELETES_TEST_DATA';
 
 export const HAS_SAFE_TEST_DB = Boolean(
   process.env.TEST_DATABASE_URL
-  && process.env.KORTIX_TEST_DB_CONFIRM === TEST_DB_CONFIRMATION,
+  && process.env.EPSILON_TEST_DB_CONFIRM === TEST_DB_CONFIRMATION,
 );
 
 function getSafeTestDbUrl(): string {
@@ -83,11 +83,11 @@ function getSafeTestDbUrl(): string {
     throw new Error('TEST_DATABASE_URL must be set for integration tests');
   }
 
-  if (process.env.KORTIX_TEST_DB_CONFIRM !== TEST_DB_CONFIRMATION) {
-    throw new Error(`KORTIX_TEST_DB_CONFIRM must equal ${TEST_DB_CONFIRMATION}`);
+  if (process.env.EPSILON_TEST_DB_CONFIRM !== TEST_DB_CONFIRMATION) {
+    throw new Error(`EPSILON_TEST_DB_CONFIRM must equal ${TEST_DB_CONFIRMATION}`);
   }
 
-  if (process.env.INTERNAL_KORTIX_ENV === 'prod') {
+  if (process.env.INTERNAL_EPSILON_ENV === 'prod') {
     throw new Error('Refusing to run integration tests against prod environment');
   }
 
@@ -154,9 +154,9 @@ export function createMockProvider(
     externalId: `mock-${name}-${Date.now()}`,
     baseUrl:
       name === 'daytona'
-        ? `https://kortix.cloud/mock-daytona-id/8000`
+        ? `https://epsilon.cloud/mock-daytona-id/8000`
         : name === 'justavps'
-          ? 'https://mock-justavps.kortix.cloud'
+          ? 'https://mock-justavps.epsilon.cloud'
         : `http://localhost:${30000 + Math.floor(Math.random() * 1000)}`,
     metadata: {
       provisionedBy: 'test',
@@ -233,7 +233,7 @@ export function createTestApp(opts: TestAppOptions = {}) {
   app.get('/health', (c) =>
     c.json({
       status: 'ok',
-      service: 'kortix-api',
+      service: 'epsilon-api',
       timestamp: new Date().toISOString(),
     }),
   );
@@ -241,7 +241,7 @@ export function createTestApp(opts: TestAppOptions = {}) {
   app.get('/v1/health', (c) =>
     c.json({
       status: 'ok',
-      service: 'kortix',
+      service: 'epsilon',
       timestamp: new Date().toISOString(),
     }),
   );
@@ -378,7 +378,7 @@ export function createTestApp(opts: TestAppOptions = {}) {
 // ─── Cleanup ─────────────────────────────────────────────────────────────────
 
 /**
- * Delete only test-scoped data from kortix schema tables.
+ * Delete only test-scoped data from epsilon schema tables.
  * Never performs whole-table deletes.
  */
 export async function cleanupTestData(): Promise<void> {
@@ -386,7 +386,7 @@ export async function cleanupTestData(): Promise<void> {
   const accountIds = await getTestAccountIds();
   if (accountIds.length === 0) return;
 
-  await db.delete(kortixApiKeys).where(inArray(kortixApiKeys.accountId, accountIds));
+  await db.delete(epsilonApiKeys).where(inArray(epsilonApiKeys.accountId, accountIds));
   await db.delete(deployments).where(inArray(deployments.accountId, accountIds));
   await db.delete(sandboxes).where(inArray(sandboxes.accountId, accountIds));
   await db.delete(integrationCredentials).where(inArray(integrationCredentials.accountId, accountIds));

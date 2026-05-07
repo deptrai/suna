@@ -4,7 +4,7 @@
  * Two responsibilities:
  *   1. Tell the preview proxy whether a given user can reach a sandbox.
  *   2. Produce the payload the proxy signs and forwards as
- *      `X-Kortix-User-Context` to kortix-master (Phase 1 of the multi-user
+ *      `X-Epsilon-User-Context` to epsilon-master (Phase 1 of the multi-user
  *      authorization layer).
  *
  * Both share one cache keyed by (previewSandboxId, userId) — the heavy cost
@@ -20,16 +20,16 @@ import {
   loadUserTeamContext,
 } from '../teams';
 import { effectiveScopes } from '../permissions';
-import { sandboxes } from '@kortix/db';
+import { sandboxes } from '@epsilon/db';
 import { eq, or } from 'drizzle-orm';
-import type { KortixUserContext } from './kortix-user-context';
+import type { EpsilonUserContext } from './epsilon-user-context';
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
 type CacheEntry = {
   allowed: boolean;
   /** Null when access is denied or the caller is anonymous. */
-  payload: Omit<KortixUserContext, 'iat' | 'exp'> | null;
+  payload: Omit<EpsilonUserContext, 'iat' | 'exp'> | null;
   expiresAt: number;
 };
 
@@ -100,7 +100,7 @@ async function computeEntry(
     return { allowed: false, payload: null, expiresAt };
   }
 
-  let sandboxRole: KortixUserContext['sandboxRole'];
+  let sandboxRole: EpsilonUserContext['sandboxRole'];
   if (ctx.isPlatformAdmin) {
     sandboxRole = 'platform_admin';
   } else if (ctx.ownerAccountIds.includes(ref.accountId)) {
@@ -158,14 +158,14 @@ export async function canAccessPreviewSandbox(input: {
 }
 
 /**
- * Payload ready to sign + forward as `X-Kortix-User-Context`. Null when the
+ * Payload ready to sign + forward as `X-Epsilon-User-Context`. Null when the
  * caller isn't authenticated or isn't allowed on this sandbox — caller should
  * skip attaching the header in that case.
  */
 export async function resolvePreviewUserContext(
   previewSandboxId: string,
   userId: string | undefined,
-): Promise<Omit<KortixUserContext, 'iat' | 'exp'> | null> {
+): Promise<Omit<EpsilonUserContext, 'iat' | 'exp'> | null> {
   if (!userId) return null;
   const entry = await getOrCompute(previewSandboxId, userId);
   return entry.payload;

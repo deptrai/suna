@@ -1,0 +1,508 @@
+/**
+ * Epsilon Projects — project CRUD + session-project linking + file gating.
+ *
+ * SQLite (epsilon.db) is the single source of truth.
+ * No filesystem scanning, no markers.
+ */
+
+import { Database } from "bun:sqlite"
+import * as fs from "node:fs/promises"
+import { existsSync, mkdirSync, unlinkSync, statSync } from "node:fs"
+import * as path from "node:path"
+import { tool, type ToolContext } from "@opencode-ai/plugin"
+import { ensureGlobalMemoryFiles } from "./lib/paths"
+import { ensureSchema } from "./lib/schema"
+import { seedV2Project, DEFAULT_PM_SLUG, resolveDefaultModel } from "../../../src/services/project-v2-seed"
+import { wakeAgentForProject, type OpenCodeClientLike } from "../../../src/services/ticket-triggers"
+import { getAgentBySlug } from "../../../src/services/ticket-service"
+
+// ── Types ────────────────────────────────────────────────────────────────────
+
+export interface ProjectRow {
+	id: string; name: string; path: string; description: string
+	created_at: string; opencode_id: string | null
+	/** Hidden project-maintainer session id. Auto-created on first task lifecycle event. */
+	maintainer_session_id?: string | null
+}
+
+export const PROJECT_MAINTAINER_AGENT = "project-maintainer"
+
+const TASK_SUMMARY_START = "<!-- EPSILON:TASK-SUMMARY:START -->"
+const TASK_SUMMARY_END = "<!-- EPSILON:TASK-SUMMARY:END -->"
+
+function projectContextPath(projectPath: string): string {
+	return path.join(projectPath, ".epsilon", "CONTEXT.md")
+}
+
+function buildTaskSummary(db: Database, projectId: string): string {
+	const tasks = db.prepare(`
+		SELECT title, status, verification_summary, result, blocking_question
+		FROM tasks WHERE project_id=$pid
+		ORDER BY CASE status
+			WHEN 'in_progress' THEN 0
+			WHEN 'input_needed' THEN 1
+			WHEN 'awaiting_review' THEN 2
+			WHEN 'todo' THEN 3
+			WHEN 'completed' THEN 4
+			WHEN 'cancelled' THEN 5
+			ELSE 99 END, updated_at DESC
+		LIMIT 40
+	`).all({ $pid: projectId }) as Array<{
+		title: string
+		status: string
+		verification_summary: string | null
+		result: string | null
+		blocking_question: string | null
+	}>
+
+	const byStatus = (s: string) => tasks.filter((t) => t.status === s)
+	const summarize = (text: string | null | undefined, max = 140) => {
+		if (!text) return ""
+		const clean = text.replace(/\s+/g, " ").trim()
+		return clean.length > max ? `${clean.slice(0, max - 1)}…` : clean
+	}
+
+	const lines = [
+		"## Task Snapshot",
+		"",
+		`- todo: ${byStatus("todo").length}`,
+		`- in_progress: ${byStatus("in_progress").length}`,
+		`- input_needed: ${byStatus("input_needed").length}`,
+		`- awaiting_review: ${byStatus("awaiting_review").length}`,
+		`- completed: ${byStatus("completed").length}`,
+		`- cancelled: ${byStatus("cancelled").length}`,
+	]
+
+	const active = tasks.filter((t) => ["todo", "in_progress", "input_needed", "awaiting_review"].includes(t.status))
+	if (active.length) {
+		lines.push("", "### Active / Review")
+		for (const task of active) {
+			const extra = task.status === "input_needed"
+				? summarize(task.blocking_question)
+				: task.status === "awaiting_review"
+					? summarize(task.verification_summary || task.result)
+					: ""
+			lines.push(`- [${task.status}] ${task.title}${extra ? ` — ${extra}` : ""}`)
+		}
+	}
+
+	const completed = byStatus("completed").slice(0, 8)
+	if (completed.length) {
+		lines.push("", "### Recent Completed")
+		for (const task of completed) {
+			const extra = summarize(task.verification_summary || task.result)
+			lines.push(`- ${task.title}${extra ? ` — ${extra}` : ""}`)
+		}
+	}
+
+	return [TASK_SUMMARY_START, ...lines, TASK_SUMMARY_END].join("\n")
+}
+
+async function syncProjectContextFile(db: Database, project: ProjectRow): Promise<string> {
+	const ctxPath = projectContextPath(project.path)
+	await fs.mkdir(path.dirname(ctxPath), { recursive: true })
+	let current = ""
+	try { current = await fs.readFile(ctxPath, "utf8") } catch {}
+	if (!current.trim()) current = `# ${project.name}\n\n${project.description || ""}\n`
+
+	const block = buildTaskSummary(db, project.id)
+	let next: string
+	const start = current.indexOf(TASK_SUMMARY_START)
+	const end = current.indexOf(TASK_SUMMARY_END)
+	if (start !== -1 && end !== -1 && end > start) {
+		next = `${current.slice(0, start).trimEnd()}\n\n${block}\n${current.slice(end + TASK_SUMMARY_END.length).trimStart()}`
+	} else {
+		next = `${current.trimEnd()}\n\n${block}\n`
+	}
+	await fs.writeFile(ctxPath, next, "utf8")
+	return ctxPath
+}
+
+// ── Database ─────────────────────────────────────────────────────────────────
+
+export function initProjectsDb(dbPath: string): Database {
+	mkdirSync(path.dirname(dbPath), { recursive: true })
+	try {
+		const dbExists = existsSync(dbPath)
+		const dbEmpty = dbExists && statSync(dbPath).size === 0
+		if (!dbExists || dbEmpty) {
+			for (const suffix of ["", "-wal", "-shm", "-journal"]) {
+				try { unlinkSync(dbPath + suffix) } catch {}
+			}
+		}
+	} catch {}
+
+	let db: Database
+	try { db = new Database(dbPath) } catch {
+		for (const suffix of ["", "-wal", "-shm", "-journal"]) {
+			try { unlinkSync(dbPath + suffix) } catch {}
+		}
+		db = new Database(dbPath)
+	}
+	db.exec("PRAGMA journal_mode=DELETE; PRAGMA busy_timeout=5000")
+
+	ensureSchema(db, "projects", [
+		{ name: "id",          type: "TEXT",    notNull: true,  defaultValue: null, primaryKey: true },
+		{ name: "name",        type: "TEXT",    notNull: true,  defaultValue: null, primaryKey: false },
+		{ name: "path",        type: "TEXT",    notNull: true,  defaultValue: null, primaryKey: false, unique: true },
+		{ name: "description", type: "TEXT",    notNull: true,  defaultValue: "''", primaryKey: false },
+		{ name: "created_at",  type: "TEXT",    notNull: true,  defaultValue: null, primaryKey: false },
+		{ name: "opencode_id", type: "TEXT",    notNull: false, defaultValue: null, primaryKey: false },
+		{ name: "maintainer_session_id", type: "TEXT", notNull: false, defaultValue: null, primaryKey: false },
+		{ name: "structure_version", type: "INTEGER", notNull: true, defaultValue: "2", primaryKey: false },
+		{ name: "user_handle", type: "TEXT", notNull: false, defaultValue: null, primaryKey: false },
+		{ name: "kind", type: "TEXT", notNull: true, defaultValue: "'scoped'", primaryKey: false },
+	])
+
+	ensureSchema(db, "session_projects", [
+		{ name: "session_id", type: "TEXT", notNull: true, defaultValue: null, primaryKey: true },
+		{ name: "project_id", type: "TEXT", notNull: true, defaultValue: null, primaryKey: false },
+		{ name: "set_at",     type: "TEXT", notNull: true, defaultValue: null, primaryKey: false },
+	])
+
+	ensureSchema(db, "connectors", [
+		{ name: "id",             type: "TEXT",    notNull: true,  defaultValue: null, primaryKey: true },
+		{ name: "name",           type: "TEXT",    notNull: true,  defaultValue: null, primaryKey: false, unique: true },
+		{ name: "description",    type: "TEXT",    notNull: false, defaultValue: null, primaryKey: false },
+		{ name: "source",         type: "TEXT",    notNull: false, defaultValue: null, primaryKey: false },
+		{ name: "pipedream_slug", type: "TEXT",    notNull: false, defaultValue: null, primaryKey: false },
+		{ name: "env_keys",       type: "TEXT",    notNull: false, defaultValue: null, primaryKey: false },
+		{ name: "notes",          type: "TEXT",    notNull: false, defaultValue: null, primaryKey: false },
+		{ name: "auto_generated", type: "INTEGER", notNull: false, defaultValue: "0",  primaryKey: false },
+		{ name: "created_at",     type: "TEXT",    notNull: true,  defaultValue: null, primaryKey: false },
+		{ name: "updated_at",     type: "TEXT",    notNull: true,  defaultValue: null, primaryKey: false },
+	])
+
+	return db
+}
+
+// ── Manager ──────────────────────────────────────────────────────────────────
+
+function projectId(name: string): string {
+	return `proj-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}-${Date.now().toString(36)}`
+}
+
+export class ProjectManager {
+	private sessionProjectCache = new Map<string, ProjectRow>()
+
+	// client is publicly accessible so tools can invoke session.* directly.
+	constructor(public client: any, private workspaceRoot: string, public db: Database) {}
+
+	getSessionProject(sessionId: string): ProjectRow | null {
+		const cached = this.sessionProjectCache.get(sessionId)
+		if (cached) return cached
+		const row = this.db.prepare("SELECT p.* FROM session_projects sp JOIN projects p ON sp.project_id = p.id WHERE sp.session_id = $sid")
+			.get({ $sid: sessionId }) as ProjectRow | null
+		if (row) this.sessionProjectCache.set(sessionId, row)
+		return row
+	}
+
+	setSessionProject(sessionId: string, projectId: string): void {
+		this.db.prepare("INSERT OR REPLACE INTO session_projects (session_id, project_id, set_at) VALUES ($sid, $pid, $now)")
+			.run({ $sid: sessionId, $pid: projectId, $now: new Date().toISOString() })
+		const project = this.db.prepare("SELECT * FROM projects WHERE id = $id").get({ $id: projectId }) as ProjectRow | null
+		if (project) this.sessionProjectCache.set(sessionId, project)
+	}
+
+	getMaintainerSessionId(projectId: string): string | null {
+		const row = this.db.prepare("SELECT maintainer_session_id FROM projects WHERE id = $id").get({ $id: projectId }) as { maintainer_session_id?: string | null } | null
+		return row?.maintainer_session_id || null
+	}
+
+	/**
+	 * Ensure a hidden project-maintainer session exists for this project, creating
+	 * one lazily on first invocation. Stored in the `maintainer_session_id` column.
+	 * Returns the session id on success, or null if creation failed.
+	 */
+	async ensureMaintainerSession(projectId: string): Promise<string | null> {
+		const existing = this.getMaintainerSessionId(projectId)
+		if (existing) return existing
+
+		const project = this.db.prepare("SELECT * FROM projects WHERE id = $id").get({ $id: projectId }) as ProjectRow | null
+		if (!project) return null
+
+		try {
+			const result = await this.client.session.create({
+				body: { title: `${project.name} maintainer` },
+			})
+			const sessionId = result?.data?.id as string | undefined
+			if (!sessionId) return null
+
+			this.db.prepare("UPDATE projects SET maintainer_session_id=$sid WHERE id=$id")
+				.run({ $sid: sessionId, $id: projectId })
+			this.setSessionProject(sessionId, projectId)
+			return sessionId
+		} catch {
+			return null
+		}
+	}
+
+	async createProject(name: string, desc: string, customPath: string): Promise<ProjectRow> {
+		const pp = customPath || path.join(this.workspaceRoot, "projects", name)
+		// Guard: never register a project AT the workspace root — that's the
+		// "workspace" meta-project's slot. Callers that pass path=workspace
+		// usually mean "create a sub-project"; picking a subfolder is safer
+		// than silently creating a duplicate meta-project there.
+		if (path.resolve(pp) === path.resolve(this.workspaceRoot)) {
+			throw new Error(
+				`Refusing to create project at workspace root (${pp}). ` +
+				`Pass a subfolder path, e.g. ${path.join(this.workspaceRoot, name)}.`,
+			)
+		}
+		const existing = this.db.prepare("SELECT * FROM projects WHERE path=$p").get({ $p: pp }) as ProjectRow | null
+		if (existing) {
+			if (desc) { this.db.prepare("UPDATE projects SET description=$d WHERE id=$id").run({ $d: desc, $id: existing.id }); existing.description = desc }
+			return existing
+		}
+		const wm = async (f: string, c: string) => { if (!existsSync(f)) await fs.writeFile(f, c, "utf8") }
+		await fs.mkdir(path.join(pp, ".epsilon"), { recursive: true })
+		ensureGlobalMemoryFiles(import.meta.dir)
+		await wm(path.join(pp, ".epsilon", "CONTEXT.md"), `# ${name}\n\n${desc || "No description."}\n`)
+		const id = projectId(name), now = new Date().toISOString()
+		let opencodeId: string | null = null
+		try {
+			const ocResult = await this.client.project.current({ directory: pp })
+			const ocProject = ocResult.data as any
+			if (ocProject?.id && ocProject.id !== "global") opencodeId = ocProject.id
+		} catch {}
+		// Explicit structure_version=2 — don't rely on the column's default.
+		// Two other code paths (routes/projects.ts CREATE TABLE + ALTER) have
+		// historically shipped with default=1; even though those are now also
+		// fixed to default 2, being explicit here prevents a v1 row ever
+		// being created regardless of which migrator ran first.
+		this.db.prepare("INSERT INTO projects (id,name,path,description,created_at,opencode_id,structure_version) VALUES ($id,$n,$p,$d,$c,$oid,2)")
+			.run({ $id: id, $n: name, $p: pp, $d: desc || "", $c: now, $oid: opencodeId })
+		return { id, name, path: pp, description: desc || "", created_at: now, opencode_id: opencodeId }
+	}
+
+	listProjects(): ProjectRow[] {
+		return this.db.prepare("SELECT * FROM projects ORDER BY created_at DESC").all() as ProjectRow[]
+	}
+
+	getProject(q: string): ProjectRow | null {
+		return (this.db.prepare("SELECT * FROM projects WHERE path=$v").get({ $v: q })
+			|| this.db.prepare("SELECT * FROM projects WHERE LOWER(name)=LOWER($v)").get({ $v: q })
+			|| this.db.prepare("SELECT * FROM projects WHERE LOWER(name) LIKE LOWER($v)").get({ $v: `%${q}%` })
+		) as ProjectRow | null
+	}
+
+	/**
+	 * Single-project paradigm: a sandbox owns exactly one Epsilon project,
+	 * canonically `proj-workspace` rooted at /workspace.
+	 *
+	 * This row is the implicit container for tickets, milestones, columns,
+	 * project-agents, and credentials when the project paradigm is enabled.
+	 * Sessions auto-bind to it, so the LLM never needs project_create or
+	 * project_select — those tools are gone in the new paradigm.
+	 *
+	 * Resolution order:
+	 *   1. Existing `proj-workspace` row → use as-is (the standard one).
+	 *   2. Any project at the workspace root path → adopt as THE project
+	 *      (handles sandboxes pre-dating this paradigm where the user had
+	 *      a different id at /workspace).
+	 *   3. Insert fresh `proj-workspace` row with structure_version=2.
+	 *
+	 * Always idempotent.
+	 */
+	ensureDefaultProject(): ProjectRow {
+		const canonicalId = "proj-workspace"
+		const existing = this.db.prepare("SELECT * FROM projects WHERE id=$id")
+			.get({ $id: canonicalId }) as ProjectRow | null
+		if (existing) return existing
+
+		const atRoot = this.db.prepare("SELECT * FROM projects WHERE path=$p")
+			.get({ $p: this.workspaceRoot }) as ProjectRow | null
+		if (atRoot) return atRoot
+
+		const now = new Date().toISOString()
+		this.db.prepare(
+			"INSERT INTO projects (id,name,path,description,created_at,opencode_id,structure_version) " +
+			"VALUES ($id,$n,$p,$d,$c,NULL,2)",
+		).run({
+			$id: canonicalId,
+			$n: "Workspace",
+			$p: this.workspaceRoot,
+			$d: "Default sandbox project — auto-bootstrapped. Owns the board, tickets, milestones.",
+			$c: now,
+		})
+		return {
+			id: canonicalId,
+			name: "Workspace",
+			path: this.workspaceRoot,
+			description: "Default sandbox project — auto-bootstrapped. Owns the board, tickets, milestones.",
+			created_at: now,
+			opencode_id: null,
+		}
+	}
+}
+
+// ── Tools ────────────────────────────────────────────────────────────────────
+
+export function projectTools(mgr: ProjectManager, db: Database) {
+	// Single-project paradigm: there is no `project_create` (the sandbox
+	// auto-bootstraps THE project on init via ProjectManager.ensureDefaultProject)
+	// and no `project_select` (every session auto-binds to THE project on
+	// first ticket/task tool call — see ticket-tools.ts:getProjectIdForCtx).
+	// Both tools are intentionally absent so the LLM never offers to "create
+	// a project" or "switch projects" — those concepts no longer exist.
+	return {
+
+		project_get: tool({
+			description: "Get project details and session info.",
+			args: { name: tool.schema.string().describe("Name or path") },
+			async execute(args: { name: string }): Promise<string> {
+				const p = mgr.getProject(args.name)
+				if (!p) return `Project not found: "${args.name}"`
+				const contextPath = path.join(p.path, ".epsilon", "CONTEXT.md")
+				return [
+					`## ${p.name}`, ``, `**Path:** \`${p.path}\``,
+					p.description ? `**Description:** ${p.description}` : null,
+					`**ID:** \`${p.id}\``, ``,
+					`**Context:** \`${contextPath}\` ${existsSync(contextPath) ? "✓" : "(not created)"}`,
+				].filter(Boolean).join("\n")
+			},
+		}),
+
+		project_context_get: tool({
+			description: "Get the current project's CONTEXT.md path and confirm whether it exists.",
+			args: { project: tool.schema.string().describe("Project name or path") },
+			async execute(args: { project: string }): Promise<string> {
+				const p = mgr.getProject(args.project)
+				if (!p) return `Project not found: "${args.project}"`
+				const ctx = projectContextPath(p.path)
+				return `Project CONTEXT: \`${ctx}\` ${existsSync(ctx) ? "✓" : "(missing)"}`
+			},
+		}),
+
+		project_context_sync: tool({
+			description: "Refresh the generated task snapshot section inside the project's CONTEXT.md while preserving manual content.",
+			args: { project: tool.schema.string().describe("Project name or path") },
+			async execute(args: { project: string }): Promise<string> {
+				const p = mgr.getProject(args.project)
+				if (!p) return `Project not found: "${args.project}"`
+				const ctx = await syncProjectContextFile(db, p)
+				return `Synced generated task snapshot in \`${ctx}\`.`
+			},
+		}),
+
+		project_update: tool({
+			description: "Update project name/description.",
+			args: {
+				project: tool.schema.string().describe("Name or path"),
+				name: tool.schema.string().describe('"" to keep current'),
+				description: tool.schema.string().describe('"" to keep current'),
+			},
+			async execute(args: { project: string; name: string; description: string }): Promise<string> {
+				const p = mgr.getProject(args.project)
+				if (!p) return "Not found."
+				const n = args.name || p.name, d = args.description || p.description
+				db.prepare("UPDATE projects SET name=$n,description=$d WHERE id=$id").run({ $n: n, $d: d, $id: p.id })
+				return `Updated: **${n}**`
+			},
+		}),
+
+	}
+}
+
+// ── Gating Hook ──────────────────────────────────────────────────────────────
+
+export function projectGateHook(_mgr: ProjectManager) {
+	// Previously this hook blocked EVERY non-project tool (bash, read, edit,
+	// skill, web_search, …) until a project was selected. That made the
+	// default chat unusable for general requests: users had to create a
+	// project before the agent could do anything at all.
+	//
+	// New policy: fail open. The default chat is for general work — trust
+	// the agent's tool descriptions (e.g. `project_create`'s "ONLY when the
+	// user explicitly mentions the word 'project'") to decide when to bind
+	// to a project. If the user just asks "write me a script", the agent
+	// can call `write` directly without a project-select dance.
+	//
+	// V2 projects still enforce role-based routing via
+	// `projectStatusTransform` (non-team agents inside a bound v2 project
+	// are told they can only route, not execute).
+	return async (_input: { tool: string; sessionID: string; callID: string }, _output: { args: any }) => {
+		return
+	}
+}
+
+// ── Status Injection ─────────────────────────────────────────────────────────
+
+export function projectStatusTransform(mgr: ProjectManager, getCurrentSessionId: () => string | null) {
+	return async (_input: any, output: { messages: any[] }) => {
+		try {
+			let sid = getCurrentSessionId()
+			if (!sid) {
+				for (const m of output.messages) {
+					const msgSid = m?.info?.sessionID || m?.sessionID
+					if (msgSid) { sid = msgSid; break }
+				}
+			}
+			if (!sid) return
+			let statusXml: string
+			try {
+				const project = mgr.getSessionProject(sid)
+				if (project) {
+					// Default 2 when col missing — same reasoning as project_select.
+					const sv = (project as unknown as { structure_version?: number }).structure_version
+						?? (project.id === 'proj-workspace' ? 1 : 2)
+					// What agent is the current session running as? Pull from the latest msg.
+					let currentAgent: string | null = null
+					for (let i = output.messages.length - 1; i >= 0; i--) {
+						const a = output.messages[i]?.info?.agent
+						if (a) { currentAgent = a; break }
+					}
+					// v2 projects have a PM + team that owns execution. Non-team agents
+					// (general, orchestrator, etc.) must NOT do hands-on work here —
+					// they route the user to the appropriate team session.
+					const isTeamAgent = !!currentAgent && !!mgr.db.prepare(
+						"SELECT 1 FROM project_agents WHERE project_id=$pid AND slug=$slug"
+					).get({ $pid: project.id, $slug: currentAgent })
+					if (sv === 2 && !isTeamAgent) {
+						statusXml = [
+							`<system-reminder>`,
+							`STOP. Session is bound to v2 project "${project.name}" (${project.path}).`,
+							`A v2 project owns its own execution: the Project Manager + the team it builds do the work via tickets. You (${currentAgent || "this agent"}) are NOT a team member of this project.`,
+							``,
+							`Your role here is ROUTING ONLY:`,
+							`  - If the user wants the project's work done → tell them to switch to the @project-manager session for that project. ONE short sentence.`,
+							`  - If the user wants something OUTSIDE this project → tell them you can't act here and to start a new general session (no project bound).`,
+							``,
+							`DO NOT call: bash, edit, write, skill, web_search, webfetch, scrape_webpage, read, grep, glob, pty_*, task_create, or any other hands-on tool. The team executes — not you.`,
+							`Tools you MAY use: project_list, project_get, question, show.`,
+							`</system-reminder>`,
+						].join("\n")
+					} else {
+						statusXml = `<project_status selected="${project.name}" path="${project.path}" version="${sv}" />`
+					}
+				} else {
+					// No project bound. That's fine for general chat — the default
+					// agent should just do the work. Only surface a soft hint that
+					// a project exists if the user asks for project-scoped things.
+					let projectList = ""
+					try {
+						const projects = mgr.listProjects()
+						if (projects.length > 0) {
+							projectList = ` Existing projects: ${projects.map(p => `"${p.name}"`).join(", ")}.`
+						}
+					} catch {}
+					statusXml = [
+						`<project_status selected="none" />`,
+						`<!-- No project is bound to this session. Act directly on the user's request.`,
+						`     Only call project_create when the user explicitly says "project" — e.g.`,
+						`     "create a project for X" / "spin up a project to Y".`,
+						`     Call project_select only if the user references an existing one by name.${projectList} -->`,
+					].join("\n")
+				}
+			} catch { return }
+			const messages = output.messages
+			for (let i = messages.length - 1; i >= 0; i--) {
+				if (messages[i]?.info?.role === "user") {
+					if (!Array.isArray(messages[i].parts)) messages[i].parts = []
+					messages[i].parts.push({ type: "text", text: `<epsilon_system type="project-status" source="epsilon-system">${statusXml}</epsilon_system>` })
+					break
+				}
+			}
+		} catch {}
+	}
+}

@@ -21,15 +21,15 @@ import { describe, test, expect } from 'bun:test';
 // ---------------------------------------------------------------------------
 
 const cloudOrigins = [
-  'https://www.kortix.com',
-  'https://kortix.com',
-  'https://dev.kortix.com',
-  'https://new-dev.kortix.com',
-  'https://staging.kortix.com',
-  'https://kortix.cloud',
-  'https://www.kortix.cloud',
-  'https://new.kortix.com',
-  'https://computer-preview.kortix.com',
+  'https://www.epsilon.com',
+  'https://epsilon.com',
+  'https://dev.epsilon.com',
+  'https://new-dev.epsilon.com',
+  'https://staging.epsilon.com',
+  'https://epsilon.cloud',
+  'https://www.epsilon.cloud',
+  'https://new.epsilon.com',
+  'https://computer-preview.epsilon.com',
 ];
 
 const justavpsOrigins = [
@@ -57,13 +57,13 @@ describe('Security Audit: CORS Security', () => {
 
   describe('Allowed origins', () => {
     test('production domains are allowed', () => {
-      expect(isOriginAllowed('https://kortix.com')).toBe(true);
-      expect(isOriginAllowed('https://www.kortix.com')).toBe(true);
+      expect(isOriginAllowed('https://epsilon.com')).toBe(true);
+      expect(isOriginAllowed('https://www.epsilon.com')).toBe(true);
     });
 
     test('staging/dev domains are allowed', () => {
-      expect(isOriginAllowed('https://dev.kortix.com')).toBe(true);
-      expect(isOriginAllowed('https://staging.kortix.com')).toBe(true);
+      expect(isOriginAllowed('https://dev.epsilon.com')).toBe(true);
+      expect(isOriginAllowed('https://staging.epsilon.com')).toBe(true);
     });
 
     test('localhost is allowed for local dev', () => {
@@ -72,7 +72,7 @@ describe('Security Audit: CORS Security', () => {
     });
 
     test('preview domain is allowed', () => {
-      expect(isOriginAllowed('https://computer-preview.kortix.com')).toBe(true);
+      expect(isOriginAllowed('https://computer-preview.epsilon.com')).toBe(true);
     });
   });
 
@@ -95,21 +95,21 @@ describe('Security Audit: CORS Security', () => {
       expect(isOriginAllowed('*')).toBe(false);
     });
 
-    test('rejects kortix subdomain not in allowlist', () => {
-      expect(isOriginAllowed('https://evil.kortix.com')).toBe(false);
-      expect(isOriginAllowed('https://malicious.kortix.com')).toBe(false);
+    test('rejects epsilon subdomain not in allowlist', () => {
+      expect(isOriginAllowed('https://evil.epsilon.com')).toBe(false);
+      expect(isOriginAllowed('https://malicious.epsilon.com')).toBe(false);
     });
 
     test('rejects similar-looking domains', () => {
       expect(isOriginAllowed('https://k0rtix.com')).toBe(false); // zero instead of o
-      expect(isOriginAllowed('https://kortix-evil.com')).toBe(false);
-      expect(isOriginAllowed('https://kortix.com.evil.com')).toBe(false);
+      expect(isOriginAllowed('https://epsilon-evil.com')).toBe(false);
+      expect(isOriginAllowed('https://epsilon.com.evil.com')).toBe(false);
     });
 
     test('rejects HTTP versions of HTTPS origins', () => {
-      expect(isOriginAllowed('http://kortix.com')).toBe(false);
-      expect(isOriginAllowed('http://www.kortix.com')).toBe(false);
-      expect(isOriginAllowed('http://dev.kortix.com')).toBe(false);
+      expect(isOriginAllowed('http://epsilon.com')).toBe(false);
+      expect(isOriginAllowed('http://www.epsilon.com')).toBe(false);
+      expect(isOriginAllowed('http://dev.epsilon.com')).toBe(false);
     });
 
     test('rejects localhost on wrong port', () => {
@@ -125,28 +125,28 @@ describe('Security Audit: CORS Security', () => {
 
   describe('Origin manipulation attacks', () => {
     test('rejects origin with trailing slash', () => {
-      expect(isOriginAllowed('https://kortix.com/')).toBe(false);
+      expect(isOriginAllowed('https://epsilon.com/')).toBe(false);
     });
 
     test('rejects origin with path', () => {
-      expect(isOriginAllowed('https://kortix.com/api')).toBe(false);
+      expect(isOriginAllowed('https://epsilon.com/api')).toBe(false);
     });
 
     test('rejects origin with query string', () => {
-      expect(isOriginAllowed('https://kortix.com?evil=true')).toBe(false);
+      expect(isOriginAllowed('https://epsilon.com?evil=true')).toBe(false);
     });
 
     test('rejects origin with port on production domain', () => {
-      expect(isOriginAllowed('https://kortix.com:443')).toBe(false);
-      expect(isOriginAllowed('https://kortix.com:8080')).toBe(false);
+      expect(isOriginAllowed('https://epsilon.com:443')).toBe(false);
+      expect(isOriginAllowed('https://epsilon.com:8080')).toBe(false);
     });
 
     test('rejects origin with user info', () => {
-      expect(isOriginAllowed('https://admin@kortix.com')).toBe(false);
+      expect(isOriginAllowed('https://admin@epsilon.com')).toBe(false);
     });
 
     test('rejects origin with fragment', () => {
-      expect(isOriginAllowed('https://kortix.com#evil')).toBe(false);
+      expect(isOriginAllowed('https://epsilon.com#evil')).toBe(false);
     });
   });
 
@@ -176,7 +176,7 @@ describe('Security Audit: CORS Security', () => {
       const extraOrigins = ['https://custom.example.com', 'http://localhost:5000'];
       expect(isOriginAllowed('https://custom.example.com', extraOrigins)).toBe(true);
       // Original origins still work
-      expect(isOriginAllowed('https://kortix.com', extraOrigins)).toBe(true);
+      expect(isOriginAllowed('https://epsilon.com', extraOrigins)).toBe(true);
     });
 
     test('extra origins do not weaken existing restrictions', () => {

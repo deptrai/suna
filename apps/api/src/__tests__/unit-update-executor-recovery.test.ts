@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, mock, test } from 'bun:test';
 const phaseCalls: string[] = [];
 const stepCalls = { ensure: 0, checkpoint: 0 };
 
-mock.module('@kortix/db', () => ({ sandboxes: { sandboxId: 'sandboxId' } }));
+mock.module('@epsilon/db', () => ({ sandboxes: { sandboxId: 'sandboxId' } }));
 mock.module('drizzle-orm', () => ({ eq: () => ({}) }));
 mock.module('../shared/db', () => ({
   db: {
@@ -16,7 +16,7 @@ mock.module('../shared/db', () => ({
     }),
   },
 }));
-mock.module('../config', () => ({ config: { SANDBOX_IMAGE: 'kortix/computer:0.8.40' } }));
+mock.module('../config', () => ({ config: { SANDBOX_IMAGE: 'epsilon/computer:0.8.40' } }));
 mock.module('../platform/providers', () => ({
   getProvider: () => ({ resolveEndpoint: async () => ({ url: 'http://sandbox', headers: {} }) }),
 }));
@@ -28,7 +28,7 @@ mock.module('../update/status', () => ({
 }));
 mock.module('../update/container-config', () => ({
   readContainerConfig: async () => ({
-    image: 'kortix/computer:0.8.40',
+    image: 'epsilon/computer:0.8.40',
     name: 'justavps-workload',
     volumes: [],
     ports: [],

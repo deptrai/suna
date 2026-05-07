@@ -34,7 +34,7 @@ test('Better Stack enables for cloud web envs when credentials are present', () 
 test('Better Stack enables for explicitly prod-like public envs', () => {
   const env = {
     NEXT_PUBLIC_ENV_MODE: 'local',
-    NEXT_PUBLIC_KORTIX_ENV: 'staging',
+    NEXT_PUBLIC_EPSILON_ENV: 'staging',
     NEXT_PUBLIC_SENTRY_DSN: 'https://example@sentry.invalid/1',
   }
 

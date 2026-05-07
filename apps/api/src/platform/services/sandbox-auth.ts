@@ -1,5 +1,5 @@
 import { and, eq, ne } from 'drizzle-orm';
-import { sandboxes } from '@kortix/db';
+import { sandboxes } from '@epsilon/db';
 import { db } from '../../shared/db';
 import { config } from '../../config';
 
@@ -32,7 +32,7 @@ import json
 
 token = ${JSON.stringify(token)}
 api_url = ${JSON.stringify(apiUrl)}
-yolo_url = ${JSON.stringify(config.KORTIX_YOLO_URL)}
+yolo_url = ${JSON.stringify(config.EPSILON_YOLO_URL)}
 env_mode = ${JSON.stringify(config.ENV_MODE)}
 
 s6_dir = Path("/run/s6/container_environment")
@@ -41,15 +41,15 @@ if s6_dir_parent.exists() and not s6_dir_parent.is_dir():
     s6_dir_parent.unlink()
 s6_dir.mkdir(parents=True, exist_ok=True)
 values = {
-    "KORTIX_TOKEN": token,
+    "EPSILON_TOKEN": token,
     "INTERNAL_SERVICE_KEY": token,
     "TUNNEL_TOKEN": token,
-    "KORTIX_API_URL": api_url,
+    "EPSILON_API_URL": api_url,
     "TUNNEL_API_URL": api_url,
 }
 if env_mode == "cloud":
-    values["KORTIX_YOLO_API_KEY"] = token
-    values["KORTIX_YOLO_URL"] = yolo_url
+    values["EPSILON_YOLO_API_KEY"] = token
+    values["EPSILON_YOLO_URL"] = yolo_url
 for key, value in values.items():
     (s6_dir / key).write_text(value)
 
@@ -63,14 +63,14 @@ try:
 except Exception:
     data = {}
 data.update({
-    "KORTIX_TOKEN": token,
+    "EPSILON_TOKEN": token,
     "INTERNAL_SERVICE_KEY": token,
     "TUNNEL_TOKEN": token,
-    "KORTIX_API_URL": api_url,
+    "EPSILON_API_URL": api_url,
 })
 if env_mode == "cloud":
-    data["KORTIX_YOLO_API_KEY"] = token
-    data["KORTIX_YOLO_URL"] = yolo_url
+    data["EPSILON_YOLO_API_KEY"] = token
+    data["EPSILON_YOLO_URL"] = yolo_url
 bootstrap.write_text(json.dumps(data))
 PY`
 }

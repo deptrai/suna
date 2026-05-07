@@ -24,7 +24,7 @@ import { useOpenCodeConfig } from '@/hooks/opencode/use-opencode-config';
 import { ProjectSelector } from '@/components/dashboard/project-selector';
 import { NoInstanceState } from '@/components/dashboard/no-instance-state';
 import { useSelectedProjectStore } from '@/stores/selected-project-store';
-import { useKortixProjects } from '@/hooks/kortix/use-kortix-projects';
+import { useEpsilonProjects } from '@/hooks/epsilon/use-epsilon-projects';
 import { useSandbox } from '@/hooks/platform/use-sandbox';
 import { appendProjectRef } from '@/lib/project-preamble';
 import { featureFlags } from '@/lib/feature-flags';
@@ -87,18 +87,18 @@ export function DashboardContent() {
   const selectedProjectIdRaw = useSelectedProjectStore((s) => s.projectId);
   const setSelectedProjectId = useSelectedProjectStore((s) => s.setProjectId);
   const selectedProjectId = featureFlags.enableMultiProject ? selectedProjectIdRaw : null;
-  const { data: kortixProjects } = useKortixProjects(undefined, { enabled: featureFlags.enableMultiProject });
+  const { data: epsilonProjects } = useEpsilonProjects(undefined, { enabled: featureFlags.enableMultiProject });
   const selectedProject = React.useMemo(
-    () => (featureFlags.enableMultiProject ? kortixProjects?.find((p) => p.id === selectedProjectId) ?? null : null),
-    [kortixProjects, selectedProjectId],
+    () => (featureFlags.enableMultiProject ? epsilonProjects?.find((p) => p.id === selectedProjectId) ?? null : null),
+    [epsilonProjects, selectedProjectId],
   );
   // If the persisted project id no longer exists, clear it transparently
   React.useEffect(() => {
     if (!featureFlags.enableMultiProject) return;
-    if (selectedProjectId && kortixProjects && !selectedProject) {
+    if (selectedProjectId && epsilonProjects && !selectedProject) {
       setSelectedProjectId(null);
     }
-  }, [selectedProjectId, kortixProjects, selectedProject, setSelectedProjectId]);
+  }, [selectedProjectId, epsilonProjects, selectedProject, setSelectedProjectId]);
 
   const handleSend = useCallback(
     async (text: string, files?: AttachedFile[]) => {

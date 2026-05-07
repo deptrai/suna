@@ -16,7 +16,7 @@ import { config } from '../config';
 import { ALL_SANDBOX_ENV_KEYS, buildProviderKeySchema } from '../providers/registry';
 import { supabaseAuth } from '../middleware/auth';
 import { eq, sql } from 'drizzle-orm';
-import { accounts } from '@kortix/db';
+import { accounts } from '@epsilon/db';
 import { db, hasDatabase } from '../shared/db';
 import { resolveAccountId } from '../shared/resolve-account';
 import { getSupabase } from '../shared/supabase';
@@ -76,7 +76,7 @@ function getProjectRoot(): string {
 
 function getMasterUrlCandidates(): string[] {
   const candidates: string[] = [];
-  const explicit = process.env.KORTIX_MASTER_URL;
+  const explicit = process.env.EPSILON_MASTER_URL;
   if (explicit && explicit.trim()) candidates.push(explicit.trim());
 
   // Inside docker-compose network, the sandbox service is reachable by name.
@@ -114,7 +114,7 @@ async function fetchMasterJson<T>(path: string, init: RequestInit = {}, timeoutM
     const url = `${base}${path}`;
     try {
       const res = await fetchWithTimeout(url, init, timeoutMs);
-      // 503 from /kortix/health means "starting" — still return the JSON body
+      // 503 from /epsilon/health means "starting" — still return the JSON body
       // so callers can inspect the status/opencode fields.
       if (!res.ok && res.status !== 503) {
         lastErr = new Error(`Master ${url} returned ${res.status}`);
@@ -151,8 +151,8 @@ async function getLocalSandboxWarmStatus() {
   const provider = new LocalDockerProvider();
   const existing = await provider.find();
   const sandboxHealthUrl = config.SANDBOX_NETWORK
-    ? `http://${config.SANDBOX_CONTAINER_NAME}:8000/kortix/health`
-    : `http://localhost:${config.SANDBOX_PORT_BASE || 14000}/kortix/health`;
+    ? `http://${config.SANDBOX_CONTAINER_NAME}:8000/epsilon/health`
+    : `http://localhost:${config.SANDBOX_PORT_BASE || 14000}/epsilon/health`;
 
   if (existing && existing.status === 'running') {
     try {
@@ -171,7 +171,7 @@ async function getLocalSandboxWarmStatus() {
       success: true,
       status: 'creating',
       progress: 95,
-      message: 'Sandbox container is running and finishing Kortix boot...',
+      message: 'Sandbox container is running and finishing Epsilon boot...',
     };
   }
 
@@ -570,7 +570,7 @@ setupApp.post('/env', async (c) => {
     if (existsSync(examplePath)) {
       writeFileSync(rootEnvPath, readFileSync(examplePath, 'utf-8'));
     } else {
-      writeFileSync(rootEnvPath, '# Kortix Environment Configuration\nENV_MODE=local\n');
+      writeFileSync(rootEnvPath, '# Epsilon Environment Configuration\nENV_MODE=local\n');
     }
   }
 
@@ -586,13 +586,13 @@ setupApp.post('/env', async (c) => {
     if (existsSync(examplePath)) {
       writeFileSync(sandboxEnvPath, readFileSync(examplePath, 'utf-8'));
     } else {
-      writeFileSync(sandboxEnvPath, '# Kortix Sandbox Environment\nENV_MODE=local\n');
+      writeFileSync(sandboxEnvPath, '# Epsilon Sandbox Environment\nENV_MODE=local\n');
     }
   }
   sandboxData.ENV_MODE = 'local';
   sandboxData.SANDBOX_ID = config.SANDBOX_CONTAINER_NAME;
   sandboxData.PROJECT_ID = 'local';
-  sandboxData.KORTIX_API_URL = 'http://kortix-api:8008';
+  sandboxData.EPSILON_API_URL = 'http://epsilon-api:8008';
   writeEnvFile(sandboxEnvPath, sandboxData);
 
   // Run setup-env.sh
@@ -619,7 +619,7 @@ setupApp.get('/health', async (c) => {
   // Installed/local Docker mode: check sandbox by HTTP (no docker CLI in image)
   if (!repoRoot) {
     try {
-      const health = await fetchMasterJson<{ status: string; runtimeReady?: boolean }>('/kortix/health', {}, 5000);
+      const health = await fetchMasterJson<{ status: string; runtimeReady?: boolean }>('/epsilon/health', {}, 5000);
       checks.sandbox = { ok: true };
       checks.docker = { ok: true };
       if (health.status === 'starting' || health.runtimeReady === false) {

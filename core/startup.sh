@@ -19,7 +19,7 @@
 #
 # The s6 init scripts then:
 #   - Restore secrets → s6 env dir (97-secrets-to-s6-env.sh)
-#   - Set up git, tool deps, env guards (98-kortix-env.sh)
+#   - Set up git, tool deps, env guards (98-epsilon-env.sh)
 #   - Restore user-installed apt/pip/npm packages (99-restore-packages.sh)
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -30,35 +30,35 @@ set -e
 WORKSPACE_UID="$(id -u abc 2>/dev/null || echo 911)"
 WORKSPACE_GID="$(id -g abc 2>/dev/null || echo 911)"
 
-echo "[startup] Preparing Kortix sandbox..."
+echo "[startup] Preparing Epsilon sandbox..."
 
-export KORTIX_PERSISTENT_ROOT=/persistent
-export OPENCODE_STORAGE_BASE="${OPENCODE_STORAGE_BASE:-${KORTIX_PERSISTENT_ROOT}/opencode}"
-export OPENCODE_SHADOW_STORAGE_BASE="${OPENCODE_SHADOW_STORAGE_BASE:-${KORTIX_PERSISTENT_ROOT}/opencode-shadow}"
-export KORTIX_OPENCODE_ARCHIVE_DIR="${KORTIX_OPENCODE_ARCHIVE_DIR:-${KORTIX_PERSISTENT_ROOT}/opencode-archive}"
-export KORTIX_OPENCODE_CACHE_DIR="${KORTIX_OPENCODE_CACHE_DIR:-${KORTIX_PERSISTENT_ROOT}/opencode-cache}"
-export SECRET_FILE_PATH="${SECRET_FILE_PATH:-${KORTIX_PERSISTENT_ROOT}/secrets/.secrets.json}"
-export SALT_FILE_PATH="${SALT_FILE_PATH:-${KORTIX_PERSISTENT_ROOT}/secrets/.salt}"
-export ENCRYPTION_KEY_PATH="${ENCRYPTION_KEY_PATH:-${KORTIX_PERSISTENT_ROOT}/secrets/.encryption-key}"
+export EPSILON_PERSISTENT_ROOT=/persistent
+export OPENCODE_STORAGE_BASE="${OPENCODE_STORAGE_BASE:-${EPSILON_PERSISTENT_ROOT}/opencode}"
+export OPENCODE_SHADOW_STORAGE_BASE="${OPENCODE_SHADOW_STORAGE_BASE:-${EPSILON_PERSISTENT_ROOT}/opencode-shadow}"
+export EPSILON_OPENCODE_ARCHIVE_DIR="${EPSILON_OPENCODE_ARCHIVE_DIR:-${EPSILON_PERSISTENT_ROOT}/opencode-archive}"
+export EPSILON_OPENCODE_CACHE_DIR="${EPSILON_OPENCODE_CACHE_DIR:-${EPSILON_PERSISTENT_ROOT}/opencode-cache}"
+export SECRET_FILE_PATH="${SECRET_FILE_PATH:-${EPSILON_PERSISTENT_ROOT}/secrets/.secrets.json}"
+export SALT_FILE_PATH="${SALT_FILE_PATH:-${EPSILON_PERSISTENT_ROOT}/secrets/.salt}"
+export ENCRYPTION_KEY_PATH="${ENCRYPTION_KEY_PATH:-${EPSILON_PERSISTENT_ROOT}/secrets/.encryption-key}"
 export AUTH_JSON_PATH="${AUTH_JSON_PATH:-${OPENCODE_STORAGE_BASE}/auth.json}"
-export LSS_DIR="${LSS_DIR:-${KORTIX_PERSISTENT_ROOT}/lss}"
-export KORTIX_BROWSER_PROFILE_DIR="${KORTIX_BROWSER_PROFILE_DIR:-${KORTIX_PERSISTENT_ROOT}/browser-profile}"
-export KORTIX_AGENT_BROWSER_DIR="${KORTIX_AGENT_BROWSER_DIR:-${KORTIX_PERSISTENT_ROOT}/agent-browser}"
-export KORTIX_KORTIX_STATE_DIR="${KORTIX_KORTIX_STATE_DIR:-${KORTIX_PERSISTENT_ROOT}/kortix-state}"
-export KORTIX_XDG_DIR="${KORTIX_XDG_DIR:-${KORTIX_PERSISTENT_ROOT}/xdg}"
+export LSS_DIR="${LSS_DIR:-${EPSILON_PERSISTENT_ROOT}/lss}"
+export EPSILON_BROWSER_PROFILE_DIR="${EPSILON_BROWSER_PROFILE_DIR:-${EPSILON_PERSISTENT_ROOT}/browser-profile}"
+export EPSILON_AGENT_BROWSER_DIR="${EPSILON_AGENT_BROWSER_DIR:-${EPSILON_PERSISTENT_ROOT}/agent-browser}"
+export EPSILON_EPSILON_STATE_DIR="${EPSILON_EPSILON_STATE_DIR:-${EPSILON_PERSISTENT_ROOT}/epsilon-state}"
+export EPSILON_XDG_DIR="${EPSILON_XDG_DIR:-${EPSILON_PERSISTENT_ROOT}/xdg}"
 
 PERSIST_BACKING_DIR="/workspace/.persistent-system"
 mkdir -p "$PERSIST_BACKING_DIR"
-if [ -L "$KORTIX_PERSISTENT_ROOT" ]; then
-  if [ "$(readlink "$KORTIX_PERSISTENT_ROOT" 2>/dev/null || true)" != "$PERSIST_BACKING_DIR" ]; then
-    rm -f "$KORTIX_PERSISTENT_ROOT"
-    ln -s "$PERSIST_BACKING_DIR" "$KORTIX_PERSISTENT_ROOT"
+if [ -L "$EPSILON_PERSISTENT_ROOT" ]; then
+  if [ "$(readlink "$EPSILON_PERSISTENT_ROOT" 2>/dev/null || true)" != "$PERSIST_BACKING_DIR" ]; then
+    rm -f "$EPSILON_PERSISTENT_ROOT"
+    ln -s "$PERSIST_BACKING_DIR" "$EPSILON_PERSISTENT_ROOT"
   fi
-elif [ -d "$KORTIX_PERSISTENT_ROOT" ] && [ -z "$(ls -A "$KORTIX_PERSISTENT_ROOT" 2>/dev/null)" ]; then
-  rmdir "$KORTIX_PERSISTENT_ROOT" 2>/dev/null || true
-  ln -s "$PERSIST_BACKING_DIR" "$KORTIX_PERSISTENT_ROOT"
-elif [ ! -e "$KORTIX_PERSISTENT_ROOT" ]; then
-  ln -s "$PERSIST_BACKING_DIR" "$KORTIX_PERSISTENT_ROOT"
+elif [ -d "$EPSILON_PERSISTENT_ROOT" ] && [ -z "$(ls -A "$EPSILON_PERSISTENT_ROOT" 2>/dev/null)" ]; then
+  rmdir "$EPSILON_PERSISTENT_ROOT" 2>/dev/null || true
+  ln -s "$PERSIST_BACKING_DIR" "$EPSILON_PERSISTENT_ROOT"
+elif [ ! -e "$EPSILON_PERSISTENT_ROOT" ]; then
+  ln -s "$PERSIST_BACKING_DIR" "$EPSILON_PERSISTENT_ROOT"
 fi
 
 migrate_dir_to_persistent() {
@@ -98,8 +98,8 @@ mkdir -p \
   /workspace/.cache \
   /workspace/.npm-global/bin \
   /workspace/.npm-global/lib \
-  /workspace/.kortix \
-  /workspace/.kortix/packages \
+  /workspace/.epsilon \
+  /workspace/.epsilon/packages \
   /workspace/.config \
   /workspace/.opencode \
   /workspace/.opencode/skills \
@@ -115,26 +115,26 @@ mkdir -p \
   "$OPENCODE_STORAGE_BASE/workspace" \
   "$OPENCODE_STORAGE_BASE/delegations" \
   "$OPENCODE_SHADOW_STORAGE_BASE" \
-  "$KORTIX_OPENCODE_ARCHIVE_DIR" \
-  "$KORTIX_OPENCODE_CACHE_DIR" \
+  "$EPSILON_OPENCODE_ARCHIVE_DIR" \
+  "$EPSILON_OPENCODE_CACHE_DIR" \
   "$(dirname "$SECRET_FILE_PATH")" \
   "$LSS_DIR" \
-  "$KORTIX_BROWSER_PROFILE_DIR" \
-  "$KORTIX_AGENT_BROWSER_DIR" \
-  "$KORTIX_KORTIX_STATE_DIR" \
-  "$KORTIX_XDG_DIR"
+  "$EPSILON_BROWSER_PROFILE_DIR" \
+  "$EPSILON_AGENT_BROWSER_DIR" \
+  "$EPSILON_EPSILON_STATE_DIR" \
+  "$EPSILON_XDG_DIR"
 
 migrate_dir_to_persistent /workspace/.local/share/opencode "$OPENCODE_STORAGE_BASE"
-migrate_dir_to_persistent /workspace/.cache/opencode "$KORTIX_OPENCODE_CACHE_DIR"
+migrate_dir_to_persistent /workspace/.cache/opencode "$EPSILON_OPENCODE_CACHE_DIR"
 migrate_dir_to_persistent /workspace/.secrets "$(dirname "$SECRET_FILE_PATH")"
 migrate_dir_to_persistent /workspace/.lss "$LSS_DIR"
-migrate_dir_to_persistent /workspace/.browser-profile "$KORTIX_BROWSER_PROFILE_DIR"
-migrate_dir_to_persistent /workspace/.agent-browser "$KORTIX_AGENT_BROWSER_DIR"
-migrate_dir_to_persistent /workspace/.kortix-state "$KORTIX_KORTIX_STATE_DIR"
-migrate_dir_to_persistent /workspace/.XDG "$KORTIX_XDG_DIR"
+migrate_dir_to_persistent /workspace/.browser-profile "$EPSILON_BROWSER_PROFILE_DIR"
+migrate_dir_to_persistent /workspace/.agent-browser "$EPSILON_AGENT_BROWSER_DIR"
+migrate_dir_to_persistent /workspace/.epsilon-state "$EPSILON_EPSILON_STATE_DIR"
+migrate_dir_to_persistent /workspace/.XDG "$EPSILON_XDG_DIR"
 
 # ── Migrate legacy symlinks to real dirs ────────────────────────────────────
-# Old images created /workspace/.opencode as a symlink to /workspace/.kortix/.opencode.
+# Old images created /workspace/.opencode as a symlink to /workspace/.epsilon/.opencode.
 # New model: /workspace/.opencode IS the real dir. Migrate data if needed.
 if [ -L /workspace/.opencode ]; then
   LINK_TARGET=$(readlink /workspace/.opencode 2>/dev/null || true)
@@ -161,7 +161,7 @@ fi
 
 # ── Exclude opencode internal dirs from git (prevents 16K+ snapshot diffs) ──
 # Only refresh info/exclude when the git repo already exists (container restart).
-# For fresh workspaces, kortix-env-setup.sh writes info/exclude AFTER git init
+# For fresh workspaces, epsilon-env-setup.sh writes info/exclude AFTER git init
 # (git init overwrites info/exclude with its default template, so writing it here
 # on fresh repos is pointless — it gets clobbered).
 if [ -f /workspace/.git/HEAD ]; then
@@ -173,8 +173,8 @@ if [ -f /workspace/.git/HEAD ]; then
 .cache/
 .config/
 .opencode/
-.kortix/
-.kortix-state/
+.epsilon/
+.epsilon-state/
 .secrets/
 .browser-profile/
 .agent-browser/
@@ -266,7 +266,7 @@ PY
     fi
   fi
   # Always ensure registry aliases exist (idempotent)
-  su -s /bin/sh abc -c 'ocx registry add https://master.kortix-registry.pages.dev --name kortix --cwd /workspace -q' 2>/dev/null || true
+  su -s /bin/sh abc -c 'ocx registry add https://master.epsilon-registry.pages.dev --name epsilon --cwd /workspace -q' 2>/dev/null || true
   su -s /bin/sh abc -c 'ocx registry add https://registry.kdco.dev --name kdco --cwd /workspace -q' 2>/dev/null || true
 fi
 
@@ -279,9 +279,9 @@ find "$OPENCODE_STORAGE_BASE" -name "*.db-shm" 2>/dev/null | while read f; do
   rm -f "$f"
 done
 
-if command -v kortix-opencode-state >/dev/null 2>&1; then
-  kortix-opencode-state guard >/dev/null 2>&1 || true
-  kortix-opencode-state sync >/dev/null 2>&1 || true
+if command -v epsilon-opencode-state >/dev/null 2>&1; then
+  epsilon-opencode-state guard >/dev/null 2>&1 || true
+  epsilon-opencode-state sync >/dev/null 2>&1 || true
 fi
 
 # ── Stale LSS database cleanup ───────────────────────────────────────────────
@@ -299,21 +299,21 @@ if [ ! -L /config ] && [ ! -d /config ]; then
 fi
 
 # ── Verify runtime exists ───────────────────────────────────────────────────
-if [ ! -e /ephemeral/kortix-master ]; then
-  echo "[startup] WARNING: /ephemeral/kortix-master not found! Rebuild the Docker image."
+if [ ! -e /ephemeral/epsilon-master ]; then
+  echo "[startup] WARNING: /ephemeral/epsilon-master not found! Rebuild the Docker image."
 fi
 
-# ── Self-heal kortix.db schema ──────────────────────────────────────────────
+# ── Self-heal epsilon.db schema ──────────────────────────────────────────────
 # Older images shipped a `projects` table without `structure_version` /
 # `user_handle`. Without the column, every project an old master inserts is
 # implicitly v1 (no default) and every read defaults to v1, so newly created
 # projects act like the legacy task layout. Add the columns here BEFORE s6
-# starts kortix-master, so the master always sees a v2-capable schema even
+# starts epsilon-master, so the master always sees a v2-capable schema even
 # if its own bundled code is stale. NOT NULL DEFAULT 2 means every insert
 # the master does — even one that doesn't list the column — gets v2.
-KORTIX_DB="/workspace/.kortix/kortix.db"
-if [ -f "$KORTIX_DB" ] && command -v python3 >/dev/null 2>&1; then
-  python3 - "$KORTIX_DB" <<'PYEOF' || echo "[startup] kortix.db migration skipped (best-effort)"
+EPSILON_DB="/workspace/.epsilon/epsilon.db"
+if [ -f "$EPSILON_DB" ] && command -v python3 >/dev/null 2>&1; then
+  python3 - "$EPSILON_DB" <<'PYEOF' || echo "[startup] epsilon.db migration skipped (best-effort)"
 import sqlite3, sys
 db = sqlite3.connect(sys.argv[1])
 def add(sql):
@@ -327,18 +327,18 @@ try:
     ).rowcount
     db.commit()
     if upgraded:
-        print(f"[startup] kortix.db: upgraded {upgraded} legacy v1 project(s) to v2")
+        print(f"[startup] epsilon.db: upgraded {upgraded} legacy v1 project(s) to v2")
 except sqlite3.OperationalError:
     pass
 db.close()
 PYEOF
 fi
 
-# ── Install Kortix CLI wrappers ─────────────────────────────────────────────
+# ── Install Epsilon CLI wrappers ─────────────────────────────────────────────
 # Runtime-facing commands (ktelegram/kslack/kchannel/kconnectors/kpipedream)
 # should always resolve from immutable /ephemeral code, never /workspace.
-if [ -x /ephemeral/kortix-master/scripts/install-channel-clis.sh ]; then
-  /ephemeral/kortix-master/scripts/install-channel-clis.sh || echo "[startup] WARNING: channel CLI install failed"
+if [ -x /ephemeral/epsilon-master/scripts/install-channel-clis.sh ]; then
+  /ephemeral/epsilon-master/scripts/install-channel-clis.sh || echo "[startup] WARNING: channel CLI install failed"
 fi
 
 echo "[startup] Starting s6-overlay directly..."

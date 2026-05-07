@@ -8,8 +8,8 @@
  *  - Missing Authorization header
  *  - Empty Bearer token
  *  - Malformed Authorization header (no "Bearer " prefix)
- *  - Non-kortix token sent to apiKeyAuth
- *  - Random/forged kortix_ tokens
+ *  - Non-epsilon token sent to apiKeyAuth
+ *  - Random/forged epsilon_ tokens
  *  - Expired JWT tokens
  *  - Tampered JWT tokens
  *  - OPTIONS preflight bypass in combinedAuth (intentional, must not set userId)
@@ -53,9 +53,9 @@ function extractToken(
   return null;
 }
 
-/** isKortixToken — mirrors shared/crypto.ts */
-function isKortixToken(token: string): boolean {
-  return token.startsWith('kortix_');
+/** isEpsilonToken — mirrors shared/crypto.ts */
+function isEpsilonToken(token: string): boolean {
+  return token.startsWith('epsilon_');
 }
 
 // ---------------------------------------------------------------------------
@@ -82,30 +82,30 @@ describe('Security Audit: Auth Middleware', () => {
       expect(token).toBeNull();
     });
 
-    test('rejects non-kortix token format', () => {
+    test('rejects non-epsilon token format', () => {
       const token = 'sk-abc123def456';
-      expect(isKortixToken(token)).toBe(false);
+      expect(isEpsilonToken(token)).toBe(false);
     });
 
     test('rejects token with cortix_ typo prefix', () => {
-      expect(isKortixToken('cortix_abc123')).toBe(false);
+      expect(isEpsilonToken('cortix_abc123')).toBe(false);
     });
 
-    test('rejects token with KORTIX_ uppercase prefix', () => {
+    test('rejects token with EPSILON_ uppercase prefix', () => {
       // The check is case-sensitive — uppercase must not match
-      expect(isKortixToken('KORTIX_abc123')).toBe(false);
+      expect(isEpsilonToken('EPSILON_abc123')).toBe(false);
     });
 
-    test('accepts valid kortix_ prefix', () => {
-      expect(isKortixToken('kortix_abc123')).toBe(true);
+    test('accepts valid epsilon_ prefix', () => {
+      expect(isEpsilonToken('epsilon_abc123')).toBe(true);
     });
 
-    test('accepts valid kortix_sb_ prefix (sandbox key)', () => {
-      expect(isKortixToken('kortix_sb_abc123')).toBe(true);
+    test('accepts valid epsilon_sb_ prefix (sandbox key)', () => {
+      expect(isEpsilonToken('epsilon_sb_abc123')).toBe(true);
     });
 
-    test('accepts valid kortix_tnl_ prefix (tunnel key)', () => {
-      expect(isKortixToken('kortix_tnl_abc123')).toBe(true);
+    test('accepts valid epsilon_tnl_ prefix (tunnel key)', () => {
+      expect(isEpsilonToken('epsilon_tnl_abc123')).toBe(true);
     });
   });
 

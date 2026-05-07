@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { getEnv } from '@/lib/env-config';
 import { UnifiedMarkdown } from '@/components/markdown/unified-markdown';
-import { KortixLoader } from '@/components/ui/kortix-loader';
+import { EpsilonLoader } from '@/components/ui/epsilon-loader';
 import {
   AlertTriangle,
   Copy,
@@ -66,7 +66,7 @@ interface ShareData {
 
 import { getActiveOpenCodeUrl } from '@/stores/server-store';
 
-const FALLBACK_BASE_URL = `${getEnv().BACKEND_URL.replace(/\/+$/, '')}/p/kortix-sandbox/8000`;
+const FALLBACK_BASE_URL = `${getEnv().BACKEND_URL.replace(/\/+$/, '')}/p/epsilon-sandbox/8000`;
 
 function getOpenCodeBaseUrl(): string {
   // Use the active server URL if available (resolves correct sandboxId).
@@ -142,7 +142,7 @@ export function ShareViewer({ shareId }: { shareId: string }) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
-          <KortixLoader size="medium" />
+          <EpsilonLoader size="medium" />
           <p className="text-sm text-muted-foreground">Loading shared session...</p>
         </div>
       </div>
@@ -174,7 +174,7 @@ export function ShareViewer({ shareId }: { shareId: string }) {
 
   return (
     <div className="flex flex-col h-screen bg-background">
-      {/* ── Header (matches Suna thread-site-header variant="shared") ── */}
+      {/* ── Header (matches ChainLens thread-site-header variant="shared") ── */}
       <ShareHeader sessionTitle={session.title} />
 
       {/* ── Message list ── */}
@@ -202,7 +202,7 @@ export function ShareViewer({ shareId }: { shareId: string }) {
 }
 
 // ============================================================================
-// Header — matches Suna SiteHeader variant="shared"
+// Header — matches ChainLens SiteHeader variant="shared"
 // ============================================================================
 
 function ShareHeader({ sessionTitle }: { sessionTitle: string }) {
@@ -259,7 +259,7 @@ function ShareHeader({ sessionTitle }: { sessionTitle: string }) {
 }
 
 // ============================================================================
-// Message views — matches Suna UserMessageRow + AssistantGroupRow
+// Message views — matches ChainLens UserMessageRow + AssistantGroupRow
 // ============================================================================
 
 function ShareMessageView({
@@ -279,7 +279,7 @@ function ShareMessageView({
   return <AssistantBlock parts={parts} aggregatedText={text} />;
 }
 
-// ── User message bubble (matches Suna UserMessageRow) ──
+// ── User message bubble (matches ChainLens UserMessageRow) ──
 
 function UserBubble({ text }: { text: string }) {
   return (
@@ -293,7 +293,7 @@ function UserBubble({ text }: { text: string }) {
   );
 }
 
-// ── Assistant message block (matches Suna AssistantGroupRow) ──
+// ── Assistant message block (matches ChainLens AssistantGroupRow) ──
 
 function AssistantBlock({
   parts,
@@ -304,12 +304,12 @@ function AssistantBlock({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      {/* Agent header — Kortix logomark (matches Suna AgentHeader for name="Kortix") */}
+      {/* Agent header — Epsilon logomark (matches ChainLens AgentHeader for name="Epsilon") */}
       <div className="flex items-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/kortix-logomark-white.svg"
-          alt="Kortix"
+          src="/epsilon-logomark-white.svg"
+          alt="Epsilon"
           className="dark:invert-0 invert flex-shrink-0"
           style={{ height: '12px', width: 'auto' }}
         />
@@ -328,7 +328,7 @@ function AssistantBlock({
             );
           })}
 
-          {/* Message actions — Copy + Thumbs (matches Suna MessageActions) */}
+          {/* Message actions — Copy + Thumbs (matches ChainLens MessageActions) */}
           <MessageActions text={aggregatedText} />
         </div>
       </div>
@@ -337,7 +337,7 @@ function AssistantBlock({
 }
 
 // ============================================================================
-// MessageActions — matches Suna MessageActions component
+// MessageActions — matches ChainLens MessageActions component
 // ============================================================================
 
 function MessageActions({ text, className }: { text: string; className?: string }) {

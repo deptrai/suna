@@ -1,11 +1,11 @@
 {
-  "name": "@kortix/desktop",
+  "name": "@epsilon/desktop",
   "version": "0.1.0",
   "private": true,
-  "description": "Kortix desktop shell — Tauri wrapper around the web app",
+  "description": "Epsilon desktop shell — Tauri wrapper around the web app",
   "scripts": {
     "dev": "tauri dev",
-    "dev:macos": "tauri build --debug --bundles app && open -n src-tauri/target/debug/bundle/macos/Kortix.app",
+    "dev:macos": "tauri build --debug --bundles app && open -n src-tauri/target/debug/bundle/macos/Epsilon.app",
     "build": "tauri build",
     "tauri": "tauri",
     "icons": "tauri icon"

@@ -41,7 +41,7 @@ import {
   MessageSquare,
   ExternalLink,
 } from 'lucide-react';
-import { KortixLoader } from '@/components/ui/kortix-loader';
+import { EpsilonLoader } from '@/components/ui/epsilon-loader';
 import { useAdminUserDetails, useAdminUserThreads, useAdminUserActivity } from '@/hooks/admin/use-admin-users';
 import {
   useUserBillingSummary,
@@ -50,7 +50,7 @@ import {
   useAdminUserTransactions,
 } from '@/hooks/billing';
 import type { UserSummary } from '@/hooks/admin/use-admin-users';
-import { formatCredits, dollarsToCredits, formatCreditsWithSign } from '@kortix/shared';
+import { formatCredits, dollarsToCredits, formatCreditsWithSign } from '@epsilon/shared';
 
 interface AdminUserDetailsDialogProps {
   user: UserSummary | null;
@@ -617,7 +617,7 @@ export function AdminUserDetailsDialog({
                       >
                         {processRefundMutation.isPending ? (
                           <>
-                            <KortixLoader size="small" className="mr-2" />
+                            <EpsilonLoader size="small" className="mr-2" />
                             Processing...
                           </>
                         ) : (

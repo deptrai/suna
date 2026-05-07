@@ -325,7 +325,7 @@ export const useTabStore = create<TabState>()(
       },
     }),
     {
-      name: 'kortix-tab-state',
+      name: 'epsilon-tab-state',
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         activeSessionId: state.activeSessionId,

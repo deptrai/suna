@@ -35,7 +35,7 @@ import { toast } from '@/lib/toast';
 import { featureFlags } from '@/lib/feature-flags';
 import { useServerStore, getActiveOpenCodeUrl } from '@/stores/server-store';
 import { authenticatedFetch } from '@/lib/auth-token';
-import { useKortixProjects } from '@/hooks/kortix/use-kortix-projects';
+import { useEpsilonProjects } from '@/hooks/epsilon/use-epsilon-projects';
 import { ChannelConfigDialog } from './channel-config-dialog';
 import { ChannelSettingsDialog } from './channel-settings-dialog';
 
@@ -63,7 +63,7 @@ async function channelFetch(path: string, opts?: RequestInit): Promise<any> {
   const url = getActiveOpenCodeUrl();
   if (!url) return { ok: false, error: 'No active sandbox' };
   try {
-    const res = await authenticatedFetch(`${url}/kortix/channels${path}`, opts);
+    const res = await authenticatedFetch(`${url}/epsilon/channels${path}`, opts);
     const text = await res.text();
     let data: any = null;
     try { data = JSON.parse(text); } catch { data = null; }
@@ -155,7 +155,7 @@ function ChannelCard({
             <p className="text-xs text-muted-foreground truncate">
               @{channel.bot_username || '?'}
               {modelShort ? ` · ${modelShort}` : ''}
-              {channel.default_agent && channel.default_agent !== 'kortix' ? ` · ${channel.default_agent}` : ''}
+              {channel.default_agent && channel.default_agent !== 'epsilon' ? ` · ${channel.default_agent}` : ''}
             </p>
             {channel.webhook_url && (
               <p className="text-[10px] text-muted-foreground/50 truncate mt-0.5 font-mono">
@@ -204,7 +204,7 @@ function ChannelsProjectFilter({
   value: string | null | typeof FILTER_ALL;
   onChange: (next: string | null | typeof FILTER_ALL) => void;
 }) {
-  const { data: projects = [] } = useKortixProjects(undefined, { enabled: featureFlags.enableMultiProject });
+  const { data: projects = [] } = useEpsilonProjects(undefined, { enabled: featureFlags.enableMultiProject });
   const visibleProjects = projects.filter((p) => p.id !== 'proj-workspace');
 
   const current = value === FILTER_ALL ? FILTER_ALL : value === null ? FILTER_WORKSPACE : value;
@@ -249,7 +249,7 @@ export function ChannelsPage() {
   const [projectFilter, setProjectFilter] = useState<string | null | typeof FILTER_ALL>(FILTER_ALL);
 
   const serverUrl = useServerStore((s) => s.getActiveServerUrl());
-  const { data: projects = [] } = useKortixProjects(undefined, { enabled: featureFlags.enableMultiProject });
+  const { data: projects = [] } = useEpsilonProjects(undefined, { enabled: featureFlags.enableMultiProject });
   const projectNameById = useMemo(() => {
     const map = new Map<string, string>();
     for (const p of projects) map.set(p.id, p.name);

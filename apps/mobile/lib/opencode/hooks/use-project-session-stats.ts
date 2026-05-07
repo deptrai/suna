@@ -98,7 +98,7 @@ export function useProjectSessionStats(
 ) {
   const queries = useQueries({
     queries: sessionIds.map((id) => ({
-      queryKey: ['kortix-session-stats', sandboxUrl, id],
+      queryKey: ['epsilon-session-stats', sandboxUrl, id],
       queryFn: () => fetchSessionStats(sandboxUrl as string, id),
       enabled: enabled && !!sandboxUrl && !!id,
       staleTime: 30_000,

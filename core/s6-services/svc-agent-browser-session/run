@@ -1,5 +1,5 @@
 #!/usr/bin/with-contenv bash
-# Agent Browser Session — keep the primary `kortix` browser session alive.
+# Agent Browser Session — keep the primary `epsilon` browser session alive.
 #
 # The visible browser window is provided by svc-chromium-persistent on DISPLAY=:1.
 # This service attaches agent-browser to that Chromium instance via CDP on 9222,
@@ -12,7 +12,7 @@ echo "[agent-browser-session] Starting"
 
 SOCKET_DIR="${AGENT_BROWSER_SOCKET_DIR:-/dev/shm/agent-browser}"
 STREAM_PORT="${AGENT_BROWSER_STREAM_PORT:-9223}"
-SESSION_NAME="${AGENT_BROWSER_PRIMARY_SESSION:-${AGENT_BROWSER_SESSION:-kortix}}"
+SESSION_NAME="${AGENT_BROWSER_PRIMARY_SESSION:-${AGENT_BROWSER_SESSION:-epsilon}}"
 CDP_PORT="${AGENT_BROWSER_CDP_PORT:-9222}"
 LOG_FILE="/tmp/agent-browser-session.log"
 PRIMARY_PID_FILE="$SOCKET_DIR/${SESSION_NAME}.pid"

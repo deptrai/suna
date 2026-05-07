@@ -4,17 +4,17 @@ import { useSoundStore, type SoundEvent } from '@/stores/sound-store';
 // ---------------------------------------------------------------------------
 // Bundled assets — only files that actually exist on disk.
 // Missing events (error, notification) fall back to completion.mp3.
-// The opencode pack has no files yet, so it falls back to kortix.
+// The opencode pack has no files yet, so it falls back to epsilon.
 // ---------------------------------------------------------------------------
 
-const KORTIX_ASSETS: Partial<Record<SoundEvent, AVPlaybackSource>> = {
-  completion: require('@/assets/sounds/kortix/completion.mp3'),
-  send: require('@/assets/sounds/kortix/send.mp3'),
+const EPSILON_ASSETS: Partial<Record<SoundEvent, AVPlaybackSource>> = {
+  completion: require('@/assets/sounds/epsilon/completion.mp3'),
+  send: require('@/assets/sounds/epsilon/send.mp3'),
 };
 
 function resolveAsset(pack: string, event: SoundEvent): AVPlaybackSource | null {
-  if (pack === 'kortix') {
-    return KORTIX_ASSETS[event] ?? KORTIX_ASSETS.completion ?? null;
+  if (pack === 'epsilon') {
+    return EPSILON_ASSETS[event] ?? EPSILON_ASSETS.completion ?? null;
   }
   // opencode pack has no files yet — returns null (no sound)
   return null;
@@ -83,7 +83,7 @@ export async function playSound(event: SoundEvent) {
 
 export async function previewSound(event: SoundEvent) {
   const { preferences } = useSoundStore.getState();
-  const pack = preferences.pack === 'off' ? 'kortix' : preferences.pack;
+  const pack = preferences.pack === 'off' ? 'epsilon' : preferences.pack;
   const volume = Math.max(preferences.pack === 'off' ? 0.5 : preferences.volume, 0.2);
 
   const asset = resolveAsset(pack, event);

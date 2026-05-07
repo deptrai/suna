@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'crypto';
 
-export const ACTOR_CONTEXT_HEADER = 'X-Kortix-Actor-Context';
+export const ACTOR_CONTEXT_HEADER = 'X-Epsilon-Actor-Context';
 
 export interface ActorContext {
   sandboxId: string;

@@ -33,7 +33,7 @@ interface SSHKeyDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const SSH_META_STORAGE_KEY = 'kortix:ssh-access-meta:v1';
+const SSH_META_STORAGE_KEY = 'epsilon:ssh-access-meta:v1';
 
 type SSHAccessMeta = {
   ssh_command: string;
@@ -121,7 +121,7 @@ function SecretCodeBlock({ text, label }: { text: string; label?: string }) {
 
   // Mask the private key: show first 6 chars after heredoc then bullets
   const masked = text.replace(
-    /(cat > [^\n]+<< 'KORTIX_KEY'\n)([^\n]{6})[^]*?(KORTIX_KEY)/,
+    /(cat > [^\n]+<< 'EPSILON_KEY'\n)([^\n]{6})[^]*?(EPSILON_KEY)/,
     '$1$2••••••••••••\n$3',
   );
   const finalMasked = masked.replace(
@@ -365,7 +365,7 @@ export function SSHKeyDialog({ open, onOpenChange }: SSHKeyDialogProps) {
             SSH Access
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
-            Connect to your Kortix instance via your IDE so it feels like home.
+            Connect to your Epsilon instance via your IDE so it feels like home.
           </DialogDescription>
         </DialogHeader>
 

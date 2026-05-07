@@ -1,0 +1,138 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "permission": {
+    "*": "allow",
+    "task": "deny"
+  },
+  "autoupdate": false,
+  "disabled_providers": ["opencode"],
+  "default_agent": "general",
+  "model": "v98store/gpt-4o-mini",
+  // Shared system prompt base — always injected into every agent session.
+  // Agent-specific persona/loop/rules live in ./agents/<name>.md.
+  "instructions": ["./epsilon-system.md"],
+  "agent": {
+    "build": { "disable": true },
+    "plan": { "disable": true },
+    "explore": { "disable": true }
+  },
+  "provider": {
+    "anthropic": {
+      "npm": "@ai-sdk/anthropic",
+      "env": ["ANTHROPIC_API_KEY"],
+      "options": {
+        "apiKey": "{env:ANTHROPIC_API_KEY}"
+      },
+      "models": {
+        "claude-sonnet-4-6": {
+          "name": "Claude Sonnet 4.6",
+          "id": "claude-sonnet-4-6",
+          "family": "anthropic"
+        }
+      }
+    },
+    "epsilon-yolo": {
+      "npm": "@ai-sdk/anthropic",
+      "env": ["EPSILON_YOLO_API_KEY", "EPSILON_YOLO_URL"],
+      "options": {
+        "baseURL": "{env:EPSILON_YOLO_URL}",
+        "apiKey": "{env:EPSILON_YOLO_API_KEY}"
+      },
+      "models": {
+        "epsilon-yolo/fast": {
+          "name": "Fast",
+          "id": "epsilon-yolo/fast",
+          "family": "epsilon-yolo"
+        },
+        "epsilon-yolo/think": {
+          "name": "Think",
+          "id": "epsilon-yolo/think",
+          "family": "epsilon-yolo"
+        }
+      }
+    },
+    "v98store": {
+      "npm": "@ai-sdk/openai-compatible",
+      "env": ["V98STORE_API_KEY"],
+      "options": {
+        "baseURL": "https://v98store.com/v1",
+        "apiKey": "{env:V98STORE_API_KEY}"
+      },
+      "models": {
+        "gpt-4o-mini": {
+          "name": "GPT-4o Mini (v98store)",
+          "id": "gpt-4o-mini",
+          "family": "v98store",
+          "cost": { "input": 0.15, "output": 0.60 },
+          "limit": { "context": 128000, "output": 16384 }
+        },
+        "gpt-5.4": {
+          "name": "GPT-5.4 (v98store)",
+          "id": "gpt-5.4",
+          "family": "v98store",
+          "cost": { "input": 2.00, "output": 8.00 },
+          "limit": { "context": 128000, "output": 16384 }
+        }
+      }
+    },
+    "epsilon": {
+      "npm": "@ai-sdk/openai-compatible",
+      "env": ["EPSILON_TOKEN", "EPSILON_API_URL"],
+      "options": {
+        "baseURL": "{env:EPSILON_API_URL}/v1/router",
+        "apiKey": "{env:EPSILON_TOKEN}"
+      },
+      "models": {
+        "minimax-m27": {
+          "name": "MiniMax M2.7",
+          "id": "minimax/minimax-m2.7",
+          "family": "epsilon",
+          "cost": { "input": 0.30, "output": 1.20 },
+          "limit": { "context": 204800, "output": 131072 }
+        },
+        "glm-turbo": {
+          "name": "GLM-5 Turbo",
+          "id": "z-ai/glm-5-turbo",
+          "family": "epsilon",
+          "cost": { "input": 1.20, "output": 4.00 },
+          "limit": { "context": 202752, "output": 131072 }
+        },
+        "kimi": {
+          "name": "Kimi K2.5",
+          "id": "moonshotai/kimi-k2.5",
+          "family": "epsilon",
+          "cost": { "input": 0.45, "output": 2.20 },
+          "limit": { "context": 262144, "output": 65535 }
+        },
+        "minimax": {
+          "name": "MiniMax M2.5",
+          "id": "minimax/minimax-m2.5",
+          "family": "epsilon",
+          "cost": { "input": 0.20, "output": 1.17 },
+          "limit": { "context": 196608, "output": 65536 }
+        },
+        "gpt-4o-mini": {
+          "name": "GPT-4o Mini (v98store)",
+          "id": "gpt-4o-mini",
+          "family": "epsilon",
+          "cost": { "input": 0.15, "output": 0.60 },
+          "limit": { "context": 128000, "output": 16384 }
+        }
+      }
+    }
+  },
+  "plugin": [
+    "./plugin/epsilon-system/epsilon-system.ts",
+    "./plugin/opencode-caveman-plugin/opencode-caveman-plugin.ts"
+  ],
+  "mcp": {
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "{env:CONTEXT7_API_KEY}"
+      },
+      "enabled": true
+    }
+  }
+}

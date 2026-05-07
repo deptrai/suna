@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { AUTO_TOPUP_DEFAULT_AMOUNT, AUTO_TOPUP_DEFAULT_THRESHOLD } from '@kortix/shared';
+import { AUTO_TOPUP_DEFAULT_AMOUNT, AUTO_TOPUP_DEFAULT_THRESHOLD } from '@epsilon/shared';
 import { supabaseAuth } from '../middleware/auth';
 import { config } from '../config';
 
@@ -37,7 +37,7 @@ billingApp.use('*', async (c, next) => {
   if (c.req.path.includes('/account-state') || c.req.path.includes('/webhooks')) {
     return next();
   }
-  if (!config.KORTIX_BILLING_INTERNAL_ENABLED) {
+  if (!config.EPSILON_BILLING_INTERNAL_ENABLED) {
     return c.json({ error: 'Billing is not enabled', billing_disabled: true }, 404);
   }
   return next();
@@ -127,7 +127,7 @@ billingApp.route('/account', accountDeletionRouter);
 // Backwards-compatible account deletion API (mounted at /v1/account/*)
 accountDeletionApp.use('*', supabaseAuth);
 accountDeletionApp.use('*', async (c, next) => {
-  if (!config.KORTIX_BILLING_INTERNAL_ENABLED) {
+  if (!config.EPSILON_BILLING_INTERNAL_ENABLED) {
     return c.json({ error: 'Billing is not enabled', billing_disabled: true }, 404);
   }
   return next();
@@ -136,7 +136,7 @@ accountDeletionApp.route('/', accountDeletionRouter);
 
 // Yearly credit rotation cron endpoint
 billingApp.post('/cron/yearly-rotation', async (c: any) => {
-  if (!config.KORTIX_BILLING_INTERNAL_ENABLED) {
+  if (!config.EPSILON_BILLING_INTERNAL_ENABLED) {
     return c.json({ skipped: true, reason: 'billing disabled' });
   }
   const { processYearlyCreditRotation } = await import('./services/yearly-rotation');
@@ -144,7 +144,7 @@ billingApp.post('/cron/yearly-rotation', async (c: any) => {
   return c.json(result);
 });
 
-if (config.KORTIX_BILLING_INTERNAL_ENABLED) {
+if (config.EPSILON_BILLING_INTERNAL_ENABLED) {
   const YEARLY_ROTATION_INTERVAL_MS = 60 * 60 * 1000;
   setInterval(async () => {
     try {

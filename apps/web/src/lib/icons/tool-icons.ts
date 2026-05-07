@@ -5,8 +5,8 @@
 
 import type React from 'react';
 import type { ElementType } from 'react';
-import { getToolIconKey } from '@kortix/shared';
-import type { ToolIconKey } from '@kortix/shared';
+import { getToolIconKey } from '@epsilon/shared';
+import type { ToolIconKey } from '@epsilon/shared';
 import {
   Globe,
   FileEdit,

@@ -1,7 +1,7 @@
 """OpenAI-compatible proxy that connects VAPI to OpenCode.
 
 VAPI sends standard /chat/completions requests with conversation history.
-We forward the latest user message to OpenCode via the kortix-proxy agent,
+We forward the latest user message to OpenCode via the epsilon-proxy agent,
 stream back text deltas in OpenAI SSE format.
 
 Architecture:
@@ -37,7 +37,7 @@ log = logging.getLogger("voice")
 
 OPENCODE_URL = os.getenv("OPENCODE_URL", "http://localhost:3111")
 PORT = int(os.getenv("PORT", "8765"))
-AGENT = os.getenv("VOICE_AGENT", "kortix-proxy")
+AGENT = os.getenv("VOICE_AGENT", "epsilon-proxy")
 
 app = FastAPI()
 

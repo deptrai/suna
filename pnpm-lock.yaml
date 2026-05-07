@@ -13,7 +13,7 @@ importers:
   .:
     devDependencies:
       agent-tunnel:
-        specifier: workspace:@kortix/agent-tunnel@*
+        specifier: workspace:@epsilon/agent-tunnel@*
         version: link:packages/agent-tunnel
 
   apps/api:
@@ -36,10 +36,10 @@ importers:
       '@daytonaio/sdk':
         specifier: ^0.143.0
         version: 0.143.0(ws@8.20.0)
-      '@kortix/db':
+      '@epsilon/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@kortix/shared':
+      '@epsilon/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       '@logtail/node':
@@ -52,7 +52,7 @@ importers:
         specifier: ^2.95.3
         version: 2.101.1
       agent-tunnel:
-        specifier: workspace:@kortix/agent-tunnel@*
+        specifier: workspace:@epsilon/agent-tunnel@*
         version: link:../../packages/agent-tunnel
       ai:
         specifier: ^6.0.77
@@ -503,6 +503,9 @@ importers:
       '@emoji-mart/react':
         specifier: ^1.1.1
         version: 1.1.1(emoji-mart@5.6.0)(react@18.3.1)
+      '@epsilon/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@floating-ui/dom':
         specifier: ^1.7.4
         version: 1.7.5
@@ -524,9 +527,6 @@ importers:
       '@icons-pack/react-simple-icons':
         specifier: ^13.7.0
         version: 13.11.2(react@18.3.1)
-      '@kortix/shared':
-        specifier: workspace:*
-        version: link:../../packages/shared
       '@liquidglass/react':
         specifier: ^0.1.3
         version: 0.1.3(react-dom@18.3.1)(react@18.3.1)
@@ -1237,7 +1237,7 @@ importers:
         specifier: 8.2.0
         version: 8.2.0
 
-  core/kortix-master:
+  core/epsilon-master:
     dependencies:
       '@chat-adapter/discord':
         specifier: ^4.23.0
@@ -1276,8 +1276,8 @@ importers:
         specifier: '*'
         version: 0.7.2
       agent-tunnel:
-        specifier: npm:@kortix/agent-tunnel@*
-        version: /@kortix/agent-tunnel@0.1.4
+        specifier: npm:@epsilon/agent-tunnel@*
+        version: link:../../packages/agent-tunnel
       bun-pty:
         specifier: ^0.4.8
         version: 0.4.8
@@ -5918,17 +5918,6 @@ packages:
       '@solid-primitives/refs': 1.1.2(solid-js@1.9.11)
       '@solid-primitives/utils': 6.3.2(solid-js@1.9.11)
       solid-js: 1.9.11
-    dev: false
-
-  /@kortix/agent-tunnel@0.1.4:
-    resolution: {integrity: sha512-9alIFpEOdygiAUViI75ThiU7l4oHWVaUdegEGCj9kjBknSSdwCfEr+oy956nS1CF1PP9GzZf8lq5jl43icBCVQ==}
-    hasBin: true
-    dependencies:
-      hono: 4.12.3
-      ws: 8.19.0
-    transitivePeerDependencies:
-      - bufferutil
-      - utf-8-validate
     dev: false
 
   /@kurkle/color@0.3.4:

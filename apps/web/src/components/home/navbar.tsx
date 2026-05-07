@@ -9,7 +9,7 @@ import Link from 'next/link';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from '@/components/AuthProvider';
 import { useRouter, usePathname } from 'next/navigation';
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { EpsilonLogo } from '@/components/sidebar/epsilon-logo';
 import { useTranslations } from 'next-intl';
 import { trackCtaSignup } from '@/lib/analytics/gtm';
 import { AppDownloadQR } from '@/components/common/app-download-qr';
@@ -46,7 +46,7 @@ function PlayIcon({ className }: { className?: string }) {
 }
 
 // macOS-style power button
-function PowerButton({ href, onClick, label = 'Launch Kortix' }: { href?: string; onClick?: () => void; label?: string }) {
+function PowerButton({ href, onClick, label = 'Launch Epsilon' }: { href?: string; onClick?: () => void; label?: string }) {
   const [hovered, setHovered] = useState(false);
 
   const inner = (
@@ -158,7 +158,7 @@ export function Navbar({ isAbsolute = false }: NavbarProps) {
   const lastScrollY = useRef(0);
 
   const filteredNavLinks = siteConfig.nav.links;
-  const { formattedStars, loading: starsLoading } = useGitHubStars('kortix-ai', 'kortix');
+  const { formattedStars, loading: starsLoading } = useGitHubStars('epsilon-ai', 'epsilon');
 
   const ctaLink = '/auth';
 
@@ -210,7 +210,7 @@ export function Navbar({ isAbsolute = false }: NavbarProps) {
         <ContextMenu>
           <ContextMenuTrigger asChild>
             <Link href="/" className="flex items-center shrink-0">
-              <KortixLogo size={18} variant='logomark' />
+              <EpsilonLogo size={18} variant='logomark' />
             </Link>
           </ContextMenuTrigger>
           <ContextMenuContent className="w-48">
@@ -221,10 +221,10 @@ export function Navbar({ isAbsolute = false }: NavbarProps) {
               </ContextMenuSubTrigger>
               <ContextMenuSubContent className="w-40">
                 {[
-                  { label: 'Black · SVG', href: '/brandkit/Logo/Brandmark/SVG/Brandmark Black.svg', file: 'kortix-symbol-black.svg' },
-                  { label: 'Black · PNG', href: '/brandkit/Logo/Brandmark/PNG/Brandmark Black.png', file: 'kortix-symbol-black.png' },
-                  { label: 'White · SVG', href: '/brandkit/Logo/Brandmark/SVG/Brandmark White.svg', file: 'kortix-symbol-white.svg' },
-                  { label: 'White · PNG', href: '/brandkit/Logo/Brandmark/PNG/Brandmark White.png', file: 'kortix-symbol-white.png' },
+                  { label: 'Black · SVG', href: '/brandkit/Logo/Brandmark/SVG/Brandmark Black.svg', file: 'epsilon-symbol-black.svg' },
+                  { label: 'Black · PNG', href: '/brandkit/Logo/Brandmark/PNG/Brandmark Black.png', file: 'epsilon-symbol-black.png' },
+                  { label: 'White · SVG', href: '/brandkit/Logo/Brandmark/SVG/Brandmark White.svg', file: 'epsilon-symbol-white.svg' },
+                  { label: 'White · PNG', href: '/brandkit/Logo/Brandmark/PNG/Brandmark White.png', file: 'epsilon-symbol-white.png' },
                 ].map((d) => (
                   <ContextMenuItem key={d.file} onClick={() => { const a = document.createElement('a'); a.href = d.href; a.download = d.file; a.click(); }} className="text-[13px] cursor-pointer">
                     {d.label}
@@ -239,10 +239,10 @@ export function Navbar({ isAbsolute = false }: NavbarProps) {
               </ContextMenuSubTrigger>
               <ContextMenuSubContent className="w-40">
                 {[
-                  { label: 'Black · SVG', href: '/brandkit/Logo/Wordmark/SVG/Wordmark Black.svg', file: 'kortix-wordmark-black.svg' },
-                  { label: 'Black · PNG', href: '/brandkit/Logo/Wordmark/PNG/Wordmark Black.png', file: 'kortix-wordmark-black.png' },
-                  { label: 'White · SVG', href: '/brandkit/Logo/Wordmark/SVG/Wordmark White.svg', file: 'kortix-wordmark-white.svg' },
-                  { label: 'White · PNG', href: '/brandkit/Logo/Wordmark/PNG/Wordmark White.png', file: 'kortix-wordmark-white.png' },
+                  { label: 'Black · SVG', href: '/brandkit/Logo/Wordmark/SVG/Wordmark Black.svg', file: 'epsilon-wordmark-black.svg' },
+                  { label: 'Black · PNG', href: '/brandkit/Logo/Wordmark/PNG/Wordmark Black.png', file: 'epsilon-wordmark-black.png' },
+                  { label: 'White · SVG', href: '/brandkit/Logo/Wordmark/SVG/Wordmark White.svg', file: 'epsilon-wordmark-white.svg' },
+                  { label: 'White · PNG', href: '/brandkit/Logo/Wordmark/PNG/Wordmark White.png', file: 'epsilon-wordmark-white.png' },
                 ].map((d) => (
                   <ContextMenuItem key={d.file} onClick={() => { const a = document.createElement('a'); a.href = d.href; a.download = d.file; a.click(); }} className="text-[13px] cursor-pointer">
                     {d.label}
@@ -282,7 +282,7 @@ export function Navbar({ isAbsolute = false }: NavbarProps) {
         <div className="flex items-center gap-1 shrink-0">
           {/* GitHub stars (hidden on mobile) */}
           <a
-            href="https://github.com/kortix-ai/suna"
+            href="https://github.com/epsilon-ai/chainlens"
             target="_blank"
             rel="noopener noreferrer"
             className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
@@ -304,7 +304,7 @@ export function Navbar({ isAbsolute = false }: NavbarProps) {
               onClick={() => { trackCtaSignup(); router.push(ctaLink); }}
               variant="ghost"
               size="icon"
-              aria-label="Launch Kortix"
+              aria-label="Launch Epsilon"
               className="opacity-80 hover:opacity-100"
             >
               <svg viewBox="0 0 24 24" className="size-[20px]" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
@@ -340,7 +340,7 @@ export function Navbar({ isAbsolute = false }: NavbarProps) {
             {/* Header - matches navbar positioning */}
             <div className="flex h-[56px] items-center justify-between px-6 py-2">
               <Link href="/" className="flex items-center gap-3" onClick={() => setIsDrawerOpen(false)}>
-                <KortixLogo size={18} variant='logomark' />
+                <EpsilonLogo size={18} variant='logomark' />
               </Link>
               <Button
                 onClick={toggleDrawer}

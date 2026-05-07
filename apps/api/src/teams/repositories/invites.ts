@@ -1,5 +1,5 @@
 import { and, eq, gt, isNull, sql } from 'drizzle-orm';
-import { sandboxes, sandboxInvites, type Database } from '@kortix/db';
+import { sandboxes, sandboxInvites, type Database } from '@epsilon/db';
 import type { SandboxInvite } from '../domain/types';
 
 function toDomain(row: typeof sandboxInvites.$inferSelect): SandboxInvite {

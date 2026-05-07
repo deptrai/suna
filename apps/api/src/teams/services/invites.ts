@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import type { Database } from '@kortix/db';
+import type { Database } from '@epsilon/db';
 import { getSupabase } from '../../shared/supabase';
 import { invalidatePreviewCacheForUser } from '../../shared/preview-ownership';
 

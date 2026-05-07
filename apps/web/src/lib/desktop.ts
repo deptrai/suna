@@ -1,7 +1,7 @@
 /**
  * Desktop runtime detection + native window helpers.
  *
- * The Tauri shell sets a custom user-agent (`KortixDesktop/...`) and exposes
+ * The Tauri shell sets a custom user-agent (`EpsilonDesktop/...`) and exposes
  * the Tauri JS bridge as `window.__TAURI__` (because `app.withGlobalTauri` is
  * true in tauri.conf.json). We use the user-agent for detection because it's
  * available synchronously before hydration; we use the global bridge for
@@ -9,7 +9,7 @@
  * `@tauri-apps/api`.
  */
 
-const DESKTOP_UA_TOKEN = 'KortixDesktop';
+const DESKTOP_UA_TOKEN = 'EpsilonDesktop';
 
 export type DesktopPlatform = 'macos' | 'windows' | 'linux';
 
@@ -48,23 +48,23 @@ function tauri(): TauriGlobal | null {
 
 /**
  * Custom URL scheme registered by the desktop shell. OAuth providers and
- * email magic links should redirect here (instead of `https://kortix.com/...`)
+ * email magic links should redirect here (instead of `https://epsilon.com/...`)
  * so the OS hands the callback back to the desktop app rather than opening
  * it in the user's browser.
  */
-export const DESKTOP_URL_SCHEME = 'kortix';
+export const DESKTOP_URL_SCHEME = 'epsilon';
 
 /**
  * Returns the right OAuth redirect target for the current runtime:
  * - Desktop: HTTPS `/auth/callback?desktop=true&...` so the user's browser
  *   lands on a real page after Supabase's 302. That page renders a "you're
- *   signed in" UI and JS-bounces to `kortix://auth/callback?...`. Going
- *   straight to `kortix://` leaves the browser tab spinning forever — the
+ *   signed in" UI and JS-bounces to `epsilon://auth/callback?...`. Going
+ *   straight to `epsilon://` leaves the browser tab spinning forever — the
  *   OS opens the app but the tab itself has nowhere to navigate.
  * - Web: the standard origin-based callback URL.
  *
  * The desktop bounce uses the desktop's loaded origin (typically
- * `http://localhost:3000` in dev, `https://kortix.com` in prod) so the
+ * `http://localhost:3000` in dev, `https://epsilon.com` in prod) so the
  * Supabase redirect URL allowlist only needs the standard callbacks.
  */
 export function authRedirectUrl(path: string = '/auth/callback'): string {
@@ -80,7 +80,7 @@ export function authRedirectUrl(path: string = '/auth/callback'): string {
 
 /* ─── Zoom (browser-style Cmd+/Cmd-/Cmd0) ─────────────────────────────── */
 
-const ZOOM_KEY = 'kortix-desktop-zoom';
+const ZOOM_KEY = 'epsilon-desktop-zoom';
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 3;
 const ZOOM_STEP = 1.1;

@@ -1,7 +1,7 @@
 /**
  * Verify a user's post-backfill state:
- *  - kortix.credit_accounts row
- *  - recent kortix.credit_ledger entries
+ *  - epsilon.credit_accounts row
+ *  - recent epsilon.credit_ledger entries
  *  - active/provisioning sandboxes
  *  - computed can_claim_computer (same rule as buildMinimalAccountState)
  *
@@ -31,7 +31,7 @@ const userRows = pick(await db.execute(
       u.id::text as user_id,
       coalesce(am.account_id, au.account_id)::text as account_id
     from auth.users u
-    left join kortix.account_members am on am.user_id = u.id
+    left join epsilon.account_members am on am.user_id = u.id
     left join basejump.account_user au on au.user_id = u.id
     where lower(u.email) = ${email}
       and coalesce(am.account_id, au.account_id) is not null
@@ -51,7 +51,7 @@ if (userRows.length > 1) {
 
 const { user_id: userId, account_id: accountId } = userRows[0];
 
-const kortixAccount = pick(await db.execute(
+const epsilonAccount = pick(await db.execute(
   drizzleSql`
     select
       tier, provider, payment_status, plan_type,
@@ -61,7 +61,7 @@ const kortixAccount = pick(await db.execute(
       revenuecat_cancelled_at, revenuecat_cancel_at_period_end,
       auto_topup_enabled, auto_topup_threshold, auto_topup_amount,
       created_at, updated_at, last_grant_date
-    from kortix.credit_accounts
+    from epsilon.credit_accounts
     where account_id = ${accountId}::uuid
     limit 1
   `,
@@ -72,7 +72,7 @@ const ledger = pick(await db.execute(
     select
       type, amount, balance_after, is_expiring,
       description, idempotency_key, created_at
-    from kortix.credit_ledger
+    from epsilon.credit_ledger
     where account_id = ${accountId}::uuid
     order by created_at desc
     limit 10
@@ -82,27 +82,27 @@ const ledger = pick(await db.execute(
 const sandboxesRows = pick(await db.execute(
   drizzleSql`
     select sandbox_id::text, name, status, provider, created_at
-    from kortix.sandboxes
+    from epsilon.sandboxes
     where account_id = ${accountId}::uuid
     order by created_at desc
   `,
 ));
 
 const hasActiveMachine = sandboxesRows.some((s: any) => s.status === 'active' || s.status === 'provisioning');
-const tier = kortixAccount?.tier ?? 'free';
+const tier = epsilonAccount?.tier ?? 'free';
 const canClaimComputer = isLegacyPaidTier(tier) && !hasActiveMachine;
 
-const expectedBalance = (Number(kortixAccount?.expiring_credits ?? 0))
-  + (Number(kortixAccount?.non_expiring_credits ?? 0))
-  + (Number(kortixAccount?.daily_credits_balance ?? 0));
-const actualBalance = Number(kortixAccount?.balance ?? 0);
+const expectedBalance = (Number(epsilonAccount?.expiring_credits ?? 0))
+  + (Number(epsilonAccount?.non_expiring_credits ?? 0))
+  + (Number(epsilonAccount?.daily_credits_balance ?? 0));
+const actualBalance = Number(epsilonAccount?.balance ?? 0);
 const balanceConsistent = Math.abs(expectedBalance - actualBalance) < 0.0001;
 
 console.log(JSON.stringify({
   email,
   userId,
   accountId,
-  kortix_credit_accounts: kortixAccount,
+  epsilon_credit_accounts: epsilonAccount,
   balance_consistent: balanceConsistent,
   balance_components_sum: expectedBalance,
   recent_ledger_entries: ledger,
@@ -114,12 +114,12 @@ console.log(JSON.stringify({
 }, null, 2));
 
 console.log('\n--- Verdict ---');
-if (!kortixAccount) {
-  console.log('❌  No kortix.credit_accounts row. Run backfill-revenuecat-user.ts first.');
+if (!epsilonAccount) {
+  console.log('❌  No epsilon.credit_accounts row. Run backfill-revenuecat-user.ts first.');
   process.exit(10);
 }
-if (kortixAccount.payment_status !== 'active') {
-  console.log(`⚠️   payment_status=${kortixAccount.payment_status} (expected 'active').`);
+if (epsilonAccount.payment_status !== 'active') {
+  console.log(`⚠️   payment_status=${epsilonAccount.payment_status} (expected 'active').`);
 }
 if (!balanceConsistent) {
   console.log(`⚠️   Balance (${actualBalance}) does not equal expiring+nonExpiring+daily (${expectedBalance}).`);

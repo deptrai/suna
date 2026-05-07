@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { sandboxes } from '@kortix/db';
+import { sandboxes } from '@epsilon/db';
 import { db } from '../../shared/db';
 import { config, SANDBOX_VERSION } from '../../config';
 import { execOnHost } from '../../update/exec';
@@ -15,7 +15,7 @@ import type {
   ProvisioningStatus,
 } from './index';
 
-const KORTIX_MASTER_PORT = 8000;
+const EPSILON_MASTER_PORT = 8000;
 const API_TIMEOUT_MS = 300_000;
 const PROVISION_TIMEOUT_MS = 600_000;
 const POLL_INTERVAL_MS = 3_000;
@@ -40,7 +40,7 @@ interface JustAVPSMachine {
   price_monthly: number | null;
   backups_enabled: boolean;
   source: string;
-  kortix_sandbox_id: string | null;
+  epsilon_sandbox_id: string | null;
   created_at: string;
   ready_at: string | null;
   urls: { vscode: string; pty: string; port_template: string } | null;
@@ -169,7 +169,7 @@ export async function mintProxyTokenOnJustAvps(
       method: 'POST',
       body: {
         machine_id: externalId,
-        label: `kortix-sandbox-${externalId}`,
+        label: `epsilon-sandbox-${externalId}`,
         expires_in_seconds: PROXY_TOKEN_TTL_SECONDS,
       },
     });
@@ -242,8 +242,8 @@ interface JustAVPSImage {
 let cachedImageId: string | null = null;
 let cachedImageExpiry = 0;
 const IMAGE_CACHE_TTL_MS = 5 * 60 * 1000;
-const IMAGE_NAME_PREFIX = 'kortix-computer-v';
-const DEV_IMAGE_NAME_PREFIX = 'kortix-computer-vdev-';
+const IMAGE_NAME_PREFIX = 'epsilon-computer-v';
+const DEV_IMAGE_NAME_PREFIX = 'epsilon-computer-vdev-';
 
 function parseSemver(version: string): number[] {
   return version.split('.').map(Number).filter((n) => !isNaN(n));
@@ -298,7 +298,7 @@ async function resolveLatestImageId(): Promise<string | null> {
       return cachedImageId;
     }
 
-    console.warn('[JUSTAVPS] No images matching kortix-computer-v* found; provisioning without image_id');
+    console.warn('[JUSTAVPS] No images matching epsilon-computer-v* found; provisioning without image_id');
     return null;
   } catch (err) {
     console.warn('[JUSTAVPS] Failed to resolve latest image, falling back to no image_id:', err);
@@ -412,7 +412,7 @@ async function ensureWebhookRegistered(): Promise<void> {
   const webhookUrl = config.JUSTAVPS_WEBHOOK_URL;
   const webhookSecret = config.JUSTAVPS_WEBHOOK_SECRET;
   if (!webhookUrl) {
-    console.warn('[JUSTAVPS] JUSTAVPS_WEBHOOK_URL not configured — provisioning events will not flow back to Kortix');
+    console.warn('[JUSTAVPS] JUSTAVPS_WEBHOOK_URL not configured — provisioning events will not flow back to Epsilon');
     webhookRegistered = true;
     return;
   }
@@ -447,8 +447,8 @@ function shellEscape(value: string): string {
   return `'${value.replace(/'/g, `'"'"'`)}'`;
 }
 
-function resolveReachableKortixApiUrl(): string {
-  const directBase = config.KORTIX_URL.replace(/\/v1\/router\/?$/, '');
+function resolveReachableEpsilonApiUrl(): string {
+  const directBase = config.EPSILON_URL.replace(/\/v1\/router\/?$/, '');
 
   try {
     const parsed = new URL(directBase);
@@ -467,9 +467,9 @@ function resolveReachableKortixApiUrl(): string {
 
 export function buildCustomerCloudInitScript(dockerImage: string): string {
   return [
-    'curl -fsSL https://raw.githubusercontent.com/kortix-ai/suna/main/scripts/start-sandbox.sh -o /usr/local/bin/kortix-start-sandbox.sh',
-    'chmod +x /usr/local/bin/kortix-start-sandbox.sh',
-    `/usr/local/bin/kortix-start-sandbox.sh ${shellEscape(dockerImage)}`,
+    'curl -fsSL https://raw.githubusercontent.com/epsilon-ai/chainlens/main/scripts/start-sandbox.sh -o /usr/local/bin/epsilon-start-sandbox.sh',
+    'chmod +x /usr/local/bin/epsilon-start-sandbox.sh',
+    `/usr/local/bin/epsilon-start-sandbox.sh ${shellEscape(dockerImage)}`,
   ].join('\n');
 }
 
@@ -495,7 +495,7 @@ export function buildJustAVPSHostRecoveryCommand(): string {
     '  sleep 2',
     'done',
     'for i in $(seq 1 60); do',
-    '  if curl -fsS http://localhost:8000/kortix/health >/dev/null 2>&1; then',
+    '  if curl -fsS http://localhost:8000/epsilon/health >/dev/null 2>&1; then',
     '    echo ready',
     '    exit 0',
     '  fi',
@@ -506,7 +506,7 @@ export function buildJustAVPSHostRecoveryCommand(): string {
     'echo "docker ps:"',
     'docker ps -a --filter name="^/justavps-workload$" --format "{{.Names}}|{{.Image}}|{{.Status}}" 2>/dev/null || true',
     'echo "health:"',
-    'curl -sS -i http://localhost:8000/kortix/health 2>/dev/null || true',
+    'curl -sS -i http://localhost:8000/epsilon/health 2>/dev/null || true',
     'exit 1',
   ].join('\n');
 }
@@ -573,24 +573,24 @@ export class JustAVPSProvider implements SandboxProvider {
 
     const serverType = opts.serverType || config.JUSTAVPS_DEFAULT_SERVER_TYPE;
     const location = opts.location || config.JUSTAVPS_DEFAULT_LOCATION;
-    const sandboxApiBase = resolveReachableKortixApiUrl().replace(/\/v1\/router\/?$/, '');
+    const sandboxApiBase = resolveReachableEpsilonApiUrl().replace(/\/v1\/router\/?$/, '');
     const routerBase = `${sandboxApiBase}/v1/router`;
-    const machineName = `kortix-sandbox-${opts.accountId.slice(0, 8)}-${Date.now().toString(36)}`;
+    const machineName = `epsilon-sandbox-${opts.accountId.slice(0, 8)}-${Date.now().toString(36)}`;
 
-    const serviceKey = opts.envVars?.KORTIX_TOKEN || '';
+    const serviceKey = opts.envVars?.EPSILON_TOKEN || '';
     // Inject the API's own version into the sandbox container so the sandbox
     // health endpoint reports the correct version. All components share one
     // version number (set by deploy-zero-downtime.sh from the Docker image tag).
     // This works even when SANDBOX_IMAGE defaults to :latest.
     const envVars: Record<string, string> = {
-      KORTIX_API_URL: sandboxApiBase,
+      EPSILON_API_URL: sandboxApiBase,
       ENV_MODE: 'cloud',
       INTERNAL_SERVICE_KEY: serviceKey,
-      KORTIX_TOKEN: serviceKey,
-      KORTIX_YOLO_API_KEY: serviceKey,
-      KORTIX_YOLO_URL: config.KORTIX_YOLO_URL,
+      EPSILON_TOKEN: serviceKey,
+      EPSILON_YOLO_API_KEY: serviceKey,
+      EPSILON_YOLO_URL: config.EPSILON_YOLO_URL,
       SANDBOX_VERSION: SANDBOX_VERSION,
-      KORTIX_SANDBOX_VERSION: SANDBOX_VERSION,
+      EPSILON_SANDBOX_VERSION: SANDBOX_VERSION,
       TUNNEL_API_URL: sandboxApiBase,
       TUNNEL_TOKEN: serviceKey,
       TAVILY_API_URL: `${routerBase}/tavily`,
@@ -751,7 +751,7 @@ export class JustAVPSProvider implements SandboxProvider {
       headers['X-Proxy-Token'] = proxyToken;
     }
 
-    // Service key for core/kortix-master auth
+    // Service key for core/epsilon-master auth
     const serviceKey = (row?.config as Record<string, unknown>)?.serviceKey as string | undefined;
     if (serviceKey) {
       headers['Authorization'] = `Bearer ${serviceKey}`;

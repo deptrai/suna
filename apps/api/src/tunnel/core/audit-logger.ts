@@ -1,4 +1,4 @@
-import { tunnelAuditLogs } from '@kortix/db';
+import { tunnelAuditLogs } from '@epsilon/db';
 import { db } from '../../shared/db';
 import type { TunnelCapability } from 'agent-tunnel';
 

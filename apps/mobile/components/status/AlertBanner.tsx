@@ -79,7 +79,7 @@ export function AlertBanner({
 
   const handleStatusPress = () => {
     if (statusUrl) {
-      const url = statusUrl.startsWith('http') ? statusUrl : `https://kortix.ai${statusUrl}`;
+      const url = statusUrl.startsWith('http') ? statusUrl : `https://epsilon.ai${statusUrl}`;
       Linking.openURL(url).catch(() => {});
     }
   };

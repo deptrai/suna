@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Kortix Sandbox — Docker Compose (single instance, fixed ports)
+# Epsilon Sandbox — Docker Compose (single instance, fixed ports)
 # ─────────────────────────────────────────────────────────────────────────────
 #
 # PERSISTENCE MODEL
@@ -17,7 +17,7 @@
 #                    do not casually touch critical runtime data.
 #
 #   /ephemeral/  →  SHIPPED RUNTIME (image layer, REPLACED on every update)
-#                    Kortix server, OpenCode config, services, metadata.
+#                    Epsilon server, OpenCode config, services, metadata.
 #                    Rebuilt from scratch on every `docker pull` + recreate.
 #                    NEVER store user data here. NEVER modify at runtime.
 #
@@ -29,7 +29,7 @@
 #   ✅ secrets, encryption   — preserved (/persistent/secrets/)
 #   ✅ OpenCode state/DB     — preserved (/persistent/opencode/)
 #   ✅ OpenCode shadow copy  — preserved (/persistent/opencode-shadow/)
-#   ✅ user-installed pkgs   — preserved (/workspace/.local/, .npm-global/, .kortix/packages/)
+#   ✅ user-installed pkgs   — preserved (/workspace/.local/, .npm-global/, .epsilon/packages/)
 #   ✅ git repos, projects   — preserved (/workspace/)
 #   ❌ /opt/*                — replaced (new image)
 #   ❌ /run/s6/              — rebuilt from /persistent/secrets/ on boot
@@ -45,8 +45,8 @@ services:
       dockerfile: core/docker/Dockerfile
       args:
         SANDBOX_VERSION: ${SANDBOX_VERSION:-dev}
-    image: kortix/computer:${SANDBOX_VERSION:-dev}
-    container_name: kortix-sandbox
+    image: epsilon/computer:${SANDBOX_VERSION:-dev}
+    container_name: epsilon-sandbox
     privileged: true
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -55,18 +55,18 @@ services:
       - PGID=911
       - TZ=Etc/UTC
       - SUBFOLDER=/
-      - TITLE=Kortix Sandbox ${SANDBOX_NAME:-default}
-      - OPENCODE_CONFIG_DIR=/ephemeral/kortix-master/opencode
+      - TITLE=Epsilon Sandbox ${SANDBOX_NAME:-default}
+      - OPENCODE_CONFIG_DIR=/ephemeral/epsilon-master/opencode
       - OPENCODE_PERMISSION={"*":"allow"}
       - DISPLAY=:1
-      - KORTIX_PERSISTENT_ROOT=/persistent
+      - EPSILON_PERSISTENT_ROOT=/persistent
       - OPENCODE_STORAGE_BASE=/persistent/opencode
       - OPENCODE_SHADOW_STORAGE_BASE=/persistent/opencode-shadow
-      - KORTIX_OPENCODE_ARCHIVE_DIR=/persistent/opencode-archive
-      - KORTIX_OPENCODE_CACHE_DIR=/persistent/opencode-cache
+      - EPSILON_OPENCODE_ARCHIVE_DIR=/persistent/opencode-archive
+      - EPSILON_OPENCODE_CACHE_DIR=/persistent/opencode-cache
       - AUTH_JSON_PATH=/persistent/opencode/auth.json
       - LSS_DIR=/persistent/lss
-      - KORTIX_WORKSPACE=/workspace
+      - EPSILON_WORKSPACE=/workspace
       # ── Persistent package paths (all under /workspace/) ──────────────
       - PYTHONUSERBASE=/workspace/.local
       - PIP_USER=1
@@ -75,16 +75,16 @@ services:
       - SECRET_FILE_PATH=/persistent/secrets/.secrets.json
       - SALT_FILE_PATH=/persistent/secrets/.salt
       - ENCRYPTION_KEY_PATH=/persistent/secrets/.encryption-key
-      # ── Sandbox identity (injected by kortix-api or set manually) ─────
-      - KORTIX_API_URL=${KORTIX_API_URL:-http://host.docker.internal:8008}
-      - KORTIX_TOKEN=${KORTIX_TOKEN:-}
+      # ── Sandbox identity (injected by epsilon-api or set manually) ─────
+      - EPSILON_API_URL=${EPSILON_API_URL:-http://host.docker.internal:8008}
+      - EPSILON_TOKEN=${EPSILON_TOKEN:-}
       - INTERNAL_SERVICE_KEY=${INTERNAL_SERVICE_KEY:-}
-      - TUNNEL_API_URL=${KORTIX_API_URL:-http://host.docker.internal:8008}
-      - TUNNEL_TOKEN=${KORTIX_TOKEN:-}
+      - TUNNEL_API_URL=${EPSILON_API_URL:-http://host.docker.internal:8008}
+      - TUNNEL_TOKEN=${EPSILON_TOKEN:-}
       - SANDBOX_ID=${SANDBOX_ID:-local}
       - PROJECT_ID=${PROJECT_ID:-local}
       - ENV_MODE=${ENV_MODE:-local}
-      - KORTIX_LOCAL_SOURCE=${KORTIX_LOCAL_SOURCE:-1}
+      - EPSILON_LOCAL_SOURCE=${EPSILON_LOCAL_SOURCE:-1}
     env_file:
       - .env
     volumes:
@@ -108,7 +108,7 @@ services:
       # nuked independently via `docker volume rm sandbox_docker`.
       - sandbox_docker:/var/lib/docker
     ports:
-      - "127.0.0.1:14000:8000"  # Kortix Master (proxy entry point)
+      - "127.0.0.1:14000:8000"  # Epsilon Master (proxy entry point)
       - "127.0.0.1:14002:6080"  # Desktop (noVNC)
       - "127.0.0.1:14003:6081"  # Desktop (HTTPS)
       - "127.0.0.1:14004:3210"  # Presentation Viewer
@@ -119,7 +119,7 @@ services:
     shm_size: "2gb"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/kortix/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/epsilon/health"]
       interval: 10s
       timeout: 5s
       retries: 3

@@ -119,7 +119,7 @@ The host must guarantee on every boot:
 - Docker daemon available on host
 - `justavps-docker.service` enabled and active
 - workload container recreated if missing
-- `kortix-master` reachable on port 8000 once workload is healthy
+- `epsilon-master` reachable on port 8000 once workload is healthy
 
 ### R5. Manual recovery
 
@@ -167,7 +167,7 @@ Add two provider-level concepts for JustAVPS:
 2. `waitForHostRecovery(externalId)`
    - waits for machine status `ready`
    - restarts / validates `justavps-docker`
-   - checks `/kortix/health`
+   - checks `/epsilon/health`
 
 ### API route behavior
 
@@ -214,7 +214,7 @@ Suggested copy:
 Then transition automatically to:
 
 - **Recovering workspace services**
-- `The host is back. Waiting for Kortix services to finish starting.`
+- `The host is back. Waiting for Epsilon services to finish starting.`
 
 Only show actual failure if:
 
@@ -258,7 +258,7 @@ systemctl restart justavps-docker.service
 then wait for:
 
 - container exists and is `running`
-- `curl -fsS http://localhost:8000/kortix/health`
+- `curl -fsS http://localhost:8000/epsilon/health`
 
 ---
 
@@ -273,7 +273,7 @@ systemctl restart justavps-docker.service
 systemctl status docker.service --no-pager -n 50
 systemctl status justavps-docker.service --no-pager -n 50
 docker ps -a
-curl -fsS http://localhost:8000/kortix/health
+curl -fsS http://localhost:8000/epsilon/health
 ```
 
 ### If container exists but app is still booting
@@ -285,9 +285,9 @@ docker logs -f justavps-workload
 ### If service must be rebuilt from the host bootstrap script
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/kortix-ai/suna/main/scripts/start-sandbox.sh -o /usr/local/bin/kortix-start-sandbox.sh
-chmod +x /usr/local/bin/kortix-start-sandbox.sh
-/usr/local/bin/kortix-start-sandbox.sh kortix/computer:0.8.42
+curl -fsSL https://raw.githubusercontent.com/epsilon-ai/chainlens/main/scripts/start-sandbox.sh -o /usr/local/bin/epsilon-start-sandbox.sh
+chmod +x /usr/local/bin/epsilon-start-sandbox.sh
+/usr/local/bin/epsilon-start-sandbox.sh epsilon/computer:0.8.42
 ```
 
 ---
@@ -423,7 +423,7 @@ UI should reflect this instead of binary reachable/unreachable only.
 - `docker.service` starts
 - `justavps-docker.service` starts
 - `justavps-workload` appears
-- `/kortix/health` returns success
+- `/epsilon/health` returns success
 
 ### Noise reduction
 

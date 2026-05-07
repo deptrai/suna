@@ -35,7 +35,7 @@ const MOCK_USER = {
   user_metadata: { name: 'Debug User', avatar_url: undefined },
   aud: 'authenticated',
   created_at: new Date().toISOString(),
-  email: 'debug@kortix.dev',
+  email: 'debug@epsilon.dev',
 } as unknown as User;
 
 function mockSandbox(overrides: Partial<SandboxInfo>): SandboxInfo {
@@ -255,7 +255,7 @@ function renderVariant(variant: Variant): React.ReactNode {
         <>
           <Header />
           <ComputerHeroCard
-            title="Kortix is now even better"
+            title="Epsilon is now even better"
             description={
               <>
                 Your plan now includes a dedicated cloud computer with{' '}
@@ -277,7 +277,7 @@ function renderVariant(variant: Variant): React.ReactNode {
         <>
           <Header />
           <ComputerHeroCard
-            title="Kortix is now even better"
+            title="Epsilon is now even better"
             description="Your plan now includes a dedicated cloud computer. Always on, runs while you sleep, full root access."
             ctaLabel="Claim Computer"
             ctaLoadingLabel="Setting up…"

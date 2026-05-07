@@ -36,11 +36,11 @@ describe('verifyContainer', () => {
 
   test('waits for the expected image to be running', async () => {
     queuedResults = [
-      { success: true, stdout: 'kortix/computer:0.8.40|created|0|', stderr: '', exitCode: 0, durationMs: 0 },
-      { success: true, stdout: 'kortix/computer:0.8.41|running|0|', stderr: '', exitCode: 0, durationMs: 0 },
+      { success: true, stdout: 'epsilon/computer:0.8.40|created|0|', stderr: '', exitCode: 0, durationMs: 0 },
+      { success: true, stdout: 'epsilon/computer:0.8.41|running|0|', stderr: '', exitCode: 0, durationMs: 0 },
     ];
 
-    const result = await verifyContainer({} as never, 'kortix/computer:0.8.41', 'justavps-workload', 2);
+    const result = await verifyContainer({} as never, 'epsilon/computer:0.8.41', 'justavps-workload', 2);
 
     expect(result.success).toBe(true);
     expect(execCalls).toHaveLength(2);
@@ -50,25 +50,25 @@ describe('verifyContainer', () => {
     queuedResults = [
       ...Array.from({ length: VERIFY_CONTAINER_MAX_RETRIES }, () => ({
         success: true,
-        stdout: 'kortix/computer:0.8.40|exited|137|CrashLoopBackOff',
+        stdout: 'epsilon/computer:0.8.40|exited|137|CrashLoopBackOff',
         stderr: '',
         exitCode: 0,
         durationMs: 0,
       } satisfies StepResult)),
       {
         success: true,
-        stdout: 'docker ps:\njustavps-workload|kortix/computer:0.8.40|Exited (137)\n\njustavps-docker logs:\nboom',
+        stdout: 'docker ps:\njustavps-workload|epsilon/computer:0.8.40|Exited (137)\n\njustavps-docker logs:\nboom',
         stderr: '',
         exitCode: 0,
         durationMs: 0,
       },
     ];
 
-    const result = await verifyContainer({} as never, 'kortix/computer:0.8.41', 'justavps-workload');
+    const result = await verifyContainer({} as never, 'epsilon/computer:0.8.41', 'justavps-workload');
 
     expect(result.success).toBe(false);
     expect(result.stderr).toContain(`after ${VERIFY_CONTAINER_MAX_RETRIES} retries`);
-    expect(result.stderr).toContain('Last observed: image=kortix/computer:0.8.40, state=exited, exitCode=137, error=CrashLoopBackOff');
+    expect(result.stderr).toContain('Last observed: image=epsilon/computer:0.8.40, state=exited, exitCode=137, error=CrashLoopBackOff');
     expect(result.stderr).toContain('Diagnostics:');
     expect(result.stderr).toContain('docker ps:');
     expect(execCalls).toHaveLength(VERIFY_CONTAINER_MAX_RETRIES + 1);
@@ -94,11 +94,11 @@ describe('ensureContainerRunning', () => {
       { success: false, stdout: '', stderr: 'No such container', exitCode: 1, durationMs: 0 },
       { success: true, stdout: '', stderr: '', exitCode: 0, durationMs: 0 },
       { success: true, stdout: '', stderr: '', exitCode: 0, durationMs: 0 },
-      { success: true, stdout: 'kortix/computer:0.8.41|running|0|', stderr: '', exitCode: 0, durationMs: 0 },
+      { success: true, stdout: 'epsilon/computer:0.8.41|running|0|', stderr: '', exitCode: 0, durationMs: 0 },
     ];
 
     const result = await ensureContainerRunning({} as never, {
-      image: 'kortix/computer:0.8.41',
+      image: 'epsilon/computer:0.8.41',
       name: 'justavps-workload',
       volumes: [],
       ports: [],
@@ -112,6 +112,6 @@ describe('ensureContainerRunning', () => {
     expect(result.success).toBe(true);
     expect(result.stdout).toBe('recovered');
     expect(execCalls).toHaveLength(4);
-    expect(execCalls[1]).toContain('kortix-managed-restart');
+    expect(execCalls[1]).toContain('epsilon-managed-restart');
   });
 });

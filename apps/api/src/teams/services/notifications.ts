@@ -4,8 +4,8 @@ const MAILTRAP_SEND_URL = 'https://send.api.mailtrap.io/api/send';
 
 // ─── Primitives (all inline) ────────────────────────────────────────────────
 
-const BRAND_WORDMARK = 'Kortix';
-const BRAND_FOOTER = 'Kortix — The Autonomous Company Operating System';
+const BRAND_WORDMARK = 'Epsilon';
+const BRAND_FOOTER = 'Epsilon — The Autonomous Company Operating System';
 
 const COLOR_BG = '#f6f7f9';
 const COLOR_CARD = '#ffffff';
@@ -115,7 +115,7 @@ async function send(opts: {
 }
 
 function frontendBase(): string {
-  return config.FRONTEND_URL || 'https://app.kortix.com';
+  return config.FRONTEND_URL || 'https://app.epsilon.com';
 }
 
 // ─── Public: invite email ───────────────────────────────────────────────────
@@ -151,20 +151,20 @@ export async function sendInviteEmail(opts: {
     ${roleChip}
     <a href="${escapeHtml(url)}" style="${S.btn}">Review invite</a>
     <p style="${S.smallNote}">
-      Don't have a Kortix account yet? You'll be prompted to sign up first —
+      Don't have a Epsilon account yet? You'll be prompted to sign up first —
       the workspace will appear on your instances page automatically.
     </p>
   `;
 
   const html = renderEmail({
     kicker: "You're invited",
-    title: `Join ${opts.sandboxName} on Kortix`,
+    title: `Join ${opts.sandboxName} on Epsilon`,
     body,
   });
 
   await send({
     to: opts.email,
-    subject: `You're invited to "${opts.sandboxName}" on Kortix`,
+    subject: `You're invited to "${opts.sandboxName}" on Epsilon`,
     html,
     category: 'sandbox-invite',
   });

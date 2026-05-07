@@ -8,7 +8,7 @@ type NgrokTunnel = {
 }
 
 const NGROK_API_PORTS = [4040, 4041, 4042]
-const LOCAL_SHARE_TUNNEL_NAME = 'kortix-share'
+const LOCAL_SHARE_TUNNEL_NAME = 'epsilon-share'
 
 function isNgrokInstalled(): boolean {
   try {

@@ -9,7 +9,7 @@ FRONTEND_PID=""
 load_local_env() {
   # pnpm --filter runs each package from its own directory, where Bun/Next may
   # auto-load package .env files. Be explicit here: use the app env files for
-  # Supabase/auth (cloud dev has Google enabled), but force only the Kortix API
+  # Supabase/auth (cloud dev has Google enabled), but force only the Epsilon API
   # endpoint back to localhost and mark the process as local-dev so cloud
   # provision pollers do not sweep shared remote rows.
   eval "$(python3 - "$ROOT_DIR/apps/api/.env" "$ROOT_DIR/apps/web/.env" <<'PY'
@@ -33,12 +33,12 @@ for path in sys.argv[1:]:
 PY
 )"
 
-  export KORTIX_LOCAL_DEV=1
+  export EPSILON_LOCAL_DEV=1
   export ENV_MODE=local
   export ALLOWED_SANDBOX_PROVIDERS="local_docker, justavps"
-  export KORTIX_URL="http://localhost:8008/v1/router"
+  export EPSILON_URL="http://localhost:8008/v1/router"
   export NEXT_PUBLIC_BACKEND_URL="http://localhost:8008/v1"
-  export KORTIX_PUBLIC_BACKEND_URL="http://localhost:8008/v1"
+  export EPSILON_PUBLIC_BACKEND_URL="http://localhost:8008/v1"
   export BACKEND_URL="http://localhost:8008/v1"
 }
 
@@ -101,9 +101,9 @@ PY
 fi
 
 echo "[start] Starting frontend (production build)..."
-pnpm --filter Kortix-Computer-Frontend start &
+pnpm --filter Epsilon-Computer-Frontend start &
 FRONTEND_PID=$!
 
 echo "[start] Starting API..."
 cd "$ROOT_DIR"
-KORTIX_SKIP_ENSURE_SCHEMA=1 pnpm --filter kortix-api start
+EPSILON_SKIP_ENSURE_SCHEMA=1 pnpm --filter epsilon-api start

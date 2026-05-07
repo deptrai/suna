@@ -415,7 +415,7 @@ describe('invoice.payment_failed', () => {
 describe('RevenueCat', () => {
   test('INITIAL_PURCHASE: maps product to tier, grants credits', async () => {
     const body = createMockRevenueCatEvent('INITIAL_PURCHASE', {
-      product_id: 'kortix_pro_monthly',
+      product_id: 'epsilon_pro_monthly',
     });
 
     const result = await processRevenueCatWebhook(body);
@@ -434,7 +434,7 @@ describe('RevenueCat', () => {
 
     const body = createMockRevenueCatEvent('INITIAL_PURCHASE', {
       app_user_id: 'user_legacy_123',
-      product_id: 'kortix_plus_monthly',
+      product_id: 'epsilon_plus_monthly',
     });
 
     const result = await processRevenueCatWebhook(body);
@@ -447,7 +447,7 @@ describe('RevenueCat', () => {
 
   test('INITIAL_PURCHASE: legacy tier grants credits + machine bonus', async () => {
     const body = createMockRevenueCatEvent('INITIAL_PURCHASE', {
-      product_id: 'kortix_plus_monthly',
+      product_id: 'epsilon_plus_monthly',
     });
 
     const result = await processRevenueCatWebhook(body);
@@ -506,20 +506,20 @@ describe('RevenueCat', () => {
   test('PRODUCT_CHANGE with effective_date: stores pending', async () => {
     const futureDate = new Date(Date.now() + 86400000).toISOString();
     const body = createMockRevenueCatEvent('PRODUCT_CHANGE', {
-      new_product_id: 'kortix_plus_monthly',
+      new_product_id: 'epsilon_plus_monthly',
       effective_date: futureDate,
     });
 
     await processRevenueCatWebhook(body);
 
     expect(updateCreditAccountCalls.length).toBe(1);
-    expect(updateCreditAccountCalls[0].data.revenuecatPendingChangeProduct).toBe('kortix_plus_monthly');
+    expect(updateCreditAccountCalls[0].data.revenuecatPendingChangeProduct).toBe('epsilon_plus_monthly');
     expect(updateCreditAccountCalls[0].data.revenuecatPendingChangeType).toBe('product_change');
   });
 
   test('PRODUCT_CHANGE without effective_date: applies immediately', async () => {
     const body = createMockRevenueCatEvent('PRODUCT_CHANGE', {
-      new_product_id: 'kortix_plus_monthly',
+      new_product_id: 'epsilon_plus_monthly',
       effective_date: null,
     });
 
@@ -527,7 +527,7 @@ describe('RevenueCat', () => {
 
     expect(updateCreditAccountCalls.length).toBe(1);
     expect(updateCreditAccountCalls[0].data.tier).toBe('tier_2_20');
-    expect(updateCreditAccountCalls[0].data.revenuecatProductId).toBe('kortix_plus_monthly');
+    expect(updateCreditAccountCalls[0].data.revenuecatProductId).toBe('epsilon_plus_monthly');
     expect(updateCreditAccountCalls[0].data.revenuecatPendingChangeProduct).toBeNull();
   });
 
@@ -589,7 +589,7 @@ describe('RevenueCat', () => {
       });
 
     const body = createMockRevenueCatEvent('INITIAL_PURCHASE', {
-      product_id: 'kortix_pro_monthly',
+      product_id: 'epsilon_pro_monthly',
     });
 
     await processRevenueCatWebhook(body);
@@ -611,7 +611,7 @@ describe('RevenueCat', () => {
       });
 
     const body = createMockRevenueCatEvent('INITIAL_PURCHASE', {
-      product_id: 'kortix_pro_monthly',
+      product_id: 'epsilon_pro_monthly',
     });
 
     await processRevenueCatWebhook(body);

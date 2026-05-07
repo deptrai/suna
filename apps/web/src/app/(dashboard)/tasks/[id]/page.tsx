@@ -1,7 +1,7 @@
 'use client';
 
 import { use, useCallback } from 'react';
-import { TaskDetailView } from '@/components/kortix/task-detail-view';
+import { TaskDetailView } from '@/components/epsilon/task-detail-view';
 import { useIsRouteActive } from '@/hooks/utils/use-is-route-active';
 import { openTabAndNavigate } from '@/stores/tab-store';
 

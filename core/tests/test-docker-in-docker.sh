@@ -17,10 +17,10 @@
 #
 # Usage:
 #   # From the host (against a running container):
-#   docker exec kortix-sandbox bash /ephemeral/tests/test-docker-in-docker.sh
+#   docker exec epsilon-sandbox bash /ephemeral/tests/test-docker-in-docker.sh
 #
 #   # Or via the dev bind mount (host path):
-#   docker exec kortix-sandbox bash /workspace/computer/core/tests/test-docker-in-docker.sh
+#   docker exec epsilon-sandbox bash /workspace/computer/core/tests/test-docker-in-docker.sh
 #
 # Exit codes:
 #   0 = all tests passed
@@ -161,12 +161,12 @@ fi
 section "bind mounts"
 
 mkdir -p "${TEST_BIND_DIR}"
-echo "kortix-dind-marker" > "${TEST_BIND_DIR}/marker.txt"
+echo "epsilon-dind-marker" > "${TEST_BIND_DIR}/marker.txt"
 
 MOUNT_OUTPUT=$(docker run --rm \
   -v "${TEST_BIND_DIR}:/mnt:ro" \
   "${TEST_IMAGE}" cat /mnt/marker.txt 2>&1 || true)
-if [ "${MOUNT_OUTPUT}" = "kortix-dind-marker" ]; then
+if [ "${MOUNT_OUTPUT}" = "epsilon-dind-marker" ]; then
   pass "bind mount host→nested container works"
 else
   fail "bind mount failed: '${MOUNT_OUTPUT}'"

@@ -66,11 +66,11 @@ function isAllowed(absPath) {
  * The proxy chain (sandbox-proxy/routes/{preview,local-preview}.ts) rewrites
  * the Host header to the upstream sandbox address before forwarding here, so
  * `req.url` would give us something like `http://127.0.0.1:3211` or
- * `http://kortix-sandbox:8000` — both unreachable from the user's browser.
+ * `http://epsilon-sandbox:8000` — both unreachable from the user's browser.
  *
  * The proxies inject the original public origin into headers:
  *   - X-Forwarded-Prefix: full URL the client used, including any path
- *     prefix the proxy strips (e.g. `https://api.kortix.cloud/v1/p/<id>/3211`
+ *     prefix the proxy strips (e.g. `https://api.epsilon.cloud/v1/p/<id>/3211`
  *     for path-based routing, or `http://p3211-<id>.localhost:8008` for
  *     subdomain routing).
  *   - X-Forwarded-Proto / X-Forwarded-Host: standard fallbacks if no prefix.

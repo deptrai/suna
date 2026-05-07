@@ -22,7 +22,7 @@ import {
 import { grantCredits, resetExpiringCredits } from './credits';
 import { grantMachineBonusOnce, getStripeMachineBonusKey } from './machine-bonus';
 import { cancelFreeSubscriptionForUpgrade } from './subscriptions';
-import { AUTO_TOPUP_DEFAULT_AMOUNT, AUTO_TOPUP_DEFAULT_THRESHOLD } from '@kortix/shared';
+import { AUTO_TOPUP_DEFAULT_AMOUNT, AUTO_TOPUP_DEFAULT_THRESHOLD } from '@epsilon/shared';
 import { resolveAccountId } from '../../shared/resolve-account';
 
 // ─── Stripe Webhook Processing ──────────────────────────────────────────────
@@ -334,7 +334,7 @@ async function revertToFree(accountId: string, subscriptionId?: string) {
   // Check if the user still has other active subscriptions.
   // If so, keep the highest tier. Otherwise revert to free.
   const { db } = await import('../../shared/db');
-  const { sandboxes } = await import('@kortix/db');
+  const { sandboxes } = await import('@epsilon/db');
   const { eq, and, inArray } = await import('drizzle-orm');
 
   const activeSandboxes = await db

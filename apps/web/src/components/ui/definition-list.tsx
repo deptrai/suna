@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Kortix <DefinitionList> — key:value pair list.
+ * Epsilon <DefinitionList> — key:value pair list.
  *
  * Used for:
  *   • Project About → Details panel

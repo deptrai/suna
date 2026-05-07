@@ -2,7 +2,7 @@
  * E2E tests for the platform (sandbox lifecycle) routes.
  *
  * Uses mock providers via DI — no Docker or Daytona needed.
- * Requires TEST_DATABASE_URL + KORTIX_TEST_DB_CONFIRM for sandbox CRUD tests.
+ * Requires TEST_DATABASE_URL + EPSILON_TEST_DB_CONFIRM for sandbox CRUD tests.
  *
  * Routes tested (sandbox-cloud router mounted at /v1/platform/sandbox):
  *   GET    /v1/platform/providers
@@ -27,7 +27,7 @@ import {
   OTHER_USER_ID,
   OTHER_USER_EMAIL,
 } from './helpers';
-import { sandboxes } from '@kortix/db';
+import { sandboxes } from '@epsilon/db';
 import { eq } from 'drizzle-orm';
 
 const HAS_DB = HAS_SAFE_TEST_DB;
@@ -189,7 +189,7 @@ describe.skipIf(!HAS_DB)('Platform — Sandbox Lifecycle', () => {
       const justavpsProvider = createMockProvider('justavps', {
         createResult: {
           externalId: 'mock-justavps-recovered',
-          baseUrl: 'https://recovered.kortix.cloud',
+          baseUrl: 'https://recovered.epsilon.cloud',
           metadata: {
             justavpsSlug: 'recovered-sandbox',
             provisioningStage: 'server_creating',
@@ -212,7 +212,7 @@ describe.skipIf(!HAS_DB)('Platform — Sandbox Lifecycle', () => {
         externalId: '',
         status: 'error',
         baseUrl: '',
-        config: { serviceKey: 'kortix_sb_retry_test' },
+        config: { serviceKey: 'epsilon_sb_retry_test' },
         metadata: {
           serverType: 'cpx32',
           location: 'nbg1',
@@ -235,7 +235,7 @@ describe.skipIf(!HAS_DB)('Platform — Sandbox Lifecycle', () => {
 
       expect(justavpsProvider.calls.create.length).toBe(1);
       expect(justavpsProvider.calls.create[0]?.accountId).toBe(TEST_USER_ID);
-      expect(justavpsProvider.calls.create[0]?.envVars?.KORTIX_TOKEN).toBe('kortix_sb_retry_test');
+      expect(justavpsProvider.calls.create[0]?.envVars?.EPSILON_TOKEN).toBe('epsilon_sb_retry_test');
       expect(justavpsProvider.calls.create[0]?.serverType).toBe('cpx32');
       expect(justavpsProvider.calls.create[0]?.location).toBe('nbg1');
 

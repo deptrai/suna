@@ -1,5 +1,5 @@
 import { eq, and, desc, inArray, sql } from 'drizzle-orm';
-import { sandboxes } from '@kortix/db';
+import { sandboxes } from '@epsilon/db';
 import { db } from '../../shared/db';
 import { createApiKey } from '../../repositories/api-keys';
 import {
@@ -116,7 +116,7 @@ async function tryReactivateStaleSandbox(accountId: string): Promise<EnsureSandb
 }
 
 async function checkProviderCredits(providerName: ProviderName, accountId: string, isIncluded?: boolean): Promise<void> {
-  if (providerName === 'justavps' && config.KORTIX_BILLING_INTERNAL_ENABLED && !isIncluded) {
+  if (providerName === 'justavps' && config.EPSILON_BILLING_INTERNAL_ENABLED && !isIncluded) {
     const creditCheck = await checkCredits(accountId, 0.10);
     if (!creditCheck.hasCredits) {
       throw new Error(`Insufficient credits to provision managed VPS: ${creditCheck.message}`);
@@ -223,7 +223,7 @@ async function provisionNewSandbox(
     name: sandbox.name,
     serverType: opts.serverType,
     location: opts.location,
-    envVars: { KORTIX_TOKEN: sandboxKey.secretKey },
+    envVars: { EPSILON_TOKEN: sandboxKey.secretKey },
   };
 
   if (provider.provisioning.async) {

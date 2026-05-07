@@ -1,7 +1,7 @@
 import { DESKTOP_URL_SCHEME, isDesktop } from '@/lib/desktop';
 
 // Kept for backwards-compat with the legacy Electron shell. The current
-// desktop app is Tauri-based; both shells share the same `kortix://` scheme.
+// desktop app is Tauri-based; both shells share the same `epsilon://` scheme.
 const ELECTRON_PROTOCOL = DESKTOP_URL_SCHEME;
 
 /**
@@ -12,7 +12,7 @@ const ELECTRON_PROTOCOL = DESKTOP_URL_SCHEME;
 export function isElectron(): boolean {
   if (typeof window === 'undefined') return false;
 
-  // New Tauri shell uses the unified `KortixDesktop` UA token.
+  // New Tauri shell uses the unified `EpsilonDesktop` UA token.
   if (isDesktop()) return true;
 
   // Legacy Electron detection (kept so an old build still authenticates).
@@ -27,8 +27,8 @@ export function isElectron(): boolean {
 
 /**
  * Gets the auth callback URL for the current environment
- * - Web: returns the web URL (https://kortix.com/auth/callback)
- * - Electron: returns the custom protocol URL (kortix://auth/callback)
+ * - Web: returns the web URL (https://epsilon.com/auth/callback)
+ * - Electron: returns the custom protocol URL (epsilon://auth/callback)
  */
 export function getAuthCallbackUrl(returnUrl?: string, termsAccepted?: boolean): string {
   const params = new URLSearchParams();

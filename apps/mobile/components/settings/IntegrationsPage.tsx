@@ -261,8 +261,8 @@ function IntegrationsContent({
       setConnectingApp(app.slug);
       try {
         // Use app deep link scheme so Safari auto-dismisses after OAuth
-        const successUri = 'kortix://integrations/success';
-        const errorUri = 'kortix://integrations/error';
+        const successUri = 'epsilon://integrations/success';
+        const errorUri = 'epsilon://integrations/error';
 
         const result = await createToken.mutateAsync({
           app: app.slug,
@@ -277,7 +277,7 @@ function IntegrationsContent({
         url = `${url}${separator}app=${encodeURIComponent(app.slug)}`;
 
         // openAuthSessionAsync auto-dismisses when redirected to our app scheme
-        const authResult = await WebBrowser.openAuthSessionAsync(url, 'kortix://integrations');
+        const authResult = await WebBrowser.openAuthSessionAsync(url, 'epsilon://integrations');
 
         if (authResult.type === 'success') {
           const returnUrl = authResult.url;
@@ -506,7 +506,7 @@ function IntegrationsContent({
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 18, fontFamily: 'Roobert-SemiBold', color: fg }}>Pipedream Credentials</Text>
               <Text style={{ fontSize: 12, fontFamily: 'Roobert', color: muted, marginTop: 2 }}>
-                {isCustomCreds ? 'Using your own Pipedream project' : 'Using Kortix defaults'}
+                {isCustomCreds ? 'Using your own Pipedream project' : 'Using Epsilon defaults'}
               </Text>
             </View>
           </View>
@@ -526,7 +526,7 @@ function IntegrationsContent({
             }}>
               <Icon as={isCustomCreds ? Check : Shield} size={10} color={isCustomCreds ? '#10b981' : muted} strokeWidth={2} />
               <Text style={{ fontSize: 10, fontFamily: 'Roobert-Medium', color: isCustomCreds ? '#10b981' : muted, marginLeft: 4 }}>
-                {isCustomCreds ? 'Your credentials' : 'Kortix Default'}
+                {isCustomCreds ? 'Your credentials' : 'Epsilon Default'}
               </Text>
             </View>
           </View>

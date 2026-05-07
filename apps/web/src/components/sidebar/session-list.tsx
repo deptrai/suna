@@ -68,7 +68,7 @@ import { useServerStore } from '@/stores/server-store';
 import { childMapByParent, sortSessions, allDescendantIds } from '@/ui';
 import type { Session } from '@/hooks/opencode/use-opencode-sessions';
 import { useBackgroundSessionPrefetch, prefetchSession } from '@/hooks/opencode/use-session-prefetch';
-import { classifySession, isSidebarHidden } from '@/lib/kortix/session-category';
+import { classifySession, isSidebarHidden } from '@/lib/epsilon/session-category';
 import { useTriggers } from '@/hooks/scheduled-tasks';
 import Link from 'next/link';
 

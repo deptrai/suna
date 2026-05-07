@@ -155,7 +155,7 @@ export function useSandboxConnection() {
 				if (!portsFetchedRef.current) {
 					portsFetchedRef.current = true;
 					try {
-						const portsRes = await authenticatedFetch(`${url}/kortix/ports`, {
+						const portsRes = await authenticatedFetch(`${url}/epsilon/ports`, {
 							signal: AbortSignal.timeout(8000),
 						}, { retryOnAuthError: false });
 						if (portsRes.ok) {
@@ -194,7 +194,7 @@ export function useSandboxConnection() {
 							runtimeFailCountRef.current = 0;
 						}
 
-						const hRes = await authenticatedFetch(`${url}/kortix/health`, {
+						const hRes = await authenticatedFetch(`${url}/epsilon/health`, {
 							signal: AbortSignal.timeout(8000),
 						}, { retryOnAuthError: false });
 						if (hRes.ok) {

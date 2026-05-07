@@ -37,8 +37,8 @@ fn open_external(app: AppHandle, url: String) -> Result<(), String> {
 ///      no ancestor up to that zone is interactive.
 const WINDOW_OPEN_SHIM: &str = r#"
 (function() {
-  if (window.__kortixWindowShim) return;
-  window.__kortixWindowShim = true;
+  if (window.__epsilonWindowShim) return;
+  window.__epsilonWindowShim = true;
 
   /* ─── window.open / target=_blank → open_external ─────────────────── */
   /* These ALWAYS route to the system browser — even for internal hosts.
@@ -132,7 +132,7 @@ use tauri::TitleBarStyle;
 const DEFAULT_URL: &str = "http://localhost:3000/dashboard";
 
 fn app_url() -> String {
-    std::env::var("KORTIX_DESKTOP_URL").unwrap_or_else(|_| DEFAULT_URL.to_string())
+    std::env::var("EPSILON_DESKTOP_URL").unwrap_or_else(|_| DEFAULT_URL.to_string())
 }
 
 /// True if a URL belongs to the app itself — internal navigation that should
@@ -145,16 +145,16 @@ fn app_url() -> String {
 /// in-app Browser tab would be punted to the user's system browser instead
 /// of loading.
 fn is_internal(url: &url::Url) -> bool {
-    if url.scheme() == "kortix" {
+    if url.scheme() == "epsilon" {
         return true;
     }
     let host = url.host_str().unwrap_or("");
     matches!(host, "localhost" | "127.0.0.1")
         || host.ends_with(".localhost")
-        || host == "kortix.com"
-        || host.ends_with(".kortix.com")
-        || host == "kortix.cloud"
-        || host.ends_with(".kortix.cloud")
+        || host == "epsilon.com"
+        || host.ends_with(".epsilon.com")
+        || host == "epsilon.cloud"
+        || host.ends_with(".epsilon.cloud")
         || host == "justavps.com"
         || host.ends_with(".justavps.com")
 }
@@ -163,7 +163,7 @@ fn is_internal(url: &url::Url) -> bool {
 pub fn run() {
     tauri::Builder::default()
         // Single-instance MUST be the first plugin. When the OS dispatches a
-        // `kortix://...` deep link (typically after OAuth completes in the
+        // `epsilon://...` deep link (typically after OAuth completes in the
         // user's browser), without this guard macOS LaunchServices may spawn
         // a fresh copy of the dev binary instead of routing to the running
         // one — leaving the original window stuck on its loading state and
@@ -193,7 +193,7 @@ pub fn run() {
         .plugin(tauri_plugin_deep_link::init())
         .invoke_handler(tauri::generate_handler![set_zoom, open_external])
         .setup(|app| {
-            let url = app_url().parse::<url::Url>().expect("valid KORTIX_DESKTOP_URL");
+            let url = app_url().parse::<url::Url>().expect("valid EPSILON_DESKTOP_URL");
             let app_handle = app.handle().clone();
 
             let mut builder = WebviewWindowBuilder::new(
@@ -201,7 +201,7 @@ pub fn run() {
                 "main",
                 WebviewUrl::External(url),
             )
-            .title("Kortix")
+            .title("Epsilon")
             .inner_size(1440.0, 920.0)
             .min_inner_size(720.0, 480.0)
             .center()
@@ -210,12 +210,12 @@ pub fn run() {
             .visible(false)
             // Browser-like user agent so server-side and 3rd-party libs that
             // sniff for `Mozilla/Safari` don't treat the desktop webview as a
-            // bot/non-browser. We keep the `KortixDesktop/0.1.0` token
+            // bot/non-browser. We keep the `EpsilonDesktop/0.1.0` token
             // appended so middleware/`isDesktop()` checks still match.
             .user_agent(
                 "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) \
                  AppleWebKit/605.1.15 (KHTML, like Gecko) \
-                 Version/17.0 Safari/605.1.15 KortixDesktop/0.1.0",
+                 Version/17.0 Safari/605.1.15 EpsilonDesktop/0.1.0",
             )
             // Disable Tauri's native OS drag-drop interceptor so HTML5
             // dragenter/dragover/drop events reach the webview. Without this
@@ -225,7 +225,7 @@ pub fn run() {
             .disable_drag_drop_handler()
             // Opaque window. We previously used transparent(true) + vibrancy,
             // but in the bundled .app (where this MUST run on macOS so the
-            // OS dispatches `kortix://` to it) the layering renders the
+            // OS dispatches `epsilon://` to it) the layering renders the
             // webview as a blank white surface. Opaque + a subtle dark
             // background (set on <body> in CSS for desktop) is reliable.
             .initialization_script(WINDOW_OPEN_SHIM)
@@ -272,7 +272,7 @@ pub fn run() {
             let _ = window.set_size(tauri::LogicalSize::new(launch_w, launch_h));
             let _ = window.center();
 
-            // Deep links: when the OS hands us a `kortix://...` URL (auth
+            // Deep links: when the OS hands us a `epsilon://...` URL (auth
             // callback after OAuth completes in the system browser, magic
             // links from email, etc.), translate the path onto the app's
             // origin and navigate the webview there. The web app then runs
@@ -280,14 +280,14 @@ pub fn run() {
             let dl_window = window.clone();
             app.deep_link().on_open_url(move |event| {
                 for incoming in event.urls() {
-                    if incoming.scheme() != "kortix" {
+                    if incoming.scheme() != "epsilon" {
                         continue;
                     }
                     let mut target = match app_url().parse::<url::Url>() {
                         Ok(u) => u,
                         Err(_) => continue,
                     };
-                    // kortix://auth/callback?code=...  →  <app_url>/auth/callback?code=...
+                    // epsilon://auth/callback?code=...  →  <app_url>/auth/callback?code=...
                     let path = format!(
                         "/{}{}",
                         incoming.host_str().unwrap_or(""),
@@ -302,12 +302,12 @@ pub fn run() {
                 }
             });
 
-            // Register the kortix:// scheme at runtime on platforms that need
+            // Register the epsilon:// scheme at runtime on platforms that need
             // it (Linux dev mode). macOS + Windows bake it into the bundle via
             // `plugins.deep-link.schemes` in tauri.conf.json.
             #[cfg(any(target_os = "linux", all(debug_assertions, windows)))]
             {
-                let _ = app.deep_link().register("kortix");
+                let _ = app.deep_link().register("epsilon");
             }
 
             // Last-line defense: any time Tauri internally creates a new

@@ -1,5 +1,5 @@
 import { and, eq } from 'drizzle-orm';
-import { sandboxMemberScopes, type Database } from '@kortix/db';
+import { sandboxMemberScopes, type Database } from '@epsilon/db';
 
 import { isScope, type Scope } from './catalog';
 

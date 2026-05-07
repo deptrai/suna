@@ -13,7 +13,7 @@
 
 import { Hono } from 'hono';
 import { eq, and, desc, sql, inArray } from 'drizzle-orm';
-import { sandboxes, type Database } from '@kortix/db';
+import { sandboxes, type Database } from '@epsilon/db';
 import { db as defaultDb } from '../../shared/db';
 import { createApiKey } from '../../repositories/api-keys';
 import { supabaseAuth as authMiddleware } from '../../middleware/auth';
@@ -282,7 +282,7 @@ export function createCloudSandboxRouter(
       const sandboxName = await generateSandboxName(accountId, customName);
 
       // Managed VPS sandboxes are billed independently as their own Stripe subscriptions.
-      if (isManagedVpsProvider(providerName) && config.KORTIX_BILLING_INTERNAL_ENABLED) {
+      if (isManagedVpsProvider(providerName) && config.EPSILON_BILLING_INTERNAL_ENABLED) {
         const { getCustomerByAccountId } = await import('../../billing/repositories/customers');
         const { getOrCreateStripeCustomer } = await import('../../billing/services/subscriptions');
         const { getComputeProductId, getComputeDisplayPriceCents, getComputeDescription, COMPUTE_PRICE_MARKUP } = await import('../../billing/services/tiers');
@@ -343,7 +343,7 @@ export function createCloudSandboxRouter(
           try {
             const portalSession = await stripe.billingPortal.sessions.create({
               customer: customer.id,
-              return_url: `${config.FRONTEND_URL ?? 'https://app.kortix.com'}/subscription`,
+              return_url: `${config.FRONTEND_URL ?? 'https://app.epsilon.com'}/subscription`,
             });
             portalUrl = portalSession.url;
           } catch {
@@ -423,7 +423,7 @@ export function createCloudSandboxRouter(
 
       await registerCreator(db, sandbox.sandboxId, userId);
 
-      // Create a sandbox-managed API key (kortix_sb_)
+      // Create a sandbox-managed API key (epsilon_sb_)
       const sandboxKey = await createApiKey({
         sandboxId: sandbox.sandboxId,
         accountId,
@@ -484,7 +484,7 @@ export function createCloudSandboxRouter(
         serverType: requestedServerType,
         location: requestedLocation,
         envVars: {
-          KORTIX_TOKEN: sandboxKey.secretKey,
+          EPSILON_TOKEN: sandboxKey.secretKey,
         },
       };
 
@@ -1041,7 +1041,7 @@ export function createCloudSandboxRouter(
       let cancelAt: string | null = null;
 
       const stripeSubId = existingMeta.stripe_subscription_id as string | undefined;
-      if (stripeSubId && config.KORTIX_BILLING_INTERNAL_ENABLED) {
+      if (stripeSubId && config.EPSILON_BILLING_INTERNAL_ENABLED) {
         try {
           const { getStripe } = await import('../../shared/stripe');
           const stripe = getStripe();
@@ -1116,7 +1116,7 @@ export function createCloudSandboxRouter(
       }
 
       const stripeSubId = existingMeta.stripe_subscription_id as string | undefined;
-      if (stripeSubId && config.KORTIX_BILLING_INTERNAL_ENABLED) {
+      if (stripeSubId && config.EPSILON_BILLING_INTERNAL_ENABLED) {
         try {
           const { getStripe } = await import('../../shared/stripe');
           const stripe = getStripe();
@@ -1145,7 +1145,7 @@ export function createCloudSandboxRouter(
     const userId = c.get('userId');
     try {
       const accountId = await resolveAccountId(userId);
-      // 1. Verify legacy paid tier from canonical kortix billing state only.
+      // 1. Verify legacy paid tier from canonical epsilon billing state only.
       const { getCreditAccount } = await import('../../billing/repositories/credit-accounts');
       const { isLegacyPaidTier, getTier } = await import('../../billing/services/tiers');
 
@@ -1166,8 +1166,8 @@ export function createCloudSandboxRouter(
         return c.json({ success: false, error: 'You already have an active computer', sandbox_id: existing[0].sandboxId }, 409);
       }
 
-      // Lazy-migrate: create kortix.credit_accounts row with full credits.
-      // Supabase RPCs can't access kortix schema, so set everything via drizzle directly.
+      // Lazy-migrate: create epsilon.credit_accounts row with full credits.
+      // Supabase RPCs can't access epsilon schema, so set everything via drizzle directly.
       try {
         const { MACHINE_CREDIT_BONUS } = await import('../../billing/services/tiers');
         const { grantMachineBonusOnce, getLegacyClaimMachineBonusKey } = await import('../../billing/services/machine-bonus');

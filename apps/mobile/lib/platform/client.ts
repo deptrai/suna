@@ -1,5 +1,5 @@
 /**
- * Platform API Client for Kortix Computer Mobile
+ * Platform API Client for Epsilon Computer Mobile
  *
  * Communicates with the Computer backend to manage sandbox lifecycle
  * and provides the sandbox URL for OpenCode session operations.
@@ -16,7 +16,7 @@ import { log } from '@/lib/logger';
 export const SANDBOX_PORTS = {
   DESKTOP: '6080',
   DESKTOP_HTTPS: '6081',
-  KORTIX_MASTER: '8000',
+  EPSILON_MASTER: '8000',
   BROWSER_STREAM: '9223',
   SSH: '22',
 } as const;
@@ -58,7 +58,7 @@ interface LocalBridgeSandboxResponse {
  * Pattern: {BACKEND_URL}/p/{externalId}/8000
  */
 export function getSandboxUrl(sandboxExternalId: string): string {
-  return `${API_URL}/p/${sandboxExternalId}/${SANDBOX_PORTS.KORTIX_MASTER}`;
+  return `${API_URL}/p/${sandboxExternalId}/${SANDBOX_PORTS.EPSILON_MASTER}`;
 }
 
 /**
@@ -341,7 +341,7 @@ export async function checkInstanceHealth(url: string): Promise<string | null> {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 3000);
-    const res = await fetch(`${url}/kortix/health`, { signal: controller.signal });
+    const res = await fetch(`${url}/epsilon/health`, { signal: controller.signal });
     clearTimeout(timeout);
     if (!res.ok) return null;
     const data = await res.json();
@@ -587,7 +587,7 @@ export async function getSandboxServices(
   const query = includeAll ? '?all=true' : '';
   const data = await serviceRequest<{ services?: SandboxService[] }>(
     sandboxUrl,
-    `/kortix/services${query}`,
+    `/epsilon/services${query}`,
   );
   return data?.services ?? [];
 }
@@ -600,8 +600,8 @@ export async function sandboxServiceAction(
   const isDelete = action === 'delete';
   const method = isDelete ? 'DELETE' : 'POST';
   const path = isDelete
-    ? `/kortix/services/${encodeURIComponent(serviceId)}`
-    : `/kortix/services/${encodeURIComponent(serviceId)}/${action}`;
+    ? `/epsilon/services/${encodeURIComponent(serviceId)}`
+    : `/epsilon/services/${encodeURIComponent(serviceId)}/${action}`;
   const data = await serviceRequest(sandboxUrl, path, { method });
   return data !== null;
 }
@@ -612,7 +612,7 @@ export async function getSandboxServiceLogs(
 ): Promise<string[]> {
   const data = await serviceRequest<{ logs?: string[] }>(
     sandboxUrl,
-    `/kortix/services/${encodeURIComponent(serviceId)}/logs`,
+    `/epsilon/services/${encodeURIComponent(serviceId)}/logs`,
   );
   return data?.logs ?? [];
 }
@@ -622,7 +622,7 @@ export async function reconcileSandboxServices(
   reload = false,
 ): Promise<boolean> {
   const query = reload ? '?reload=true' : '';
-  const data = await serviceRequest(sandboxUrl, `/kortix/services/reconcile${query}`, {
+  const data = await serviceRequest(sandboxUrl, `/epsilon/services/reconcile${query}`, {
     method: 'POST',
   });
   return data !== null;
@@ -632,7 +632,7 @@ export async function sandboxRuntimeReload(
   sandboxUrl: string,
   mode: 'dispose-only' | 'full',
 ): Promise<boolean> {
-  const data = await serviceRequest(sandboxUrl, `/kortix/services/system/reload`, {
+  const data = await serviceRequest(sandboxUrl, `/epsilon/services/system/reload`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ mode }),

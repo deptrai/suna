@@ -31,7 +31,7 @@ function mergeMetadataPatch(target: Record<string, unknown>, value: unknown) {
 mock.module('../middleware/auth', () => ({
   combinedAuth: async (c: any, next: any) => {
     c.set('userId', 'user_test');
-    c.set('userEmail', 'test@kortix.dev');
+    c.set('userEmail', 'test@epsilon.dev');
     await next();
   },
 }));
@@ -47,7 +47,7 @@ mock.module('../shared/resolve-account', () => ({
 
 mock.module('../config', () => ({
   config: {
-    SANDBOX_IMAGE: 'kortix/computer:0.8.41',
+    SANDBOX_IMAGE: 'epsilon/computer:0.8.41',
   },
 }));
 
@@ -75,7 +75,7 @@ mock.module('../shared/db', () => ({
   },
 }));
 
-mock.module('@kortix/db', () => ({
+mock.module('@epsilon/db', () => ({
   sandboxes: {
     sandboxId: 'sandboxId',
     accountId: 'accountId',

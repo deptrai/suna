@@ -3,7 +3,7 @@ import {
   getCreditAccount,
   getSubscriptionInfo,
 } from '../repositories/credit-accounts';
-import { AUTO_TOPUP_DEFAULT_AMOUNT, AUTO_TOPUP_DEFAULT_THRESHOLD } from '@kortix/shared';
+import { AUTO_TOPUP_DEFAULT_AMOUNT, AUTO_TOPUP_DEFAULT_THRESHOLD } from '@epsilon/shared';
 import {
   getTier,
   getDailyCreditConfig,
@@ -25,7 +25,7 @@ async function getYoloUsage(serviceKey: string | null): Promise<AccountStateResp
   if (config.ENV_MODE !== 'cloud') return null;
   if (!serviceKey) return null;
   try {
-    const res = await fetch(`${config.KORTIX_YOLO_URL}/me`, {
+    const res = await fetch(`${config.EPSILON_YOLO_URL}/me`, {
       headers: { Authorization: `Bearer ${serviceKey}` },
       signal: AbortSignal.timeout(5000),
     });
@@ -94,7 +94,7 @@ export async function buildMinimalAccountState(accountId: string): Promise<Accou
   let yoloUsage: AccountStateResponse['yolo_usage'] = null;
   try {
     const { db } = await import('../../shared/db');
-    const { sandboxes } = await import('@kortix/db');
+    const { sandboxes } = await import('@epsilon/db');
 
     const sandboxRows = await db
       .select()

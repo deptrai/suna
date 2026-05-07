@@ -22,7 +22,7 @@
 
 import { create } from 'zustand';
 
-const QUEUE_STORAGE_KEY = 'kortix_message_queue_v2';
+const QUEUE_STORAGE_KEY = 'epsilon_message_queue_v2';
 
 /** Lightweight file reference for queued messages (mirrors AttachedFile from session-chat-input) */
 export type QueuedFile =

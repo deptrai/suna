@@ -7,11 +7,11 @@
  * keep working — internally it now routes through the teams module's
  * visibleSandboxFilter + loadUserTeamContext.
  *
- * New callers should import from '@kortix/api/teams' directly.
+ * New callers should import from '@epsilon/api/teams' directly.
  */
 
 import { and, desc, eq, inArray, ne, or, type SQL } from 'drizzle-orm';
-import { sandboxes, type Database } from '@kortix/db';
+import { sandboxes, type Database } from '@epsilon/db';
 import {
   loadUserTeamContext,
   visibleSandboxFilter,
@@ -62,7 +62,7 @@ function buildExtraFilters(
 
   if (options.sandboxId) {
     // Callers historically pass the DB sandbox_id here, but instance-scoped
-    // local routes can also pass the proxy/external id (e.g. "kortix-sandbox").
+    // local routes can also pass the proxy/external id (e.g. "epsilon-sandbox").
     // Do not bind a non-UUID to the uuid column — Postgres throws 22P02 and
     // turns harmless lookup misses into /platform/sandbox/list 500s.
     clauses.push(UUID_RE.test(options.sandboxId)

@@ -20,7 +20,7 @@ export interface SetupOpts {
 }
 
 export function buildContainerConfig(opts: SetupOpts): ContainerConfig {
-  const volumeName = opts.volumeName || 'kortix-data';
+  const volumeName = opts.volumeName || 'epsilon-data';
   const ports = sanitizePorts(opts.ports || DEFAULT_PORTS);
   const envFile = opts.envFile || JUSTAVPS_ENV_FILE;
   const volumes = [`${volumeName}:/workspace`, `${volumeName}:/config`];
@@ -57,7 +57,7 @@ export async function deploySandbox(
     console.log(`[SETUP] Pulling ${config.image}...`);
     await execOnHost(
       endpoint,
-      `systemd-run --unit=kortix-image-pull docker pull ${config.image}`,
+      `systemd-run --unit=epsilon-image-pull docker pull ${config.image}`,
       15,
     );
 

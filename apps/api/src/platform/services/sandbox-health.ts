@@ -1,7 +1,7 @@
 /**
  * Sandbox Health Monitor
  *
- * Periodic health check that ensures kortix-api can always reach the sandbox.
+ * Periodic health check that ensures epsilon-api can always reach the sandbox.
  * Self-heals by re-syncing the canonical sandbox auth bundle on auth failures.
  *
  * Runs every HEALTH_CHECK_INTERVAL_MS. On failure:
@@ -100,9 +100,9 @@ async function checkSandboxHealth(): Promise<void> {
 
   try {
     // 1. Check basic reachability (health endpoint bypasses auth)
-    // 503 means Kortix Master is running but the agent runtime isn't ready yet —
+    // 503 means Epsilon Master is running but the agent runtime isn't ready yet —
     // treat it as a soft failure (sandbox is reachable but not fully ready).
-    const healthRes = await fetch(`${baseUrl}/kortix/health`, {
+    const healthRes = await fetch(`${baseUrl}/epsilon/health`, {
       signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS),
     });
 
@@ -127,13 +127,13 @@ async function checkSandboxHealth(): Promise<void> {
     // 2. Check auth works (protected endpoint)
     const fetchAuthorized = async (): Promise<Response> => {
       for (const authToken of authCandidates) {
-        const res = await fetch(`${baseUrl}/kortix/ports`, {
+        const res = await fetch(`${baseUrl}/epsilon/ports`, {
           headers: { Authorization: `Bearer ${authToken}` },
           signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS),
         });
         if (res.status !== 401 && res.status !== 403) return res;
       }
-      return fetch(`${baseUrl}/kortix/ports`, {
+      return fetch(`${baseUrl}/epsilon/ports`, {
         headers: { Authorization: `Bearer ${authCandidates[0] || ''}` },
         signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS),
       });
@@ -182,34 +182,34 @@ async function checkSandboxHealth(): Promise<void> {
 /**
  * Attempt to sync the canonical auth bundle + API URLs to the sandbox container.
  * Tries the secrets manager /env API first (preferred — triple-write + no restart needed).
- * Falls back to docker exec if the API is unreachable (e.g. kortix-master down).
+ * Falls back to docker exec if the API is unreachable (e.g. epsilon-master down).
  */
 async function attemptKeySync(baseUrl: string, canonicalServiceKey: string, authCandidates: string[]): Promise<boolean> {
   if (!canonicalServiceKey) return false;
 
   // Compute the correct internal API URL for the sandbox (same logic as local-docker.ts)
   let internalApiUrl = `http://host.docker.internal:${config.PORT}`;
-  if (config.KORTIX_URL) {
+  if (config.EPSILON_URL) {
     try {
-      const parsed = new URL(config.KORTIX_URL);
+      const parsed = new URL(config.EPSILON_URL);
       if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') {
         parsed.hostname = 'host.docker.internal';
         internalApiUrl = parsed.toString().replace(/\/$/, '');
       } else {
-        internalApiUrl = config.KORTIX_URL.replace(/\/$/, '');
+        internalApiUrl = config.EPSILON_URL.replace(/\/$/, '');
       }
     } catch {}
   }
 
   const keysToSync: Record<string, string> = {
-    KORTIX_TOKEN: canonicalServiceKey,
+    EPSILON_TOKEN: canonicalServiceKey,
     INTERNAL_SERVICE_KEY: canonicalServiceKey,
     TUNNEL_TOKEN: canonicalServiceKey,
-    KORTIX_API_URL: internalApiUrl,
+    EPSILON_API_URL: internalApiUrl,
     TUNNEL_API_URL: internalApiUrl,
     ...(config.ENV_MODE === 'cloud' ? {
-      KORTIX_YOLO_API_KEY: canonicalServiceKey,
-      KORTIX_YOLO_URL: config.KORTIX_YOLO_URL,
+      EPSILON_YOLO_API_KEY: canonicalServiceKey,
+      EPSILON_YOLO_URL: config.EPSILON_YOLO_URL,
     } : {}),
   };
 
@@ -264,7 +264,7 @@ async function attemptKeySync(baseUrl: string, canonicalServiceKey: string, auth
 
 /**
  * Fallback: write core env vars directly to s6 env dir via docker exec.
- * Used when the /env API is unreachable (e.g. kortix-master auth mismatch).
+ * Used when the /env API is unreachable (e.g. epsilon-master auth mismatch).
  */
 async function attemptKeySyncFallback(keys: Record<string, string>): Promise<boolean> {
   // Only works in local docker mode (not network mode)
@@ -280,8 +280,8 @@ async function attemptKeySyncFallback(keys: Record<string, string>): Promise<boo
       env.DOCKER_HOST = `unix://${config.DOCKER_HOST}`;
     }
 
-    const token = keys.KORTIX_TOKEN || keys.INTERNAL_SERVICE_KEY || '';
-    const apiUrl = keys.KORTIX_API_URL || keys.TUNNEL_API_URL || '';
+    const token = keys.EPSILON_TOKEN || keys.INTERNAL_SERVICE_KEY || '';
+    const apiUrl = keys.EPSILON_API_URL || keys.TUNNEL_API_URL || '';
     execSync(
       `docker exec ${shellQuote(config.SANDBOX_CONTAINER_NAME)} bash -c ${shellQuote(buildCanonicalSandboxAuthCommand(token, apiUrl))}`,
       { timeout: 15_000, stdio: 'pipe', env },

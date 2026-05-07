@@ -1,7 +1,7 @@
 import { Context, Next } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { validateSecretKey } from '../repositories/api-keys';
-import { isKortixToken } from '../shared/crypto';
+import { isEpsilonToken } from '../shared/crypto';
 import { canAccessPreviewSandbox } from '../shared/preview-ownership';
 import { getSupabase } from '../shared/supabase';
 import { verifySupabaseJwt } from '../shared/jwt-verify';
@@ -27,9 +27,9 @@ function isLocalPreviewBypassRequest(c: Context, previewSandboxId: string | null
 // ═══════════════════════════════════════════════════════════════════════════════
 // Auth Middleware (3 middlewares — one per auth strategy)
 //
-//   1. apiKeyAuth      — Kortix API keys only (header)
+//   1. apiKeyAuth      — Epsilon API keys only (header)
 //   2. supabaseAuth    — Supabase JWT only (header)
-//   3. combinedAuth    — Kortix OR Supabase (header + cookie fallback)
+//   3. combinedAuth    — Epsilon OR Supabase (header + cookie fallback)
 //
 // Token is read from query parameters ONLY as a last resort for preview proxy
 // routes (/v1/p/*) — browser WebSocket API can't set custom headers, so PTY
@@ -39,7 +39,7 @@ function isLocalPreviewBypassRequest(c: Context, previewSandboxId: string | null
 
 /**
  * API key auth for search, LLM, and router routes.
- * Always validates Kortix tokens (kortix_, kortix_sb_) via validateSecretKey()
+ * Always validates Epsilon tokens (epsilon_, epsilon_sb_) via validateSecretKey()
  * against the api_keys table.
  */
 export async function apiKeyAuth(c: Context, next: Next) {
@@ -59,9 +59,9 @@ export async function apiKeyAuth(c: Context, next: Next) {
     });
   }
 
-  if (!isKortixToken(token)) {
+  if (!isEpsilonToken(token)) {
     throw new HTTPException(401, {
-      message: 'Invalid token format — expected kortix_ prefix',
+      message: 'Invalid token format — expected epsilon_ prefix',
     });
   }
 
@@ -141,7 +141,7 @@ export async function supabaseAuth(c: Context, next: Next) {
 }
 
 /**
- * Combined auth — accepts Kortix tokens OR Supabase JWTs.
+ * Combined auth — accepts Epsilon tokens OR Supabase JWTs.
  *
  * Token resolution order:
  *   1. Authorization: Bearer <token> header
@@ -169,17 +169,17 @@ export async function combinedAuth(c: Context, next: Next) {
     return;
   }
 
-  // Extract token: header → X-Kortix-Token (preview only) → cookie → query param
+  // Extract token: header → X-Epsilon-Token (preview only) → cookie → query param
   const authHeader = c.req.header('Authorization');
-  const kortixTokenHeader = previewSandboxId ? c.req.header('X-Kortix-Token') : undefined;
+  const epsilonTokenHeader = previewSandboxId ? c.req.header('X-Epsilon-Token') : undefined;
   let token: string | undefined;
 
   if (authHeader?.startsWith('Bearer ')) {
     token = authHeader.slice(7);
   }
 
-  if (!token && kortixTokenHeader && isKortixToken(kortixTokenHeader)) {
-    token = kortixTokenHeader;
+  if (!token && epsilonTokenHeader && isEpsilonToken(epsilonTokenHeader)) {
+    token = epsilonTokenHeader;
   }
 
   if (!token) {
@@ -213,11 +213,11 @@ export async function combinedAuth(c: Context, next: Next) {
   // Determine if this is a preview proxy route (for cookie management)
   const isPreviewRoute = c.req.path.startsWith('/v1/p/') || c.req.path === '/v1/p';
 
-  // 1. Try Kortix token (kortix_ or kortix_sb_) — used by agents inside the sandbox
-  if (isKortixToken(token)) {
+  // 1. Try Epsilon token (epsilon_ or epsilon_sb_) — used by agents inside the sandbox
+  if (isEpsilonToken(token)) {
     const result = await validateSecretKey(token);
     if (!result.isValid) {
-      throw new HTTPException(401, { message: result.error || 'Invalid Kortix token' });
+      throw new HTTPException(401, { message: result.error || 'Invalid Epsilon token' });
     }
     if (previewSandboxId && !(await canAccessPreviewSandbox({
       previewSandboxId,

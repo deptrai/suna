@@ -23,8 +23,8 @@ import {
 } from '@/components/chat';
 import { parseToolMessage } from '@agentpress/shared';
 import { ThreadHeader } from '@/components/threads';
-import { KortixComputer } from '@/components/kortix-computer';
-import { useKortixComputerStore } from '@/stores/kortix-computer-store';
+import { EpsilonComputer } from '@/components/epsilon-computer';
+import { useEpsilonComputerStore } from '@/stores/epsilon-computer-store';
 import { useVoicePlayerStore } from '@/stores/voice-player-store';
 import { useChatCommons, type UseChatReturn, useDeleteThread, useShareThread, useUpgradePaywall } from '@/hooks';
 import { useThread } from '@/lib/chat';
@@ -334,11 +334,11 @@ export function ThreadPage({
   }, []);
 
   const {
-    isOpen: isKortixComputerOpen,
+    isOpen: isEpsilonComputerOpen,
     openPanel,
     openFileInComputer,
     openFileBrowser,
-  } = useKortixComputerStore();
+  } = useEpsilonComputerStore();
 
   const deleteThreadMutation = useDeleteThread();
   const shareThreadMutation = useShareThread();
@@ -346,13 +346,13 @@ export function ThreadPage({
   const { data: fullThreadData, refetch: refetchThreadData } = useThread(chat.activeThread?.id);
 
   React.useEffect(() => {
-    if (isKortixComputerOpen) {
+    if (isEpsilonComputerOpen) {
       refetchThreadData();
     } else {
       // Clear selected tool data when panel closes
       setSelectedToolData(null);
     }
-  }, [isKortixComputerOpen, refetchThreadData]);
+  }, [isEpsilonComputerOpen, refetchThreadData]);
 
   const messages = chat.messages || [];
   const streamingContent = chat.streamingContent || '';
@@ -1233,8 +1233,8 @@ export function ThreadPage({
       />
 
 
-      {isKortixComputerOpen && (
-        <KortixComputer
+      {isEpsilonComputerOpen && (
+        <EpsilonComputer
           toolMessages={selectedToolData?.toolMessages || []}
           currentIndex={selectedToolData?.initialIndex || 0}
           onNavigate={(newIndex) => {

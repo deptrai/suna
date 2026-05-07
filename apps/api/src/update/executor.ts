@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { sandboxes } from '@kortix/db';
+import { sandboxes } from '@epsilon/db';
 import { db } from '../shared/db';
 import { config } from '../config';
 import { getProvider, type ProviderName, type SandboxProvider } from '../platform/providers';
@@ -46,7 +46,7 @@ async function verifyRuntimeVersion(
   while (Date.now() < deadline) {
     attempt += 1;
     try {
-      const res = await fetch(`${endpoint.url}/kortix/update/version`, {
+      const res = await fetch(`${endpoint.url}/epsilon/update/version`, {
         headers: endpoint.headers,
         signal: AbortSignal.timeout(RUNTIME_VERIFY_PROBE_TIMEOUT_MS),
       });
@@ -114,7 +114,7 @@ async function resolveContainerConfig(
 function buildSafeBackupDescription(previousVersion: string | null, targetVersion: string): string {
   const from = previousVersion ? `v${previousVersion.replace(/^v/, '')}` : 'unknown';
   const to = `v${targetVersion.replace(/^v/, '')}`;
-  return `Kortix pre-update backup ${from} -> ${to}`;
+  return `Epsilon pre-update backup ${from} -> ${to}`;
 }
 
 class UpdateCancelledError extends Error {

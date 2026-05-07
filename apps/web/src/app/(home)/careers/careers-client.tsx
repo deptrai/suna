@@ -64,8 +64,8 @@ export default function CareersPageClient() {
               If this sounds like you, just reach out. I{"'"}m Marko.
             </p>
             <div className="flex flex-col gap-1.5 mt-3">
-              <a href="mailto:marko@kortix.com" className="text-base text-foreground font-medium underline underline-offset-4 decoration-foreground/40 hover:decoration-foreground transition-colors w-fit">
-                marko@kortix.com
+              <a href="mailto:marko@epsilon.com" className="text-base text-foreground font-medium underline underline-offset-4 decoration-foreground/40 hover:decoration-foreground transition-colors w-fit">
+                marko@epsilon.com
               </a>
               <a href="https://x.com/markokraemer" target="_blank" rel="noopener noreferrer" className="text-base text-foreground font-medium underline underline-offset-4 decoration-foreground/40 hover:decoration-foreground transition-colors w-fit">
                 @markokraemer

@@ -32,7 +32,7 @@ const emailFilter = email ? sql`AND lower(candidates.email) = lower(${email})` :
 const result = await db.execute(sql`
   WITH customer_accounts AS (
     SELECT account_id, email, COALESCE(provider, 'stripe') AS provider, COALESCE(active, true) AS active
-    FROM kortix.billing_customers
+    FROM epsilon.billing_customers
     UNION ALL
     SELECT account_id, email, COALESCE(provider, 'stripe') AS provider, COALESCE(active, true) AS active
     FROM basejump.billing_customers
@@ -53,7 +53,7 @@ const result = await db.execute(sql`
     credit.provider AS "existingProvider",
     credit.stripe_subscription_id AS "existingStripeSubscriptionId"
   FROM candidates
-  LEFT JOIN kortix.credit_accounts credit
+  LEFT JOIN epsilon.credit_accounts credit
     ON credit.account_id = candidates.account_id
   WHERE (
     credit.account_id IS NULL

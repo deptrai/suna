@@ -27,19 +27,19 @@ export async function GET(request: NextRequest) {
   const runtimeEnv = getServerPublicEnv()
 
   // Desktop OAuth bounce: Supabase 302'd the user's BROWSER here. Don't
-  // exchange the code on the web side — bounce to `kortix://auth/callback`
+  // exchange the code on the web side — bounce to `epsilon://auth/callback`
   // with the same params so the OS hands the code to the desktop app, and
   // leave the browser tab on a real page so it doesn't spin forever waiting
-  // for a navigation that the kortix:// scheme never produces.
+  // for a navigation that the epsilon:// scheme never produces.
   if (desktop) {
     const forwardParams = new URLSearchParams()
     for (const [k, v] of searchParams) {
       if (k !== 'desktop') forwardParams.set(k, v)
     }
-    const deepLink = `kortix://auth/callback${forwardParams.toString() ? `?${forwardParams.toString()}` : ''}`
+    const deepLink = `epsilon://auth/callback${forwardParams.toString() ? `?${forwardParams.toString()}` : ''}`
     const escaped = deepLink.replace(/&/g, '&amp;').replace(/"/g, '&quot;')
     const html = `<!doctype html><html><head><meta charset="utf-8"/>
-<title>Opening Kortix…</title>
+<title>Opening Epsilon…</title>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <style>
   html,body{margin:0;height:100%;background:#0a0a0a;color:#f4f4f5;
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
 <div class="wrap"><div>
   <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
   <h1>You're signed in</h1>
-  <p>Opening Kortix… you can close this tab.<br/>
+  <p>Opening Epsilon… you can close this tab.<br/>
     If nothing happens, <a href="${escaped}">click here</a> to open the app.</p>
 </div></div>
 <script>window.location.replace(${JSON.stringify(deepLink)});</script>

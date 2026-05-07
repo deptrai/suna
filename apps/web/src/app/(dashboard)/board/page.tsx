@@ -4,7 +4,7 @@
  * Global board page — single-project paradigm.
  *
  * The sandbox is one implicit project (proj-workspace, auto-bootstrapped by
- * the kortix-system plugin when KORTIX_PROJECTS_ENABLED=true). Tickets,
+ * the epsilon-system plugin when EPSILON_PROJECTS_ENABLED=true). Tickets,
  * columns, milestones live under that project sandbox-wide; this page
  * surfaces them as a global kanban without a per-project URL.
  *
@@ -27,10 +27,10 @@ import {
   useUpdateTicketStatus,
   useDeleteTicket,
   type Ticket,
-} from '@/hooks/kortix/use-kortix-tickets';
-import { TicketBoard } from '@/components/kortix/ticket-board';
-import { NewTicketDialog } from '@/components/kortix/new-ticket-dialog';
-import { TicketDetailDrawer } from '@/components/kortix/ticket-detail-drawer';
+} from '@/hooks/epsilon/use-epsilon-tickets';
+import { TicketBoard } from '@/components/epsilon/ticket-board';
+import { NewTicketDialog } from '@/components/epsilon/new-ticket-dialog';
+import { TicketDetailDrawer } from '@/components/epsilon/ticket-detail-drawer';
 
 const PROJECT_ID = 'proj-workspace';
 

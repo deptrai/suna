@@ -33,16 +33,16 @@ import {
 import { Text } from '@/components/ui/text';
 import { Icon } from '@/components/ui/icon';
 import {
-  useKortixProjects,
-  type KortixProject,
-} from '@/lib/kortix/use-kortix-projects';
+  useEpsilonProjects,
+  type EpsilonProject,
+} from '@/lib/epsilon/use-epsilon-projects';
 import { useSelectedProjectStore } from '@/stores/selected-project-store';
 import { getSheetBg } from '@/lib/theme-colors';
 import { useSandboxContext } from '@/contexts/SandboxContext';
 
 // ─── Helpers (mirror of web) ─────────────────────────────────────────────────
 
-function projectRecency(p: KortixProject): number {
+function projectRecency(p: EpsilonProject): number {
   if (p.time?.updated) return p.time.updated;
   if (p.created_at) {
     const t = new Date(p.created_at).getTime();
@@ -80,7 +80,7 @@ function shortPath(path: string | undefined): string {
 
 export function ProjectPicker() {
   const { sandboxUrl } = useSandboxContext();
-  const { data: projects, isLoading } = useKortixProjects(sandboxUrl);
+  const { data: projects, isLoading } = useEpsilonProjects(sandboxUrl);
   const selectedProjectId = useSelectedProjectStore((s) => s.projectId);
   const setSelectedProjectId = useSelectedProjectStore((s) => s.setProjectId);
 
@@ -93,7 +93,7 @@ export function ProjectPicker() {
 
   // Sort by recency (desc), same as web.
   const sorted = useMemo(() => {
-    if (!projects) return [] as KortixProject[];
+    if (!projects) return [] as EpsilonProject[];
     return [...projects].sort((a, b) => projectRecency(b) - projectRecency(a));
   }, [projects]);
 

@@ -43,14 +43,14 @@ export function useFileList(
   });
 
   // Filter hidden files client-side so the cache stays complete.
-  // .kortix and .opencode are always shown — they are elevated system dirs.
+  // .epsilon and .opencode are always shown — they are elevated system dirs.
   const data = useMemo(() => {
     if (!query.data) return query.data;
     if (showHidden) return query.data;
     return query.data.filter(
       (node) =>
         !node.name.startsWith('.') ||
-        node.name === '.kortix' ||
+        node.name === '.epsilon' ||
         node.name === '.opencode',
     );
   }, [query.data, showHidden]);

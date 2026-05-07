@@ -1,5 +1,5 @@
 /**
- * Sandbox Preview Proxy — transparent pipe to Kortix Master inside the sandbox.
+ * Sandbox Preview Proxy — transparent pipe to Epsilon Master inside the sandbox.
  *
  * TRUE TRANSPARENT PROXY:
  *   - decompress: false — raw bytes pass through untouched
@@ -18,7 +18,7 @@ import { execSync } from 'child_process';
 import { buildCanonicalSandboxAuthCommand } from '../../platform/services/sandbox-auth';
 import { invalidateProviderCache } from '..';
 
-const KORTIX_MASTER_PORT = 8000;
+const EPSILON_MASTER_PORT = 8000;
 const FETCH_TIMEOUT_MS = 30_000;
 
 function shellQuote(value: string): string {
@@ -47,7 +47,7 @@ function isExpectedStartupPreview(path: string, status: number, bodySnippet: str
     '/global/health',
     '/global/event',
     '/session/status',
-    '/kortix/health',
+    '/epsilon/health',
     '/log',
   ];
   return startupPaths.some((candidate) => normalizedPath.startsWith(candidate)) && (
@@ -65,7 +65,7 @@ function isExpectedStartupPreview(path: string, status: number, bodySnippet: str
 // Previously this used a one-shot boolean (`_serviceKeySynced`) — once we
 // successfully synced ONE key, all future 401s were ignored. That broke
 // `bun --hot` reloads: every API restart re-provisions the sandbox with a
-// fresh kortix_sb_ token, the browser keeps hitting the proxy with a JWT,
+// fresh epsilon_sb_ token, the browser keeps hitting the proxy with a JWT,
 // the proxy resolves the NEW serviceKey, but we refuse to resync and just
 // serve 401s until the page is manually hard-refreshed.
 //
@@ -93,7 +93,7 @@ function trySyncServiceKey(serviceKey: string): boolean {
 
     console.log(`[LOCAL-PREVIEW] Syncing sandbox auth bundle to container (attempt ${_syncAttemptsForCurrentKey}/${MAX_SYNC_ATTEMPTS_PER_KEY})...`);
     execSync(
-      `docker exec ${shellQuote(config.SANDBOX_CONTAINER_NAME)} bash -c ${shellQuote(buildCanonicalSandboxAuthCommand(serviceKey, config.KORTIX_URL.replace(/\/v1\/router\/?$/, '') || `http://host.docker.internal:${config.PORT}`))}`,
+      `docker exec ${shellQuote(config.SANDBOX_CONTAINER_NAME)} bash -c ${shellQuote(buildCanonicalSandboxAuthCommand(serviceKey, config.EPSILON_URL.replace(/\/v1\/router\/?$/, '') || `http://host.docker.internal:${config.PORT}`))}`,
       { timeout: 15_000, stdio: 'pipe', env },
     );
     _lastSyncedKey = serviceKey;
@@ -106,7 +106,7 @@ function trySyncServiceKey(serviceKey: string): boolean {
 }
 
 /**
- * Read the kortix-master process's currently-loaded KORTIX_TOKEN by
+ * Read the epsilon-master process's currently-loaded EPSILON_TOKEN by
  * cat-ing `/workspace/.secrets/.bootstrap-env.json` from inside the
  * container. This is the source of truth for what the running process
  * actually accepts (bootstrap-env.ts overrides process.env at startup
@@ -123,7 +123,7 @@ function readContainerBootstrapKey(): string | null {
       { timeout: 5_000, stdio: ['pipe', 'pipe', 'pipe'], env },
     ).toString('utf8');
     const json = JSON.parse(out);
-    return typeof json.KORTIX_TOKEN === 'string' && json.KORTIX_TOKEN.length > 0 ? json.KORTIX_TOKEN : null;
+    return typeof json.EPSILON_TOKEN === 'string' && json.EPSILON_TOKEN.length > 0 ? json.EPSILON_TOKEN : null;
   } catch {
     return null;
   }
@@ -137,7 +137,7 @@ function readContainerBootstrapKey(): string | null {
 async function updateSandboxServiceKeyInDb(newKey: string): Promise<void> {
   try {
     const { db } = await import('../../shared/db');
-    const { sandboxes } = await import('@kortix/db');
+    const { sandboxes } = await import('@epsilon/db');
     const { eq, sql } = await import('drizzle-orm');
     await db
       .update(sandboxes)
@@ -157,7 +157,7 @@ const STRIP_REQUEST_HEADERS = new Set([
   'keep-alive',
   'te',
   'upgrade',
-  'x-kortix-user-context',
+  'x-epsilon-user-context',
 ]);
 
 // Hop-by-hop response headers must not be forwarded by proxies.
@@ -176,7 +176,7 @@ const STRIP_RESPONSE_HEADERS = new Set([
 ]);
 
 /**
- * Resolve the sandbox's Kortix Master URL.
+ * Resolve the sandbox's Epsilon Master URL.
  * Inside Docker: http://{sandboxId}:8000 (Docker DNS)
  * On host (pnpm dev): http://localhost:{SANDBOX_PORT_BASE}
  */
@@ -206,7 +206,7 @@ export async function proxyToSandbox(
   extraHeaders?: Record<string, string>,
 ): Promise<Response> {
   const sandboxBaseUrl = baseUrlOverride || getSandboxBaseUrl(sandboxId);
-  const targetUrl = port === KORTIX_MASTER_PORT
+  const targetUrl = port === EPSILON_MASTER_PORT
     ? `${sandboxBaseUrl}${path}${queryString}`
     : `${sandboxBaseUrl}/proxy/${port}${path}${queryString}`;
 
@@ -276,14 +276,14 @@ export async function proxyToSandbox(
   // On 401 from sandbox: service-key mismatch. Two failure modes:
   //   (a) Container env files have key X but our cached serviceKey is Y.
   //       Pushing Y into the s6 env via trySyncServiceKey only helps the
-  //       NEXT process spawn, not the currently-running kortix-master that
+  //       NEXT process spawn, not the currently-running epsilon-master that
   //       loaded X at start. So syncing+retrying with the same Y still 401s.
   //   (b) The DB / our cache is fine but bootstrap-env.ts inside the
-  //       container loaded an older KORTIX_TOKEN from a stale persistent
+  //       container loaded an older EPSILON_TOKEN from a stale persistent
   //       /workspace/.secrets/.bootstrap-env.json.
   //
   // The container's bootstrap file is the source of truth for what the
-  // running kortix-master process actually accepts. On 401, read that
+  // running epsilon-master process actually accepts. On 401, read that
   // file via `docker exec` and retry with whatever it says. If the retry
   // succeeds we also publish the corrected key into our DB row so
   // subsequent cache reads pick it up cleanly.
@@ -387,13 +387,13 @@ export async function proxyToSandbox(
   }
 
   // Fix Location header for redirects.
-  // Kortix Master's proxy rewrites e.g. http://localhost:5173/path → /proxy/5173/path.
+  // Epsilon Master's proxy rewrites e.g. http://localhost:5173/path → /proxy/5173/path.
   // For subdomain routing (p5173-sandbox.localhost:8008), the client already "is" at
   // the right port — strip the /proxy/{port} prefix so the redirect is just /path.
   // For path-based routing (OpenCode API at port 8000), there's no /proxy/ prefix, so
   // this is a no-op.
   const location = respHeaders.get('location');
-  if (location && port !== KORTIX_MASTER_PORT) {
+  if (location && port !== EPSILON_MASTER_PORT) {
     const proxyPrefix = `/proxy/${port}`;
     if (location.startsWith(proxyPrefix)) {
       respHeaders.set('location', location.slice(proxyPrefix.length) || '/');

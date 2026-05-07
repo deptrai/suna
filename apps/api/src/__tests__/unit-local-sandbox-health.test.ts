@@ -24,7 +24,7 @@ describe('checkLocalSandboxHealth', () => {
 
   test('restarts the managed service when the container is missing', () => {
     responses.set('docker info', ['Docker 26.1.0']);
-    responses.set(`docker inspect 'kortix-sandbox' --format "{{.State.Status}}"`, [new Error('missing'), new Error('missing')]);
+    responses.set(`docker inspect 'epsilon-sandbox' --format "{{.State.Status}}"`, [new Error('missing'), new Error('missing')]);
     responses.set(`docker inspect 'justavps-workload' --format "{{.State.Status}}"`, [new Error('missing'), 'running']);
     responses.set('systemctl cat justavps-docker', ['[Unit]']);
     responses.set('systemctl restart justavps-docker', ['']);

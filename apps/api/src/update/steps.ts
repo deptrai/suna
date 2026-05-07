@@ -83,7 +83,7 @@ export async function pullImage(endpoint: ResolvedEndpoint, image: string): Prom
   // 2. Clean up ALL stale pull units from any previous attempts
   await execOnHost(
     endpoint,
-    'for u in $(systemctl list-units --all --no-legend "kortix-pull-*" | awk "{print \\$1}"); do systemctl stop "$u" 2>/dev/null; systemctl reset-failed "$u" 2>/dev/null; done; true',
+    'for u in $(systemctl list-units --all --no-legend "epsilon-pull-*" | awk "{print \\$1}"); do systemctl stop "$u" 2>/dev/null; systemctl reset-failed "$u" 2>/dev/null; done; true',
     10,
   );
 
@@ -91,7 +91,7 @@ export async function pullImage(endpoint: ResolvedEndpoint, image: string): Prom
   await execOnHost(endpoint, 'docker image prune -f >/dev/null 2>&1 || true', 15);
 
   // 4. Start pull in background via systemd-run (CF proxy times out on long operations)
-  const unitName = `kortix-pull-${Date.now()}`;
+  const unitName = `epsilon-pull-${Date.now()}`;
   const startPull = await execOnHost(
     endpoint,
     `systemd-run --unit=${unitName} --description="Pull ${image}" -- docker pull ${image} 2>&1`,
@@ -186,7 +186,7 @@ export async function checkpointSqlite(endpoint: ResolvedEndpoint, containerName
 
   return execOnHost(
     endpoint,
-    `docker exec '${containerName}' sh -c "if command -v kortix-opencode-state >/dev/null 2>&1; then kortix-opencode-state sync --archive pre-update; else echo ${pythonFallback} | base64 -d | python3; fi"`,
+    `docker exec '${containerName}' sh -c "if command -v epsilon-opencode-state >/dev/null 2>&1; then epsilon-opencode-state sync --archive pre-update; else echo ${pythonFallback} | base64 -d | python3; fi"`,
     60,
   );
 }
@@ -232,9 +232,9 @@ export async function stopAndStartContainer(
   const scriptLines = [
     '#!/bin/bash',
     `systemctl disable --now ${JUSTAVPS_SERVICE_NAME} 2>/dev/null || true`,
-    'systemctl disable --now kortix-sandbox 2>/dev/null || true',
-    'systemctl disable --now kortix-port-shim 2>/dev/null || true',
-    'rm -f /etc/systemd/system/kortix-port-shim.service',
+    'systemctl disable --now epsilon-sandbox 2>/dev/null || true',
+    'systemctl disable --now epsilon-port-shim 2>/dev/null || true',
+    'rm -f /etc/systemd/system/epsilon-port-shim.service',
     'systemctl disable --now opencode-web 2>/dev/null || true',
     'rm -f /etc/systemd/system/opencode-web.service',
     `docker stop -t 10 ${sqName} 2>/dev/null || true`,
@@ -244,8 +244,8 @@ export async function stopAndStartContainer(
   ].join('\n');
 
   const b64 = Buffer.from(scriptLines).toString('base64');
-  const unitName = `kortix-update-${Date.now()}`;
-  const scriptPath = `/tmp/kortix-update-${Date.now()}.sh`;
+  const unitName = `epsilon-update-${Date.now()}`;
+  const scriptPath = `/tmp/epsilon-update-${Date.now()}.sh`;
 
   await execOnHost(
     endpoint,
@@ -255,7 +255,7 @@ export async function stopAndStartContainer(
 
   const result = await execOnHost(
     endpoint,
-    `systemctl reset-failed ${unitName} 2>/dev/null || true; systemd-run --unit=${unitName} --description="Kortix sandbox update" ${scriptPath}`,
+    `systemctl reset-failed ${unitName} 2>/dev/null || true; systemd-run --unit=${unitName} --description="Epsilon sandbox update" ${scriptPath}`,
     15,
   );
 
@@ -273,7 +273,7 @@ async function restartManagedJustAVPSContainer(
   const startScript = buildManagedServiceStartScript(config);
   const serviceUnit = [
     '[Unit]',
-    'Description=Kortix sandbox workload',
+    'Description=Epsilon sandbox workload',
     'After=network-online.target docker.service',
     'Requires=docker.service',
     'Wants=network-online.target',
@@ -307,11 +307,11 @@ async function restartManagedJustAVPSContainer(
     'pathlib.Path("/etc/systemd/system/justavps-docker.service").write_text(payload["serviceUnit"] + "\\n")',
     'PY',
     'rm -f "$PAYLOAD_JSON"',
-    `curl -fsSL https://raw.githubusercontent.com/kortix-ai/suna/main/core/startup.sh -o ${JUSTAVPS_STARTUP_PATCH_HOST}`,
+    `curl -fsSL https://raw.githubusercontent.com/epsilon-ai/chainlens/main/core/startup.sh -o ${JUSTAVPS_STARTUP_PATCH_HOST}`,
     `chmod +x ${JUSTAVPS_STARTUP_PATCH_HOST}`,
     'systemctl daemon-reload',
-    'systemctl disable --now kortix-port-shim 2>/dev/null || true',
-    'rm -f /etc/systemd/system/kortix-port-shim.service',
+    'systemctl disable --now epsilon-port-shim 2>/dev/null || true',
+    'rm -f /etc/systemd/system/epsilon-port-shim.service',
     'systemctl disable --now opencode-web 2>/dev/null || true',
     'rm -f /etc/systemd/system/opencode-web.service',
     `systemctl enable ${JUSTAVPS_SERVICE_NAME} >/dev/null 2>&1 || true`,
@@ -321,7 +321,7 @@ async function restartManagedJustAVPSContainer(
   ].join('\n');
 
   const b64 = Buffer.from(script).toString('base64');
-  const scriptPath = `/tmp/kortix-managed-restart-${Date.now()}.sh`;
+  const scriptPath = `/tmp/epsilon-managed-restart-${Date.now()}.sh`;
   await execOnHost(
     endpoint,
     `echo '${b64}' | base64 -d > ${scriptPath} && chmod +x ${scriptPath}`,
@@ -387,8 +387,8 @@ async function collectContainerDiagnostics(endpoint: ResolvedEndpoint, container
       `echo 'justavps-docker logs:'`,
       `journalctl -u ${JUSTAVPS_SERVICE_NAME} --no-pager -n 30 2>/dev/null || true`,
       `echo ''`,
-      `echo 'kortix-sandbox logs:'`,
-      `journalctl -u kortix-sandbox --no-pager -n 30 2>/dev/null || true`,
+      `echo 'epsilon-sandbox logs:'`,
+      `journalctl -u epsilon-sandbox --no-pager -n 30 2>/dev/null || true`,
     ].join('; '),
     15,
   );

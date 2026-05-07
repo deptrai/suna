@@ -1,5 +1,5 @@
 /**
- * Diagnose why a paying Stripe user has no kortix.credit_accounts row
+ * Diagnose why a paying Stripe user has no epsilon.credit_accounts row
  * (and therefore no "Claim computer" button on the web).
  *
  * Calls the same syncLegacyStripeSubscription() path that resolveAccountId
@@ -35,7 +35,7 @@ const userRows = (await db.execute(
       u.id::text as user_id,
       coalesce(am.account_id, au.account_id)::text as account_id
     from auth.users u
-    left join kortix.account_members am on am.user_id = u.id
+    left join epsilon.account_members am on am.user_id = u.id
     left join basejump.account_user au on au.user_id = u.id
     where lower(u.email) = ${email}
       and coalesce(am.account_id, au.account_id) is not null
@@ -57,14 +57,14 @@ if (rows.length > 1) {
 
 const { user_id: userId, account_id: accountId } = rows[0];
 
-const kortixRow = (await db.execute(
-  drizzleSql`select tier, provider, stripe_subscription_id, stripe_subscription_status, payment_status from kortix.credit_accounts where account_id = ${accountId}::uuid limit 1`,
+const epsilonRow = (await db.execute(
+  drizzleSql`select tier, provider, stripe_subscription_id, stripe_subscription_status, payment_status from epsilon.credit_accounts where account_id = ${accountId}::uuid limit 1`,
 )) as any;
 const legacyRow = (await db.execute(
   drizzleSql`select tier, provider, stripe_subscription_id, stripe_subscription_status, payment_status, commitment_type, revenuecat_product_id from public.credit_accounts where account_id = ${accountId}::uuid limit 1`,
 )) as any;
 const customers = (await db.execute(
-  drizzleSql`select id, email, provider, active from kortix.billing_customers where account_id = ${accountId}::uuid order by active desc nulls last`,
+  drizzleSql`select id, email, provider, active from epsilon.billing_customers where account_id = ${accountId}::uuid order by active desc nulls last`,
 )) as any;
 const legacyCustomers = (await db.execute(
   drizzleSql`select id, email, provider, active from basejump.billing_customers where account_id = ${accountId}::uuid order by active desc nulls last`,
@@ -76,9 +76,9 @@ console.log(JSON.stringify({
   email,
   userId,
   accountId,
-  kortix_credit_accounts: pick(kortixRow)[0] ?? null,
+  epsilon_credit_accounts: pick(epsilonRow)[0] ?? null,
   legacy_public_credit_accounts: pick(legacyRow)[0] ?? null,
-  kortix_billing_customers: pick(customers),
+  epsilon_billing_customers: pick(customers),
   basejump_billing_customers: pick(legacyCustomers),
 }, null, 2));
 
@@ -126,7 +126,7 @@ if (!rcKey) {
       }, null, 2));
 
       if (activeEntitlements.length > 0 || activeSubscriptions.length > 0) {
-        console.log(`→ RevenueCat has an active record under app_user_id=${appUserId}. The kortix row is missing because the webhook never landed (or failed).`);
+        console.log(`→ RevenueCat has an active record under app_user_id=${appUserId}. The epsilon row is missing because the webhook never landed (or failed).`);
         break;
       }
     } catch (err) {

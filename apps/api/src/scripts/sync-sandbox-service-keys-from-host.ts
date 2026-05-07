@@ -1,8 +1,8 @@
 import { and, eq } from 'drizzle-orm';
-import { kortixApiKeys, sandboxes } from '@kortix/db';
+import { epsilonApiKeys, sandboxes } from '@epsilon/db';
 import { db } from '../shared/db';
 import { config } from '../config';
-import { generateSandboxKeyPair, hashSecretKey, isKortixToken } from '../shared/crypto';
+import { generateSandboxKeyPair, hashSecretKey, isEpsilonToken } from '../shared/crypto';
 import { isProxyTokenStale, refreshSandboxProxyToken } from '../platform/providers/justavps';
 
 function getArg(flag: string): string | null {
@@ -91,8 +91,8 @@ async function processRow(row: typeof sandboxes.$inferSelect) {
       body: JSON.stringify({
         command: [
           'set -e',
-          'TOKEN="$(docker exec justavps-workload sh -lc \"printenv KORTIX_TOKEN\" 2>/dev/null | tr -d \"\\r\" || true)"',
-          'if [ -z "$TOKEN" ]; then TOKEN="$(grep -E "^(KORTIX_TOKEN|INTERNAL_SERVICE_KEY)=" /etc/justavps/env 2>/dev/null | tail -1 | cut -d= -f2- | tr -d "\\r" || true)"; fi',
+          'TOKEN="$(docker exec justavps-workload sh -lc \"printenv EPSILON_TOKEN\" 2>/dev/null | tr -d \"\\r\" || true)"',
+          'if [ -z "$TOKEN" ]; then TOKEN="$(grep -E "^(EPSILON_TOKEN|INTERNAL_SERVICE_KEY)=" /etc/justavps/env 2>/dev/null | tail -1 | cut -d= -f2- | tr -d "\\r" || true)"; fi',
           'printf "%s" "$TOKEN"',
         ].join('\n'),
         timeout: 15,
@@ -103,27 +103,27 @@ async function processRow(row: typeof sandboxes.$inferSelect) {
     if (!tokenRes.ok) throw new Error(`Toolbox token read failed (${tokenRes.status})`);
     const tokenBody = await tokenRes.json() as { stdout?: string; stderr?: string; exit_code?: number };
     const token = String(tokenBody.stdout ?? '').trim();
-    if (!isKortixToken(token)) throw new Error(`Invalid token from host: ${token.slice(0, 16)}`);
+    if (!isEpsilonToken(token)) throw new Error(`Invalid token from host: ${token.slice(0, 16)}`);
 
     const tokenHash = hashSecretKey(token);
     const [existingKey] = await db
-      .select({ keyId: kortixApiKeys.keyId })
-      .from(kortixApiKeys)
-      .where(eq(kortixApiKeys.secretKeyHash, tokenHash))
+      .select({ keyId: epsilonApiKeys.keyId })
+      .from(epsilonApiKeys)
+      .where(eq(epsilonApiKeys.secretKeyHash, tokenHash))
       .limit(1);
 
     if (existingKey) {
       await db
-        .update(kortixApiKeys)
+        .update(epsilonApiKeys)
         .set({
           sandboxId: row.sandboxId,
           accountId: row.accountId,
           status: 'active',
         })
-        .where(eq(kortixApiKeys.keyId, existingKey.keyId));
+        .where(eq(epsilonApiKeys.keyId, existingKey.keyId));
     } else {
       const { publicKey } = generateSandboxKeyPair();
-      await db.insert(kortixApiKeys).values({
+      await db.insert(epsilonApiKeys).values({
         sandboxId: row.sandboxId,
         accountId: row.accountId,
         publicKey,

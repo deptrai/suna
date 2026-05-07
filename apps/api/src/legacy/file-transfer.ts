@@ -191,7 +191,7 @@ async function uploadAndExtractOnNewSandbox(
   const quotedDestPath = shellQuote(destPath);
   const quotedArchivePath = shellQuote(archivePath);
 
-  const execRes = await fetch(`${baseUrl}/kortix/core/exec`, {
+  const execRes = await fetch(`${baseUrl}/epsilon/core/exec`, {
     method: 'POST',
     headers: { ...headers, 'Content-Type': 'application/json' },
     body: JSON.stringify({

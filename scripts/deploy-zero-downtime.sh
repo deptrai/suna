@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ─── Zero-Downtime Deploy for Kortix API ─────────────────────────────────────
+# ─── Zero-Downtime Deploy for Epsilon API ─────────────────────────────────────
 #
 # Blue/green deployment using nginx as the traffic switcher:
 #
@@ -14,18 +14,18 @@ set -euo pipefail
 #   7. On failure at any step: automatic rollback
 #
 # Port allocation: Blue = 8008, Green = 8009
-# State file: ~/.kortix-deploy-slot tracks which slot is active
+# State file: ~/.epsilon-deploy-slot tracks which slot is active
 # ─────────────────────────────────────────────────────────────────────────────
 
-IMAGE_NAME="kortix-api"
-STATE_FILE="$HOME/.kortix-deploy-slot"
-NGINX_CONF="/etc/nginx/sites-available/kortix-api"
+IMAGE_NAME="epsilon-api"
+STATE_FILE="$HOME/.epsilon-deploy-slot"
+NGINX_CONF="/etc/nginx/sites-available/epsilon-api"
 HEALTH_TIMEOUT=60
 HEALTH_INTERVAL=2
-LOCK_FILE="$HOME/.kortix-deploy.lock"
+LOCK_FILE="$HOME/.epsilon-deploy.lock"
 PREBUILT_IMAGE="${PREBUILT_IMAGE:-}"
 
-cd ~/suna
+cd ~/chainlens
 
 # ── Serialize deploys on-host (defense in depth) ────────────────────────────
 exec 9>"$LOCK_FILE"
@@ -62,7 +62,7 @@ git submodule sync --recursive
 git submodule update --init --recursive --remote
 
 # Migrate .env from old paths to new paths (one-time after repo restructure)
-[ -f kortix-api/.env ] && [ ! -f apps/api/.env ] && mkdir -p apps/api && mv kortix-api/.env apps/api/.env && echo "  Migrated kortix-api/.env → apps/api/.env"
+[ -f epsilon-api/.env ] && [ ! -f apps/api/.env ] && mkdir -p apps/api && mv epsilon-api/.env apps/api/.env && echo "  Migrated epsilon-api/.env → apps/api/.env"
 [ -f apps/frontend/.env ] && [ ! -f apps/web/.env ] && mkdir -p apps/web && mv apps/frontend/.env apps/web/.env && echo "  Migrated apps/frontend/.env → apps/web/.env"
 [ -f sandbox/docker/.env ] && [ ! -f core/docker/.env ] && mkdir -p core/docker && mv sandbox/docker/.env core/docker/.env && echo "  Migrated sandbox/docker/.env → core/docker/.env"
 
@@ -87,15 +87,15 @@ fi
 
 # ── 3. Start standby container ───────────────────────────────────────────────
 echo "[3/6] Starting $STANDBY_SLOT on port $STANDBY_PORT..."
-docker rm -f "kortix-api-$STANDBY_SLOT" 2>/dev/null || true
+docker rm -f "epsilon-api-$STANDBY_SLOT" 2>/dev/null || true
 
-# Extract version from image tag (e.g. "kortix/kortix-api:0.8.29" → "0.8.29")
+# Extract version from image tag (e.g. "epsilon/epsilon-api:0.8.29" → "0.8.29")
 # Falls back to git commit short SHA for dev builds
 SANDBOX_VERSION="${IMAGE_TAG##*:}"
 echo "  SANDBOX_VERSION=$SANDBOX_VERSION"
 
 docker run -d \
-  --name "kortix-api-$STANDBY_SLOT" \
+  --name "epsilon-api-$STANDBY_SLOT" \
   --env-file apps/api/.env \
   -e "SANDBOX_VERSION=$SANDBOX_VERSION" \
   -p "${STANDBY_PORT}:8008" \
@@ -119,8 +119,8 @@ done
 if [ "$HEALTHY" = "false" ]; then
   echo "  ✗ Health check FAILED after ${HEALTH_TIMEOUT}s — rolling back"
   echo "  Container logs:"
-  docker logs "kortix-api-$STANDBY_SLOT" 2>&1 | tail -20
-  docker rm -f "kortix-api-$STANDBY_SLOT" 2>/dev/null || true
+  docker logs "epsilon-api-$STANDBY_SLOT" 2>&1 | tail -20
+  docker rm -f "epsilon-api-$STANDBY_SLOT" 2>/dev/null || true
   echo "  Rollback complete. Active ($ACTIVE_SLOT:$ACTIVE_PORT) unchanged."
   exit 1
 fi
@@ -135,7 +135,7 @@ if sudo nginx -t 2>&1; then
 else
   echo "  ✗ nginx config test failed — reverting"
   sudo sed -i "s|proxy_pass http://127.0.0.1:[0-9]*;|proxy_pass http://127.0.0.1:${ACTIVE_PORT};|" "$NGINX_CONF"
-  docker rm -f "kortix-api-$STANDBY_SLOT" 2>/dev/null || true
+  docker rm -f "epsilon-api-$STANDBY_SLOT" 2>/dev/null || true
   exit 1
 fi
 
@@ -146,13 +146,13 @@ else
   echo "  ✗ nginx verification failed — reverting"
   sudo sed -i "s|proxy_pass http://127.0.0.1:[0-9]*;|proxy_pass http://127.0.0.1:${ACTIVE_PORT};|" "$NGINX_CONF"
   sudo nginx -s reload
-  docker rm -f "kortix-api-$STANDBY_SLOT" 2>/dev/null || true
+  docker rm -f "epsilon-api-$STANDBY_SLOT" 2>/dev/null || true
   exit 1
 fi
 
 # ── 6. Stop old container + cleanup ──────────────────────────────────────────
 echo "[6/6] Stopping old $ACTIVE_SLOT container..."
-docker rm -f "kortix-api-$ACTIVE_SLOT" 2>/dev/null || true
+docker rm -f "epsilon-api-$ACTIVE_SLOT" 2>/dev/null || true
 
 # Save new active slot
 echo "$STANDBY_SLOT" > "$STATE_FILE"

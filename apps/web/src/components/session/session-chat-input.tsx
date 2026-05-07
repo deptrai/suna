@@ -51,7 +51,7 @@ import type {
   PromptPart,
 } from '@/hooks/opencode/use-opencode-sessions';
 import { useOpenCodeSessions, useOpenCodeSessionTodo } from '@/hooks/opencode/use-opencode-sessions';
-import { useKortixProjects } from '@/hooks/kortix/use-kortix-projects';
+import { useEpsilonProjects } from '@/hooks/epsilon/use-epsilon-projects';
 import { searchWorkspaceFiles } from '@/features/files';
 import { getFileIcon } from '@/features/files/components/file-icon';
 import type { Session } from '@/hooks/opencode/use-opencode-sessions';
@@ -1539,7 +1539,7 @@ export function SessionChatInput({
   const { data: allSessions } = useOpenCodeSessions();
   // Skip the projects query entirely when the multi-project paradigm is off —
   // the @-mention popover never offers a project bucket in that mode.
-  const { data: kortixProjects } = useKortixProjects(undefined, { enabled: featureFlags.enableMultiProject });
+  const { data: epsilonProjects } = useEpsilonProjects(undefined, { enabled: featureFlags.enableMultiProject });
 
   useEffect(() => {
     if (text.trim().length > 0) return;
@@ -1754,7 +1754,7 @@ export function SessionChatInput({
       .map((a) => ({ kind: 'agent' as const, label: a.name || '', value: a.name || '' }));
 
     // Project items: filter by name, path, or description. Sort by recency.
-    const projectItems: MentionItem[] = (kortixProjects ?? [])
+    const projectItems: MentionItem[] = (epsilonProjects ?? [])
       .filter((p) => {
         const hay = [p.name, p.path, p.description].join(' ').toLowerCase();
         return !q || hay.includes(q);
@@ -1802,7 +1802,7 @@ export function SessionChatInput({
       value: f,
     }));
     return [...agentItems, ...projectItems, ...sessionItems, ...fileItems];
-  }, [mentionQuery, agents, kortixProjects, allSessions, sessionId, fileResults]);
+  }, [mentionQuery, agents, epsilonProjects, allSessions, sessionId, fileResults]);
 
   // Clamp mention index when items change to prevent out-of-bounds selection
   useEffect(() => {
@@ -2410,7 +2410,7 @@ export function SessionChatInput({
 
               {isBusy && onStop && !lockForQuestion && (
                 <div className="relative flex items-center">
-                  {/* ESC hint — matches Kortix tooltip styling (bg-primary rounded-2xl) */}
+                  {/* ESC hint — matches Epsilon tooltip styling (bg-primary rounded-2xl) */}
                   {escCount > 0 && (
                     <div
                       className="absolute bottom-full right-1/2 translate-x-1/2 mb-2 pointer-events-none animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 duration-150"

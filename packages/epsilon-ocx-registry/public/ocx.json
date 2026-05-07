@@ -1,0 +1,17 @@
+{
+  "$schema": "https://ocx.kdco.dev/schemas/ocx.json",
+  "namespace": "epsilon",
+  "author": "epsilon",
+  "name": "epsilon-ocx-registry",
+  "description": "Epsilon Marketplace - Skills for Epsilon AI Agents",
+  "registries": {
+    "epsilon": {
+      "url": "https://epsilon-registry-6om.pages.dev"
+    }
+  },
+  "lockRegistries": false,
+  "skipCompatCheck": false,
+  "components": {
+    "skills": []
+  }
+}

@@ -1,5 +1,5 @@
 import { and, eq, ne } from 'drizzle-orm';
-import { billingCustomers, billingCustomersInBasejump } from '@kortix/db';
+import { billingCustomers, billingCustomersInBasejump } from '@epsilon/db';
 import { db } from '../../shared/db';
 
 type BillingCustomerRow = typeof billingCustomers.$inferSelect;
@@ -18,7 +18,7 @@ function pickCanonicalCustomer(rows: BillingCustomerRow[]): BillingCustomerRow |
   return candidates[0] ?? null;
 }
 
-async function listKortixCustomersByAccountId(accountId: string): Promise<BillingCustomerRow[]> {
+async function listEpsilonCustomersByAccountId(accountId: string): Promise<BillingCustomerRow[]> {
   return db
     .select()
     .from(billingCustomers)
@@ -60,7 +60,7 @@ async function deactivateConflictingCustomers(accountId: string, canonicalId: st
     .where(and(...conditions));
 }
 
-async function syncLegacyCustomerToKortix(legacy: {
+async function syncLegacyCustomerToEpsilon(legacy: {
   accountId: string;
   id: string;
   email?: string | null;
@@ -99,10 +99,10 @@ async function syncLegacyCustomerToKortix(legacy: {
 export async function getCustomerByAccountId(accountId: string) {
   const legacy = await getLegacyCustomerByAccountId(accountId);
   if (legacy) {
-    return syncLegacyCustomerToKortix(legacy);
+    return syncLegacyCustomerToEpsilon(legacy);
   }
 
-  const rows = await listKortixCustomersByAccountId(accountId);
+  const rows = await listEpsilonCustomersByAccountId(accountId);
 
   return pickCanonicalCustomer(rows);
 }
@@ -118,7 +118,7 @@ export async function getCustomerByStripeId(stripeCustomerId: string) {
 
   const legacy = await getLegacyCustomerByStripeId(stripeCustomerId);
   if (legacy) {
-    return syncLegacyCustomerToKortix(legacy);
+    return syncLegacyCustomerToEpsilon(legacy);
   }
 
   return null;

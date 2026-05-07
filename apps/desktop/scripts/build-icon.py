@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Build a macOS Big Sur-style app icon for the Kortix desktop shell.
+Build a macOS Big Sur-style app icon for the Epsilon desktop shell.
 
-Reads the iOS App Icon master (which has the canonical Kortix K mark on a
+Reads the iOS App Icon master (which has the canonical Epsilon K mark on a
 cream background) and produces a dark-variant 1024×1024 PNG at
 `src-tauri/icons/source.png` ready to feed to `tauri icon`.
 
@@ -16,7 +16,7 @@ Spec, from Apple's HIG and the Big Sur icon template:
 
 Usage:
     python3 apps/desktop/scripts/build-icon.py
-    pnpm --filter @kortix/desktop icons src-tauri/icons/source.png
+    pnpm --filter @epsilon/desktop icons src-tauri/icons/source.png
 
 Requires: Pillow (`pip install Pillow`).
 """
@@ -25,7 +25,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFilter, ImageChops
 
 REPO = Path(__file__).resolve().parents[3]
-IOS_ICON = REPO / "apps/mobile/ios/Kortix/Images.xcassets/AppIcon.appiconset/App-Icon-1024x1024@1x.png"
+IOS_ICON = REPO / "apps/mobile/ios/Epsilon/Images.xcassets/AppIcon.appiconset/App-Icon-1024x1024@1x.png"
 OUT = REPO / "apps/desktop/src-tauri/icons/source.png"
 
 CANVAS = 1024

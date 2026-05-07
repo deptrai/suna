@@ -7,12 +7,12 @@
     font-family: 'Roobert-Regular';
   }
 
-  /* Light Mode (Default) - Kortix Brand
+  /* Light Mode (Default) - Epsilon Brand
    * Aligned with web b77b685: pure white center content,
    * off-white chrome for visual separation. */
   :root {
     --background: 0 0% 100%; /* #FFFFFF - Pure white (center content) */
-    --foreground: 218 12% 7%; /* #121215 - Kortix Black */
+    --foreground: 218 12% 7%; /* #121215 - Epsilon Black */
     --card: 0 0% 100%; /* #FFFFFF - Pure white cards */
     --card-foreground: 218 12% 7%; /* #121215 - Card text */
     --popover: 0 0% 100%; /* #FFFFFF - Popover background */
@@ -31,7 +31,7 @@
     --ring: 218 12% 7%; /* #121215 - Focus rings */
     --radius: 0.625rem;
     /* Chrome colors — off-white for headers/drawers/outer areas to separate from white content */
-    --chrome-background: 0 0% 96%; /* #F6F6F6 - Off-white (Kortix White) for chrome */
+    --chrome-background: 0 0% 96%; /* #F6F6F6 - Off-white (Epsilon White) for chrome */
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
@@ -39,7 +39,7 @@
     --chart-5: 27 87% 67%;
   }
 
-  /* Dark Mode - Kortix Brand
+  /* Dark Mode - Epsilon Brand
    * Aligned with web (apps/web globals.css .dark):
    * Pure neutral grayscale, matching web's OKLCH(L 0 0).
    * HSL lightness values are the sRGB equivalents of web's OKLCH L values

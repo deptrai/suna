@@ -4,7 +4,7 @@
  * they belong here next to this one.
  */
 
-import type { Database } from '@kortix/db';
+import type { Database } from '@epsilon/db';
 import { deleteExpiredInvites } from '../repositories/invites';
 
 const CLEANUP_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 hours

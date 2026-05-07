@@ -147,7 +147,7 @@ import {
 } from '@/components/ui/definition-list';
 import { InlineMeta } from '@/components/ui/inline-meta';
 import { EmptyState } from '@/components/ui/empty-state';
-import { IconInbox } from '@/components/ui/kortix-icons';
+import { IconInbox } from '@/components/ui/epsilon-icons';
 import { PageHeader } from '@/components/ui/page-header';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { PageSearchBar } from '@/components/ui/page-search-bar';
@@ -371,7 +371,7 @@ function Hex({ value }: { value: string }) {
 function LogoCard({ asset, fmt }: { asset: LogoAsset; fmt: LogoFormat }) {
   const isWordmark = asset.label === 'Wordmark';
   const downloadHref = fmt === 'png' ? asset.pngSrc : asset.svgSrc;
-  const downloadName = `kortix-${asset.label.toLowerCase()}-${asset.variant.toLowerCase()}.${fmt}`;
+  const downloadName = `epsilon-${asset.label.toLowerCase()}-${asset.variant.toLowerCase()}.${fmt}`;
 
   return (
     <div className="group relative">
@@ -387,7 +387,7 @@ function LogoCard({ asset, fmt }: { asset: LogoAsset; fmt: LogoFormat }) {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={asset.svgSrc}
-          alt={`Kortix ${asset.label} ${asset.variant}`}
+          alt={`Epsilon ${asset.label} ${asset.variant}`}
           className={cn(
             'object-contain',
             isWordmark
@@ -687,7 +687,7 @@ export default function BrandPage() {
                 </h1>
                 <p className="text-base text-muted-foreground leading-relaxed max-w-xl">
                   Logo assets, color palette, typography, motion tokens,
-                  component library, and usage rules for building Kortix.
+                  component library, and usage rules for building Epsilon.
                   The complete reference for designers and engineers.
                 </p>
                 <div className="flex flex-wrap gap-2 mt-6">
@@ -854,7 +854,7 @@ export default function BrandPage() {
                           s.cls
                         )}
                       >
-                        Kortix Computer
+                        Epsilon Computer
                       </p>
                     </div>
                   ))}
@@ -866,7 +866,7 @@ export default function BrandPage() {
                     Roobert Mono
                   </span>
                   <p className="font-mono text-lg md:text-2xl tracking-tight">
-                    const agent = new Kortix();
+                    const agent = new Epsilon();
                   </p>
                   <p className="font-mono text-[11px] text-neutral-600 mt-4">
                     ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz
@@ -1030,9 +1030,9 @@ export default function BrandPage() {
                           <Button variant="link">Link</Button>
                         </div>
                       </div>
-                      {/* Kortix Variants */}
+                      {/* Epsilon Variants */}
                       <div>
-                        <p className="text-[10px] text-muted-foreground mb-3 uppercase tracking-wider">Kortix Variants</p>
+                        <p className="text-[10px] text-muted-foreground mb-3 uppercase tracking-wider">Epsilon Variants</p>
                         <div className="flex flex-wrap gap-2">
                           <Button variant="subtle">Subtle</Button>
                           <Button variant="muted">Muted</Button>
@@ -1666,10 +1666,10 @@ export default function BrandPage() {
                     <Accordion type="single" collapsible className="w-full">
                       <AccordionItem value="item-1">
                         <AccordionTrigger>
-                          What is Kortix?
+                          What is Epsilon?
                         </AccordionTrigger>
                         <AccordionContent>
-                          Kortix is an AI-powered platform for building and
+                          Epsilon is an AI-powered platform for building and
                           deploying intelligent agents. It provides the
                           infrastructure, tools, and interfaces needed to create
                           production-grade AI workflows.
@@ -1680,7 +1680,7 @@ export default function BrandPage() {
                           What design system does it use?
                         </AccordionTrigger>
                         <AccordionContent>
-                          Kortix uses a monochromatic design system with
+                          Epsilon uses a monochromatic design system with
                           strategic accent colors, built on OKLCH color tokens,
                           the Roobert type family, and Radix UI primitives.
                         </AccordionContent>
@@ -1726,14 +1726,14 @@ export default function BrandPage() {
                         </CollapsibleTrigger>
                       </div>
                       <div className="rounded-md border border-border/50 px-4 py-2 mt-2 text-sm">
-                        @kortix/design-system
+                        @epsilon/design-system
                       </div>
                       <CollapsibleContent className="mt-2 space-y-2">
                         <div className="rounded-md border border-border/50 px-4 py-2 text-sm">
-                          @kortix/components
+                          @epsilon/components
                         </div>
                         <div className="rounded-md border border-border/50 px-4 py-2 text-sm">
-                          @kortix/tokens
+                          @epsilon/tokens
                         </div>
                       </CollapsibleContent>
                     </Collapsible>
@@ -2048,7 +2048,7 @@ export default function BrandPage() {
                 Page Patterns
               </h2>
               <p className="text-base text-muted-foreground leading-relaxed mb-8">
-                How Kortix list / management pages are built. These are the
+                How Epsilon list / management pages are built. These are the
                 shared chrome pieces used by <code className="text-[11px] font-mono">/scheduled-tasks</code>,{' '}
                 <code className="text-[11px] font-mono">/channels</code>,{' '}
                 <code className="text-[11px] font-mono">/tunnel</code>,{' '}

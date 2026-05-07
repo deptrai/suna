@@ -19,7 +19,7 @@ import { readFileSync, unlinkSync, mkdirSync, rmdirSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import Docker from 'dockerode';
-import { sandboxes } from '@kortix/db';
+import { sandboxes } from '@epsilon/db';
 import { config } from '../../config';
 import { execOnHost } from '../../update/exec';
 import type { AuthVariables } from '../../types';
@@ -34,8 +34,8 @@ sshRouter.use('/*', supabaseAuth);
 
 // ─── Shared: keypair generation ──────────────────────────────────────────────
 
-function generateKeypair(comment = 'kortix-sandbox'): { privateKey: string; publicKey: string } {
-  const tmpPath = join(tmpdir(), `kortix-ssh-${Date.now()}`);
+function generateKeypair(comment = 'epsilon-sandbox'): { privateKey: string; publicKey: string } {
+  const tmpPath = join(tmpdir(), `epsilon-ssh-${Date.now()}`);
   mkdirSync(tmpPath, { recursive: true });
   const keyPath = join(tmpPath, 'key');
 
@@ -71,7 +71,7 @@ async function resolveSandboxRecord(userId: string, requestedSandboxId?: string)
 
 // ─── Shared: authorized_keys injection via remote host toolbox exec ──────────
 // JustAVPS resolveEndpoint() points at the VPS host toolbox endpoint, not the
-// sandbox's kortix-master API. To inject a key into the Dockerized sandbox we
+// sandbox's epsilon-master API. To inject a key into the Dockerized sandbox we
 // must exec on the host, then docker exec into the workload container.
 
 async function injectPublicKeyViaHostExec(

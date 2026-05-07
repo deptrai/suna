@@ -11,7 +11,7 @@ const webSearch = new Hono<{ Variables: AppContext }>();
  * POST /web-search
  *
  * Search the web using Tavily API.
- * Requires authentication via KORTIX_TOKEN.
+ * Requires authentication via EPSILON_TOKEN.
  * Credits are deducted based on search depth (basic or advanced).
  */
 webSearch.post('/', async (c) => {
@@ -55,7 +55,7 @@ webSearch.post('/', async (c) => {
 
     if (!billingResult.success && !billingResult.skipped) {
       console.warn(
-        `[KORTIX] Billing failed for ${accountId} but returning results anyway`
+        `[EPSILON] Billing failed for ${accountId} but returning results anyway`
       );
     }
 
@@ -68,11 +68,11 @@ webSearch.post('/', async (c) => {
     return c.json(response);
   } catch (error) {
     if (error instanceof Error && error.message.includes('not configured')) {
-      console.error(`[KORTIX] Web search config error: ${error.message}`);
+      console.error(`[EPSILON] Web search config error: ${error.message}`);
       throw new HTTPException(500, { message: error.message });
     }
 
-    console.error(`[KORTIX] Web search error: ${error}`);
+    console.error(`[EPSILON] Web search error: ${error}`);
     throw new HTTPException(500, {
       message: `Search failed: ${error instanceof Error ? error.message : String(error)}`,
     });

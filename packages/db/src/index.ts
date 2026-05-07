@@ -5,27 +5,27 @@ export * as schema from './schema';
 // Re-export frequently used schemas and types for convenience
 export {
   // Schema namespace
-  kortixSchema,
+  epsilonSchema,
   // Enums
   sandboxStatusEnum,
   deploymentStatusEnum,
   deploymentSourceEnum,
   apiKeyStatusEnum,
   apiKeyTypeEnum,
-  // Kortix tables — accounts
+  // Epsilon tables — accounts
   accounts,
   accountMembers,
   accountRoleEnum,
   accountsRelations,
   accountMembersRelations,
-  // Kortix tables
+  // Epsilon tables
   sandboxes,
   sandboxMembers,
   sandboxMemberScopes,
   scopeEffectEnum,
   sandboxInvites,
   deployments,
-  kortixApiKeys,
+  epsilonApiKeys,
   integrationCredentials,
   integrations,
   sandboxIntegrations,
@@ -37,10 +37,10 @@ export {
   sandboxMembersRelations,
   sandboxInvitesRelations,
   deploymentsRelations,
-  kortixApiKeysRelations,
+  epsilonApiKeysRelations,
   integrationsRelations,
   sandboxIntegrationsRelations,
-  // Billing / Credits (moved from public → kortix schema)
+  // Billing / Credits (moved from public → epsilon schema)
   billingCustomers,
   creditAccounts,
   creditLedger,
@@ -78,7 +78,7 @@ export {
   // Pool
   poolResources,
   poolSandboxes,
-} from './schema/kortix';
+} from './schema/epsilon';
 
 export type {
   TunnelMachineInfo,
@@ -86,7 +86,7 @@ export type {
   TunnelShellScope,
   TunnelNetworkScope,
   TunnelPermissionScope,
-} from './schema/kortix';
+} from './schema/epsilon';
 
 // Public/basejump tables
 export {
@@ -107,8 +107,8 @@ export type {
   AccountUser,
   NewApiKey,
   SandboxSelect,
-  KortixApiKey,
-  NewKortixApiKey,
+  EpsilonApiKey,
+  NewEpsilonApiKey,
   IntegrationCredential,
   NewIntegrationCredential,
   Integration,

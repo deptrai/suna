@@ -1,14 +1,14 @@
-# Kortix
+# Epsilon
 
 **The Open-Source Operating System for Running Autonomous Companies**
 
 The best results come from maximum entropy and openness. Give a language model full context — every file, every secret, every integration, every piece of institutional knowledge — and let it run free. For that to work, it needs a proper machine: a real computer running 24/7 where all the context is stored, all the secrets live, all the work accumulates, and all the other agents operate alongside it.
 
-A Kortix *is* a company. One shared machine where every agent sees the same filesystem, the same databases, the same credentials, the same history. Context isn't siloed per tool or per session — it's shared across the entire system, compounding over time. When your support agent resolves a ticket, your product agent already knows. When your finance agent reconciles an invoice, the context is there for everyone.
+A Epsilon *is* a company. One shared machine where every agent sees the same filesystem, the same databases, the same credentials, the same history. Context isn't siloed per tool or per session — it's shared across the entire system, compounding over time. When your support agent resolves a ticket, your product agent already knows. When your finance agent reconciles an invoice, the context is there for everyone.
 
 The reason this works is that coding agents — agents that operate inside a real computer with bash, a filesystem, and the full power of a Linux machine — are the optimal harness for all knowledge work, not just software engineering. They can write scripts, call APIs, manipulate files, browse the web, run databases, parse documents, generate reports, manage infrastructure — anything a human can do at a terminal. Pair that with agent skills, persistent memory, triggers, and orchestration, and you can build complete agents for sales, finance, operations, legal, recruiting, customer support, and every other function a company needs.
 
-We are building Kortix as our own internal operating system at [Kortix](https://kortix.com) to run our own companies and products. Every agent, skill, and workflow we ship is something we use ourselves — battle-tested against real workloads, not demos. 
+We are building Epsilon as our own internal operating system at [Epsilon](https://epsilon.com) to run our own companies and products. Every agent, skill, and workflow we ship is something we use ourselves — battle-tested against real workloads, not demos. 
 
 **What you get:** A cloud computer where AI agents do the actual work of running a company. Full Linux Ubuntu sandbox, persistent memory, 60+ skills, 3,000+ integrations, cron/webhook triggers, multi-channel access. Agents work 24/7 — code, APIs, documents, spreadsheets, infrastructure — whether you're there or not. Everything is Linux, bash, files. The agent runtime is [OpenCode](https://github.com/anomalyco/opencode).
 
@@ -17,7 +17,7 @@ We are building Kortix as our own internal operating system at [Kortix](https://
 Run locally on your laptop or on a VPS/server — the installer handles both.
 
 ```bash
-curl -fsSL https://kortix.com/install | bash
+curl -fsSL https://epsilon.com/install | bash
 ```
 
 The installer will ask where you're running:
@@ -25,26 +25,26 @@ The installer will ask where you're running:
 1. **Local machine** (laptop/desktop) — binds to `localhost`
 2. **VPS / Server** — binds to `0.0.0.0`, accessible over the network
 
-Kortix works best when it can run 24/7 — even when your laptop is closed. We recommend a server or VPS: [Kortix Cloud](https://kortix.com/) (managed), your own server, or a VPS from [Hetzner](https://hetzner.com/) or [JustAVPS](https://justavps.com/).
+Epsilon works best when it can run 24/7 — even when your laptop is closed. We recommend a server or VPS: [Epsilon Cloud](https://epsilon.com/) (managed), your own server, or a VPS from [Hetzner](https://hetzner.com/) or [JustAVPS](https://justavps.com/).
 
 On any server, just SSH in and run the same install command:
 
 ```bash
 # SSH into your server, then run the same install:
-curl -fsSL https://kortix.com/install | bash
+curl -fsSL https://epsilon.com/install | bash
 ```
 
-After install, manage everything with the `kortix` CLI:
+After install, manage everything with the `epsilon` CLI:
 
 ```
-kortix start       Start all services
-kortix stop        Stop all services
-kortix restart     Restart all services
-kortix logs        Tail logs
-kortix status      Show service status
-kortix update      Pull latest images and restart
-kortix reset       Wipe local data and start fresh
-kortix uninstall   Remove Kortix completely
+epsilon start       Start all services
+epsilon stop        Stop all services
+epsilon restart     Restart all services
+epsilon logs        Tail logs
+epsilon status      Show service status
+epsilon update      Pull latest images and restart
+epsilon reset       Wipe local data and start fresh
+epsilon uninstall   Remove Epsilon completely
 ```
 
 ## DEV Commands

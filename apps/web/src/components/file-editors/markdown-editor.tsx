@@ -552,7 +552,7 @@ export function MarkdownEditor({
           <style dangerouslySetInnerHTML={{
             __html: `
             /* ═══════════════════════════════════════════════════════════════
-               KORTIX TIPTAP EDITOR STYLES
+               EPSILON TIPTAP EDITOR STYLES
                Matches UnifiedMarkdown for consistent rendering
                ═══════════════════════════════════════════════════════════════ */
             

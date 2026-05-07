@@ -10,9 +10,9 @@
     </array>
     <key>com.apple.developer.associated-domains</key>
     <array>
-      <string>applinks:kortix.com</string>
-      <string>applinks:www.kortix.com</string>
-      <string>applinks:staging.kortix.com</string>
+      <string>applinks:epsilon.com</string>
+      <string>applinks:www.epsilon.com</string>
+      <string>applinks:staging.epsilon.com</string>
     </array>
   </dict>
 </plist>

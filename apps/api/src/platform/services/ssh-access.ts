@@ -58,15 +58,15 @@ export function resolvePublicSSHHost(c: Context): string {
   for (const raw of headerCandidates) {
     const host = extractHostname(raw);
     if (!host) continue;
-    if (host === 'host.docker.internal' || host === 'kortix-api') continue;
+    if (host === 'host.docker.internal' || host === 'epsilon-api') continue;
     return host;
   }
 
-  const configCandidates = [config.KORTIX_URL, config.FRONTEND_URL];
+  const configCandidates = [config.EPSILON_URL, config.FRONTEND_URL];
   for (const raw of configCandidates) {
     const host = extractHostname(raw);
     if (!host) continue;
-    if (host === 'host.docker.internal' || host === 'kortix-api') continue;
+    if (host === 'host.docker.internal' || host === 'epsilon-api') continue;
     return host;
   }
 
@@ -80,11 +80,11 @@ export function buildSSHConnectionInfo(opts: {
   provider: string;
 }): SSHConnectionInfo {
   const hostToken = sanitizeHostToken(opts.host);
-  const keyName = `kortix_${hostToken}`;
-  const hostAlias = `kortix-${hostToken}`;
+  const keyName = `epsilon_${hostToken}`;
+  const hostAlias = `epsilon-${hostToken}`;
   const reconnectCommand = `ssh -i ~/.ssh/${keyName} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ServerAliveInterval=15 -o ServerAliveCountMax=4 -p ${opts.port} ${opts.username}@${opts.host}`;
   const sshConfigEntry = `Host ${hostAlias}\n  HostName ${opts.host}\n  Port ${opts.port}\n  User ${opts.username}\n  IdentityFile ~/.ssh/${keyName}\n  StrictHostKeyChecking no\n  UserKnownHostsFile /dev/null\n  ServerAliveInterval 15\n  ServerAliveCountMax 4`;
-  const sshConfigCommand = `mkdir -p ~/.ssh && touch ~/.ssh/config && chmod 600 ~/.ssh/config && grep -q "Host ${hostAlias}" ~/.ssh/config 2>/dev/null || cat >> ~/.ssh/config << 'KORTIX_SSH_CONFIG'\n\n${sshConfigEntry}\nKORTIX_SSH_CONFIG`;
+  const sshConfigCommand = `mkdir -p ~/.ssh && touch ~/.ssh/config && chmod 600 ~/.ssh/config && grep -q "Host ${hostAlias}" ~/.ssh/config 2>/dev/null || cat >> ~/.ssh/config << 'EPSILON_SSH_CONFIG'\n\n${sshConfigEntry}\nEPSILON_SSH_CONFIG`;
 
   return {
     host: opts.host,
@@ -107,8 +107,8 @@ export function buildSSHSetupPayload(opts: {
   keyComment: string;
 }): SSHSetupPayload {
   const pk = opts.privateKey.trim();
-  const setupCommand = `mkdir -p ~/.ssh && cat > ~/.ssh/${opts.connection.key_name} << 'KORTIX_KEY'\n${pk}\nKORTIX_KEY\nchmod 600 ~/.ssh/${opts.connection.key_name} && ${opts.connection.reconnect_command}`;
-  const agentPrompt = `Set up SSH access to my remote Kortix instance and connect via Remote-SSH.\n\n1. Save the SSH key:\n${setupCommand}\n\n2. Add to ~/.ssh/config:\n${opts.connection.ssh_config_entry}\n\n3. Connect via Remote-SSH to host "${opts.connection.host_alias}"`;
+  const setupCommand = `mkdir -p ~/.ssh && cat > ~/.ssh/${opts.connection.key_name} << 'EPSILON_KEY'\n${pk}\nEPSILON_KEY\nchmod 600 ~/.ssh/${opts.connection.key_name} && ${opts.connection.reconnect_command}`;
+  const agentPrompt = `Set up SSH access to my remote Epsilon instance and connect via Remote-SSH.\n\n1. Save the SSH key:\n${setupCommand}\n\n2. Add to ~/.ssh/config:\n${opts.connection.ssh_config_entry}\n\n3. Connect via Remote-SSH to host "${opts.connection.host_alias}"`;
 
   return {
     ...opts.connection,

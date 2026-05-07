@@ -64,7 +64,7 @@ function resolveAccountId(userId: string) {
   return Promise.resolve('viewer-account');
 }
 
-mock.module('@kortix/db', () => ({
+mock.module('@epsilon/db', () => ({
   sandboxes: {
     sandboxId: 'sandboxId',
     accountId: 'accountId',
@@ -96,12 +96,12 @@ mock.module('../config', () => ({
   config: {
     JUSTAVPS_DEFAULT_LOCATION: 'ash',
     JUSTAVPS_DEFAULT_SERVER_TYPE: 'starter',
-    KORTIX_BILLING_INTERNAL_ENABLED: false,
+    EPSILON_BILLING_INTERNAL_ENABLED: false,
     isJustAVPSEnabled: () => true,
   },
 }));
 mock.module('../repositories/api-keys', () => ({
-  createApiKey: async () => ({ secretKey: 'kortix_sb_test' }),
+  createApiKey: async () => ({ secretKey: 'epsilon_sb_test' }),
 }));
 mock.module('../pool', () => ({}));
 mock.module('../platform/providers/justavps', () => ({
@@ -138,7 +138,7 @@ function createApp(userId: string) {
   const app = new Hono<{ Variables: { userId: string; userEmail: string } }>();
   app.use('*', async (c, next) => {
     c.set('userId', userId);
-    c.set('userEmail', `${userId}@kortix.dev`);
+    c.set('userEmail', `${userId}@epsilon.dev`);
     await next();
   });
   app.route('/v1/platform/sandbox', createBackupRouter({

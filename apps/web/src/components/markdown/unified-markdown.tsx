@@ -13,12 +13,12 @@ import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import { MermaidRenderer } from '@/components/ui/mermaid-renderer';
 import { isMermaidCode } from '@/lib/mermaid-utils';
-import { autoLinkUrls } from '@kortix/shared';
+import { autoLinkUrls } from '@epsilon/shared';
 import { useSandboxProxy } from '@/hooks/use-sandbox-proxy';
 import { useFilePreviewStore } from '@/stores/file-preview-store';
 import { wrapChildrenWithPaths } from '@/components/common/clickable-path';
 import { looksLikeFilePath as sharedLooksLikeFilePath } from '@/lib/utils/path-detection';
-import { stripKortixSystemTags } from '@/lib/utils/kortix-system-tags';
+import { stripEpsilonSystemTags } from '@/lib/utils/epsilon-system-tags';
 import { toast } from '@/lib/toast';
 
 // ---------------------------------------------------------------------------
@@ -609,7 +609,7 @@ export interface UnifiedMarkdownProps {
  * UNIFIED MARKDOWN RENDERER
  *
  * Single source of truth for all markdown rendering across the application.
- * Optimized for Kortix brand with Vercel-level UX/UI polish.
+ * Optimized for Epsilon brand with Vercel-level UX/UI polish.
  *
  * Design principles:
  * - Clean, minimal aesthetic
@@ -961,12 +961,12 @@ export const UnifiedMarkdown = React.memo<UnifiedMarkdownProps>(({
     );
   }
 
-  // Strip <kortix_system> tags, then auto-link URLs
-  const finalContent = autoLinkUrls(stripKortixSystemTags(safeContent));
+  // Strip <epsilon_system> tags, then auto-link URLs
+  const finalContent = autoLinkUrls(stripEpsilonSystemTags(safeContent));
 
   return (
     <div
-      className={cn('kortix-markdown', isStreaming && 'streaming-active', className)}
+      className={cn('epsilon-markdown', isStreaming && 'streaming-active', className)}
       data-streaming={isStreaming ? 'true' : 'false'}
     >
       <Streamdown

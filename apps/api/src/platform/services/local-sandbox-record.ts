@@ -1,5 +1,5 @@
 import { and, desc, eq, ne } from 'drizzle-orm';
-import { accounts, sandboxes, type Database } from '@kortix/db';
+import { accounts, sandboxes, type Database } from '@epsilon/db';
 import { config } from '../../config';
 
 type SandboxRow = typeof sandboxes.$inferSelect;
@@ -43,8 +43,8 @@ function getMappedPorts(): Record<string, string> {
 
 function getHealthUrl(): string {
   return config.SANDBOX_NETWORK
-    ? `http://${config.SANDBOX_CONTAINER_NAME}:8000/kortix/health`
-    : `http://localhost:${config.SANDBOX_PORT_BASE || 14000}/kortix/health`;
+    ? `http://${config.SANDBOX_CONTAINER_NAME}:8000/epsilon/health`
+    : `http://localhost:${config.SANDBOX_PORT_BASE || 14000}/epsilon/health`;
 }
 
 function getBaseUrl(): string {
@@ -143,7 +143,7 @@ export async function ensureGenericLocalSandboxRecord(db: Database): Promise<Loc
   if (!snapshot) return null;
 
   // If a local API is pointed at a shared/remote Supabase database, the generic
-  // local bridge must not mutate or reuse global `external_id = kortix-sandbox`
+  // local bridge must not mutate or reuse global `external_id = epsilon-sandbox`
   // rows from other accounts. Return a synthetic local record; authenticated
   // routes can still create a user-owned local row via POST /platform/init/local.
   if (!isLocalDatabaseUrl()) {

@@ -188,17 +188,17 @@ function summarizeWorkload(details: Record<string, string>, status: InstanceLaye
 }
 
 function summarizeRuntime(
-  kortix: HttpProbeResult<any>,
+  epsilon: HttpProbeResult<any>,
   globalHealth: HttpProbeResult<any>,
   sessionStatus: HttpProbeResult<any>,
   coreStatus: HttpProbeResult<any>,
   status: InstanceLayerStatus,
 ): string {
   if (status === 'healthy') return 'Core runtime healthy';
-  if (!kortix.ok) {
-    return kortix.status === 0 && kortix.error
-      ? `Kortix core unavailable · ${kortix.error}`
-      : 'Kortix core unavailable';
+  if (!epsilon.ok) {
+    return epsilon.status === 0 && epsilon.error
+      ? `Epsilon core unavailable · ${epsilon.error}`
+      : 'Epsilon core unavailable';
   }
   if (!globalHealth.ok) {
     return globalHealth.status === 0 && globalHealth.error
@@ -367,15 +367,15 @@ export async function getJustAvpsInstanceHealth(
             headers: endpoint.headers,
           }
         : null;
-      const [kortixHealth, globalHealth, sessionStatus, coreStatus] = await Promise.all([
-        runtimeEndpoint ? fetchEndpointJson(runtimeEndpoint, '/kortix/health') : Promise.resolve(unavailableProbe('runtime endpoint unavailable')),
+      const [epsilonHealth, globalHealth, sessionStatus, coreStatus] = await Promise.all([
+        runtimeEndpoint ? fetchEndpointJson(runtimeEndpoint, '/epsilon/health') : Promise.resolve(unavailableProbe('runtime endpoint unavailable')),
         runtimeEndpoint ? fetchEndpointJson(runtimeEndpoint, '/global/health') : Promise.resolve(unavailableProbe('runtime endpoint unavailable')),
         runtimeEndpoint ? fetchEndpointJson(runtimeEndpoint, '/session/status') : Promise.resolve(unavailableProbe('runtime endpoint unavailable')),
-        runtimeEndpoint ? fetchEndpointJson(runtimeEndpoint, '/kortix/core/status') : Promise.resolve(unavailableProbe('runtime endpoint unavailable')),
+        runtimeEndpoint ? fetchEndpointJson(runtimeEndpoint, '/epsilon/core/status') : Promise.resolve(unavailableProbe('runtime endpoint unavailable')),
       ]);
 
       const runtimeProbeIssues = [
-        describeProbeFailure(kortixHealth, 'kortix health'),
+        describeProbeFailure(epsilonHealth, 'epsilon health'),
         describeProbeFailure(globalHealth, 'global health'),
         describeProbeFailure(sessionStatus, 'session status'),
       ].filter((issue): issue is string => Boolean(issue));
@@ -388,9 +388,9 @@ export async function getJustAvpsInstanceHealth(
             if (service.id === 'opencode-serve' && runtimeProbeIssues.length > 0) {
               derivedStatus = 'unresponsive';
               derivedLastError = runtimeProbeIssues.join(' · ');
-            } else if (service.id === 'svc-kortix-master' && !kortixHealth.ok) {
+            } else if (service.id === 'svc-epsilon-master' && !epsilonHealth.ok) {
               derivedStatus = 'unresponsive';
-              derivedLastError = describeProbeFailure(kortixHealth, 'kortix health');
+              derivedLastError = describeProbeFailure(epsilonHealth, 'epsilon health');
             }
 
             return {
@@ -406,9 +406,9 @@ export async function getJustAvpsInstanceHealth(
       const degradedServices = services.filter((service: any) => service.status === 'failed' || service.status === 'backoff' || service.status === 'unresponsive');
 
       let runtimeStatus: InstanceLayerStatus = 'unknown';
-      if (kortixHealth.ok && globalHealth.ok && sessionStatus.ok && degradedServices.length === 0) {
+      if (epsilonHealth.ok && globalHealth.ok && sessionStatus.ok && degradedServices.length === 0) {
         runtimeStatus = 'healthy';
-      } else if (kortixHealth.status === 0 && globalHealth.status === 0 && sessionStatus.status === 0) {
+      } else if (epsilonHealth.status === 0 && globalHealth.status === 0 && sessionStatus.status === 0) {
         runtimeStatus = 'offline';
       } else {
         runtimeStatus = 'degraded';
@@ -418,7 +418,7 @@ export async function getJustAvpsInstanceHealth(
         key: 'runtime',
         label: 'Runtime',
         status: runtimeStatus,
-        summary: summarizeRuntime(kortixHealth, globalHealth, sessionStatus, coreStatus, runtimeStatus),
+        summary: summarizeRuntime(epsilonHealth, globalHealth, sessionStatus, coreStatus, runtimeStatus),
         actions: [
           { action: 'restart_runtime', label: 'Restart core runtime' },
           ...services.map((service: any) => ({
@@ -428,7 +428,7 @@ export async function getJustAvpsInstanceHealth(
           })),
         ],
         details: {
-          kortix_health: { status: kortixHealth.status, data: kortixHealth.data ?? null, error: kortixHealth.error ?? null },
+          epsilon_health: { status: epsilonHealth.status, data: epsilonHealth.data ?? null, error: epsilonHealth.error ?? null },
           global_health: { status: globalHealth.status, data: globalHealth.data ?? null, error: globalHealth.error ?? null },
           session_status: { status: sessionStatus.status, data: sessionStatus.data ?? null, error: sessionStatus.error ?? null },
           runtime_probe_issues: runtimeProbeIssues,

@@ -24,7 +24,7 @@ import { buildCanonicalSandboxAuthCommand } from './platform/services/sandbox-au
 import { ensureLocalSandboxPublicBase } from './platform/services/local-public-base';
 import { getSandboxBaseUrl, proxyToSandbox } from './sandbox-proxy/routes/local-preview';
 import { validateSecretKey } from './repositories/api-keys';
-import { isKortixToken } from './shared/crypto';
+import { isEpsilonToken } from './shared/crypto';
 import { getSupabase } from './shared/supabase';
 import { verifySupabaseJwt } from './shared/jwt-verify';
 import { canAccessPreviewSandbox } from './shared/preview-ownership';
@@ -98,15 +98,15 @@ const app = new Hono();
 
 // CORS origins: production domains + localhost for local dev + any extras from env.
 const cloudOrigins = [
-  'https://www.kortix.com',
-  'https://kortix.com',
-  'https://dev.kortix.com',
-  'https://new-dev.kortix.com',
-  'https://dev-new.kortix.com',
-  'https://staging.kortix.com',
-  'https://kortix.cloud',
-  'https://www.kortix.cloud',
-  'https://new.kortix.com',
+  'https://www.epsilon.com',
+  'https://epsilon.com',
+  'https://dev.epsilon.com',
+  'https://new-dev.epsilon.com',
+  'https://dev-new.epsilon.com',
+  'https://staging.epsilon.com',
+  'https://epsilon.cloud',
+  'https://www.epsilon.cloud',
+  'https://new.epsilon.com',
 ];
 const justavpsOrigins = [
   'https://justavps.com',
@@ -133,7 +133,7 @@ app.use(
   cors({
     origin: corsOrigins,
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'Authorization', 'X-Kortix-Token', 'X-Api-Key', 'Accept'],
+    allowHeaders: ['Content-Type', 'Authorization', 'X-Epsilon-Token', 'X-Api-Key', 'Accept'],
     credentials: true,
   })
 );
@@ -187,7 +187,7 @@ app.use('*', async (c, next) => {
   const isProxyLongPoll = isSandboxProxyPath && path.includes('/global/event');
   const isProxyStartupProbe = isSandboxProxyPath && (
     path.includes('/global/health') ||
-    path.includes('/kortix/health') ||
+    path.includes('/epsilon/health') ||
     /\/sessions(?:\/|$)/.test(path)
   );
   const isExpectedProxyNoise = method === 'GET' && (
@@ -210,21 +210,21 @@ app.use('*', async (c, next) => {
 });
 
 // Pretty JSON in dev mode for easier debugging
-if (config.INTERNAL_KORTIX_ENV === 'dev') {
+if (config.INTERNAL_EPSILON_ENV === 'dev') {
   app.use('*', prettyJSON());
 }
 
 // === Top-Level Health Check (no auth) ===
 
 // API version is injected at container start by deploy-zero-downtime.sh,
-// which extracts it from the Docker image tag (e.g. kortix/kortix-api:0.8.29 → 0.8.29).
+// which extracts it from the Docker image tag (e.g. epsilon/epsilon-api:0.8.29 → 0.8.29).
 // Falls back to 'dev' for local development.
 const API_VERSION = process.env.SANDBOX_VERSION || 'dev';
 
 app.get('/health', (c) => {
   return c.json({
     status: 'ok',
-    service: 'kortix-api',
+    service: 'epsilon-api',
     version: API_VERSION,
     timestamp: new Date().toISOString(),
     env: config.ENV_MODE,
@@ -236,7 +236,7 @@ app.get('/health', (c) => {
 app.get('/v1/health', (c) => {
   return c.json({
     status: 'ok',
-    service: 'kortix-api',
+    service: 'epsilon-api',
     version: API_VERSION,
     timestamp: new Date().toISOString(),
     env: config.ENV_MODE,
@@ -263,16 +263,16 @@ app.post('/v1/prewarm', (c) => {
 });
 
 // GET /v1/accounts — returns user's accounts.
-// Dual-read: kortix.account_members first, falls back to basejump.account_user.
+// Dual-read: epsilon.account_members first, falls back to basejump.account_user.
 app.get('/v1/accounts', supabaseAuth, async (c: any) => {
   const userId = c.get('userId') as string;
   const userEmail = c.get('userEmail') as string;
 
   const { eq } = await import('drizzle-orm');
-  const { accountMembers, accounts, accountUser } = await import('@kortix/db');
+  const { accountMembers, accounts, accountUser } = await import('@epsilon/db');
   const { db } = await import('./shared/db');
 
-  // 1. Try kortix.account_members (new table)
+  // 1. Try epsilon.account_members (new table)
   try {
     const memberships = await db
       .select({
@@ -362,7 +362,7 @@ app.route('/v1/router', router);        // /v1/router/chat/completions, /v1/rout
 app.route('/v1/billing', billingApp);   // /v1/billing/account-state, /v1/billing/webhooks/*, /v1/billing/setup/*
 app.route('/v1/account', accountDeletionApp); // account deletion status/request/cancel/immediate
 app.route('/v1/platform', platformApp); // /v1/platform/providers, /v1/platform/sandbox/*, /v1/platform/sandbox/version
-if (config.KORTIX_DEPLOYMENTS_ENABLED) {
+if (config.EPSILON_DEPLOYMENTS_ENABLED) {
   const { deploymentsApp } = await import('./deployments');
   app.route('/v1/deployments', deploymentsApp); // /v1/deployments/*
 }
@@ -388,7 +388,7 @@ app.route('/v1/admin/sandbox-pool', sandboxPoolAdminApp); // /v1/admin/sandbox-p
 // OAuth2 provider — public token endpoint, auth on authorize/consent
 app.route('/v1/oauth', oauthApp);
 
-// All remaining routes require authentication (JWT or kortix_ token).
+// All remaining routes require authentication (JWT or epsilon_ token).
 app.use('/v1/providers/*', combinedAuth);
 app.route('/v1/providers', providersApp);   // /v1/providers, /v1/providers/schema, /v1/providers/:id/connect, /v1/providers/:id/disconnect, /v1/providers/health
 
@@ -418,21 +418,21 @@ app.route('/v1/tunnel', tunnelApp);
 
 // WoA moved to /v1/router/woa — see router/index.ts
 
-// ── Kortix API — proxies /v1/kortix/* to the sandbox's /kortix/* ─────────────
+// ── Epsilon API — proxies /v1/epsilon/* to the sandbox's /epsilon/* ─────────────
 // Direct server-to-server proxy. Avoids double-CORS from the /v1/p/ path.
 // Auth: Supabase JWT (global middleware). Sandbox auth: INTERNAL_SERVICE_KEY.
-import { kortixProxyHandler } from './routes/kortix-projects';
-app.use('/v1/kortix/*', combinedAuth);
-app.use('/v1/kortix', combinedAuth);
-app.all('/v1/kortix/*', kortixProxyHandler);
-app.all('/v1/kortix', kortixProxyHandler);
+import { epsilonProxyHandler } from './routes/epsilon-projects';
+app.use('/v1/epsilon/*', combinedAuth);
+app.use('/v1/epsilon', combinedAuth);
+app.all('/v1/epsilon/*', epsilonProxyHandler);
+app.all('/v1/epsilon', epsilonProxyHandler);
 
 // Preview Proxy — unified route for both cloud (Daytona) and local mode.
 // Pattern: /v1/p/{sandboxId}/{port}/* for ALL modes.
 // Cloud:  sandboxId = Daytona external ID → proxied via Daytona SDK
-// Local:  sandboxId = container name (e.g. 'kortix-sandbox') → Docker DNS resolution
-// JustAVPS: sandboxId → CF Worker proxy at {port}--{slug}.kortix.cloud
-// Auth: unified previewProxyAuth (accepts Supabase JWT and kortix_ tokens).
+// Local:  sandboxId = container name (e.g. 'epsilon-sandbox') → Docker DNS resolution
+// JustAVPS: sandboxId → CF Worker proxy at {port}--{slug}.epsilon.cloud
+// Auth: unified previewProxyAuth (accepts Supabase JWT and epsilon_ tokens).
 // MUST be after all explicit routes (wildcard catch-all).
 app.route('/v1/p', sandboxProxyApp);
 
@@ -529,10 +529,10 @@ app.notFound((c) => {
 // ─── Auto-register local Docker sandbox in DB ──────────────────────────────
 
 /**
- * Ensure a valid KORTIX_TOKEN exists in the DB and is synced to the sandbox.
+ * Ensure a valid EPSILON_TOKEN exists in the DB and is synced to the sandbox.
  *
  * Architecture:
- *   Source of truth: kortix.api_keys table (hash) + sandboxes.config.serviceKey (plaintext)
+ *   Source of truth: epsilon.api_keys table (hash) + sandboxes.config.serviceKey (plaintext)
  *   Delivery:        POST to sandbox /env API → triple-write (s6 + bootstrap + SecretStore) + auto-restart
  *   Fallback:        docker exec raw write when /env API is unreachable (sandbox still booting)
  *
@@ -542,8 +542,8 @@ app.notFound((c) => {
  */
 async function injectSandboxToken(sandboxId: string, accountId: string): Promise<string> {
   const { db } = await import('./shared/db');
-  const { kortixApiKeys } = await import('@kortix/db');
-  const { sandboxes } = await import('@kortix/db');
+  const { epsilonApiKeys } = await import('@epsilon/db');
+  const { sandboxes } = await import('@epsilon/db');
   const { eq, and } = await import('drizzle-orm');
   const { execSync: rawExecSync } = await import('child_process');
   const rawDockerHost = config.DOCKER_HOST || process.env.DOCKER_HOST || '';
@@ -558,7 +558,7 @@ async function injectSandboxToken(sandboxId: string, accountId: string): Promise
     const deadline = Date.now() + 20_000;
     while (Date.now() < deadline) {
       try {
-        const res = await fetch(`${sandboxBaseUrl}/kortix/health`, {
+        const res = await fetch(`${sandboxBaseUrl}/epsilon/health`, {
           signal: AbortSignal.timeout(2_000),
         });
         if (res.ok || res.status === 503) return;
@@ -569,16 +569,16 @@ async function injectSandboxToken(sandboxId: string, accountId: string): Promise
     }
   };
 
-  // Resolve how sandbox reaches kortix-api
-  const rawUrl = (config.KORTIX_URL || '').replace(/\/v1\/router\/?$/, '');
-  let kortixApiUrl = `http://host.docker.internal:${config.PORT}`;
+  // Resolve how sandbox reaches epsilon-api
+  const rawUrl = (config.EPSILON_URL || '').replace(/\/v1\/router\/?$/, '');
+  let epsilonApiUrl = `http://host.docker.internal:${config.PORT}`;
   try {
     const parsed = new URL(rawUrl || `http://localhost:${config.PORT}`);
     if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') {
       parsed.hostname = 'host.docker.internal';
-      kortixApiUrl = parsed.toString().replace(/\/$/, '');
+      epsilonApiUrl = parsed.toString().replace(/\/$/, '');
     } else if (rawUrl) {
-      kortixApiUrl = rawUrl.replace(/\/$/, '');
+      epsilonApiUrl = rawUrl.replace(/\/$/, '');
     }
   } catch { /* keep default */ }
 
@@ -595,13 +595,13 @@ async function injectSandboxToken(sandboxId: string, accountId: string): Promise
     const validation = await validateSecretKey(existingServiceKey).catch(() => ({ isValid: false }));
     if (validation.isValid) {
       token = existingServiceKey;
-      console.log('[startup] Reusing existing valid KORTIX_TOKEN from sandbox config');
+      console.log('[startup] Reusing existing valid EPSILON_TOKEN from sandbox config');
     } else {
       // Key exists in config but not valid in DB — re-issue
-      console.log('[startup] Existing KORTIX_TOKEN invalid in DB — re-issuing');
-      const [oldKey] = await db.select().from(kortixApiKeys)
-        .where(and(eq(kortixApiKeys.sandboxId, sandboxId), eq(kortixApiKeys.type, 'sandbox')));
-      if (oldKey) await db.delete(kortixApiKeys).where(eq(kortixApiKeys.keyId, oldKey.keyId));
+      console.log('[startup] Existing EPSILON_TOKEN invalid in DB — re-issuing');
+      const [oldKey] = await db.select().from(epsilonApiKeys)
+        .where(and(eq(epsilonApiKeys.sandboxId, sandboxId), eq(epsilonApiKeys.type, 'sandbox')));
+      if (oldKey) await db.delete(epsilonApiKeys).where(eq(epsilonApiKeys.keyId, oldKey.keyId));
       const newKey = await createApiKey({ sandboxId, accountId, title: 'Sandbox Token', type: 'sandbox' });
       token = newKey.secretKey;
       await db.update(sandboxes)
@@ -610,7 +610,7 @@ async function injectSandboxToken(sandboxId: string, accountId: string): Promise
     }
   } else {
     // No key at all — first provision
-    console.log('[startup] No KORTIX_TOKEN in sandbox config — creating');
+    console.log('[startup] No EPSILON_TOKEN in sandbox config — creating');
     const newKey = await createApiKey({ sandboxId, accountId, title: 'Sandbox Token', type: 'sandbox' });
     token = newKey.secretKey;
     await db.update(sandboxes)
@@ -638,20 +638,20 @@ async function injectSandboxToken(sandboxId: string, accountId: string): Promise
   };
 
   // ─── Check if sandbox already has the correct token ─────────────────────
-  // Read the sandbox's current KORTIX_TOKEN via its /env API. If it already
+  // Read the sandbox's current EPSILON_TOKEN via its /env API. If it already
   // matches, skip the sync entirely — no restart, no downtime.
-  const sandboxAlreadyHasToken = async (): Promise<boolean> => (await readSandboxEnvValue('KORTIX_TOKEN')) === token;
+  const sandboxAlreadyHasToken = async (): Promise<boolean> => (await readSandboxEnvValue('EPSILON_TOKEN')) === token;
 
-  // Also check KORTIX_API_URL
-  const sandboxAlreadyHasUrl = async (): Promise<boolean> => (await readSandboxEnvValue('KORTIX_API_URL')) === kortixApiUrl;
+  // Also check EPSILON_API_URL
+  const sandboxAlreadyHasUrl = async (): Promise<boolean> => (await readSandboxEnvValue('EPSILON_API_URL')) === epsilonApiUrl;
   const sandboxAlreadyHasInboundKey = async (): Promise<boolean> => (await readSandboxEnvValue('INTERNAL_SERVICE_KEY')) === token;
   const sandboxAlreadyHasYoloKey = async (): Promise<boolean> => {
     if (config.ENV_MODE !== 'cloud') return true;
-    return (await readSandboxEnvValue('KORTIX_YOLO_API_KEY')) === token;
+    return (await readSandboxEnvValue('EPSILON_YOLO_API_KEY')) === token;
   };
   const sandboxAlreadyHasYoloUrl = async (): Promise<boolean> => {
     if (config.ENV_MODE !== 'cloud') return true;
-    return (await readSandboxEnvValue('KORTIX_YOLO_URL')) === config.KORTIX_YOLO_URL;
+    return (await readSandboxEnvValue('EPSILON_YOLO_URL')) === config.EPSILON_YOLO_URL;
   };
 
   // Fast path: if the sandbox already has the correct token AND URL, skip sync.
@@ -697,12 +697,12 @@ async function injectSandboxToken(sandboxId: string, accountId: string): Promise
   // NOTE: The /env POST handler is now idempotent — it won't restart
   // OpenCode if the values are unchanged (belt-and-suspenders with the check above).
   const keysToSync: Record<string, string> = {
-    KORTIX_TOKEN: token,
+    EPSILON_TOKEN: token,
     INTERNAL_SERVICE_KEY: token,
     TUNNEL_TOKEN: token,
-    KORTIX_API_URL: kortixApiUrl,
-    TUNNEL_API_URL: kortixApiUrl,
-    ...(config.ENV_MODE === 'cloud' ? { KORTIX_YOLO_API_KEY: token, KORTIX_YOLO_URL: config.KORTIX_YOLO_URL } : {}),
+    EPSILON_API_URL: epsilonApiUrl,
+    TUNNEL_API_URL: epsilonApiUrl,
+    ...(config.ENV_MODE === 'cloud' ? { EPSILON_YOLO_API_KEY: token, EPSILON_YOLO_URL: config.EPSILON_YOLO_URL } : {}),
     ...(config.SANDBOX_NETWORK ? { ONBOARDING_COMPLETE: 'true' } : {}),
   };
 
@@ -719,7 +719,7 @@ async function injectSandboxToken(sandboxId: string, accountId: string): Promise
       });
       if (res.ok) {
         const result = await res.json() as { restarted?: boolean };
-        console.log(`[startup] KORTIX_TOKEN synced via /env API (restarted=${result?.restarted ?? 'unknown'})`);
+        console.log(`[startup] EPSILON_TOKEN synced via /env API (restarted=${result?.restarted ?? 'unknown'})`);
         return true;
       }
       console.warn(`[startup] /env API returned ${res.status} for primary auth candidate — trying fallback candidates`);
@@ -735,7 +735,7 @@ async function injectSandboxToken(sandboxId: string, accountId: string): Promise
         });
         if (retry.ok) {
           const result = await retry.json() as { restarted?: boolean };
-          console.log(`[startup] KORTIX_TOKEN synced via /env API fallback (restarted=${result?.restarted ?? 'unknown'})`);
+          console.log(`[startup] EPSILON_TOKEN synced via /env API fallback (restarted=${result?.restarted ?? 'unknown'})`);
           return true;
         }
       }
@@ -756,11 +756,11 @@ async function injectSandboxToken(sandboxId: string, accountId: string): Promise
         );
         rawExecSync(
           `docker exec ${shellQuote(config.SANDBOX_CONTAINER_NAME)} bash -c ${shellQuote(buildBootstrapUpdateCommand({
-            KORTIX_TOKEN: token,
-            KORTIX_API_URL: kortixApiUrl,
+            EPSILON_TOKEN: token,
+            EPSILON_API_URL: epsilonApiUrl,
             INTERNAL_SERVICE_KEY: token,
             TUNNEL_TOKEN: token,
-            ...(config.ENV_MODE === 'cloud' ? { KORTIX_YOLO_API_KEY: token, KORTIX_YOLO_URL: config.KORTIX_YOLO_URL } : {}),
+            ...(config.ENV_MODE === 'cloud' ? { EPSILON_YOLO_API_KEY: token, EPSILON_YOLO_URL: config.EPSILON_YOLO_URL } : {}),
           }))}`,
           { stdio: 'pipe', timeout: 15_000, env: dockerEnv },
         ).toString();
@@ -769,7 +769,7 @@ async function injectSandboxToken(sandboxId: string, accountId: string): Promise
       }
       // No restart — getEnv() reads from s6 env dir live. OpenCode picks up
       // the new values on the next tool call without a process restart.
-      console.log('[startup] KORTIX_TOKEN synced via docker exec fallback + bootstrap file');
+      console.log('[startup] EPSILON_TOKEN synced via docker exec fallback + bootstrap file');
       return true;
     } catch (e: any) {
       console.error(`[startup] docker exec fallback failed: ${e?.message}`);
@@ -780,7 +780,7 @@ async function injectSandboxToken(sandboxId: string, accountId: string): Promise
   const forceLocalDockerAuthBundle = (): void => {
     if (config.SANDBOX_NETWORK) return;
     rawExecSync(
-      `docker exec ${shellQuote(config.SANDBOX_CONTAINER_NAME)} bash -c ${shellQuote(buildCanonicalSandboxAuthCommand(token, kortixApiUrl))}`,
+      `docker exec ${shellQuote(config.SANDBOX_CONTAINER_NAME)} bash -c ${shellQuote(buildCanonicalSandboxAuthCommand(token, epsilonApiUrl))}`,
       { stdio: 'pipe', timeout: 15_000, env: dockerEnv },
     );
   };
@@ -789,7 +789,7 @@ async function injectSandboxToken(sandboxId: string, accountId: string): Promise
     if (config.SANDBOX_NETWORK) return null;
     try {
       const raw = rawExecSync(
-        `docker exec ${shellQuote(config.SANDBOX_CONTAINER_NAME)} python3 -c ${shellQuote("from pathlib import Path; import json; keys=['KORTIX_TOKEN','INTERNAL_SERVICE_KEY','TUNNEL_TOKEN']; print(json.dumps({k:(Path('/run/s6/container_environment')/k).read_text() for k in keys}))")}`,
+        `docker exec ${shellQuote(config.SANDBOX_CONTAINER_NAME)} python3 -c ${shellQuote("from pathlib import Path; import json; keys=['EPSILON_TOKEN','INTERNAL_SERVICE_KEY','TUNNEL_TOKEN']; print(json.dumps({k:(Path('/run/s6/container_environment')/k).read_text() for k in keys}))")}`,
         { stdio: 'pipe', timeout: 15_000, env: dockerEnv },
       ).toString();
       return JSON.parse(raw) as Record<string, string>;
@@ -801,7 +801,7 @@ async function injectSandboxToken(sandboxId: string, accountId: string): Promise
   // Try /env API first, fall back to docker exec
   const synced = await syncViaEnvApi() || syncViaDockerExec();
   if (!synced) {
-    console.error('[startup] FATAL: Could not sync KORTIX_TOKEN to sandbox. LLM calls will fail with 401.');
+    console.error('[startup] FATAL: Could not sync EPSILON_TOKEN to sandbox. LLM calls will fail with 401.');
     return token;
   }
 
@@ -812,7 +812,7 @@ async function injectSandboxToken(sandboxId: string, accountId: string): Promise
         forceLocalDockerAuthBundle();
         const bundle = readLocalDockerAuthBundle();
         if (
-          bundle?.KORTIX_TOKEN === token &&
+          bundle?.EPSILON_TOKEN === token &&
           bundle?.INTERNAL_SERVICE_KEY === token &&
           bundle?.TUNNEL_TOKEN === token
         ) {
@@ -842,7 +842,7 @@ async function ensureLocalSandboxRegistered() {
   }
 
   const { db } = await import('./shared/db');
-  const { sandboxes } = await import('@kortix/db');
+  const { sandboxes } = await import('@epsilon/db');
   const { eq, and } = await import('drizzle-orm');
   const { execSync } = await import('child_process');
 
@@ -914,7 +914,7 @@ async function ensureLocalSandboxRegistered() {
 
   // No existing sandbox — auto-provision for local single-user setup.
   // Only create if the container is actually running (image pulled, container started).
-  const { accounts } = await import('@kortix/db');
+  const { accounts } = await import('@epsilon/db');
   const [account] = await db.select().from(accounts).limit(1);
   if (!account) {
     console.log('[startup] No account yet — sandbox will be created on first login via POST /init');
@@ -993,17 +993,17 @@ function startLocalSandboxSelfHeal(): void {
 
 console.log(`
 ╔═══════════════════════════════════════════════════════════╗
-║                  Kortix API Starting                      ║
+║                  Epsilon API Starting                      ║
 ╠═══════════════════════════════════════════════════════════╣
 ║  Port: ${config.PORT.toString().padEnd(49)}║
 ║  Mode: ${config.ENV_MODE.padEnd(49)}║
-║  Env:  ${config.INTERNAL_KORTIX_ENV.padEnd(49)}║
+║  Env:  ${config.INTERNAL_EPSILON_ENV.padEnd(49)}║
 ╠═══════════════════════════════════════════════════════════╣
 ║  Services:                                                ║
 ║    /v1/router     (search, LLM, proxy)                    ║
 ║    /v1/billing    (subscriptions, credits, webhooks)       ║
 ║    /v1/platform   (sandbox lifecycle)                      ║
-${config.KORTIX_DEPLOYMENTS_ENABLED ? '║    /v1/deployments (deploy lifecycle)                      ║\n' : ''}║    /v1/pipedream   (Pipedream OAuth integrations)           ║
+${config.EPSILON_DEPLOYMENTS_ENABLED ? '║    /v1/deployments (deploy lifecycle)                      ║\n' : ''}║    /v1/pipedream   (Pipedream OAuth integrations)           ║
 ║    /v1/setup      (setup & env management)                 ║
 ║    /v1/queue      (persistent message queue)               ║
 ║    /v1/tunnel     (reverse-tunnel to local machines)         ║
@@ -1012,7 +1012,7 @@ ${config.KORTIX_DEPLOYMENTS_ENABLED ? '║    /v1/deployments (deploy lifecycle)
 ║  Database:   ${config.DATABASE_URL ? '✓ Configured'.padEnd(42) : '✗ NOT SET'.padEnd(42)}║
 ║  Supabase:   ${config.SUPABASE_URL ? '✓ Configured'.padEnd(42) : '✗ NOT SET'.padEnd(42)}║
 ║  Stripe:     ${config.STRIPE_SECRET_KEY ? '✓ Configured'.padEnd(42) : '✗ NOT SET'.padEnd(42)}║
-║  Billing:    ${(config.KORTIX_BILLING_INTERNAL_ENABLED ? 'ENABLED' : 'DISABLED').padEnd(42)}║
+║  Billing:    ${(config.EPSILON_BILLING_INTERNAL_ENABLED ? 'ENABLED' : 'DISABLED').padEnd(42)}║
 ║  Tunnel:     ${(config.TUNNEL_ENABLED ? 'ENABLED' : 'DISABLED').padEnd(42)}║
 ║  Providers:  ${config.ALLOWED_SANDBOX_PROVIDERS.join(', ').padEnd(42)}║
 ╚═══════════════════════════════════════════════════════════╝
@@ -1103,7 +1103,7 @@ process.on('SIGINT', () => shutdown('SIGINT'));
 // ─── WebSocket proxy for sandbox PTY ─────────────────────────────────────────
 // The Bun server needs to handle WebSocket upgrades at the top level.
 // We intercept WS upgrade requests for /v1/p/{sandboxId}/* and proxy them
-// to the sandbox's Kortix Master (which further proxies to OpenCode).
+// to the sandbox's Epsilon Master (which further proxies to OpenCode).
 
 const WS_CONNECT_TIMEOUT_MS = 10_000;
 const WS_BUFFER_MAX_BYTES = 1024 * 1024; // 1MB
@@ -1163,7 +1163,7 @@ function extractCookieToken(req: Request): string | null {
 }
 
 async function validatePreviewToken(token: string, sandboxId: string): Promise<boolean> {
-  if (isKortixToken(token)) {
+  if (isEpsilonToken(token)) {
     const result = await validateSecretKey(token);
     return !!result.isValid && !!result.accountId && await canAccessPreviewSandbox({
       previewSandboxId: sandboxId,
@@ -1358,12 +1358,12 @@ export default {
       if (!allowLocalPreviewBridge && !isSubdomainAuthenticated(sandboxId, port)) {
         const authHeader = req.headers.get('Authorization');
         const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-        const kortixTokenHeader = req.headers.get('X-Kortix-Token');
+        const epsilonTokenHeader = req.headers.get('X-Epsilon-Token');
         const cookieToken = extractCookieToken(req);
         // Also accept ?token= query param — browser WebSocket API can't set
         // custom headers, and initial page loads may not have cookies yet.
         const queryToken = url.searchParams.get('token');
-        const token = bearerToken || cookieToken || kortixTokenHeader || queryToken;
+        const token = bearerToken || cookieToken || epsilonTokenHeader || queryToken;
 
         if (!token || !(await validatePreviewToken(token, sandboxId))) {
           return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -1430,7 +1430,7 @@ export default {
 
         // JustAVPS: route through CF Worker proxy at {port}--{slug}.{domain}
         if (config.isJustAVPSEnabled()) {
-          const { sandboxes } = await import('@kortix/db');
+          const { sandboxes } = await import('@epsilon/db');
           const { db } = await import('./shared/db');
           const { eq, and, ne } = await import('drizzle-orm');
           const [sandbox] = await db
@@ -1572,10 +1572,10 @@ export default {
 
         const wsAuthHeader = req.headers.get('Authorization');
         const wsBearerToken = wsAuthHeader?.startsWith('Bearer ') ? wsAuthHeader.slice(7) : null;
-        const wsKortixTokenHeader = req.headers.get('X-Kortix-Token');
+        const wsEpsilonTokenHeader = req.headers.get('X-Epsilon-Token');
         const wsCookieToken = extractCookieToken(req);
         const wsQueryToken = url.searchParams.get('token');
-        const wsToken = wsBearerToken || wsCookieToken || wsKortixTokenHeader || wsQueryToken;
+        const wsToken = wsBearerToken || wsCookieToken || wsEpsilonTokenHeader || wsQueryToken;
 
         if (wsToken && (await validatePreviewToken(wsToken, wsSandboxId))) {
           const resolved = await resolveProvider(wsSandboxId).catch(() => null);

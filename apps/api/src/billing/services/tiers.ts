@@ -39,12 +39,12 @@ export function getComputeDisplayPriceCents(serverType: string): number | null {
 
 /**
  * Human-readable line for Stripe checkout / invoice descriptions.
- * Example: "Kortix Computer · Pro — 8 vCPU, 16 GB RAM, 320 GB SSD"
+ * Example: "Epsilon Computer · Pro — 8 vCPU, 16 GB RAM, 320 GB SSD"
  */
 export function getComputeDescription(serverType: string): string {
   const t = COMPUTE_TIERS[serverType];
-  if (!t) return 'Kortix Computer';
-  return `Kortix Computer · ${t.label} — ${t.cores} vCPU, ${t.memoryGb} GB RAM, ${t.diskGb} GB SSD`;
+  if (!t) return 'Epsilon Computer';
+  return `Epsilon Computer · ${t.label} — ${t.cores} vCPU, ${t.memoryGb} GB RAM, ${t.diskGb} GB SSD`;
 }
 
 // ─── Tiers ──────────────────────────────────────────────────────────────────
@@ -157,7 +157,7 @@ const STRIPE_PRICES_STAGING: StripePriceConfig = {
 };
 
 function getStripePrices(): StripePriceConfig {
-  return config.INTERNAL_KORTIX_ENV === 'prod' ? STRIPE_PRICES_PROD : STRIPE_PRICES_STAGING;
+  return config.INTERNAL_EPSILON_ENV === 'prod' ? STRIPE_PRICES_PROD : STRIPE_PRICES_STAGING;
 }
 
 export function getProductId(): string {
@@ -295,16 +295,16 @@ export function isDowngrade(fromTier: string, toTier: string): boolean {
 // ─── RevenueCat (mobile billing — untouched) ─────────────────────────────────
 
 const REVENUECAT_PRODUCT_MAPPING: Record<string, string> = {
-  'kortix_plus_monthly': 'tier_2_20',
-  'kortix_plus_yearly': 'tier_2_20',
+  'epsilon_plus_monthly': 'tier_2_20',
+  'epsilon_plus_yearly': 'tier_2_20',
   'plus:plus-monthly': 'tier_2_20',
 
-  'kortix_pro_monthly': 'pro',
-  'kortix_pro_yearly': 'pro',
+  'epsilon_pro_monthly': 'pro',
+  'epsilon_pro_yearly': 'pro',
   'pro:pro-monthly': 'pro',
 
-  'kortix_ultra_monthly': 'tier_25_200',
-  'kortix_ultra_yearly': 'tier_25_200',
+  'epsilon_ultra_monthly': 'tier_25_200',
+  'epsilon_ultra_yearly': 'tier_25_200',
   'ultra:ultra-monthly': 'tier_25_200',
 };
 

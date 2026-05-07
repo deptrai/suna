@@ -1,5 +1,5 @@
 import { and, eq, inArray, ne, or, sql, type SQL } from 'drizzle-orm';
-import { sandboxes, sandboxMembers, type Database } from '@kortix/db';
+import { sandboxes, sandboxMembers, type Database } from '@epsilon/db';
 import { isPlatformAdmin } from '../../shared/platform-roles';
 import { NotFoundError } from '../domain/errors';
 import type {

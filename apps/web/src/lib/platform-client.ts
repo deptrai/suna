@@ -1,7 +1,7 @@
 /**
  * Platform API client.
  *
- * Routes through kortix-api (the unified backend) for sandbox lifecycle:
+ * Routes through epsilon-api (the unified backend) for sandbox lifecycle:
  *   GET  /platform/providers          — available sandbox providers
  *   POST /platform/init               — ensure user has a sandbox, provision if needed
  *   GET  /platform/sandbox            — get user's active sandbox
@@ -9,7 +9,7 @@
  *   POST /platform/sandbox/stop       — stop the active sandbox
  *   POST /platform/sandbox/restart    — restart the active sandbox
  *
- * In production: https://api.kortix.com/v1/platform/*  (base URL includes /v1)
+ * In production: https://api.epsilon.com/v1/platform/*  (base URL includes /v1)
  * In local:      http://localhost:8008/v1/platform/*  (base URL includes /v1)
  */
 
@@ -29,7 +29,7 @@ export const SANDBOX_PORTS = {
   DESKTOP_HTTPS: '6081',
   PRESENTATION_VIEWER: '3210',
   STATIC_FILE_SERVER: '3211',
-  KORTIX_MASTER: '8000',
+  EPSILON_MASTER: '8000',
   BROWSER_STREAM: '9223',
   BROWSER_VIEWER: '9224',
   SSH: '22',
@@ -187,7 +187,7 @@ async function platformFetch<T>(
  * Provider-agnostic: {BACKEND_URL}/p/{externalId}/8000
  *
  * The external_id is the sandbox identifier used for routing:
- *   - Local Docker: container name (e.g. 'kortix-sandbox') — resolves via Docker DNS
+ *   - Local Docker: container name (e.g. 'epsilon-sandbox') — resolves via Docker DNS
  *   - Daytona (cloud): Daytona sandbox ID
  *
  * Guards against missing external_id to prevent broken URLs.
@@ -200,7 +200,7 @@ export function getSandboxUrl(sandbox: SandboxInfo): string {
     );
   }
 
-  return `${getPlatformUrl()}/p/${sandbox.external_id}/${SANDBOX_PORTS.KORTIX_MASTER}`;
+  return `${getPlatformUrl()}/p/${sandbox.external_id}/${SANDBOX_PORTS.EPSILON_MASTER}`;
 }
 
 /**
@@ -650,7 +650,7 @@ export interface SandboxProjectSummary {
 
 export async function listSandboxProjects(sandbox: SandboxInfo): Promise<SandboxProjectSummary[]> {
   const base = getSandboxUrl(sandbox);
-  const res = await authenticatedFetch(`${base.replace(/\/+$/, '')}/kortix/projects`, {
+  const res = await authenticatedFetch(`${base.replace(/\/+$/, '')}/epsilon/projects`, {
     signal: AbortSignal.timeout(8_000),
   });
   if (!res.ok) {
@@ -663,8 +663,8 @@ export async function listSandboxProjects(sandbox: SandboxInfo): Promise<Sandbox
 
 // ─── Per-project ACL inside a sandbox ────────────────────────────────────────
 //
-// The ACL lives in kortix-master's sqlite next to the projects it governs, so
-// these helpers talk to kortix-master via the preview proxy. Emails aren't
+// The ACL lives in epsilon-master's sqlite next to the projects it governs, so
+// these helpers talk to epsilon-master via the preview proxy. Emails aren't
 // known inside the sandbox — hydrate them client-side by joining against the
 // sandbox member list (which does carry emails).
 
@@ -680,7 +680,7 @@ export interface SandboxProjectMembersResponse {
   members: SandboxProjectMember[];
 }
 
-async function fetchKortixMaster<T>(
+async function fetchEpsilonMaster<T>(
   sandbox: SandboxInfo,
   path: string,
   init?: RequestInit,
@@ -702,9 +702,9 @@ export async function listSandboxProjectMembers(
   sandbox: SandboxInfo,
   projectId: string,
 ): Promise<SandboxProjectMembersResponse> {
-  return fetchKortixMaster<SandboxProjectMembersResponse>(
+  return fetchEpsilonMaster<SandboxProjectMembersResponse>(
     sandbox,
-    `/kortix/projects/${encodeURIComponent(projectId)}/members`,
+    `/epsilon/projects/${encodeURIComponent(projectId)}/members`,
     { method: 'GET' },
   );
 }
@@ -715,9 +715,9 @@ export async function grantSandboxProjectAccess(
   userId: string,
   role: 'admin' | 'member' = 'member',
 ): Promise<void> {
-  await fetchKortixMaster<void>(
+  await fetchEpsilonMaster<void>(
     sandbox,
-    `/kortix/projects/${encodeURIComponent(projectId)}/members`,
+    `/epsilon/projects/${encodeURIComponent(projectId)}/members`,
     {
       method: 'POST',
       body: JSON.stringify({ user_id: userId, role }),
@@ -730,9 +730,9 @@ export async function revokeSandboxProjectAccess(
   projectId: string,
   userId: string,
 ): Promise<void> {
-  await fetchKortixMaster<void>(
+  await fetchEpsilonMaster<void>(
     sandbox,
-    `/kortix/projects/${encodeURIComponent(projectId)}/members/${encodeURIComponent(userId)}`,
+    `/epsilon/projects/${encodeURIComponent(projectId)}/members/${encodeURIComponent(userId)}`,
     { method: 'DELETE' },
   );
 }
@@ -1186,7 +1186,7 @@ export function isDestructivePhase(phase: UpdatePhase): boolean {
 }
 
 /**
- * Get the current update status from kortix-api.
+ * Get the current update status from epsilon-api.
  * The API tracks the Docker pull + recreate progress.
  */
 export async function getSandboxUpdateStatus(
@@ -1254,7 +1254,7 @@ export async function getAllVersions(): Promise<AllVersionsResponse> {
 }
 
 /**
- * Trigger a Docker image-based sandbox update via kortix-api.
+ * Trigger a Docker image-based sandbox update via epsilon-api.
  *
  * The API pulls the new image, stops the container, removes it (preserving
  * the /workspace volume), and recreates with the new image. The frontend
@@ -1284,7 +1284,7 @@ export async function triggerSandboxUpdate(
 }
 
 /**
- * Reset the update status on kortix-api (e.g. after a failed update to allow retry).
+ * Reset the update status on epsilon-api (e.g. after a failed update to allow retry).
  */
 export async function resetSandboxUpdateStatus(sandbox?: SandboxInfo): Promise<void> {
   const url = sandbox?.sandbox_id

@@ -21,7 +21,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { getToolIcon } from '@/lib/icons/tool-icons';
 import { getUserFriendlyToolName } from '@agentpress/shared';
 import { useSandboxImageBlob } from '@/lib/files/hooks';
-import { KortixLoader } from '@/components/ui/kortix-loader';
+import { EpsilonLoader } from '@/components/ui/epsilon-loader';
 
 type MediaType = 'image' | 'video' | null;
 
@@ -271,7 +271,7 @@ export function MediaGenerationInline({
           {displayName}
         </Text>
         {!isComplete ? (
-          <KortixLoader size="small" />
+          <EpsilonLoader size="small" />
         ) : (
           <Icon as={CheckCircle2} size={12} className="text-emerald-500 ml-2" />
         )}

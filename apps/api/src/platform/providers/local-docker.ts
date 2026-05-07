@@ -39,22 +39,22 @@ function shellQuote(value: string): string {
 }
 
 /**
- * Resolve bind-mounts that overlay the host's `core/kortix-master` checkout
- * onto the baked sandbox image's `/ephemeral/kortix-master` tree.
+ * Resolve bind-mounts that overlay the host's `core/epsilon-master` checkout
+ * onto the baked sandbox image's `/ephemeral/epsilon-master` tree.
  *
  * Returns [] when not running from a repo checkout (packaged install) so
  * production / self-hosted deployments are unaffected.
  *
- * Set `KORTIX_DEV_BIND_SOURCE=0` to force-disable even when running from a
+ * Set `EPSILON_DEV_BIND_SOURCE=0` to force-disable even when running from a
  * checkout (e.g. when intentionally testing the baked image).
  */
 function findRepoRoot(): string | null {
-  if (process.env.KORTIX_DEV_BIND_SOURCE === '0') return null;
+  if (process.env.EPSILON_DEV_BIND_SOURCE === '0') return null;
   // apps/api/src → repo root = ../../.. from this file's runtime location.
-  // Walk up until we find a `core/kortix-master/opencode/opencode.jsonc`.
+  // Walk up until we find a `core/epsilon-master/opencode/opencode.jsonc`.
   let dir = resolve(__dirname);
   for (let i = 0; i < 8; i++) {
-    const probe = resolve(dir, 'core/kortix-master/opencode/opencode.jsonc');
+    const probe = resolve(dir, 'core/epsilon-master/opencode/opencode.jsonc');
     if (existsSync(probe)) return dir;
     const parent = resolve(dir, '..');
     if (parent === dir) break;
@@ -67,22 +67,22 @@ function buildDevSourceBinds(): string[] {
   const repoRoot = findRepoRoot();
   if (!repoRoot) return [];
 
-  const km = resolve(repoRoot, 'core/kortix-master');
+  const km = resolve(repoRoot, 'core/epsilon-master');
   const services = resolve(repoRoot, 'core/services');
   // Mirror core/docker/docker-compose.dev.yml — read-only, ephemeral target.
   const paths: Array<[string, string]> = [
-    [resolve(km, 'src'),                       '/ephemeral/kortix-master/src'],
-    [resolve(km, 'opencode/plugin'),           '/ephemeral/kortix-master/opencode/plugin'],
-    [resolve(km, 'opencode/agents'),           '/ephemeral/kortix-master/opencode/agents'],
-    [resolve(km, 'opencode/commands'),         '/ephemeral/kortix-master/opencode/commands'],
-    [resolve(km, 'opencode/skills'),           '/ephemeral/kortix-master/opencode/skills'],
-    [resolve(km, 'opencode/tools'),            '/ephemeral/kortix-master/opencode/tools'],
-    [resolve(km, 'opencode/patches'),          '/ephemeral/kortix-master/opencode/patches'],
-    [resolve(km, 'opencode/opencode.jsonc'),   '/ephemeral/kortix-master/opencode/opencode.jsonc'],
-    [resolve(km, 'opencode/kortix-system.md'), '/ephemeral/kortix-master/opencode/kortix-system.md'],
-    [resolve(km, 'channels/src'),              '/ephemeral/kortix-master/channels/src'],
-    [resolve(km, 'triggers/src'),              '/ephemeral/kortix-master/triggers/src'],
-    [resolve(km, 'scripts'),                   '/ephemeral/kortix-master/scripts'],
+    [resolve(km, 'src'),                       '/ephemeral/epsilon-master/src'],
+    [resolve(km, 'opencode/plugin'),           '/ephemeral/epsilon-master/opencode/plugin'],
+    [resolve(km, 'opencode/agents'),           '/ephemeral/epsilon-master/opencode/agents'],
+    [resolve(km, 'opencode/commands'),         '/ephemeral/epsilon-master/opencode/commands'],
+    [resolve(km, 'opencode/skills'),           '/ephemeral/epsilon-master/opencode/skills'],
+    [resolve(km, 'opencode/tools'),            '/ephemeral/epsilon-master/opencode/tools'],
+    [resolve(km, 'opencode/patches'),          '/ephemeral/epsilon-master/opencode/patches'],
+    [resolve(km, 'opencode/opencode.jsonc'),   '/ephemeral/epsilon-master/opencode/opencode.jsonc'],
+    [resolve(km, 'opencode/epsilon-system.md'), '/ephemeral/epsilon-master/opencode/epsilon-system.md'],
+    [resolve(km, 'channels/src'),              '/ephemeral/epsilon-master/channels/src'],
+    [resolve(km, 'triggers/src'),              '/ephemeral/epsilon-master/triggers/src'],
+    [resolve(km, 'scripts'),                   '/ephemeral/epsilon-master/scripts'],
     [services,                                 '/ephemeral/services'],
   ];
   return paths
@@ -118,23 +118,23 @@ const PORT_BINDINGS: Record<string, { HostPort: string; HostIp: string }[]> = Ob
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /**
- * Compute the URL the sandbox container should use to reach kortix-api.
+ * Compute the URL the sandbox container should use to reach epsilon-api.
  *
- * This is the INTERNAL url — how the sandbox talks to kortix-api from inside Docker.
+ * This is the INTERNAL url — how the sandbox talks to epsilon-api from inside Docker.
  * NOT the external/browser-facing URL.
  *
- * - Shared Docker network (SANDBOX_NETWORK set):  http://kortix-api:{PORT}  (Docker DNS)
+ * - Shared Docker network (SANDBOX_NETWORK set):  http://epsilon-api:{PORT}  (Docker DNS)
  * - Default bridge (sandbox on host ports):        http://host.docker.internal:{PORT}
  *
- * If KORTIX_URL is set to something other than localhost (e.g. a real domain),
+ * If EPSILON_URL is set to something other than localhost (e.g. a real domain),
  * we use it as-is since the sandbox can reach it directly.
  */
 function getSandboxInternalApiUrl(): string {
   if (config.SANDBOX_NETWORK) {
-    return `http://kortix-api:${config.PORT}`;
+    return `http://epsilon-api:${config.PORT}`;
   }
 
-  const externalUrl = config.KORTIX_URL?.replace(/\/v1\/router\/?$/, '');
+  const externalUrl = config.EPSILON_URL?.replace(/\/v1\/router\/?$/, '');
   if (externalUrl) {
     try {
       const parsed = new URL(externalUrl);
@@ -251,7 +251,7 @@ function setUpdateStatus(partial: Partial<SandboxUpdateStatus>): void {
 /**
  * Derive the target image name from a version string.
  * Uses the current SANDBOX_IMAGE config as the base (strips existing tag).
- * e.g. "kortix/computer:0.7.5" + version "0.8.0" → "kortix/computer:0.8.0"
+ * e.g. "epsilon/computer:0.7.5" + version "0.8.0" → "epsilon/computer:0.8.0"
  */
 function getImageForVersion(version: string): string {
   const current = config.SANDBOX_IMAGE;
@@ -338,7 +338,7 @@ export class LocalDockerProvider implements SandboxProvider {
     if (existing) {
       if (existing.status === 'running') {
         await this.syncCoreEnvVars();
-        const callerToken = this._lastCreateOpts?.envVars?.KORTIX_TOKEN;
+        const callerToken = this._lastCreateOpts?.envVars?.EPSILON_TOKEN;
         if (callerToken) {
           await this.syncTokenToContainer(callerToken);
         }
@@ -602,16 +602,16 @@ export class LocalDockerProvider implements SandboxProvider {
   /**
    * Sync the non-auth core env vars to the sandbox via the secrets manager API.
    *
-   * Uses kortix-master's /env endpoint which does triple-write:
+   * Uses epsilon-master's /env endpoint which does triple-write:
    *   1. SecretStore (.secrets.json — encrypted at rest)
    *   2. s6 env dir  (/run/s6/container_environment/ — tools read this on every call)
-   *   3. process.env (kortix-master's own process)
+   *   3. process.env (epsilon-master's own process)
    *
    * Since getEnv() reads s6 first (always fresh from disk), updated values
    * take effect immediately — no service restart needed.
    * Only POSTs when values actually differ from what's currently set.
    *
-   * Auth aliases (KORTIX_TOKEN / INTERNAL_SERVICE_KEY / TUNNEL_TOKEN) are
+   * Auth aliases (EPSILON_TOKEN / INTERNAL_SERVICE_KEY / TUNNEL_TOKEN) are
    * synced separately from the canonical sandbox service key in the DB.
    */
   async syncCoreEnvVars(): Promise<void> {
@@ -626,10 +626,10 @@ export class LocalDockerProvider implements SandboxProvider {
     const sandboxApiBase = getSandboxInternalApiUrl();
     const routerBase = `${sandboxApiBase}/v1/router`;
     const desired: Record<string, string> = {
-      KORTIX_API_URL: sandboxApiBase,
+      EPSILON_API_URL: sandboxApiBase,
       TUNNEL_API_URL: sandboxApiBase,
-      // Tool proxy URLs — route through kortix-api router so sandbox tools
-      // auth with KORTIX_TOKEN and the router injects real upstream API keys.
+      // Tool proxy URLs — route through epsilon-api router so sandbox tools
+      // auth with EPSILON_TOKEN and the router injects real upstream API keys.
       TAVILY_API_URL: `${routerBase}/tavily`,
       REPLICATE_API_URL: `${routerBase}/replicate`,
       SERPER_API_URL: `${routerBase}/serper`,
@@ -681,7 +681,7 @@ export class LocalDockerProvider implements SandboxProvider {
   }
 
   /**
-   * GET /env from kortix-master — returns all current env vars.
+   * GET /env from epsilon-master — returns all current env vars.
    */
   private async fetchMasterEnv(authCandidates: string[]): Promise<Record<string, string>> {
     const url = `http://localhost:${config.SANDBOX_PORT_BASE || 14000}/env`;
@@ -700,7 +700,7 @@ export class LocalDockerProvider implements SandboxProvider {
   }
 
   /**
-   * POST /env to kortix-master — sets env vars via the secrets manager.
+   * POST /env to epsilon-master — sets env vars via the secrets manager.
    * No restart needed: getEnv() reads s6 env dir directly on every call.
    */
   private async postMasterEnv(keys: Record<string, string>, authCandidates: string[]): Promise<void> {
@@ -722,7 +722,7 @@ export class LocalDockerProvider implements SandboxProvider {
 
   /**
    * Fallback: write directly to s6 env dir via docker exec.
-   * Used only when the /env API is unreachable (e.g. kortix-master not ready yet).
+   * Used only when the /env API is unreachable (e.g. epsilon-master not ready yet).
    */
   private syncCoreEnvVarsFallback(stale: Record<string, string>): void {
     const env = { ...process.env };
@@ -739,7 +739,7 @@ export class LocalDockerProvider implements SandboxProvider {
   }
 
   /**
-   * Push a KORTIX_TOKEN into a running container so it matches the DB.
+   * Push a EPSILON_TOKEN into a running container so it matches the DB.
    *
    * Called by ensure() when the caller (e.g. POST /init/local) registered a
    * new token in the DB but the container is already running with a stale one.
@@ -748,15 +748,15 @@ export class LocalDockerProvider implements SandboxProvider {
   private async syncTokenToContainer(token: string): Promise<void> {
     const containerEnv = await this.getContainerEnv();
     if (
-      containerEnv['KORTIX_TOKEN'] === token &&
+      containerEnv['EPSILON_TOKEN'] === token &&
       containerEnv['INTERNAL_SERVICE_KEY'] === token &&
       containerEnv['TUNNEL_TOKEN'] === token
     ) return;
 
-    console.log('[LOCAL-DOCKER] Syncing DB-registered KORTIX_TOKEN into running container...');
+    console.log('[LOCAL-DOCKER] Syncing DB-registered EPSILON_TOKEN into running container...');
     const authCandidates = getAuthCandidates(token);
     const authBundle = {
-      KORTIX_TOKEN: token,
+      EPSILON_TOKEN: token,
       INTERNAL_SERVICE_KEY: token,
       TUNNEL_TOKEN: token,
     };
@@ -775,7 +775,7 @@ export class LocalDockerProvider implements SandboxProvider {
 
   private async getCanonicalServiceKey(): Promise<string> {
     const dbKey = await getSandboxServiceKeyByExternalId(CONTAINER_NAME);
-    return dbKey || this._lastCreateOpts?.envVars?.KORTIX_TOKEN || '';
+    return dbKey || this._lastCreateOpts?.envVars?.EPSILON_TOKEN || '';
   }
 
   private _lastCreateOpts?: CreateSandboxOpts;
@@ -843,7 +843,7 @@ export class LocalDockerProvider implements SandboxProvider {
   }
 
   /**
-   * Pull a specific image by full name (e.g. "kortix/computer:0.8.0").
+   * Pull a specific image by full name (e.g. "epsilon/computer:0.8.0").
    * Updates both _pullStatus and _updateStatus with progress.
    */
   private async pullImageByName(imageName: string): Promise<void> {
@@ -902,7 +902,7 @@ export class LocalDockerProvider implements SandboxProvider {
       await this.pullImage();
     }
 
-    let authToken = this._lastCreateOpts?.envVars?.KORTIX_TOKEN || '';
+    let authToken = this._lastCreateOpts?.envVars?.EPSILON_TOKEN || '';
     if (!authToken) {
       authToken = generateSandboxKeyPair().secretKey;
     }
@@ -911,8 +911,8 @@ export class LocalDockerProvider implements SandboxProvider {
     const serviceKey = authToken;
 
     const MANAGED_VARS = new Set([
-      'KORTIX_TOKEN',
-      'KORTIX_API_URL',
+      'EPSILON_TOKEN',
+      'EPSILON_API_URL',
       'SANDBOX_ID',
       'INTERNAL_SERVICE_KEY',
       'PROJECT_ID',
@@ -937,12 +937,12 @@ export class LocalDockerProvider implements SandboxProvider {
       'PGID=911',
       'TZ=Etc/UTC',
       'SUBFOLDER=/',
-      'TITLE=Kortix Sandbox',
-      'OPENCODE_CONFIG_DIR=/ephemeral/kortix-master/opencode',
+      'TITLE=Epsilon Sandbox',
+      'OPENCODE_CONFIG_DIR=/ephemeral/epsilon-master/opencode',
       'OPENCODE_PERMISSION={"*":"allow"}',
       'DISPLAY=:1',
       'LSS_DIR=/persistent/lss',
-      'KORTIX_WORKSPACE=/workspace',
+      'EPSILON_WORKSPACE=/workspace',
       'PYTHONUSERBASE=/workspace/.local',
       'PIP_USER=1',
       'NPM_CONFIG_PREFIX=/workspace/.npm-global',
@@ -950,8 +950,8 @@ export class LocalDockerProvider implements SandboxProvider {
       'SECRET_FILE_PATH=/persistent/secrets/.secrets.json',
       'SALT_FILE_PATH=/persistent/secrets/.salt',
       'ENCRYPTION_KEY_PATH=/persistent/secrets/.encryption-key',
-      `KORTIX_API_URL=${sandboxApiBase}`,
-      `KORTIX_TOKEN=${authToken}`,
+      `EPSILON_API_URL=${sandboxApiBase}`,
+      `EPSILON_TOKEN=${authToken}`,
       `INTERNAL_SERVICE_KEY=${serviceKey}`,
       `TUNNEL_API_URL=${sandboxApiBase}`,
       `TUNNEL_TOKEN=${authToken}`,
@@ -960,24 +960,24 @@ export class LocalDockerProvider implements SandboxProvider {
       // All components share one version (set by deploy-zero-downtime.sh from image tag).
       `SANDBOX_VERSION=${SANDBOX_VERSION}`,
       'PROJECT_ID=local',
-      // ── Tool proxy URLs — route through kortix-api router ─────────────
-      // Sandbox tools use KORTIX_TOKEN to auth; the router injects the real
+      // ── Tool proxy URLs — route through epsilon-api router ─────────────
+      // Sandbox tools use EPSILON_TOKEN to auth; the router injects the real
       // upstream API key. Matches cloud provider env injection (justavps/daytona/pool).
       `TAVILY_API_URL=${routerBase}/tavily`,
       `REPLICATE_API_URL=${routerBase}/replicate`,
       `SERPER_API_URL=${routerBase}/serper`,
       `FIRECRAWL_API_URL=${routerBase}/firecrawl`,
-      ...(config.KORTIX_LOCAL_IMAGES ? ['KORTIX_LOCAL_SOURCE=1'] : []),
-      `ENV_MODE=${config.KORTIX_BILLING_INTERNAL_ENABLED ? 'cloud' : 'local'}`,
-      `CORS_ALLOWED_ORIGINS=${[config.FRONTEND_URL, config.KORTIX_URL].filter(Boolean).join(',')}`,
+      ...(config.EPSILON_LOCAL_IMAGES ? ['EPSILON_LOCAL_SOURCE=1'] : []),
+      `ENV_MODE=${config.EPSILON_BILLING_INTERNAL_ENABLED ? 'cloud' : 'local'}`,
+      `CORS_ALLOWED_ORIGINS=${[config.FRONTEND_URL, config.EPSILON_URL].filter(Boolean).join(',')}`,
       ...filteredSandboxEnv,
     ];
 
     // Dev-mode bind-mounts: when running from a repo checkout, mount the
-    // host's `core/kortix-master` source tree over the image's baked copy so
+    // host's `core/epsilon-master` source tree over the image's baked copy so
     // plugin/agent/config edits are live without rebuilding the image. Without
     // this, `pnpm start` auto-provisions with whatever's baked into
-    // `kortix/computer:latest` — which lags the branch. Mirrors what
+    // `epsilon/computer:latest` — which lags the branch. Mirrors what
     // `core/docker/docker-compose.dev.yml` does for manual compose runs.
     const devBinds = buildDevSourceBinds();
     if (devBinds.length > 0) {
@@ -1002,9 +1002,9 @@ export class LocalDockerProvider implements SandboxProvider {
         ...(config.SANDBOX_NETWORK ? { NetworkMode: config.SANDBOX_NETWORK } : {}),
       },
       Labels: {
-        'kortix.sandbox': 'true',
-        'kortix.account': 'local',
-        'kortix.user': 'local',
+        'epsilon.sandbox': 'true',
+        'epsilon.account': 'local',
+        'epsilon.user': 'local',
       },
     });
 
@@ -1055,11 +1055,11 @@ export class LocalDockerProvider implements SandboxProvider {
 
   /**
    * Wait for the sandbox to pass health checks.
-   * Polls GET /kortix/health until it returns 200 with status "ok".
+   * Polls GET /epsilon/health until it returns 200 with status "ok".
    */
   private async waitForHealth(timeoutMs: number): Promise<void> {
     const start = Date.now();
-    const healthUrl = `http://localhost:${PORT_MAP['8000']}/kortix/health`;
+    const healthUrl = `http://localhost:${PORT_MAP['8000']}/epsilon/health`;
 
     while (Date.now() - start < timeoutMs) {
       try {

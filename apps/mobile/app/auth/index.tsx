@@ -23,7 +23,7 @@ import { Text } from '@/components/ui/text';
 import { useAuthContext } from '@/contexts';
 import { log } from '@/lib/logger';
 import { supabase } from '@/api/supabase';
-import { KortixLogo } from '@/components/ui/KortixLogo';
+import { EpsilonLogo } from '@/components/ui/EpsilonLogo';
 import { AuthButton } from '@/components/auth/AuthButton';
 import { AuthInput } from '@/components/auth/AuthInput';
 import { isLocal } from '@/lib/utils/env-config';
@@ -116,9 +116,9 @@ function LocalAuthScreen() {
           style={{ paddingTop: insets.top, paddingBottom: insets.bottom + 32 }}
         >
           <View className="items-start mb-10">
-            <KortixLogo variant="symbol" size={36} color={isDark ? 'dark' : 'light'} />
+            <EpsilonLogo variant="symbol" size={36} color={isDark ? 'dark' : 'light'} />
             <Text className="text-[28px] font-roobert-semibold text-foreground mt-5 leading-tight">
-              Sign in to{'\n'}Kortix
+              Sign in to{'\n'}Epsilon
             </Text>
             <Text className="text-[15px] text-muted-foreground mt-2 font-roobert">
               Your AI Computer
@@ -271,9 +271,9 @@ function CloudAuthScreen() {
         >
           {/* Logo */}
           <View className="items-start mb-10">
-            <KortixLogo variant="symbol" size={36} color={isDark ? 'dark' : 'light'} />
+            <EpsilonLogo variant="symbol" size={36} color={isDark ? 'dark' : 'light'} />
             <Text className="text-[28px] font-roobert-semibold text-foreground mt-5 leading-tight">
-              {phase === 'email' ? 'Sign in to\nKortix' : 'Check your\nemail'}
+              {phase === 'email' ? 'Sign in to\nEpsilon' : 'Check your\nemail'}
             </Text>
             <Text className="text-[15px] text-muted-foreground mt-2 font-roobert">
               {phase === 'email'
@@ -331,7 +331,7 @@ function CloudAuthScreen() {
                       const { data, error } = await supabase.auth.signInWithOAuth({
                         provider: 'google',
                         options: {
-                          redirectTo: 'kortix://auth/callback',
+                          redirectTo: 'epsilon://auth/callback',
                           skipBrowserRedirect: true,
                         },
                       });
