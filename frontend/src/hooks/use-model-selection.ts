@@ -15,6 +15,7 @@ export interface ModelOption {
   recommended?: boolean;
   capabilities?: string[];
   contextWindow?: number;
+  provider?: string;
 }
 
 // Helper function to get default model from API data
@@ -61,6 +62,7 @@ export const useModelSelection = () => {
       recommended: model.recommended || false,
       capabilities: model.capabilities || [],
       contextWindow: model.context_window || 128000,
+      provider: model.provider,
     })).sort((a, b) => {
       // Sort by recommended first, then priority, then name
       if (a.recommended !== b.recommended) return a.recommended ? -1 : 1;

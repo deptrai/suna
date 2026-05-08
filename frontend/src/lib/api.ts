@@ -1751,6 +1751,7 @@ export interface Model {
   capabilities?: string[];
   recommended?: boolean;
   priority?: number;
+  provider?: string;
 }
 
 export interface AvailableModelsResponse {
