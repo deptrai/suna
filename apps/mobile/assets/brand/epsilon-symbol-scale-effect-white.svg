@@ -1,11 +1,31 @@
-<svg width="393" height="462" viewBox="0 0 393 462" fill="none" xmlns="http://www.w3.org/2000/svg">
-<g opacity="0.3">
-<path d="M-1.00195 0.527344C-0.760269 93.2729 66.7031 170.569 156.288 188.394L156.886 188.513V0.527344H234.645V188.515L235.244 188.394C324.406 170.253 392.288 92.9849 392.532 0.527344H470.302C470.12 97.8051 416.92 182.937 337.412 229.808L336.682 230.238L337.412 230.669C416.921 277.54 470.122 362.671 470.304 459.948H392.534C392.292 367.202 324.828 289.906 235.242 272.082L234.645 271.963V460.033H156.886V271.964L156.288 272.082C66.703 289.907 -0.762124 367.203 -1.00391 459.948H-78.7734C-78.5916 362.671 -25.3899 277.54 54.1191 230.669L54.8496 230.238L54.1191 229.808C-25.3893 182.937 -78.5898 97.8051 -78.7715 0.527344H-1.00195Z" stroke="url(#paint0_linear_189_1736)"/>
-</g>
-<defs>
-<linearGradient id="paint0_linear_189_1736" x1="195.765" y1="0.0273437" x2="195.765" y2="460.533" gradientUnits="userSpaceOnUse">
-<stop stop-color="white"/>
-<stop offset="1" stop-color="white" stop-opacity="0"/>
-</linearGradient>
-</defs>
+<svg width="1600" height="800" viewBox="0 0 1600 800" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(400, 400)">
+    <path d="M 130,-225 A 150 150 0 1 0 0 0 A 150 150 0 1 0 75 20" fill="none" stroke="#94A3B8" stroke-width="2" opacity="0.4" />
+    <circle cx="130" cy="-225" r="48" fill="#0EA5E9" />
+    <circle cx="75" cy="-280" r="42" fill="#0EA5E9" />
+    <circle cx="0" cy="-300" r="36" fill="#0EA5E9" />
+    <circle cx="-75" cy="-280" r="31" fill="#0EA5E9" />
+    <circle cx="-130" cy="-225" r="26" fill="#0EA5E9" />
+    <circle cx="-150" cy="-150" r="22" fill="#0EA5E9" />
+    <circle cx="-130" cy="-75" r="18" fill="#0EA5E9" />
+    <circle cx="-75" cy="-20" r="15" fill="#0EA5E9" />
+    <circle cx="0" cy="0" r="12" fill="#0EA5E9" />
+    <circle cx="-75" cy="20" r="10" fill="#0EA5E9" />
+    <circle cx="-130" cy="75" r="8" fill="#0EA5E9" />
+    <circle cx="-150" cy="150" r="6.5" fill="#0EA5E9" />
+    <circle cx="-130" cy="225" r="5" fill="#0EA5E9" />
+    <circle cx="-75" cy="280" r="4" fill="#0EA5E9" />
+    <circle cx="0" cy="300" r="3.2" fill="#0EA5E9" />
+    <circle cx="75" cy="280" r="2.5" fill="#0EA5E9" />
+    <circle cx="130" cy="225" r="2" fill="#0EA5E9" />
+    <circle cx="150" cy="150" r="1.5" fill="#0EA5E9" />
+    <circle cx="130" cy="75" r="1" fill="#0EA5E9" />
+    <circle cx="75" cy="20" r="12" fill="#F43F5E" />
+    <circle cx="75" cy="20" r="20" fill="none" stroke="#F43F5E" stroke-width="2" opacity="0.3" />
+    <circle cx="75" cy="20" r="4" fill="#FFFFFF" />
+  </g>
+  <g transform="translate(700, 400)">
+    <text x="0" y="40" font-family="system-ui, -apple-system, sans-serif" font-size="180" font-weight="800" fill="#0F172A" text-anchor="start" letter-spacing="24">EPSILON</text>
+    <text x="10" y="140" font-family="system-ui, -apple-system, sans-serif" font-size="64" font-weight="600" fill="#64748B" text-anchor="start" letter-spacing="12">SOFTWARE</text>
+  </g>
 </svg>
