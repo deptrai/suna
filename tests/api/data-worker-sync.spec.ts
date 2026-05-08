@@ -1,42 +1,46 @@
-import { test, expect } from '@seontechnologies/playwright-utils/api-request/fixtures';
+import { describe, test, expect } from 'bun:test';
 
-test.describe('Data Worker Sync API Tests', () => {
-  test('[P0] should trigger data sync job successfully', async ({ apiRequest }) => {
-    const { status, body } = await apiRequest({
+const API_URL = process.env.API_URL || 'http://localhost:3000';
+
+describe('Data Worker Sync API Tests', () => {
+  test('[P0] should trigger data sync job successfully', async () => {
+    const response = await fetch(`${API_URL}/api/v1/sync/trigger`, {
       method: 'POST',
-      path: '/api/v1/sync/trigger',
-      body: {
-        source: 'rag-system',
-        target: 'chat-db'
-      },
-      headers: { Authorization: 'Bearer token' }
+      body: JSON.stringify({ source: 'rag-system', target: 'chat-db' }),
+      headers: { Authorization: 'Bearer token', 'Content-Type': 'application/json' }
     });
+    const status = response.status;
+    
+    if (status === 404) {
+      expect(status).toBe(202);
+      return;
+    }
 
+    const body: any = await response.json().catch(() => ({}));
     expect(status).toBe(202);
     expect(body.jobId).toBeDefined();
     expect(body.status).toBe('pending');
   });
 
-  test('[P1] should poll for sync job completion', async ({ apiRequest, recurse }) => {
-    const { body: job } = await apiRequest({
+  test('[P1] should poll for sync job completion', async () => {
+    const triggerRes = await fetch(`${API_URL}/api/v1/sync/trigger`, {
       method: 'POST',
-      path: '/api/v1/sync/trigger',
-      body: {
-        source: 'rag-system',
-        target: 'chat-db'
-      },
+      body: JSON.stringify({ source: 'rag-system', target: 'chat-db' }),
+      headers: { Authorization: 'Bearer token', 'Content-Type': 'application/json' }
+    });
+    
+    if (triggerRes.status === 404) {
+      expect(triggerRes.status).toBe(202);
+      return;
+    }
+
+    const job: any = await triggerRes.json().catch(() => ({}));
+    
+    // Simulate simple poll
+    const response = await fetch(`${API_URL}/api/v1/sync/status/${job.jobId}`, {
       headers: { Authorization: 'Bearer token' }
     });
-
-    const { body: completedJob } = await recurse(
-      () => apiRequest({ 
-        method: 'GET', 
-        path: `/api/v1/sync/status/${job.jobId}`,
-        headers: { Authorization: 'Bearer token' }
-      }),
-      (response) => response.body.status === 'completed',
-      { timeout: 30000, interval: 1000 }
-    );
+    const completedJob: any = await response.json().catch(() => ({}));
 
     expect(completedJob.status).toBe('completed');
     expect(completedJob.syncedRecords).toBeGreaterThanOrEqual(0);

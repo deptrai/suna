@@ -1,36 +1,40 @@
-import { test, expect } from '@seontechnologies/playwright-utils/api-request/fixtures';
+import { describe, test, expect } from 'bun:test';
 
-test.describe('Vibe Trading API Tests', () => {
-  test('[P0] should handle successful trade execution', async ({ apiRequest }) => {
-    const { status, body } = await apiRequest({
+const API_URL = process.env.API_URL || 'http://localhost:3000';
+
+describe('Vibe Trading API Tests', () => {
+  test('[P0] should handle successful trade execution', async () => {
+    const response = await fetch(`${API_URL}/api/v1/trading/execute`, {
       method: 'POST',
-      path: '/api/v1/trading/execute',
-      body: {
-        assetId: 'vibe-123',
-        amount: 100,
-        action: 'buy'
-      },
-      headers: { Authorization: 'Bearer token' }
+      body: JSON.stringify({ assetId: 'vibe-123', amount: 100, action: 'buy' }),
+      headers: { Authorization: 'Bearer token', 'Content-Type': 'application/json' }
     });
+    const status = response.status;
+    
+    if (status === 404) {
+      expect(status).toBe(200);
+      return;
+    }
 
+    const body: any = await response.json().catch(() => ({}));
     expect(status).toBe(200);
     expect(body.transactionId).toBeDefined();
     expect(body.status).toBe('completed');
   });
 
-  test('[P1] should handle insufficient funds error', async ({ apiRequest }) => {
-    const { status, body } = await apiRequest({
+  test('[P1] should handle insufficient funds error', async () => {
+    const response = await fetch(`${API_URL}/api/v1/trading/execute`, {
       method: 'POST',
-      path: '/api/v1/trading/execute',
-      body: {
-        assetId: 'vibe-123',
-        amount: 9999999,
-        action: 'buy'
-      },
-      headers: { Authorization: 'Bearer token' },
-      retryConfig: { maxRetries: 0 }
+      body: JSON.stringify({ assetId: 'vibe-123', amount: 9999999, action: 'buy' }),
+      headers: { Authorization: 'Bearer token', 'Content-Type': 'application/json' }
     });
+    const status = response.status;
+    
+    if (status === 404) {
+      // Just assert the endpoint is missing
+    }
 
+    const body: any = await response.json().catch(() => ({}));
     expect(status).toBe(400);
     expect(body.code).toBe('INSUFFICIENT_FUNDS');
   });

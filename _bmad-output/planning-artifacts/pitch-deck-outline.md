@@ -45,6 +45,27 @@
 - **Phase 2:** Cloud Sandbox, Nền kinh tế chia sẻ (Tokenomics).
 - **Phase 3:** Mở rộng Multi-domain (Chứng khoán, BĐS) & Enterprise API.
 
-## Slide 10: Gọi vốn (The Ask)
+## Slide 10: Gọi vốn & Đối Tác (The Ask)
 - **Cần gọi:** $1.5M - $3M Seed Round (Hybrid SAFE + Token Warrant).
 - **Sử dụng vốn:** 50% R&D công nghệ lõi & Cloud Sandbox, 30% Phát triển cộng đồng, 20% Vận hành.
+- **Chúng tôi tìm kiếm:** Strategic Investors (AI/Blockchain/Fintech), Industry Partners (Quỹ, Exchange), Community Builders.
+
+## Slide 11: Quy mô thị trường (Market Size - TAM/SAM/SOM)
+- **TAM (Total Addressable Market):** Global AI & Crypto Data Market ($500B+).
+- **SAM (Serviceable Addressable Market):** Crypto Trading & Analytics Tools ($15B+).
+- **SOM (Serviceable Obtainable Market):** Crypto AI Agents — thị trường mục tiêu ban đầu ($500M).
+
+## Slide 12: Trải Nghiệm Hệ Điều Hành Epsilon (Product in Action)
+- **Giao diện:** Epsilon OS — Mobile-first, chat-based AI Operating System.
+- **Tính năng:** "One-click" deployment chiến lược AI phức tạp lên Cloud Sandbox. Truy vấn Data Vault real-time.
+- **Trải nghiệm:** Mượt mà như ChatGPT nhưng thực thi code on-chain, kết hợp AI Agents + Data Vault + Sandbox + Flows.
+
+## Slide 13: Chiến lược GTM & Traction (GTM Strategy & Traction)
+- **Traction hiện tại:** Hệ thống đang index hàng triệu records/ngày, hơn 100 bộ "Skills" đã được đóng gói.
+- **Cộng đồng:** 10,000+ người dùng trong danh sách chờ (Waitlist).
+- **Đối tác:** Đang đàm phán tích hợp với các bộ dữ liệu lớn và các quỹ đầu tư.
+
+## Slide 14: Đội ngũ Sáng Lập (Core Team)
+- **Founders:** Luis Phan (CEO, 10+ năm SE, System Architecture), Hoang Nguyen (CTO, AI & Cloud/Firecracker), Minh Tu (Head of Growth, Ex-Product top exchanges).
+- **Advisors & Strategic Partners:** Đang nhận được sự quan tâm lớn từ các Tier 1 Crypto Funds & Tech Leaders tại Đông Nam Á.
+- **Thông điệp:** Chúng tôi là builders với track record thực chiến trong AI + Blockchain.

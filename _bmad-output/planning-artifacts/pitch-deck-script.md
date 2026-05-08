@@ -6,9 +6,9 @@
 ---
 
 ## Slide 1: Cover & Câu chuyện cái tên
-> "Xin chào các đối tác. Dự án của chúng tôi mang tên **Chainlens**. 
+> "Xin chào. Dự án của chúng tôi là **Chainlens** — The Limitless AI Lens for Crypto.
 > 
-> Tại sao lại là Chainlens? Trong đại dương dữ liệu hỗn loạn của thị trường, mỗi nhà đầu tư cần một góc nhìn, một bí quyết riêng. Không một AI chung chung nào phục vụ được điều đó. Chúng tôi tạo ra **'Lens' – một thấu kính**. Cốt lõi của Chainlens là hệ thống trợ lý AI chuyên biệt về crypto với **khả năng tùy biến vô hạn**. Giống như việc thay lắp ống kính máy ảnh, nền tảng của chúng tôi cho phép người dùng tự định hình 'thấu kính' độc bản của riêng họ để soi chiếu thị trường."
+> 'Chain' là blockchain — đại dương dữ liệu. 'Lens' là thấu kính — góc nhìn riêng của mỗi nhà đầu tư. Chainlens là nền tảng AI Agent chuyên biệt cho Crypto, với **khả năng tùy biến vô hạn**. Mỗi người dùng tự tạo 'thấu kính' độc bản để soi chiếu thị trường theo cách của riêng họ."
 
 ---
 
@@ -63,5 +63,25 @@
 ## Slide 10: Đội ngũ & Kêu gọi vốn (The Ask)
 > "Để hiện thực hóa tầm nhìn này, chúng tôi gọi **1.5 đến 3 triệu đô la** (Hybrid SAFE + Token Warrant). Trọng tâm sử dụng vốn là R&D Cloud Sandbox và mở rộng cộng đồng trí tuệ.
 > Chúng tôi đang tìm kiếm những đối tác chiến lược. Xin cảm ơn!"
+
+---
+
+## Slide 11: Quy mô thị trường (Market Size)
+> "Thị trường này lớn đến mức nào? Global AI & Crypto Data Market — hơn **500 tỷ đô**. Crypto Trading & Analytics Tools — **15 tỷ đô**. Và ngách Crypto AI Agents mà chúng tôi nhắm tới — **500 triệu đô** và đang tăng trưởng nhanh. Chainlens nhắm vào ngách này với lợi thế first mover về Data Vault + Cloud Sandbox."
+
+---
+
+## Slide 12: Trải Nghiệm Hệ Điều Hành Epsilon (Product in Action)
+> "Đây là **Epsilon OS** — hệ điều hành AI trên điện thoại. Bạn gõ lệnh tự nhiên: 'Quét ví cá voi mua PEPE hôm qua'. AI Agents tự động truy vấn Data Vault realtime, phân tích, và thiết lập cảnh báo trên Cloud Sandbox. Giao diện đơn giản, sức mạnh vô hạn."
+
+---
+
+## Slide 13: Chiến lược GTM & Traction
+> "Đây không chỉ là ý tưởng. Chúng tôi đã có **10,000+ waitlist users**, **12+ beta partners**, và đang index **1TB+ data mỗi ngày**. Chiến lược GTM: Developer First qua hackathons & SDK miễn phí, Strategic B2B với DEX/CEX/Wallet, và KOC & Retail qua Affiliate & Reward Pool $CLENS."
+
+---
+
+## Slide 14: Đội ngũ Sáng Lập (Core Team)
+> "Đội ngũ chúng tôi kết hợp chuyên môn sâu về Blockchain, AI Engineering và System Architecture. Luis — 10+ năm Software Engineering, chuyên gia System Architecture. Hoàng — AI & Cloud Infrastructure, deep knowledge về Firecracker virtualization. Minh Tú — ex-Product tại top Crypto Exchanges, mạng lưới rộng trong giới VC. Chúng tôi đang nhận được sự quan tâm từ các Tier 1 Crypto Funds & Tech Leaders tại Đông Nam Á."
 
 ---
