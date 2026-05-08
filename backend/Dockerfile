@@ -8,7 +8,9 @@ RUN apk add --no-cache curl git \
     freetype-dev \
     gcc \
     musl-dev \
-    python3-dev
+    python3-dev \
+    # Rust required for cryptography package on arm64
+    rust cargo
 
 # Install Python dependencies
 COPY pyproject.toml uv.lock ./

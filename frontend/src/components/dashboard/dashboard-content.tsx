@@ -457,7 +457,7 @@ export function DashboardContent() {
                   </div>
 
                   {/* Modes Panel - Below chat input, doesn't affect its position */}
-                  {isChainLensAgent && (
+                  {isChainlensAgent && (
                     <div className="px-4 pb-8">
                       <div className="max-w-3xl mx-auto">
                         <ChainLensModesPanel
