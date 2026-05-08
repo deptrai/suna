@@ -10,7 +10,8 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json ./apps/web/package.json
 COPY packages/shared/package.json ./packages/shared/package.json
-RUN pnpm install --filter ./apps/web... --frozen-lockfile
+RUN corepack enable pnpm && corepack prepare pnpm@8.15.8 --activate && \
+    pnpm install --filter ./apps/web... --frozen-lockfile --network-concurrency 1
 
 FROM base AS builder
 WORKDIR /app

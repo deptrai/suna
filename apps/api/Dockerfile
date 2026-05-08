@@ -26,8 +26,8 @@ COPY packages/agent-tunnel ./packages/agent-tunnel
 # Install pnpm and deps for this app + workspace packages it depends on.
 # --shamefully-hoist flattens node_modules (no symlinks) so COPY works on all Docker versions.
 # Include devDeps so drizzle-kit is available for schema push at runtime.
-RUN corepack enable pnpm && \
-    pnpm install --filter ./${SERVICE}... --shamefully-hoist --prod=false --ignore-scripts
+RUN corepack enable pnpm && corepack prepare pnpm@8.15.8 --activate && \
+    pnpm install --filter ./${SERVICE}... --shamefully-hoist --prod=false --ignore-scripts --network-concurrency 1
 
 # ---- Runner Stage ----
 FROM base AS runner
