@@ -27,6 +27,7 @@ FR11: All generated smart contract code or trading bots must pass through a vali
 FR12: Display mandatory legal disclaimers for all investment advice and generated code.
 FR13: Implement Inbound-Only RAG Sync for Tier 3 (On-premise) to receive Market Data without any outbound telemetry.
 FR14: Implement Hold-and-Settle billing sequence (Reserve -> Execute -> Stream -> Settle/Refund -> Release Lock).
+FR15: Support Agnostic Multi-chain code generation without hard-coding specific chains.
 
 ### NonFunctional Requirements
 
@@ -89,6 +90,7 @@ FR11: Epic 3 - Sandbox validation layer (vuln scanning)
 FR12: Epic 1 - Mandatory legal disclaimers
 FR13: Epic 4 - Tier 3 Inbound-Only RAG Sync
 FR14: Epic 2 - Hold-and-Settle billing sequence
+FR15: Epic 3 - Agnostic Multi-chain code generation
 
 ## Epic List
 
@@ -102,7 +104,7 @@ Nền tảng có thể tự động trừ Internal Credits của người dùng 
 
 ### Epic 3: Premium Agent Customization & Execution Sandbox (Tier 2)
 Người dùng Premium có thể tùy biến bot/agent, viết code chiến lược giao dịch và đưa vào Sandbox để backtest an toàn với market data trước khi tương tác với Vibe Trading API.
-**FRs covered:** FR2, FR3, FR6, FR11
+**FRs covered:** FR2, FR3, FR6, FR11, FR15
 
 ### Epic 4: Enterprise Workspaces & Privacy Sync (Tier 3)
 Khách hàng Doanh nghiệp có không gian làm việc nhóm (Team Collaboration) và có thể đồng bộ market data on-premise an toàn với kiến trúc Inbound-Only RAG (Zero-Data-Leakage).
@@ -111,6 +113,13 @@ Khách hàng Doanh nghiệp có không gian làm việc nhóm (Team Collaboratio
 ### Epic 5: Admin Dashboard & Ecosystem Management
 Admin có thể giám sát việc sử dụng Credit trên toàn hệ thống và quản lý các hành động Tokenomics (Burn / Buy-back) thông qua Smart Contract.
 **FRs covered:** FR9
+
+### Epic 6: Chainlens Crypto-Native UI/UX Integration
+Tích hợp giao diện Frontend chuyên biệt cho Web3, bao gồm Web App và Browser Extension (Vigilant Companion), cùng trang Discover AI-Generated và Generative UI Widgets.
+**FRs covered:** FR1
+
+### Epic 7: AI Compute Infrastructure (BYOK, LLM Proxy & Local Ollama)
+Triển khai hạ tầng tính toán phi tập trung cho người dùng, bao gồm BYOK (cung cấp API Key nhận thưởng), cổng Proxy LLM (MaaS - Model as a Service thanh toán bằng token), và kết nối Local Ollama miễn phí.
 
 ## Epic 1: Core AI Assistant & Knowledge Engine (Free Tier)
 
@@ -361,6 +370,19 @@ So that orphaned processes do not consume system memory over time.
 **When** hệ thống giám sát phát hiện
 **Then** lỗi được giới hạn (Partial Failure Isolation) và chỉ cảnh báo trên hệ thống monitor, không làm sập toàn bộ AI Chat.
 
+### Story 3.6: Agnostic Multi-chain Code Generation
+
+As a Quant Trader (Tier 2),
+I want the AI to generate smart contract and trading bot code for various blockchains (EVM, Solana, Move) without hardcoded restrictions,
+So that I can seamlessly deploy strategies across multiple ecosystems using the same conversational interface.
+
+**Acceptance Criteria:**
+
+**Given** người dùng yêu cầu tạo bot giao dịch hoặc smart contract cho một chuỗi bất kỳ (ví dụ: Solana hoặc Ethereum)
+**When** AI sinh code và trả kết quả
+**Then** AI tự động nhận diện ngôn ngữ và framework phù hợp (như Rust/Anchor cho Solana, Solidity cho EVM)
+**And** đoạn code được sinh ra tương thích với hệ sinh thái được yêu cầu mà không bị giới hạn bởi hardcoded logic của hệ thống.
+
 
 ## Epic 4: Enterprise Workspaces & Privacy Sync (Tier 3)
 
@@ -446,9 +468,12 @@ I want to connect my Web3 Wallet (MetaMask, Phantom) instead of just using email
 So that I can authenticate securely and interact with on-chain features seamlessly.
 
 **Acceptance Criteria:**
-- Hệ thống hỗ trợ Connect Wallet qua `wagmi` / `viem`.
-- Người dùng có thể chuyển đổi Network trực tiếp từ UI.
-- Hiển thị ENS (Ethereum Name Service) hoặc avatar nếu có.
+
+**Given** người dùng chưa đăng nhập
+**When** họ click vào Connect Wallet
+**Then** hệ thống hiển thị tùy chọn kết nối qua `wagmi` / `viem` (MetaMask, Phantom)
+**And** cho phép chuyển đổi Network trực tiếp từ UI
+**And** hiển thị ENS hoặc avatar nếu có.
 
 ### Story 6.2: Phát triển Crypto-UI Component Library
 
@@ -457,9 +482,12 @@ I need a robust set of UI components specifically for Crypto,
 So that I can build trading dashboards and chat widgets efficiently.
 
 **Acceptance Criteria:**
-- Có sẵn `TokenCard` hiển thị Price, 24h Change, Market Cap.
-- Có `RiskBadge` để cảnh báo rủi ro hợp đồng thông minh.
-- Có `Sparkline` và `DataGrid` để hiển thị TVL/Yield.
+
+**Given** Frontend Developer cần xây dựng UI
+**When** họ import các UI components từ thư viện
+**Then** họ có thể sử dụng `TokenCard` để hiển thị Price, 24h Change, Market Cap
+**And** sử dụng `RiskBadge` để cảnh báo rủi ro hợp đồng thông minh
+**And** sử dụng `Sparkline` và `DataGrid` để hiển thị TVL/Yield.
 
 ### Story 6.3: Tích hợp Vercel AI SDK Generative UI
 
@@ -468,9 +496,11 @@ I want the AI chat to return interactive widgets (like charts or token cards) in
 So that I can consume complex market data intuitively.
 
 **Acceptance Criteria:**
-- Tích hợp Vercel AI SDK (`ai/rsc` hoặc UI state).
-- Tool calls từ backend được stream thành UI component tương ứng trên trình duyệt.
-- Hỗ trợ `Transaction Simulation Card` với nút bấm thao tác trực tiếp.
+
+**Given** người dùng đang chat với AI
+**When** AI trả về các thông tin thị trường phức tạp hoặc data on-chain
+**Then** backend stream tool calls và Frontend tự động render thành Generative UI component (như biểu đồ, thẻ token)
+**And** hỗ trợ hiển thị `Transaction Simulation Card` với nút bấm thao tác trực tiếp.
 
 ### Story 6.4: Advanced Market Dashboard
 
@@ -479,9 +509,12 @@ I want a dashboard with professional charting tools,
 So that I can analyze DeFiLlama and Nansen data visually.
 
 **Acceptance Criteria:**
-- Tích hợp `TradingView Lightweight Charts` cho nến OHLCV.
-- Tích hợp `Recharts` cho các biểu đồ phân tích đơn giản (TVL, APY).
-- Hiển thị biểu đồ dòng tiền (Smart Money Flow).
+
+**Given** Trader truy cập vào Advanced Market Dashboard
+**When** họ xem thông tin chi tiết của một token
+**Then** hệ thống hiển thị biểu đồ nến OHLCV sử dụng `TradingView Lightweight Charts`
+**And** hiển thị biểu đồ TVL, APY bằng `Recharts`
+**And** hiển thị biểu đồ dòng tiền (Smart Money Flow).
 
 ### Story 6.5: Sandbox IDE & Backtest Visualizer
 
@@ -490,9 +523,11 @@ I want a visual interface to edit bot code and view backtest performance,
 So that I can evaluate AI-generated strategies easily.
 
 **Acceptance Criteria:**
-- Tích hợp `Monaco Editor` cho phép chỉnh sửa code chiến lược.
-- Hiển thị báo cáo hiệu suất (Sharpe Ratio, Max Drawdown).
-- Hiển thị `Equity Curve Chart` so sánh lợi nhuận với Benchmark.
+
+**Given** Quant Trader truy cập Sandbox IDE
+**When** họ viết hoặc chỉnh sửa code chiến lược bằng `Monaco Editor` và chạy backtest
+**Then** hệ thống hiển thị báo cáo hiệu suất (Sharpe Ratio, Max Drawdown)
+**And** hiển thị `Equity Curve Chart` so sánh lợi nhuận với Benchmark.
 
 ### Story 6.6: AI-Generated Discover & News Page
 
@@ -501,10 +536,12 @@ I want an AI-generated Discover page that aggregates news, insights, and warning
 So that I can get real-time alpha insights and early risk warnings globally.
 
 **Acceptance Criteria:**
-- Hệ thống có trang "Discover" hiển thị tin tức tổng hợp tự động.
-- Dữ liệu được trích xuất từ các API tin tức, on-chain data và từ các prompt/câu trả lời ẩn danh của cộng đồng.
-- Cung cấp các thẻ cảnh báo (Risk warnings) và tin nóng (Trending insights) có thể nhấp vào để tương tác tiếp với AI.
-- Mọi user (bao gồm Tier 1 Free) đều có thể xem trang này.
+
+**Given** người dùng truy cập trang Discover
+**When** trang được tải
+**Then** hệ thống hiển thị tin tức tổng hợp tự động từ các API tin tức, on-chain data và insights cộng đồng
+**And** hiển thị các thẻ cảnh báo (Risk warnings) và tin nóng (Trending insights)
+**And** người dùng có thể nhấp vào để tương tác tiếp với AI.
 
 ### Story 6.7: Vigilant Companion Browser Extension
 
@@ -513,8 +550,56 @@ I want a lightweight browser extension that proactively detects tokens across pl
 So that I can quickly assess the safety of a token without leaving the page I am browsing.
 
 **Acceptance Criteria:**
-- Extension có khả năng scan DOM để detect các text pattern là token address (VD: `0x...` hoặc `$TOKEN`).
-- Khi hover vào token, hiện ra một Tooltip giao diện Kính mờ (Glassmorphism) chứa Trust Score (Xanh/Đỏ/Vàng) và 1-2 cảnh báo rủi ro quan trọng.
-- Extension có một Side Panel thu gọn cho phép chat nhanh với AI Assistant.
-- Extension yêu cầu đăng nhập và tự động đồng bộ (sync) với tài khoản người dùng trên web để đưa ra insights cá nhân hóa.
-- Có nút "Expand" để người dùng mở rộng sang phiên bản Web App đầy đủ khi cần phân tích sâu (Code Sandbox, Charts).
+
+**Given** người dùng cài đặt và đăng nhập vào Vigilant Companion Browser Extension
+**When** họ lướt các trang web (X, Dexscreener) và hover vào token address hoặc `$TOKEN`
+**Then** extension scan DOM và hiển thị Tooltip chứa Trust Score cùng cảnh báo rủi ro
+**And** cung cấp Side Panel để chat nhanh với AI Assistant
+**And** đồng bộ insights cá nhân hóa với tài khoản web
+**And** cung cấp nút "Expand" để mở rộng sang Web App đầy đủ.
+
+## Epic 7: AI Compute Infrastructure (BYOK, LLM Proxy & Local Ollama)
+
+Triển khai hạ tầng tính toán AI mở rộng, hướng tới Web3 DePIN-lite, nơi người dùng có quyền tự chủ về compute model, đóng góp dữ liệu để nhận token và thanh toán dịch vụ AI linh hoạt.
+
+### Story 7.1: BYOK (Bring Your Own Key) & Data Contribution Rewards
+
+As a User,
+I want to use my own OpenAI/Anthropic API key for chatting and optionally allow Chainlens to store my query context anonymously,
+So that I don't have to pay internal credits and can earn $CLENS tokens for my data contribution.
+
+**Acceptance Criteria:**
+
+**Given** user nhập API key hợp lệ trong Settings
+**When** gọi AI Chat
+**Then** hệ thống sử dụng key của user (không trừ Credit)
+**And** tính toán "Proof of Contribution" dựa trên tokens sử dụng
+**And** tự động thưởng $CLENS token cho user theo tỷ lệ quy định.
+
+### Story 7.2: LLM Proxy Gateway & Model-as-a-Service (MaaS)
+
+As a Developer or User,
+I want to deposit USDT or $CLENS to buy API access to commercial models and self-hosted models (Qwen 3.6 27B) via an OpenRouter-like interface,
+So that I can integrate Chainlens intelligence into my own tools at a competitive price.
+
+**Acceptance Criteria:**
+
+**Given** user đã nạp $CLENS hoặc USDT
+**When** họ gọi `/v1/chat/completions` của proxy gateway
+**Then** request được định tuyến qua Hold-and-Settle billing middleware
+**And** tính phí theo token consumption
+**And** request thành công với model được yêu cầu (GPT-4o, Claude 3.5, hoặc Qwen 3.6 27B).
+
+### Story 7.3: Local Compute Integration via Ollama
+
+As a Privacy-conscious User,
+I want to connect Chainlens directly to my local Ollama instance (localhost:11434),
+So that I can run completely private, free analysis with Zero-Data-Leakage.
+
+**Acceptance Criteria:**
+
+**Given** user chạy sẵn Ollama ở máy cá nhân
+**When** họ thiết lập `localhost:11434` làm provider trong Web App
+**Then** Chainlens gửi prompt trực tiếp tới local model (không đi qua backend)
+**And** kết quả được stream trực tiếp lên UI với độ trễ tối thiểu
+**And** không lưu trữ bất kỳ data nào lên server của Chainlens.

@@ -43,7 +43,7 @@ story_location: _bmad-output/implementation-artifacts
 
 development_status:
   epic-1: in-progress
-  1-1-khoi-tao-project-lifecycle-hooks: in-progress
+  1-1-khoi-tao-project-lifecycle-hooks: completed
   1-2-ai-chat-endpoint-legal-disclaimers: backlog
   1-3-background-data-workers: backlog
   1-4-ai-tools-external-integrations: backlog
@@ -61,6 +61,7 @@ development_status:
   3-3-secure-sandbox-execution-environment: backlog
   3-4-backtesting-with-vibe-trading-api: backlog
   3-5-sandbox-resource-management-monitors: backlog
+  3-6-agnostic-multi-chain-code-generation: backlog
   epic-3-retrospective: optional
   epic-4: backlog
   4-1-team-collaboration-workspaces: backlog
@@ -79,3 +80,8 @@ development_status:
   6-6-ai-generated-discover-news-page: backlog
   6-7-vigilant-companion-browser-extension: in-progress
   epic-6-retrospective: optional
+  epic-7: backlog
+  7-1-byok-bring-your-own-key-data-contribution-rewards: backlog
+  7-2-llm-proxy-gateway-model-as-a-service-maas: backlog
+  7-3-local-compute-integration-via-ollama: backlog
+  epic-7-retrospective: optional

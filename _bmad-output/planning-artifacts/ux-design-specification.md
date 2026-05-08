@@ -147,7 +147,49 @@ graph TD
     C --> H[Private Output to User]
 ```
 
-### 6.4 Admin Ops & Token Burn Flow (Đạt - Internal)
+### 6.4 BYOK & Proof of Contribution Flow (Data Contributor)
+Luồng này cho phép người dùng tự dùng API Key cá nhân để được miễn phí sử dụng Chainlens và nhận thưởng token từ việc đóng góp dữ liệu.
+
+```mermaid
+graph TD
+    A[User opens Settings] --> B[Enter OpenAI/Anthropic API Key]
+    B --> C[Ask AI via Chat]
+    C --> D[Chainlens routes request via User's Key]
+    D --> E[Anonymize & index query context]
+    E --> F[Calculate Token Consumption]
+    F --> G[Reward $CLENS to User Wallet]
+```
+
+### 6.5 LLM Proxy Gateway Flow (MaaS Developer)
+Luồng cung cấp API Model-as-a-Service, user nạp tiền và mua API model thương mại hoặc model tự host (Qwen) qua interface chuẩn OpenRouter.
+
+```mermaid
+graph TD
+    A[Developer opens Developer Portal] --> B[Deposit USDT / $CLENS]
+    B --> C[Generate API Key]
+    C --> D[Send `/v1/chat/completions` request]
+    D --> E[Hold-and-Settle Billing Middleware]
+    E --> F{Select Provider}
+    F -->|Commercial| G[OpenAI / Anthropic]
+    F -->|Self-hosted| H[Chainlens Qwen 3.6 27B]
+    G --> I[Return Response & Deduct Credits]
+    H --> I
+```
+
+### 6.6 Local Compute Privacy Flow (Ollama User)
+Luồng Zero-Data-Leakage tuyệt đối khi user dùng thẳng Local LLM để xử lý câu hỏi.
+
+```mermaid
+graph TD
+    A[User opens Compute Settings] --> B[Select "Local Ollama"]
+    B --> C[Test connection to `localhost:11434`]
+    C --> D[User asks AI about contract code]
+    D --> E[Browser sends request directly to localhost]
+    E --> F[Ollama streams response to UI]
+    F --> G[Zero data sent to Chainlens server]
+```
+
+### 6.7 Admin Ops & Token Burn Flow (Đạt - Internal)
 Luồng vận hành hệ thống Tokenomics, đảm bảo sự minh bạch và tạo động lực tăng giá trị cho $CLENS token.
 
 ```mermaid
@@ -162,7 +204,7 @@ graph TD
     G --> H[Update Tokenomics Stats]
 ```
 
-### 6.5 Journey Patterns
+### 6.8 Journey Patterns
 Xuyên suốt các luồng trên, chúng ta chuẩn hóa các UX pattern sau:
 - **State-based UI Transition:** Tự động chuyển đổi giữa Ambient Mode (nhẹ nhàng, trong suốt) sang Alert Mode (cảnh báo cao, viền sáng) khi có rủi ro, áp dụng mạnh ở Flow 1.
 - **Progressive Disclosure:** Ở Flow 2, chỉ hiển thị UI cơ bản khi prompt, sau đó mới mở rộng ra Monaco Editor và các biểu đồ KPI sau khi backtest thành công.
@@ -212,6 +254,20 @@ Dựa trên các user journeys đã thiết kế, đây là các component đặ
 *   **Purpose:** Biểu đồ thể hiện kết quả sinh lời của chiến lược backtest hoặc token metrics.
 *   **Usage:** Đi kèm sau khi Vibe Sandbox thực thi xong hoặc trong báo cáo phân tích sâu.
 *   **Anatomy:** Biểu đồ đường (Line chart), Overlay Benchmark (để so sánh), Tooltip khi hover (hiển thị PnL tại thời điểm).
+
+#### Compute Settings Panel
+*   **Purpose:** Nơi người dùng cấu hình hạ tầng tính toán họ muốn dùng (Cloud, BYOK, Local).
+*   **Usage:** Nằm trong màn hình Profile / Settings.
+*   **Anatomy:** 
+    *   **Tab BYOK:** Input field ẩn API Key, thống kê lượng Token đã dùng và $CLENS token đã claim được.
+    *   **Tab Local Ollama:** Input cho localhost endpoint, nút "Test Connection" kèm trạng thái Ping (Green/Red).
+*   **States:** Disconnected, Connected (Active), Syncing Rewards.
+
+#### Proxy Developer Dashboard
+*   **Purpose:** Giao diện OpenRouter-style cho Developer quản lý API key dùng proxy của Chainlens.
+*   **Usage:** Nằm trong portal riêng `/developers`.
+*   **Anatomy:** Biểu đồ Bar chart (mức tiêu thụ theo Model), Data table quản lý API Keys (Create/Revoke), Nút "Top-up Credits" (Web3 Payment Modal).
+*   **States:** Active, Depleted Balance (khoá API).
 
 ### 7.3 Component Implementation Strategy
 - **Headless + Tailwind v4:** Xây dựng component logic bằng Radix UI và dùng Tailwind v4 `@theme` để tiêm các biến CSS (Deep Space Black, Frosted Glass, Neon Colors).

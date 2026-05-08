@@ -91,8 +91,9 @@ Chainlens (Chain = Blockchain + Lens = Soi dữ liệu) định vị là một n
 - **Tier 2 Customization:** Mở rộng giao diện tạo bot/agent cá nhân hóa mạnh mẽ hơn cho Premium.
 - **Tier 3 Packaging:** Đóng gói giải pháp On-premise + Local LLM + Team Workspace cho Enterprise (kèm API/Credit Gateway để đồng bộ RAG Data).
 - **Advanced Code Gen:** Liên tục nâng cấp bộ sinh code dựa trên model LLM tiên tiến nhất.
-- **Crypto-Specific LLM & MaaS (Model-as-a-Service):** Phát triển một model LLM riêng biệt, chuyên sâu về dự đoán và phân tích kiến thức Crypto (có thể fine-tune từ open-source hoặc phát triển mới). Model này sẽ tận dụng nguồn dữ liệu chuẩn, chất lượng cao được sinh ra từ quá trình research của AI cùng với sự đồng ý chia sẻ từ tập người dùng Free và Premium. Từ đó, cung cấp dịch vụ LLM chuyên ngành cho cộng đồng và đối tác.
-
+- **Bring Your Own Key (BYOK) & Proof of Contribution:** Cơ chế bootstrapping thông minh giải quyết bài toán chi phí API khổng lồ ban đầu. User sử dụng API Key cá nhân (OpenAI/Anthropic) để tương tác với hệ thống. Chainlens sẽ đo lường chi phí này và thưởng lại cho user bằng `$CLENS` token (Airdrop) dựa trên lượng token tiêu thụ và chất lượng dữ liệu họ đóng góp vào kho RAG.
+- **Local Compute (Ollama Integration):** Hỗ trợ user kết nối Local LLM thông qua Ollama. User có thể chạy các model open-source ngay trên máy cá nhân để sử dụng Chainlens hoàn toàn miễn phí và đảm bảo quyền riêng tư tuyệt đối (Zero-Data-Leakage), dữ liệu không gửi qua bất kỳ API bên thứ ba nào.
+- **LLM Proxy & Crypto-Specific MaaS (Model-as-a-Service):** Đóng vòng lặp Tokenomics bằng cách biến Chainlens thành "OpenRouter cho Web3". User nạp `$CLENS` hoặc USDT để mua quyền truy cập ẩn danh vào các model thương mại, hoặc mua quyền truy cập vào model tự host (Qwen 3.6 27B) với giá cực rẻ. Dự án sẽ thu biên lợi nhuận (Profit Margin) cao từ việc bán model do chính mình host.
 ## 5. User Journeys (Hành trình Người dùng)
 
 ### 5.1. Hành trình 1: Minh - Nhà Đầu tư Cá nhân (Tier 1) & "Airdrop Hunter"
