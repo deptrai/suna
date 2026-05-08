@@ -41,15 +41,16 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to Docker Hub
+      - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Re-tag all images
         run: |
-          for IMAGE in epsilon/epsilon-api epsilon/epsilon-frontend epsilon/computer; do
+          for IMAGE in ghcr.io/deptrai/epsilon-api ghcr.io/deptrai/epsilon-frontend ghcr.io/deptrai/computer; do
             echo "Re-tagging $IMAGE:dev-latest → $IMAGE:${{ env.VERSION }} + $IMAGE:latest"
 
             # Use buildx imagetools to create new tags from existing multi-arch manifest
@@ -64,9 +65,9 @@ jobs:
       - name: Summary
         run: |
           echo "### Re-tagged dev-latest → v${{ env.VERSION }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- \`epsilon/epsilon-api:${{ env.VERSION }}\` (multi-arch)" >> "$GITHUB_STEP_SUMMARY"
-          echo "- \`epsilon/epsilon-frontend:${{ env.VERSION }}\` (multi-arch)" >> "$GITHUB_STEP_SUMMARY"
-          echo "- \`epsilon/computer:${{ env.VERSION }}\` (multi-arch)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`ghcr.io/deptrai/epsilon-api:${{ env.VERSION }}\` (multi-arch)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`ghcr.io/deptrai/epsilon-frontend:${{ env.VERSION }}\` (multi-arch)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`ghcr.io/deptrai/computer:${{ env.VERSION }}\` (multi-arch)" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "_Zero rebuilds — re-tagged from dev-latest manifests._" >> "$GITHUB_STEP_SUMMARY"
 
@@ -86,15 +87,15 @@ jobs:
           timeout: 600s
           script: |
             set -e
-            if [ ! -d ~/chainlens ]; then
-              git clone https://github.com/epsilon-ai/chainlens.git ~/chainlens
+            if [ ! -d ~/suna ]; then
+              git clone https://github.com/deptrai/suna.git ~/suna
             fi
-            cd ~/chainlens
+            cd ~/suna
             git -c fetch.recurseSubmodules=false fetch origin main
             git reset --hard origin/main
             git submodule sync --recursive
             git submodule update --init --recursive --remote
-            PREBUILT_IMAGE="epsilon/epsilon-api:${{ env.VERSION }}" bash scripts/deploy-zero-downtime.sh
+            PREBUILT_IMAGE="ghcr.io/deptrai/epsilon-api:${{ env.VERSION }}" bash scripts/deploy-zero-downtime.sh
 
       - name: Summary
         run: |
@@ -154,9 +155,9 @@ jobs:
             echo ""
             echo "### Docker Images"
             echo ""
-            echo "- \`epsilon/computer:${{ env.VERSION }}\`"
-            echo "- \`epsilon/epsilon-api:${{ env.VERSION }}\`"
-            echo "- \`epsilon/epsilon-frontend:${{ env.VERSION }}\`"
+            echo "- \`ghcr.io/deptrai/computer:${{ env.VERSION }}\`"
+            echo "- \`ghcr.io/deptrai/epsilon-api:${{ env.VERSION }}\`"
+            echo "- \`ghcr.io/deptrai/epsilon-frontend:${{ env.VERSION }}\`"
           } > /tmp/release-notes.md
           cat /tmp/release-notes.md
 
@@ -172,7 +173,7 @@ jobs:
           gh release create "v${{ env.VERSION }}" \
             --title "v${{ env.VERSION }} — ${{ env.TITLE }}" \
             --notes-file /tmp/release-notes.md \
-            --repo epsilon-ai/chainlens
+            --repo deptrai/suna
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
