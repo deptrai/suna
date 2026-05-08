@@ -1,0 +1,105 @@
+.chainlens-token-highlight {
+  border-bottom: 1px dashed #3b82f6;
+  cursor: help;
+  background-color: rgba(59, 130, 246, 0.1);
+  border-radius: 2px;
+  padding: 0 2px;
+  transition: background-color 0.2s ease;
+}
+
+.chainlens-token-highlight:hover {
+  background-color: rgba(59, 130, 246, 0.2);
+}
+
+#chainlens-tooltip-container {
+  position: absolute;
+  z-index: 2147483647; /* max z-index */
+  display: none;
+  pointer-events: auto; /* allow hovering over tooltip */
+}
+
+.chainlens-tooltip {
+  background-color: #1e293b;
+  color: #f8fafc;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 12px;
+  width: 280px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 14px;
+}
+
+.chainlens-tooltip .header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  border-bottom: 1px solid #334155;
+  padding-bottom: 8px;
+}
+
+.chainlens-tooltip .token-name {
+  font-weight: 600;
+  font-size: 16px;
+  color: #60a5fa;
+}
+
+.chainlens-tooltip .badge {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.chainlens-tooltip .badge.risk-analyzing {
+  background-color: #475569;
+  color: #f1f5f9;
+}
+
+.chainlens-tooltip .badge.risk-safe {
+  background-color: #064e3b;
+  color: #34d399;
+}
+
+.chainlens-tooltip .badge.risk-high {
+  background-color: #7f1d1d;
+  color: #f87171;
+}
+
+.chainlens-tooltip .content {
+  color: #cbd5e1;
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.chainlens-tooltip .content p {
+  margin: 4px 0;
+}
+
+.chainlens-tooltip .footer {
+  display: flex;
+  justify-content: center;
+}
+
+.chainlens-tooltip .expand-btn {
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  width: 100%;
+  transition: background-color 0.2s ease;
+}
+
+.chainlens-tooltip .expand-btn:hover {
+  background-color: #1d4ed8;
+}
+
+.chainlens-tooltip.error {
+  color: #f87171;
+  text-align: center;
+}

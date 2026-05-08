@@ -437,7 +437,7 @@ So that I can manage the $CLENS native token ecosystem based on system revenue.
 
 ## Epic 6: Chainlens Crypto-Native UI/UX Integration
 
-Tích hợp giao diện Frontend chuyên biệt cho Web3, bao gồm kết nối ví, biểu đồ nâng cao, và các widget động sinh ra từ AI.
+Tích hợp giao diện Frontend chuyên biệt cho Web3, cải tiến từ nền tảng web hiện có (không phải thiết kế mới hoàn toàn), bao gồm kết nối ví, biểu đồ nâng cao, trang tin tức AI-generated và các widget động sinh ra từ AI.
 
 ### Story 6.1: Hệ thống Web3 Auth & Wallet Management
 
@@ -493,3 +493,28 @@ So that I can evaluate AI-generated strategies easily.
 - Tích hợp `Monaco Editor` cho phép chỉnh sửa code chiến lược.
 - Hiển thị báo cáo hiệu suất (Sharpe Ratio, Max Drawdown).
 - Hiển thị `Equity Curve Chart` so sánh lợi nhuận với Benchmark.
+
+### Story 6.6: AI-Generated Discover & News Page
+
+As a User (Free or Premium),
+I want an AI-generated Discover page that aggregates news, insights, and warnings from various sources and from the community's interactions with the AI assistant,
+So that I can get real-time alpha insights and early risk warnings globally.
+
+**Acceptance Criteria:**
+- Hệ thống có trang "Discover" hiển thị tin tức tổng hợp tự động.
+- Dữ liệu được trích xuất từ các API tin tức, on-chain data và từ các prompt/câu trả lời ẩn danh của cộng đồng.
+- Cung cấp các thẻ cảnh báo (Risk warnings) và tin nóng (Trending insights) có thể nhấp vào để tương tác tiếp với AI.
+- Mọi user (bao gồm Tier 1 Free) đều có thể xem trang này.
+
+### Story 6.7: Vigilant Companion Browser Extension
+
+As a User,
+I want a lightweight browser extension that proactively detects tokens across platforms (X, Dexscreener, CoinMarketCap) and shows an AI-powered Trust Score tooltip,
+So that I can quickly assess the safety of a token without leaving the page I am browsing.
+
+**Acceptance Criteria:**
+- Extension có khả năng scan DOM để detect các text pattern là token address (VD: `0x...` hoặc `$TOKEN`).
+- Khi hover vào token, hiện ra một Tooltip giao diện Kính mờ (Glassmorphism) chứa Trust Score (Xanh/Đỏ/Vàng) và 1-2 cảnh báo rủi ro quan trọng.
+- Extension có một Side Panel thu gọn cho phép chat nhanh với AI Assistant.
+- Extension yêu cầu đăng nhập và tự động đồng bộ (sync) với tài khoản người dùng trên web để đưa ra insights cá nhân hóa.
+- Có nút "Expand" để người dùng mở rộng sang phiên bản Web App đầy đủ khi cần phân tích sâu (Code Sandbox, Charts).

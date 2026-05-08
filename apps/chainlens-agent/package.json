@@ -1,0 +1,19 @@
+{
+  "name": "chainlens-agent",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^3.0.26",
+    "@hono/zod-validator": "^0.7.6",
+    "ai": "^6.0.77",
+    "hono": "^4.12.18",
+    "zod": "^4.4.3"
+  }
+}

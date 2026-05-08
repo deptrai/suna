@@ -1,0 +1,45 @@
+{
+  "manifest_version": 3,
+  "name": "Chainlens Vigilant Companion",
+  "version": "1.0.0",
+  "description": "Chainlens AI Assistant - Detects tokens and provides quick risk analysis on X, DexScreener, and more.",
+  "permissions": ["storage", "activeTab", "scripting"],
+  "host_permissions": [
+    "*://*.twitter.com/*",
+    "*://*.x.com/*",
+    "*://*.facebook.com/*",
+    "*://*.dexscreener.com/*",
+    "*://*.coinmarketcap.com/*",
+    "*://*.coingecko.com/*"
+  ],
+  "action": {
+    "default_popup": "popup/index.html",
+    "default_title": "Chainlens Companion"
+  },
+  "side_panel": {
+    "default_path": "sidepanel/index.html"
+  },
+  "background": {
+    "service_worker": "background/index.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.twitter.com/*",
+        "*://*.x.com/*",
+        "*://*.facebook.com/*",
+        "*://*.dexscreener.com/*",
+        "*://*.coinmarketcap.com/*",
+        "*://*.coingecko.com/*"
+      ],
+      "js": ["content/index.js"],
+      "css": ["content/styles.css"]
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

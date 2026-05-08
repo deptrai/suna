@@ -37,15 +37,16 @@ workflowType: prd
 * **Loại hình:** SaaS B2B / Enterprise / Blockchain Web3 (AI Advisory, Code Gen & Backtesting).
 * **Domain:** Fintech (Crypto Intelligence & Algorithmic Strategy Validation).
 * **Độ phức tạp:** Medium-High.
-* **Context:** Brownfield (Sử dụng lõi Chainlens hiện có, refactor thành kiến trúc 3 tầng).
+* **Context:** Brownfield (Cải tiến UI/UX dựa trên nền tảng web code hiện có, không thiết kế mới hoàn toàn. Refactor thành kiến trúc 3 tầng để tối ưu và mở rộng).
 
 ## 2. Product Vision & Moat (Lợi thế cạnh tranh)
 Chainlens (Chain = Blockchain + Lens = Soi dữ liệu) định vị là một nền tảng tư vấn và tự động hóa sinh code dành riêng cho lĩnh vực crypto, hoạt động theo mô hình Non-custodial (tuyệt đối không lưu trữ Private Key của người dùng). Được sinh ra từ Web3, phục vụ cộng đồng Web3, mục tiêu là cung cấp các công cụ "Crypto-Native" mà các mô hình AI đa dụng hiện nay không thể đáp ứng.
 
 **Các Lợi thế Cạnh tranh (Moat) cốt lõi:**
-1. **Bảo mật & Quyền riêng tư Cấp Doanh nghiệp (Tier 3 - Enterprise):** Khác với ChatGPT hay Claude yêu cầu setup thủ công và đẩy dữ liệu lên cloud, Chainlens cung cấp giải pháp đóng gói sẵn để deploy trực tiếp trên server/VPC của khách hàng, tích hợp Local LLM. Dữ liệu research và chiến lược giao dịch được giữ kín hoàn toàn (Zero-knowledge/Trustless), chính Chainlens cũng không có quyền truy cập.
-2. **Crypto-Native Tooling & Hiệu ứng Bánh đà Dữ liệu (Data Flywheel):** Hệ thống sở hữu bộ công cụ chuyên biệt cho crypto, được cộng đồng tinh chỉnh. Quan trọng hơn, thông qua hoạt động của lượng lớn người dùng ở Tier 1 (Free/Shared) và Tier 2 (Premium), Chainlens liên tục crawl, index dữ liệu dự án và on-chain mới nhất. Các worker sẽ cập nhật, làm dày ngữ cảnh (RAG) và fine-tune tool mỗi ngày. Đây là kho dữ liệu sống động mà các LLM chung chung không bao giờ có.
-3. **Môi trường Automated Backtesting (Tier 2 - Premium):** Tích hợp Sandbox cô lập (microVM/Firecracker) cho phép tự động kiểm thử, xác thực chiến lược/bot do AI sinh ra ngay trên dữ liệu thị trường trước khi trả kết quả cho người dùng.
+1. **Trang Tin tức & Cảnh báo AI-Generated (Vượt trội CoinMarketCap):** Một trang "Discover" tin tức sinh bởi AI (tương tự Perplexity) tổng hợp từ đa nguồn và từ chính quá trình tương tác của cộng đồng người dùng với AI Chat Assistant. Thông tin này hiển thị real-time, public cho mọi user (kể cả Free), tạo ra sức mạnh cảnh báo rủi ro đám đông tức thì.
+2. **Bảo mật & Quyền riêng tư Cấp Doanh nghiệp (Tier 3 - Enterprise):** Khác với ChatGPT hay Claude yêu cầu setup thủ công và đẩy dữ liệu lên cloud, Chainlens cung cấp giải pháp đóng gói sẵn để deploy trực tiếp trên server/VPC của khách hàng, tích hợp Local LLM. Dữ liệu research và chiến lược giao dịch được giữ kín hoàn toàn (Zero-knowledge/Trustless), chính Chainlens cũng không có quyền truy cập.
+3. **Crypto-Native Tooling & Hiệu ứng Bánh đà Dữ liệu (Data Flywheel):** Hệ thống sở hữu bộ công cụ chuyên biệt cho crypto, được cộng đồng tinh chỉnh. Quan trọng hơn, thông qua hoạt động của lượng lớn người dùng ở Tier 1 (Free/Shared) và Tier 2 (Premium), Chainlens liên tục crawl, index dữ liệu dự án và on-chain mới nhất. Các worker sẽ cập nhật, làm dày ngữ cảnh (RAG) và fine-tune tool mỗi ngày. Đây là kho dữ liệu sống động mà các LLM chung chung không bao giờ có.
+4. **Môi trường Automated Backtesting (Tier 2 - Premium):** Tích hợp Sandbox cô lập (microVM/Firecracker) cho phép tự động kiểm thử, xác thực chiến lược/bot do AI sinh ra ngay trên dữ liệu thị trường trước khi trả kết quả cho người dùng.
 
 ## 3. Success Criteria
 
@@ -68,7 +69,9 @@ Chainlens (Chain = Blockchain + Lens = Soi dữ liệu) định vị là một n
 
 ### 4.1. MVP (Minimum Viable Product)
 - **Ưu tiên Tier 1:** Tận dụng tối đa core Chainlens hiện tại để phục vụ tập người dùng Free.
-- **Giao diện Crypto-Native (Frontend Features):**
+- **Giao diện Crypto-Native (Frontend Features - Cải tiến từ nền tảng cũ):**
+  - **Browser Extension (Vigilant Companion):** Dạng extension nhẹ tích hợp thẳng vào trình duyệt (Side Panel). Tự động detect token/smart contract khi người dùng lướt X, Facebook, Dexscreener, CoinMarketCap. Cung cấp cảnh báo rủi ro nhanh qua tooltip và đồng bộ lịch sử chat với tài khoản web chính. Cung cấp nút Expand để mở full web app khi cần phân tích sâu.
+  - **AI-Generated News & Discover Page:** Trang tin tức thông minh tổng hợp tự động từ nhiều nguồn và từ dữ liệu tương tác ẩn danh của các user với AI. Cung cấp cảnh báo sớm (early warnings) và alpha insights cho tất cả người dùng (bao gồm Free Tier), mục tiêu vượt qua trải nghiệm truyền thống của CoinMarketCap.
   - **Web3 Authentication Module:** UI kết nối ví đa nền tảng (MetaMask, WalletConnect, Phantom), UI chuyển đổi mạng (Ethereum, Arbitrum, Solana), hiển thị số dư, rút gọn địa chỉ ví và ENS Avatar.
   - **Generative AI Chat Widgets:** Tích hợp Vercel AI SDK để trả về UI Components thay vì text (Token Info Widget, Smart Contract Risk Badge, Transaction Simulation Card).
   - **DeFi & Market Dashboards (DeFiLlama/Nansen Data):** Bảng Yield / TVL đa cột có thể sort, kèm Sparklines. Đồ thị luân chuyển vốn (Smart Money Flow Visualizer).
