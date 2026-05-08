@@ -1,3 +1,62 @@
-<svg width="164" height="140" viewBox="0 0 164 140" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M139.737 139.53H163.055C163.055 109.932 147.261 84.0225 123.642 69.7694C147.261 55.5163 163.054 29.6068 163.054 0.0085907H139.736C139.736 28.0165 119.67 51.4471 93.2922 56.9406V0.0085907H69.9773V56.9406C43.4754 51.5428 23.5331 28.1045 23.5331 0.0085907H0.21529C0.21529 29.6068 16.0088 55.5163 39.6282 69.7694C16.0086 84.0225 0.214773 109.932 0.214773 139.53H23.5325C23.5325 111.434 43.4754 87.996 69.9773 82.5981V139.556H93.2922V82.598C119.794 87.9957 139.737 111.434 139.737 139.53Z" fill="black"/>
+<svg width="2400" height="800" viewBox="0 0 2400 800" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <g id="hex">
+      <polygon points="24,0 12,-20.78 -12,-20.78 -24,0 -12,20.78 12,20.78" fill="#F8FAFC" stroke="#0284C7" stroke-width="4"/>
+      <circle cx="0" cy="0" r="6" fill="#0284C7" />
+    </g>
+    <g id="blade">
+      <path d="M 25,0 L 12.5,21.65 L -30,95.4 A 100,100 0 0,0 86.6,50 Z" fill="#F1F5F9" stroke="#0284C7" stroke-width="2" />
+    </g>
+  </defs>
+  <g transform="translate(400, 400)">
+    <circle cx="0" cy="0" r="280" fill="#E0F2FE" opacity="0.4" />
+    <g>
+      <circle cx="0" cy="0" r="130" fill="none" stroke="#CBD5E1" stroke-width="3" />
+      <circle cx="0" cy="0" r="160" fill="none" stroke="#94A3B8" stroke-width="4" opacity="0.6" />
+      <circle cx="0" cy="0" r="180" fill="none" stroke="#0284C7" stroke-width="2" />
+      <circle cx="0" cy="0" r="280" fill="none" stroke="#0284C7" stroke-width="4" />
+      <path d="M 280,0 L 155.88,90 M 280,0 L 155.88,-90 M 242.49,140 L 180,0 M 242.49,140 L 90,155.88 M 140,242.49 L 155.88,90 M 140,242.49 L 0,180 M 0,280 L 90,155.88 M 0,280 L -90,155.88 M -140,242.49 L 0,180 M -140,242.49 L -155.88,90 M -242.49,140 L -90,155.88 M -242.49,140 L -180,0 M -280,0 L -155.88,90 M -280,0 L -155.88,-90 M -242.49,-140 L -180,0 M -242.49,-140 L -90,-155.88 M -140,-242.49 L -155.88,-90 M -140,-242.49 L 0,-180 M 0,-280 L -90,-155.88 M 0,-280 L 90,-155.88 M 140,-242.49 L 0,-180 M 140,-242.49 L 155.88,-90 M 242.49,-140 L 90,-155.88 M 242.49,-140 L 180,0" stroke="#94A3B8" stroke-width="2" fill="none" opacity="0.8"/>
+      <path d="M 280,0 L 180,0 M 0,280 L 0,180 M -280,0 L -180,0 M 0,-280 L 0,-180" stroke="#0284C7" stroke-width="4" fill="none"/>
+      <circle cx="180" cy="0" r="7" fill="#0284C7" />
+      <circle cx="155.88" cy="90" r="7" fill="#0284C7" />
+      <circle cx="90" cy="155.88" r="7" fill="#0284C7" />
+      <circle cx="0" cy="180" r="7" fill="#0284C7" />
+      <circle cx="-90" cy="155.88" r="7" fill="#0284C7" />
+      <circle cx="-155.88" cy="90" r="7" fill="#0284C7" />
+      <circle cx="-180" cy="0" r="7" fill="#0284C7" />
+      <circle cx="-155.88" cy="-90" r="7" fill="#0284C7" />
+      <circle cx="-90" cy="-155.88" r="7" fill="#0284C7" />
+      <circle cx="0" cy="-180" r="7" fill="#0284C7" />
+      <circle cx="90" cy="-155.88" r="7" fill="#0284C7" />
+      <circle cx="155.88" cy="-90" r="7" fill="#0284C7" />
+      <circle cx="242.49" cy="140" r="10" fill="#0284C7" />
+      <circle cx="140" cy="242.49" r="10" fill="#0284C7" />
+      <circle cx="-140" cy="242.49" r="10" fill="#0284C7" />
+      <circle cx="-242.49" cy="140" r="10" fill="#0284C7" />
+      <circle cx="-242.49" cy="-140" r="10" fill="#0284C7" />
+      <circle cx="-140" cy="-242.49" r="10" fill="#0284C7" />
+      <circle cx="140" cy="-242.49" r="10" fill="#0284C7" />
+      <circle cx="242.49" cy="-140" r="10" fill="#0284C7" />
+      <use href="#hex" x="280" y="0" />
+      <use href="#hex" x="0" y="280" />
+      <use href="#hex" x="-280" y="0" />
+      <use href="#hex" x="0" y="-280" />
+    </g>
+    <circle cx="0" cy="0" r="100" fill="#FFFFFF" stroke="#0284C7" stroke-width="6" />
+    <use href="#blade" transform="rotate(0)" />
+    <use href="#blade" transform="rotate(60)" />
+    <use href="#blade" transform="rotate(120)" />
+    <use href="#blade" transform="rotate(180)" />
+    <use href="#blade" transform="rotate(240)" />
+    <use href="#blade" transform="rotate(300)" />
+    <path d="M -70,-65 A 95 95 0 0 1 70,-65 A 80 80 0 0 0 -70,-65 Z" fill="#E2E8F0" />
+    <path d="M -50,85 A 95 95 0 0 0 50,85 A 85 85 0 0 1 -50,85 Z" fill="#E2E8F0" />
+    <circle cx="-40" cy="-40" r="15" fill="#E2E8F0" />
+  </g>
+  <g transform="translate(800, 400)">
+    <text x="0" y="60" font-family="system-ui, -apple-system, sans-serif" font-size="240" font-weight="800" text-anchor="start" letter-spacing="10">
+      <tspan fill="#0F172A">CHAIN</tspan><tspan fill="#0284C7">LENS</tspan>
+    </text>
+    <text x="15" y="180" font-family="system-ui, -apple-system, sans-serif" font-size="70" font-weight="600" fill="#64748B" text-anchor="start" letter-spacing="24">AGENT</text>
+  </g>
 </svg>
