@@ -1,0 +1,21 @@
+{
+  "name": "chainlens-proxy",
+  "version": "1.0.0",
+  "description": "Chainlens MaaS Proxy Gateway (MVP)",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --hot src/index.ts",
+    "start": "bun run src/index.ts"
+  },
+  "dependencies": {
+    "hono": "^4.4.0",
+    "ai": "^3.1.0",
+    "@ai-sdk/openai": "^3.0.0",
+    "@ai-sdk/anthropic": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.0",
+    "typescript": "^5.4.0"
+  }
+}
