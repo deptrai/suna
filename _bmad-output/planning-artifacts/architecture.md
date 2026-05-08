@@ -25,7 +25,8 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 ### Lộ trình Phát hành (Roadmap / Release Milestones)
 - **Phase 1 (MVP):**
   - Khởi tạo kiến trúc 3-Tier cơ bản (API Gateway, Agent Orchestrator, Core DB).
-  - Tích hợp Vercel AI SDK cho tính năng Advisory cơ bản.
+  - Phát triển Browser Extension (Vigilant Companion) & Discover Page cho Free Tier.
+  - Tích hợp Vercel AI SDK cho tính năng Advisory (Generative UI).
   - Áp dụng Sandbox sơ khởi cho Code Gen.
   - Mô hình Free/Premium (Single-Tokenomics).
 - **Phase 2 (Growth):**
@@ -43,7 +44,8 @@ Web Application & API Backend (Brownfield Project / Monorepo Extension) based on
 
 1. **Vercel AI SDK + Next.js (App Router)** - Mở rộng UI cho Chainlens tại `apps/web`.
 2. **ElysiaJS / Hono + Bun (Chainlens Core Template)** - Thiết kế Agent Orchestrator & API Gateway tại `apps/api`.
-3. **Chainlens Internal Monorepo Boilerplate** - Tái sử dụng Database connection pool, Type Safety end-to-end.
+3. **Browser Extension (Vite/React)** - Tích hợp Side Panel và Content Script tiêm Shadow DOM tại `apps/extension`.
+4. **Chainlens Internal Monorepo Boilerplate** - Tái sử dụng Database connection pool, Type Safety end-to-end.
 
 ### Selected Starter: Option C - Monorepo Independent Deployment (`apps/chainlens-agent`)
 
@@ -102,9 +104,18 @@ pnpm add ai @ai-sdk/openai hono
 - **Căn cứ (Rationale):** Đảm bảo an toàn bảo mật tuyệt đối khi chạy Code Generation từ LLM. Sandbox được trừu tượng hóa qua interface `SandboxProvider` — cho phép swap backend giữa Deno subprocess/gVisor (Phase 1 MVP, nhẹ, chạy được trên Mac) và Firecracker (Phase 2, full kernel isolation). Service code KHÔNG phụ thuộc trực tiếp vào Firecracker API.
 - **Lưu ý:** Interface tồn tại chủ yếu cho **testability** (mock injection trong unit tests), không phải vì cần runtime polymorphism ở Phase 1.
 
-### Frontend Architecture
-- **Quyết định:** Sử dụng **Vercel AI SDK Hooks** (v6+).
-- **Căn cứ (Rationale):** SDK v6 hỗ trợ MCP (Model Context Protocol) và built-in streaming/structured output, loại bỏ 80% boilerplate code khi render response real-time. Dùng kết hợp React Query cho các static data.
+### Multi-chain Strategy
+- **Quyết định:** Agnostic Multi-chain Support (Không hardcode blockchain logic).
+- **Căn cứ (Rationale):** Sử dụng khả năng tự nhận diện của LLM để sinh code cho nhiều hệ sinh thái khác nhau (EVM, Solana, Move, v.v.). Hệ thống Agent và Sandbox Runtime sẽ được thiết kế linh hoạt, không bị trói buộc (agnostic) vào bất kỳ ngôn ngữ lập trình smart contract cụ thể nào.
+
+### LLM Proxy & Token Utility (Model-as-a-Service)
+- **Quyết định:** Tích hợp LLM Proxy Gateway và Self-Hosted Model (Qwen 3.6 27B) thanh toán bằng Crypto (`$CLENS` token).
+- **Căn cứ (Rationale):** Hoàn thiện chuỗi giá trị Tokenomics (Data Flywheel -> Token Sink). Hệ thống đóng vai trò như một "OpenRouter cho Web3", cung cấp quyền truy cập LLM ẩn danh. Proxy Gateway sẽ thực hiện routing request, track input/output tokens chính xác, và trừ credits trực tiếp từ ví off-chain của user. Kiến trúc Hold-and-Settle với Redis Lock Manager sẽ được áp dụng trực tiếp cho luồng Proxy này để đảm bảo tốc độ cao và chống Race Condition.
+
+### Frontend & Extension Architecture
+- **Quyết định 1 (Web UI):** Sử dụng **Vercel AI SDK Hooks** (v6+) kết hợp **Generative UI**. Tool calls từ backend được stream và render trực tiếp thành các React components (Token Info, Risk Badge).
+- **Quyết định 2 (Extension):** Sử dụng kiến trúc React/Vite cho `apps/extension`. Giao diện tiêm vào host website (như X, DexScreener) bắt buộc dùng **Shadow DOM** để cách ly CSS (đảm bảo style Epsilon Cyber-Glass không bị xung đột). Background scripts quản lý Auth sync với Web App.
+- **Căn cứ (Rationale):** SDK v6 hỗ trợ MCP và built-in streaming/structured output, kết hợp Generative UI mang lại trải nghiệm Crypto-native mượt mà. Extension cô lập style giúp UI hoạt động ổn định trên mọi nền tảng thứ ba.
 
 ### Decision Impact Analysis
 
