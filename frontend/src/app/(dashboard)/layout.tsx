@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import DashboardLayoutContent from '@/components/dashboard/layout-content';
 
 interface DashboardLayoutProps {
