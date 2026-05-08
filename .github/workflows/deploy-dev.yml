@@ -286,28 +286,29 @@ jobs:
     runs-on: ubuntu-latest
     environment: dev
     steps:
-      - name: Zero-downtime deploy via SSH
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USERNAME }}
-          key: ${{ secrets.AWS_DEV_KEY }}
-          port: 22
-          timeout: 300s
-          script: |
-            set -e
-            cd ~/chainlens
-            git -c fetch.recurseSubmodules=false fetch origin main
-            git reset --hard origin/main
-            git submodule sync --recursive
-            git submodule update --init --recursive --remote
-            PREBUILT_IMAGE="${{ needs.merge-api.outputs.image }}" bash scripts/deploy-zero-downtime.sh
-
+      - name: Trigger Dokploy Webhook
+        run: |
+          curl -X GET "${{ secrets.DOKPLOY_API_WEBHOOK }}"
       - name: Summary
         if: always()
         run: |
-          echo "### Deployed API → **dev**" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Deployed API → **dev** via Dokploy" >> "$GITHUB_STEP_SUMMARY"
           echo "Image: \`${{ needs.merge-api.outputs.image }}\`" >> "$GITHUB_STEP_SUMMARY"
+
+  # ── Deploy Frontend to dev VPS ─────────────────────────────────────────────
+  deploy-frontend:
+    name: Deploy Frontend to dev
+    needs: merge-frontend
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Trigger Dokploy Webhook
+        run: |
+          curl -X GET "${{ secrets.DOKPLOY_FRONTEND_WEBHOOK }}"
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Deployed Frontend → **dev** via Dokploy" >> "$GITHUB_STEP_SUMMARY"
 
   # ── Async: Fire off dev snapshot in a separate workflow run ─────────────
   # Uses gh workflow run (workflow_dispatch) to trigger a standalone
