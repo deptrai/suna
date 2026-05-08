@@ -80,13 +80,13 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
 
   const getModelDisplayName = (model: ModelOption) => {
     if (model.recommended) {
-      return `${model.name} (Recommended)`;
+      return `${model.label} (Recommended)`;
     }
-    return model.name;
+    return model.label;
   };
 
   const getModelIcon = (model: ModelOption) => {
-    if (model.name.includes('Auto') || model.name.includes('🤖')) {
+    if (model.label.includes('Auto') || model.label.includes('🤖')) {
       return <Brain className="w-4 h-4 text-blue-500" />;
     }
     return <Cpu className="w-4 h-4" />;
