@@ -112,6 +112,10 @@ pnpm add ai @ai-sdk/openai hono
 - **Quyết định:** Tích hợp LLM Proxy Gateway và Self-Hosted Model (Qwen 3.6 27B) thanh toán bằng Crypto (`$CLENS` token).
 - **Căn cứ (Rationale):** Hoàn thiện chuỗi giá trị Tokenomics (Data Flywheel -> Token Sink). Hệ thống đóng vai trò như một "OpenRouter cho Web3", cung cấp quyền truy cập LLM ẩn danh. Proxy Gateway sẽ thực hiện routing request, track input/output tokens chính xác, và trừ credits trực tiếp từ ví off-chain của user. Kiến trúc Hold-and-Settle với Redis Lock Manager sẽ được áp dụng trực tiếp cho luồng Proxy này để đảm bảo tốc độ cao và chống Race Condition.
 
+### Decentralized Local Compute (Ollama Integration)
+- **Quyết định:** Hỗ trợ kết nối Local LLM thông qua Ollama (User host model tại thiết bị cá nhân).
+- **Căn cứ (Rationale):** Tối đa hóa việc tận dụng năng lực tính toán (Compute) nhàn rỗi từ thiết bị của user. Thay vì gọi API tốn phí, user có thể chạy Ollama ở local và trỏ Chainlens về `localhost`. Nâng cao hơn, user có thể tham gia vào **Compute Pool** (đóng vai trò như worker node) để chia sẻ năng lực tính toán cho mạng lưới và nhận thưởng token `$CLENS`. Kiến trúc này yêu cầu Web App/Extension có khả năng bypass CORS và định tuyến traffic về máy local của user một cách bảo mật.
+
 ### Frontend & Extension Architecture
 - **Quyết định 1 (Web UI):** Sử dụng **Vercel AI SDK Hooks** (v6+) kết hợp **Generative UI**. Tool calls từ backend được stream và render trực tiếp thành các React components (Token Info, Risk Badge).
 - **Quyết định 2 (Extension):** Sử dụng kiến trúc React/Vite cho `apps/extension`. Giao diện tiêm vào host website (như X, DexScreener) bắt buộc dùng **Shadow DOM** để cách ly CSS (đảm bảo style Epsilon Cyber-Glass không bị xung đột). Background scripts quản lý Auth sync với Web App.
