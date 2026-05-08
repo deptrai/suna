@@ -1,0 +1,355 @@
+name: Deploy Dev
+
+# Builds multi-arch Docker images using native runners (amd64 + arm64 in parallel),
+# deploys API to dev VPS. Path-filtered — only builds what changed.
+#
+# Auto-deploy on push is controlled by the repo variable AUTO_DEPLOY_DEV.
+# Set to 'true' to enable, anything else to disable. Manual dispatch always works.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/api/**'
+      - 'apps/web/**'
+      - 'core/**'
+      - 'packages/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  # ── Gate: skip on push if auto-deploy is off ─────────────────────────────
+  gate:
+    name: Check auto-deploy
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || vars.AUTO_DEPLOY_DEV == 'true'
+    steps:
+      - run: echo "Auto-deploy enabled or manual trigger"
+
+  # ── Detect what changed ──────────────────────────────────────────────────
+  detect-changes:
+    name: Detect changes
+    needs: gate
+    runs-on: ubuntu-latest
+    outputs:
+      api_changed: ${{ steps.filter.outputs.api }}
+      frontend_changed: ${{ steps.filter.outputs.frontend }}
+      computer_changed: ${{ steps.filter.outputs.computer }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Path filter
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            api:
+              - 'apps/api/**'
+              - 'packages/**'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+            frontend:
+              - 'apps/web/**'
+              - 'packages/shared/**'
+              - 'pnpm-lock.yaml'
+            computer:
+              - 'core/**'
+      - name: Summary
+        run: |
+          echo "### Changes detected" >> "$GITHUB_STEP_SUMMARY"
+          echo "- API: ${{ steps.filter.outputs.api }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Frontend: ${{ steps.filter.outputs.frontend }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Computer: ${{ steps.filter.outputs.computer }}" >> "$GITHUB_STEP_SUMMARY"
+
+  # ── Build API (amd64 + arm64 in parallel) ──────────────────────────────────
+  build-api-amd64:
+    name: API (amd64)
+    needs: detect-changes
+    if: needs.detect-changes.outputs.api_changed == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: false }
+      - run: git submodule sync --recursive && git submodule update --init --recursive --remote
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push
+        run: |
+          SHA8="${GITHUB_SHA::8}"
+          docker build --file apps/api/Dockerfile --build-arg SERVICE=apps/api \
+            --tag "ghcr.io/deptrai/epsilon-api:dev-${SHA8}-amd64" \
+            --tag "ghcr.io/deptrai/epsilon-api:dev-latest-amd64" .
+          docker push "ghcr.io/deptrai/epsilon-api:dev-${SHA8}-amd64"
+          docker push "ghcr.io/deptrai/epsilon-api:dev-latest-amd64"
+
+  build-api-arm64:
+    name: API (arm64)
+    needs: detect-changes
+    if: needs.detect-changes.outputs.api_changed == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: false }
+      - run: git submodule sync --recursive && git submodule update --init --recursive --remote
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push
+        run: |
+          SHA8="${GITHUB_SHA::8}"
+          docker build --file apps/api/Dockerfile --build-arg SERVICE=apps/api \
+            --tag "ghcr.io/deptrai/epsilon-api:dev-${SHA8}-arm64" \
+            --tag "ghcr.io/deptrai/epsilon-api:dev-latest-arm64" .
+          docker push "ghcr.io/deptrai/epsilon-api:dev-${SHA8}-arm64"
+          docker push "ghcr.io/deptrai/epsilon-api:dev-latest-arm64"
+
+  merge-api:
+    name: API manifest
+    needs: [build-api-amd64, build-api-arm64]
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+    steps:
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create multi-arch manifest
+        id: meta
+        run: |
+          SHA8="${GITHUB_SHA::8}"
+          docker manifest create "ghcr.io/deptrai/epsilon-api:dev-${SHA8}" \
+            "ghcr.io/deptrai/epsilon-api:dev-${SHA8}-amd64" \
+            "ghcr.io/deptrai/epsilon-api:dev-${SHA8}-arm64"
+          docker manifest push "ghcr.io/deptrai/epsilon-api:dev-${SHA8}"
+
+          docker manifest create "ghcr.io/deptrai/epsilon-api:dev-latest" \
+            "ghcr.io/deptrai/epsilon-api:dev-latest-amd64" \
+            "ghcr.io/deptrai/epsilon-api:dev-latest-arm64"
+          docker manifest push "ghcr.io/deptrai/epsilon-api:dev-latest"
+
+          echo "image=ghcr.io/deptrai/epsilon-api:dev-${SHA8}" >> "$GITHUB_OUTPUT"
+
+  # ── Build Frontend (amd64 + arm64 in parallel) ─────────────────────────────
+  build-frontend-amd64:
+    name: Frontend (amd64)
+    needs: detect-changes
+    if: needs.detect-changes.outputs.frontend_changed == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: false }
+      - run: git submodule sync --recursive && git submodule update --init --recursive --remote
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push
+        run: |
+          SHA8="${GITHUB_SHA::8}"
+          docker build --file apps/web/Dockerfile \
+            --tag "ghcr.io/deptrai/epsilon-frontend:dev-${SHA8}-amd64" \
+            --tag "ghcr.io/deptrai/epsilon-frontend:dev-latest-amd64" .
+          docker push "ghcr.io/deptrai/epsilon-frontend:dev-${SHA8}-amd64"
+          docker push "ghcr.io/deptrai/epsilon-frontend:dev-latest-amd64"
+
+  build-frontend-arm64:
+    name: Frontend (arm64)
+    needs: detect-changes
+    if: needs.detect-changes.outputs.frontend_changed == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: false }
+      - run: git submodule sync --recursive && git submodule update --init --recursive --remote
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push
+        run: |
+          SHA8="${GITHUB_SHA::8}"
+          docker build --file apps/web/Dockerfile \
+            --tag "ghcr.io/deptrai/epsilon-frontend:dev-${SHA8}-arm64" \
+            --tag "ghcr.io/deptrai/epsilon-frontend:dev-latest-arm64" .
+          docker push "ghcr.io/deptrai/epsilon-frontend:dev-${SHA8}-arm64"
+          docker push "ghcr.io/deptrai/epsilon-frontend:dev-latest-arm64"
+
+  merge-frontend:
+    name: Frontend manifest
+    needs: [build-frontend-amd64, build-frontend-arm64]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create multi-arch manifest
+        run: |
+          SHA8="${GITHUB_SHA::8}"
+          docker manifest create "ghcr.io/deptrai/epsilon-frontend:dev-${SHA8}" \
+            "ghcr.io/deptrai/epsilon-frontend:dev-${SHA8}-amd64" \
+            "ghcr.io/deptrai/epsilon-frontend:dev-${SHA8}-arm64"
+          docker manifest push "ghcr.io/deptrai/epsilon-frontend:dev-${SHA8}"
+
+          docker manifest create "ghcr.io/deptrai/epsilon-frontend:dev-latest" \
+            "ghcr.io/deptrai/epsilon-frontend:dev-latest-amd64" \
+            "ghcr.io/deptrai/epsilon-frontend:dev-latest-arm64"
+          docker manifest push "ghcr.io/deptrai/epsilon-frontend:dev-latest"
+
+  # ── Build Computer (amd64 + arm64 in parallel) ────────────────────────────
+  build-computer-amd64:
+    name: Computer (amd64)
+    needs: detect-changes
+    if: needs.detect-changes.outputs.computer_changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: false }
+      - run: git submodule sync --recursive && git submodule update --init --recursive --remote
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push
+        run: |
+          SHA8="${GITHUB_SHA::8}"
+          docker build --file core/docker/Dockerfile \
+            --build-arg "SANDBOX_VERSION=dev-${SHA8}" \
+            --tag "ghcr.io/deptrai/computer:dev-${SHA8}-amd64" \
+            --tag "ghcr.io/deptrai/computer:dev-latest-amd64" .
+          docker push "ghcr.io/deptrai/computer:dev-${SHA8}-amd64"
+          docker push "ghcr.io/deptrai/computer:dev-latest-amd64"
+
+  build-computer-arm64:
+    name: Computer (arm64)
+    needs: detect-changes
+    if: needs.detect-changes.outputs.computer_changed == 'true'
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: false }
+      - run: git submodule sync --recursive && git submodule update --init --recursive --remote
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push
+        run: |
+          SHA8="${GITHUB_SHA::8}"
+          docker build --file core/docker/Dockerfile \
+            --build-arg "SANDBOX_VERSION=dev-${SHA8}" \
+            --tag "ghcr.io/deptrai/computer:dev-${SHA8}-arm64" \
+            --tag "ghcr.io/deptrai/computer:dev-latest-arm64" .
+          docker push "ghcr.io/deptrai/computer:dev-${SHA8}-arm64"
+          docker push "ghcr.io/deptrai/computer:dev-latest-arm64"
+
+  merge-computer:
+    name: Computer manifest
+    needs: [build-computer-amd64, build-computer-arm64]
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+    steps:
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create multi-arch manifest
+        id: meta
+        run: |
+          SHA8="${GITHUB_SHA::8}"
+          docker manifest create "ghcr.io/deptrai/computer:dev-${SHA8}" \
+            "ghcr.io/deptrai/computer:dev-${SHA8}-amd64" \
+            "ghcr.io/deptrai/computer:dev-${SHA8}-arm64"
+          docker manifest push "ghcr.io/deptrai/computer:dev-${SHA8}"
+
+          docker manifest create "ghcr.io/deptrai/computer:dev-latest" \
+            "ghcr.io/deptrai/computer:dev-latest-amd64" \
+            "ghcr.io/deptrai/computer:dev-latest-arm64"
+          docker manifest push "ghcr.io/deptrai/computer:dev-latest"
+
+          echo "tag=dev-${SHA8}" >> "$GITHUB_OUTPUT"
+
+  # ── Deploy API to dev VPS ──────────────────────────────────────────────────
+  deploy-api:
+    name: Deploy API to dev
+    needs: merge-api
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Trigger Dokploy Webhook
+        run: |
+          curl -X GET "${{ secrets.DOKPLOY_API_WEBHOOK }}"
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Deployed API → **dev** via Dokploy" >> "$GITHUB_STEP_SUMMARY"
+          echo "Image: \`${{ needs.merge-api.outputs.image }}\`" >> "$GITHUB_STEP_SUMMARY"
+
+  # ── Deploy Frontend to dev VPS ─────────────────────────────────────────────
+  deploy-frontend:
+    name: Deploy Frontend to dev
+    needs: merge-frontend
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Trigger Dokploy Webhook
+        run: |
+          curl -X GET "${{ secrets.DOKPLOY_FRONTEND_WEBHOOK }}"
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Deployed Frontend → **dev** via Dokploy" >> "$GITHUB_STEP_SUMMARY"
+
+  # ── Async: Fire off dev snapshot in a separate workflow run ─────────────
+  trigger-dev-snapshot:
+    name: Trigger dev snapshot (async)
+    needs: merge-computer
+    runs-on: ubuntu-latest
+    if: vars.AUTO_SNAPSHOT_DEV != 'false'
+    steps:
+      - name: Dispatch snapshot-build workflow
+        env:
+          GH_TOKEN: ${{ secrets.GH_RELEASE_PAT || secrets.GITHUB_TOKEN }}
+        run: |
+          SHA8="${GITHUB_SHA::8}"
+          gh workflow run snapshot-build.yml \
+            --repo ${{ github.repository }} \
+            --ref main \
+            -f version="dev-${SHA8}" \
+            -f target=dev
+          echo "### Dev snapshot dispatched (async)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Version: \`dev-${SHA8}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Target: **dev**" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Runs separately — deploy-dev is not blocked" >> "$GITHUB_STEP_SUMMARY"
