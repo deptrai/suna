@@ -65,6 +65,13 @@ dump.rdb
 .cwc/
 test/
 
+# Playwright / test artifacts
+test-results/
+playwright-report/
+
+# One-off scripts
+update-logos.sh
+
 # Core runtime data
 .epsilon/
 apps/api/.epsilon-data/
