@@ -1,11 +1,23 @@
 ---
-stepsCompleted: [1, 2, 3, 4, 5, 6, 7]
-inputDocuments: ['_bmad-output/planning-artifacts/prd.md', '_bmad-output/project-context.md']
+stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8]
+lastStep: 8
+status: 'complete'
+completedAt: '2026-05-09'
+inputDocuments:
+  - _bmad-output/project-context.md
+  - docs/project-overview.md
+  - docs/epsilon-agent-os-framework-cloud-spec.md
+  - docs/instance-three-layer-health-and-actions-spec.md
+  - docs/development-release-guide.md
+  - docs/admin-panel-handoff.md
+  - docs/config-degradation-visual-handover.md
+  - docs/justavps-restart-hardening-spec.md
+  - docs/opencode-config-failsafe-spec.md
 workflowType: 'architecture'
 project_name: 'chainlens'
 user_name: 'Luisphan'
-date: '2026-05-08'
-validation_status: 'READY_FOR_IMPLEMENTATION'
+date: '2026-05-09'
+validation_status: 'IN_PROGRESS'
 ---
 
 # Architecture Decision Document
@@ -13,338 +25,987 @@ validation_status: 'READY_FOR_IMPLEMENTATION'
 _This document builds collaboratively through step-by-step discovery. Sections are appended as we work through each architectural decision together._
 
 ## Step 2: Project Context Analysis
-*(Chấp nhận từ kết quả Elicitation - Red Team vs Blue Team Analysis)*
 
-### Ràng buộc về Functional & Non-Functional Requirements (NFRs)
-- **Bảo mật Sandbox:** Thiết lập `No outbound network`, `Strict Resource Quotas` (CPU/RAM cho MicroVM) và `Output Sanitization` để tránh buffer overflow trên Host.
-- **Bảo mật dữ liệu (Enterprise Tier 3):** Triển khai cơ chế `Data Provenance` để chống Data Poisoning (đầu độc dữ liệu RAG), đảm bảo chỉ đồng bộ các dữ liệu có độ uy tín cao.
-- **Tính ổn định tài chính:** Bổ sung `Distributed Locking` (dùng Redis) cho cơ chế trừ Credits để chống Race Condition khi stream LLM.
-- **Tính sẵn sàng (Reliability):** Áp dụng `Circuit Breakers` cho toàn bộ các kết nối API từ bên thứ 3 (Nansen, DeFiLlama) để đảm bảo TTFB < 2s.
-- **Tính tương thích:** Phải tích hợp liền mạch với Core Chainlens hiện tại (Bun, TypeScript, Hono/Elysia-like, Drizzle ORM, Supabase, Next.js).
+### What This Project Is
 
-### Lộ trình Phát hành (Roadmap / Release Milestones)
-- **Phase 1 (MVP):**
-  - Khởi tạo kiến trúc 3-Tier cơ bản (API Gateway, Agent Orchestrator, Core DB).
-  - Phát triển Browser Extension (Vigilant Companion) & Discover Page cho Free Tier.
-  - Tích hợp Vercel AI SDK cho tính năng Advisory (Generative UI).
-  - Áp dụng Sandbox sơ khởi cho Code Gen.
-  - Mô hình Free/Premium (Single-Tokenomics).
-- **Phase 2 (Growth):**
-  - Nâng cấp Sandbox (Firecracker MicroVM) với Strict Quotas và No outbound network.
-  - Ra mắt tính năng Backtesting chuyên sâu.
-  - Triển khai Dual-Tokenomics và cơ chế thanh toán/locking qua Redis.
-  - Tính năng Enterprise: Data Provenance và Zero-Data-Leakage.
+**Epsilon** là một Agent OS Platform — cho phép user build, deploy và run custom AI background agents theo mô hình "Vercel for agents": một git repo định nghĩa behavior, `epsilon deploy` ship nó thành always-on worker với filesystem, channels, triggers, integrations, và persistent memory.
+
+**Primary Domain:** AI Platform / Agent Deployment Infrastructure
+**Complexity:** High — distributed system với 3 separate deployment units
+**Type:** Brownfield Monorepo (mở rộng incremental)
+
+---
+
+### Architecture Overview — 3 Components
+
+| Component | Docker Image | Source | Role |
+|---|---|---|---|
+| **API** | `epsilon/epsilon-api` | `apps/api/` | Backend: auth, billing, sandbox lifecycle, LLM proxy |
+| **Frontend** | `epsilon/epsilon-frontend` | `apps/web/` | Next.js web UI |
+| **Computer** | `epsilon/computer` | `core/` | Sandbox container: OpenCode + Epsilon Master + tools |
+
+---
+
+### 1. Sandbox Container (`core/` → `epsilon/computer`)
+
+Mỗi user/project có 1 sandbox container riêng, chạy trên JustaVPS. Bên trong là môi trường Alpine Linux với **s6-services** supervisor quản lý các process:
+
+| Service | Port | Role |
+|---|---|---|
+| **OpenCode** | :4096 | AI agent runtime thực sự — nhận message, gọi LLM, gọi tools |
+| **Epsilon Master** | :8000 | Reverse proxy trước OpenCode: auth gate + billing gating |
+| Chromium | — | Browser tool cho agent |
+| sshd | — | SSH access |
+| agent-browser-session | — | Browser session management |
+| lss-sync | — | Local state sync |
+| static-web | — | Static file serving |
+
+**OpenCode là AI brain** — chạy agent loop (nhận prompt → gọi LLM → gọi tools → stream kết quả). Epsilon Master là guard layer trước nó.
+
+---
+
+### 2. Backend API (`apps/api/` — Hono + Bun)
+
+`apps/api` KHÔNG chạy AI agent loop. Đây là platform layer:
+
+#### 2.1 Auth Layer
+- `middleware/auth.ts`: Supabase JWT + API key + combined auth
+- `oauth/`: OAuth flows
+- `access-control/`, `teams/`: RBAC + multi-workspace
+
+#### 2.2 Sandbox Lifecycle Management (`platform/`)
+- Provider abstraction: JustaVPS (production), local Docker (dev)
+- Pool management (`pool/`): pre-warmed sandbox instances
+- Provisioning poller, sandbox health monitor, auto-update loop
+
+#### 2.3 Sandbox Proxy (`sandbox-proxy/`)
+- Route `/:sandboxId/:port/*` → forward tới sandbox container đang chạy
+- Auth token injection, preview sharing, Daytona + JustaVPS provider support
+
+#### 2.4 LLM Proxy + Billing (`router/routes/llm.ts`, `router/services/billing.ts`)
+- OpenCode trong sandbox route LLM calls QUA `apps/api/router/llm`
+- 3 billing modes:
+  1. Epsilon token → inject Epsilon's OpenRouter key → bill at 1.2× markup
+  2. User's key + Epsilon token → passthrough → bill at 0.1× platform fee
+  3. User's key only → pure passthrough, no billing
+- Streaming: `tee()` stream → 1 nhánh về client, 1 nhánh đọc usage data để billing
+
+#### 2.5 Integrations (`integrations/`)
+- OAuth credential store cho 3rd-party connectors (Pipedream pattern)
+- Notify sandbox khi connector sync
+
+#### 2.6 Queue + Background Jobs (`queue/`)
+- BullMQ-based background job processing
+
+#### 2.7 Các Module Khác
+- `billing/`: Stripe + RevenueCat subscription management
+- `admin/`: Administrative endpoints
+- `secrets/`, `repositories/`: Credential + API key management
+- `router/routes/proxy.ts`: General LLM provider proxy (31KB)
+- `router/routes/search-web.ts`, `search-image.ts`: Web/image search endpoints
+- `router/services/serper.ts`, `tavily.ts`: Search API client wrappers
+
+---
+
+### 3. Frontend (`apps/web/` — Next.js 15)
+
+#### 3.1 Kết nối tới Sandbox
+- `@opencode-ai/sdk` v2 (`lib/opencode-sdk.ts`): singleton `OpencodeClient` trỏ vào sandbox URL đang active
+- `authenticatedFetch`: inject auth token cho mọi request
+- Frontend kết nối trực tiếp tới sandbox (qua `apps/api` sandbox-proxy)
+
+#### 3.2 Tab-based Multi-session UI
+- `stores/tab-store`: quản lý nhiều tab session đồng thời
+- Catch-all route `[...catchAll]/page.tsx` resolve pathname → tab descriptor
+
+#### 3.3 Thread/Chat Components
+- `components/thread/tool-views/`: render kết quả tool calls từ OpenCode
+- `components/session/`: session layout, chat input, error banner
+
+#### 3.4 Dashboard Routes
+```
+app/(dashboard)/
+├── agents/          # Agent configuration
+├── sessions/        # Session management
+├── tools/           # Tools marketplace/config
+├── skills/          # Skills management
+├── connectors/      # OAuth integrations
+├── memory/          # Agent memory management
+├── terminal/        # Embedded terminal
+├── browser/         # Embedded browser view
+├── files/           # Filesystem browser
+├── marketplace/     # Agent/skill marketplace
+└── admin/           # Admin panel
+```
+
+---
+
+### 4. Shared Packages (`packages/`)
+
+| Package | Purpose |
+|---|---|
+| `packages/db` | Drizzle ORM schema + Supabase migrations |
+| `packages/shared` | Common TypeScript types + utilities |
+| `packages/agent-tunnel` | Network relay cho agent connections |
+| `packages/epsilon-ocx-registry` | Cloudflare Workers registry cho OCX/agent capabilities |
+| `packages/voice` | Python FastAPI voice processing service |
+
+---
+
+### 5. Infrastructure: 3-Layer Health Model
+
+```
+Layer 1 — Host VM (JustaVPS machine)
+  Health: machine status (ready/stopped/provisioning/error)
+  Actions: start_host, reboot_host, stop_host
+  → Chỉ dùng khi machine offline hoàn toàn
+
+Layer 2 — Workload Service (Docker on host)
+  Health: systemctl justavps-docker.service, justavps-workload container
+  Actions: start_workload, restart_workload, stop_workload
+  → DEFAULT repair action cho hầu hết incidents
+
+Layer 3 — Core Runtime (inside container)
+  Health: localhost:8000, session/status, OpenCode readiness
+  Actions: restart individual services (epsilon-master, opencode)
+  → Dùng khi container up nhưng services bên trong bị lỗi
+```
+
+---
+
+### 6. Request Flow — AI Chat
+
+```
+1. User gõ tin nhắn (apps/web)
+         ↓
+2. @opencode-ai/sdk → HTTP/SSE tới sandbox URL
+         ↓
+3. apps/api sandbox-proxy: /:sandboxId/8000/* → container:8000
+         ↓
+4. Epsilon Master (container:8000) → auth check → OpenCode:4096
+         ↓
+5. OpenCode processes:
+   a. Gọi LLM → qua apps/api/router/llm → OpenRouter
+      (billing check + deduct tại apps/api)
+   b. Gọi tools: bash, file, browser, MCP servers...
+   c. Stream kết quả ngược về frontend via SSE
+         ↓
+6. apps/web renders tool-views từ stream
+```
+
+---
+
+### 7. Deployment Environments
+
+| Env | Frontend | API | Sandboxes |
+|---|---|---|---|
+| **Dev** | Vercel (main branch) | dev-api.epsilon.com (VPS) | JustaVPS dev org |
+| **Prod** | Vercel (production) | new-api.epsilon.com (VPS) | JustaVPS prod org |
+
+**Local dev:**
+- Frontend: localhost:3000 (`pnpm dev:frontend`)
+- API: localhost:8008 (`pnpm dev:api`)
+- Sandbox: Docker local (`pnpm dev:sandbox`)
+- DB: Supabase local (`supabase start`)
+
+---
+
+### 8. Technical Constraints
+
+- **Bun runtime** cho backend — KHÔNG dùng Node.js-specific APIs
+- **Additive-only migrations** — Drizzle schema, chỉ thêm, không rename/drop
+- **Strict TypeScript** — no `any`
+- **Next.js App Router** — `"use client"` chỉ ở leaf nodes
+- **pnpm workspaces** — import shared code qua `@epsilon/shared`, `@epsilon/db`
+- **OpenCode là black box** — tương tác qua HTTP/SSE protocol, KHÔNG import internals
 
 ## Step 3: Starter Template Evaluation
 
 ### Primary Technology Domain
-Web Application & API Backend (Brownfield Project / Monorepo Extension) based on project requirements analysis.
 
-### Starter Options Considered
+**Brownfield Monorepo Extension** — không chọn starter mới. Mọi quyết định công nghệ đã được thực thi trong codebase hiện tại.
 
-1. **Vercel AI SDK + Next.js (App Router)** - Mở rộng UI cho Chainlens tại `apps/web`.
-2. **ElysiaJS / Hono + Bun (Chainlens Core Template)** - Thiết kế Agent Orchestrator & API Gateway tại `apps/api`.
-3. **Browser Extension (Vite/React)** - Tích hợp Side Panel và Content Script tiêm Shadow DOM tại `apps/extension`.
-4. **Chainlens Internal Monorepo Boilerplate** - Tái sử dụng Database connection pool, Type Safety end-to-end.
+### Existing Technology Foundation
 
-### Selected Starter: Option C - Monorepo Independent Deployment (`apps/chainlens-agent`)
+| Layer | Technology | Status |
+|---|---|---|
+| Backend Runtime | Bun | ✅ Production |
+| Backend Framework | Hono (TypeScript) | ✅ Production |
+| Frontend | Next.js 15 (App Router) | ✅ Production |
+| Database ORM | Drizzle ORM | ✅ Production |
+| Database Host | Supabase (PostgreSQL) | ✅ Production |
+| Auth | Supabase JWT + API Keys | ✅ Production |
+| AI SDK | Vercel AI SDK (`@ai-sdk/*`) | ✅ Production |
+| Container | Docker + Alpine + s6 | ✅ Production |
+| Sandbox Runtime | OpenCode + Epsilon Master | ✅ Production |
+| Styling | TailwindCSS + Radix primitives | ✅ Production |
+| Editor | CodeMirror 6 | ✅ Production |
+| Mobile | Expo + NativeWind | ✅ Production |
+| Desktop | Tauri (Rust) | ✅ Production |
+| Package Manager | pnpm workspaces | ✅ Production |
+| Monorepo Tooling | Turborepo | ✅ Production |
+| Build (Frontend) | Next.js Turbopack | ✅ Production |
+| Testing (Backend) | Bun test | ✅ Production |
+| Testing (E2E) | Playwright | ✅ Production |
+| Observability | Sentry + Logtail | ✅ Production |
+| VPS Provider | JustaVPS | ✅ Production |
+| LLM Gateway | OpenRouter | ✅ Production |
+| Edge Registry | Cloudflare Workers | ✅ Production |
+| Voice Backend | Python + FastAPI | ✅ Production |
 
-**Rationale for Selection:**
-Vì Chainlens là nền tảng độc lập, việc tái sử dụng `pnpm workspace` là bắt buộc để chia sẻ Drizzle Schemas và Utilities.
-Để tuân thủ Best Practices cho các tác vụ AI (Heavy I/O, Long-polling, Sandbox communication) mà không làm ảnh hưởng (block event loop / exhaust connection pool) của các REST API user-facing tại `apps/api`, chúng ta sẽ thiết lập một module độc lập mang tên `apps/chainlens-agent` (sử dụng Hono/Bun). Nó vẫn nằm trong monorepo nhưng được triển khai ở container riêng biệt (Fault Isolation).
+### Architectural Decisions Already Made
 
-**Initialization Command (Dependencies Addition):**
+**Language & Runtime:**
+- TypeScript strict mode trên toàn bộ codebase
+- Bun native APIs cho backend (KHÔNG Node.js `fs`, `path`, `crypto`)
+- Python chỉ cho `packages/voice`
 
-```bash
-# Thêm Vercel AI SDK vào Frontend
-cd apps/web && pnpm add ai @ai-sdk/react zod @ai-sdk/openai
+**Code Organization:**
+- `apps/*`: end-user applications (api, web, mobile, desktop)
+- `packages/*`: shared libraries (`@epsilon/db`, `@epsilon/shared`, `@epsilon/agent-tunnel`)
+- `core/`: sandbox infrastructure (Docker, s6-services, OpenCode config)
+- Path aliases: `@/*` → `./src/*` trong `apps/web` và `apps/api`
 
-# Tạo thư mục mới cho Agent Orchestrator và cài đặt dependencies
-mkdir -p apps/chainlens-agent && cd apps/chainlens-agent
-bun init
-pnpm add ai @ai-sdk/openai hono
-```
+**Database:**
+- Tất cả DB operations qua Drizzle ORM schemas tại `packages/db`
+- Migrations: additive-only (chỉ thêm table/column, KHÔNG rename/drop)
 
-**Architectural Decisions Provided by Starter:**
+**Frontend Patterns:**
+- Next.js App Router (`app/` directory)
+- `"use client"` chỉ ở leaf nodes — server components ưu tiên
+- TailwindCSS cho styling (NativeWind trên mobile)
 
-- **Language & Runtime:** TypeScript (Strict Mode), Bun cho Backend, Node.js/Edge cho Frontend Next.js.
-- **Styling Solution:** TailwindCSS kết hợp Radix-like primitives (shadcn/ui).
-- **Build Tooling:** Turborepo, Next.js Turbopack, Bun bundler.
-- **Testing Framework:** Bun Test (Unit/Backend) và Playwright (E2E).
-- **Code Organization:** Cấu trúc Monorepo chia theo `apps/*` (client/services apps) và `packages/*` (shared logic, db schemas).
-- **Development Experience:** Tái sử dụng s6-services kết hợp hot-reloading từ Bun. Share type an toàn từ Database đến Orchestrator và Frontend.
+**AI Integration:**
+- Vercel AI SDK (`@ai-sdk/*`) cho tất cả LLM interactions trong backend
+- OpenCode là black box — tương tác qua HTTP/SSE, không import internals
 
-**Lưu ý:** Việc tạo folder `apps/chainlens-agent` và thiết lập kết nối cơ bản với `packages/db` sẽ là Story số 1 trong Implementation Phase.
+**Note:** Không cần initialization command — project đã khởi tạo. Mọi feature mới là extension vào codebase hiện tại.
 
 ## Step 4: Core Architectural Decisions
 
-### Decision Priority Analysis
+### Data Architecture
 
-**Critical Decisions (Block Implementation):**
-- Giao tiếp nội bộ (Internal Communication): Hono RPC.
-- Infrastructure & Deployment: Sandbox Abstraction Layer (SandboxProvider) cho luồng Code Execution.
+**Database:** Supabase PostgreSQL (managed) + Drizzle ORM
+- All schemas tại `packages/db/src/schema/`
+- Migrations: additive-only — KHÔNG rename/drop columns/tables
+- Migration pattern: chỉ `ALTER TABLE ... ADD COLUMN` hoặc `CREATE TABLE`
+- Client: Drizzle query builder (`@epsilon/db`) — raw SQL bị cấm
+- Row Level Security (RLS): enforced ở Supabase layer cho user-owned resources
 
-**Important Decisions (Shape Architecture):**
-- Quản lý trạng thái AI (Frontend State): Vercel AI SDK Hooks (`useChat`, `useObject`).
-- Kiến trúc dữ liệu (Data Caching/Locking): Redis (Upstash/Local s6) cho Distributed Locking.
+**Data Models (key entities):**
+- `sandboxes`: sandbox instance metadata, provider, status, user/project link
+- `sessions`: OpenCode session per sandbox
+- `threads`: conversation threads in sessions
+- `messages`: individual messages in threads
+- `accounts` / `users`: Supabase auth integration
+- `subscriptions`: Stripe subscription state
+- `credits`: billing credit ledger
 
-**Deferred Decisions (Post-MVP):**
-- Cơ sở hạ tầng scale tự động cho Firecracker MicroVMs.
+**Caching:**
+- Sandbox provider cache in-memory (sandbox-proxy: `providerCache`)
+- No Redis — caching là in-process
+
+---
+
+### Authentication & Security
+
+**Auth Stack:**
+- Primary: Supabase JWT (`Authorization: Bearer <jwt>`)
+- Secondary: API Key (`x-api-key` header) — hashed, stored in DB
+- Combined: `middleware/auth.ts` tries JWT → falls back to API key
+- Service-level: `x-epsilon-service-key` cho internal service-to-service calls
+
+**Auth Flow:**
+```
+Client → apps/api → Supabase JWT verify → user context injected → handler
+                 → API key lookup in DB → user context injected → handler
+```
+
+**Sandbox Auth:**
+- Epsilon Master trong sandbox validates `x-epsilon-auth-token` trước khi forward tới OpenCode
+- Token được inject bởi `authenticatedFetch` trong apps/web
+
+**Authorization:**
+- RBAC qua `access-control/` và `teams/` modules
+- Multi-workspace support: user thuộc nhiều workspace với roles khác nhau
+
+---
 
 ### API & Communication Patterns
-- **Quyết định:** Sử dụng **Hono RPC (v4.12+)** cho kết nối Backend-to-Frontend trong pnpm workspace.
-- **Căn cứ (Rationale):** Type-safe native trên Bun, không yêu cầu build steps như GraphQL hay tRPC, tối ưu tốc độ gọi hàm và chia sẻ kiểu dữ liệu trực tiếp từ `apps/chainlens-agent` sang `apps/web`.
 
-### Data Architecture
-- **Quyết định:** Sử dụng **Redis** làm Distributed Cache & Lock Manager.
-- **Căn cứ (Rationale):** Lock KHÔNG phải để atomic decrement (DB đã đảm bảo). Lock cần vì Hold-and-Settle là **two-phase reservation** — giữa hold và settle, tổng reservation không được vượt balance. Redis lock bảo vệ reservation window này. Đồng thời Redis làm lớp cache (semantic cache) cho các prompt trùng lặp.
+**Backend API Style:** REST via Hono (TypeScript, Bun runtime)
+- Route structure: `apps/api/src/router/routes/`
+- No GraphQL — pure REST + SSE streaming
+- Validation: Zod schemas tại route level
+
+**Sandbox Proxy Pattern:**
+```
+Request: /:sandboxId/:port/*
+Handler: sandbox-proxy/index.ts
+  → Lookup sandbox URL from provider
+  → Forward request with auth token injected
+  → Stream response back to client
+```
+
+**LLM Proxy Pattern (3 billing modes):**
+```
+Mode 1: Epsilon credit token
+  → Inject Epsilon's OpenRouter key
+  → Bill at 1.2× markup, deduct from user credits
+
+Mode 2: User key + Epsilon token
+  → Passthrough user's key
+  → Bill at 0.1× platform fee
+
+Mode 3: User key only
+  → Pure passthrough
+  → No billing
+```
+Implementation: `router/routes/llm.ts` — tee() stream: 1 nhánh → client, 1 nhánh → usage tracking
+
+**Streaming:** SSE (Server-Sent Events) cho AI response streaming
+- OpenCode → Epsilon Master → apps/api sandbox-proxy → apps/web
+- No WebSocket
+
+**Error Handling Standard:**
+- Hono `app.onError()` global handler
+- HTTP status codes: 400 (validation), 401 (auth), 403 (forbidden), 429 (rate limit), 500 (internal)
+
+---
+
+### Frontend Architecture
+
+**Framework:** Next.js 15 (App Router, Turbopack dev)
+
+**Routing:**
+- `app/(dashboard)/[...catchAll]/page.tsx`: tab-based catch-all
+- Tab store (`stores/tab-store`): manages multiple concurrent sessions
+- Server components default; `"use client"` chỉ ở leaf nodes
+
+**Sandbox Connection:**
+- `@opencode-ai/sdk` v2 → `OpencodeClient` singleton (`lib/opencode-sdk.ts`)
+- `authenticatedFetch`: injects auth token vào mọi sandbox request
+- Direct connection: apps/web → apps/api sandbox-proxy → sandbox container
+
+**State Management:**
+- Zustand stores cho global state (tab-store, session state)
+- React Query / SWR cho server data fetching
+- No Redux
+
+**UI System:**
+- TailwindCSS + Radix UI primitives
+- CodeMirror 6 cho code editor
+- Tool-view components: `components/thread/tool-views/` — renders OpenCode tool call results
+
+**Mobile/Desktop:**
+- Mobile: Expo + NativeWind (React Native)
+- Desktop: Tauri (Rust shell)
+- Shared business logic qua `@epsilon/shared`
+
+---
 
 ### Infrastructure & Deployment
-- **Quyết định:** Sử dụng **Sandbox Abstraction Layer** với Firecracker MicroVMs làm production backend.
-- **Căn cứ (Rationale):** Đảm bảo an toàn bảo mật tuyệt đối khi chạy Code Generation từ LLM. Sandbox được trừu tượng hóa qua interface `SandboxProvider` — cho phép swap backend giữa Deno subprocess/gVisor (Phase 1 MVP, nhẹ, chạy được trên Mac) và Firecracker (Phase 2, full kernel isolation). Service code KHÔNG phụ thuộc trực tiếp vào Firecracker API.
-- **Lưu ý:** Interface tồn tại chủ yếu cho **testability** (mock injection trong unit tests), không phải vì cần runtime polymorphism ở Phase 1.
 
-### Multi-chain Strategy
-- **Quyết định:** Agnostic Multi-chain Support (Không hardcode blockchain logic).
-- **Căn cứ (Rationale):** Sử dụng khả năng tự nhận diện của LLM để sinh code cho nhiều hệ sinh thái khác nhau (EVM, Solana, Move, v.v.). Hệ thống Agent và Sandbox Runtime sẽ được thiết kế linh hoạt, không bị trói buộc (agnostic) vào bất kỳ ngôn ngữ lập trình smart contract cụ thể nào.
+**Sandbox Provider Abstraction:**
+```
+IProvider interface
+  ├── JustaVPS (production): REST API → provision VM → run Docker image
+  └── Local Docker (dev): docker-compose, direct container management
+```
 
-### LLM Proxy & Token Utility (Model-as-a-Service)
-- **Quyết định:** Tích hợp LLM Proxy Gateway và Self-Hosted Model (Qwen 3.6 27B) thanh toán bằng Crypto (`$CLENS` token).
-- **Căn cứ (Rationale):** Hoàn thiện chuỗi giá trị Tokenomics (Data Flywheel -> Token Sink). Hệ thống đóng vai trò như một "OpenRouter cho Web3", cung cấp quyền truy cập LLM ẩn danh. Proxy Gateway sẽ thực hiện routing request, track input/output tokens chính xác, và trừ credits trực tiếp từ ví off-chain của user. Kiến trúc Hold-and-Settle với Redis Lock Manager sẽ được áp dụng trực tiếp cho luồng Proxy này để đảm bảo tốc độ cao và chống Race Condition.
+**3-Layer Health Model:**
+```
+Layer 1 — Host VM (JustaVPS machine)
+  Repair: start_host, reboot_host (chỉ khi machine offline hoàn toàn)
 
-### Local Compute (Ollama Integration)
-- **Quyết định:** Hỗ trợ kết nối Local LLM thông qua Ollama (User host model tại thiết bị cá nhân).
-- **Căn cứ (Rationale):** Tối ưu hóa tính riêng tư và tiết kiệm chi phí. Thay vì dùng API Key bên thứ ba tốn phí, user có thể chạy các model open-source qua Ollama ở thiết bị cá nhân và trỏ Chainlens về `localhost:11434`. Cách tiếp cận này đảm bảo Zero-Data-Leakage (dữ liệu không bao giờ rời khỏi máy user) và hoàn toàn miễn phí. Kiến trúc yêu cầu Browser Extension hoặc Web App xử lý khéo léo việc kết nối thẳng xuống localhost mà không gặp lỗi CORS.
+Layer 2 — Workload Service (Docker on host)  ← DEFAULT REPAIR
+  Repair: restart_workload
+  Check: systemctl justavps-docker.service status
 
-### Frontend & Extension Architecture
-- **Quyết định 1 (Web UI):** Sử dụng **Vercel AI SDK Hooks** (v6+) kết hợp **Generative UI**. Tool calls từ backend được stream và render trực tiếp thành các React components (Token Info, Risk Badge).
-- **Quyết định 2 (Extension):** Sử dụng kiến trúc React/Vite cho `apps/extension`. Giao diện tiêm vào host website (như X, DexScreener) bắt buộc dùng **Shadow DOM** để cách ly CSS (đảm bảo style Epsilon Cyber-Glass không bị xung đột). Background scripts quản lý Auth sync với Web App.
-- **Căn cứ (Rationale):** SDK v6 hỗ trợ MCP và built-in streaming/structured output, kết hợp Generative UI mang lại trải nghiệm Crypto-native mượt mà. Extension cô lập style giúp UI hoạt động ổn định trên mọi nền tảng thứ ba.
+Layer 3 — Core Runtime (inside container)
+  Repair: restart epsilon-master, opencode services
+  Check: localhost:8000/health, session/status
+```
+
+**Container Architecture (epsilon/computer):**
+- Base: Alpine Linux + s6-overlay process supervisor
+- Services managed by s6:
+  - `svc-epsilon-master`: port 8000, reverse proxy trước OpenCode
+  - `svc-opencode-serve`: port 4096, AI agent runtime (managed by Epsilon Master ServiceManager)
+  - `svc-chromium`: Browser tool
+  - `svc-sshd`: SSH access
+  - `svc-agent-browser-session`, `svc-lss-sync`, `svc-static-web`
+
+**Sandbox Pool:**
+- `pool/`: pre-warmed sandbox instances để reduce cold start
+- Provisioning poller: background loop check sandbox health + auto-provision
+- Auto-update loop: rolling update sandboxes với new image versions
+
+**Environments:**
+```
+Dev:  frontend → Vercel (main branch)
+      api     → dev-api.epsilon.com (VPS)
+      sandbox → JustaVPS dev org
+
+Prod: frontend → Vercel (production)
+      api     → new-api.epsilon.com (VPS)
+      sandbox → JustaVPS prod org
+```
+
+**Background Jobs:** BullMQ (`queue/`) cho async operations
+
+**Monitoring:** Sentry (error tracking) + Logtail (structured logs)
+
+---
 
 ### Decision Impact Analysis
 
-**Implementation Sequence:**
-1. Setup Redis và cấu hình Distributed Lock helper tại `packages/shared`.
-2. Dựng khung Hono RPC trong `apps/chainlens-agent` và export type cho `apps/web`.
-3. Tích hợp Vercel AI SDK (`useChat`) tại frontend và kết nối với router của Hono.
-4. Triển khai Sandbox Integration (implement `SandboxProvider` — Deno subprocess cho Phase 1, Firecracker cho Phase 2).
+**Sequence khi thêm tính năng mới:**
+1. DB schema → `packages/db/src/schema/` (additive migration)
+2. Types → `packages/shared/src/types/`
+3. API route → `apps/api/src/router/routes/`
+4. Frontend → `apps/web/src/app/(dashboard)/`
 
 **Cross-Component Dependencies:**
-- Hono RPC client tại Frontend phụ thuộc trực tiếp vào TypeScript interfaces export từ Backend.
-- Vercel AI SDK tại Frontend phụ thuộc vào logic streaming response chuẩn format của AI SDK trả về từ `chainlens-agent`.
+- OpenCode tools → MCP server protocol (KHÔNG thêm vào apps/api)
+- Billing check → apps/api/router/llm.ts (KHÔNG bypass sandbox-proxy)
+- Auth → Supabase JWT first, API key fallback (middleware đã handle cả 2)
+- Sandbox lifecycle → provider abstraction layer (không gọi JustaVPS API trực tiếp)
 
 ## Step 5: Implementation Patterns & Consistency Rules
 
-### Pattern Categories Defined
-
-**Critical Conflict Points Identified:** 7 khu vực:
-1. Quy tắc đặt tên Schema & Redis keys.
-2. Cấu trúc Route Hono, RPC & Frontend Client.
-3. Cấu trúc thư mục, DI & AI Tool Definitions.
-4. Error Handling, Sandbox Security & Output Sanitization.
-5. Quy trình tính phí an toàn (Hold & Settle).
-6. Lifecycle Management & Frontend Resilience.
-7. Observability, Rate Limiting & Idempotency.
-
 ### Naming Patterns
 
-**Database & Redis:**
-- **Tables:** `snake_case` số nhiều (`agent_sessions`).
-- **Columns:** `snake_case` (`created_at`).
-- **Redis Keys:** `<service>:<entity>:<id>:<action>` (`chainlens:user:123:credit_lock`).
-- **Idempotency Redis Keys:** `chainlens:idempotency:<userId>:<key>` — PHẢI scope theo `userId` để chống spoofing.
+**Database Naming (Drizzle ORM + PostgreSQL):**
+- Tables: `snake_case` plural — `sandboxes`, `user_sessions`, `api_keys`
+- Columns: `snake_case` — `created_at`, `sandbox_id`, `is_active`
+- Foreign keys: `<table_singular>_id` — `user_id`, `sandbox_id`
+- Indexes: `<table>_<column(s)>_idx` — `users_email_idx`
+- Schema definition: Drizzle `pgTable()` trong `packages/db/src/schema/`
 
-**API (Hono RPC):**
-- **Paths:** Kebab-case + namespace (`/api/v1/sandbox/execute-code`).
-- Bắt buộc Zod validation (`zValidator`).
+**API Naming (Hono REST):**
+- Endpoints: kebab-case plural nouns — `/api/sandboxes`, `/api/api-keys`
+- Path params: `:id`, `:sandboxId`, `:userId`
+- Query params: camelCase — `?pageSize=10&projectId=abc`
+- Route files: `kebab-case.ts` — `apps/api/src/router/routes/sandbox-proxy.ts`
 
-**Code:**
-- **Files/Folders:** Kebab-case. **Classes/Interfaces:** PascalCase. **Functions/Variables:** camelCase.
+**TypeScript Naming:**
+- Variables/functions: camelCase — `getUserById`, `sandboxProvider`
+- Types/Interfaces: PascalCase — `SandboxStatus`, `BillingMode`
+- Constants: SCREAMING_SNAKE_CASE — `MAX_SANDBOX_COUNT`, `DEFAULT_TIMEOUT`
+- React components: PascalCase — `SessionTabsContainer`, `ToolView`
+- Files (apps/web): `kebab-case.tsx` — `tool-view.tsx`, `session-layout.tsx`
+- Files (apps/api): `kebab-case.ts` — `sandbox-proxy.ts`, `auth.ts`
 
-**Environment Variables:**
-- App-specific: prefix `CHAINLENS_` (`CHAINLENS_MOCK_SANDBOX`, `CHAINLENS_BUILD_HASH`).
-- Shared/Chainlens-level: giữ convention hiện tại (`DATABASE_URL`, `REDIS_URL`, `OPENAI_API_KEY`).
+---
 
 ### Structure Patterns
 
-**Project Organization:**
-```text
-apps/chainlens-agent/src/
-├── index.ts           # Entry point, Application Container, SIGTERM handler
-├── app.ts             # Hono app, Middleware DI, export AppType
-├── routes/            # Sub-routers (sandbox.ts, advisory.ts, health.ts)
-├── services/          # Business logic
-├── sandbox/           # SandboxProvider interface + implementations (deno.ts, firecracker.ts)
-├── lib/               # Utilities (lock-manager, rate-limiter, logger, circuit-breaker)
-└── tools/             # Vercel AI SDK tools (Factory Pattern)
+**apps/api Feature Organization:**
+```
+apps/api/src/
+  router/routes/<feature>.ts   ← HTTP handlers
+  router/services/<feature>.ts ← Business logic
+  <module>/                    ← Self-contained feature module
+    index.ts                   ← Public API của module
+    types.ts                   ← Module-specific types
 ```
 
-**Hono Router Chaining:** Chia sub-routers độc lập, mount vào `app.ts`.
-
-**Frontend RPC Client:** Gom tại `apps/web/lib/rpc.ts`:
-```typescript
-export const sandboxRpc = hc<SandboxApp>(baseUrl + '/api/sandbox')
+**packages/db Schema:**
+```
+packages/db/src/
+  schema/
+    <entity>.ts                ← 1 file per table/entity
+  migrations/                  ← Drizzle migration files
+  index.ts                     ← Re-export all schemas
 ```
 
-**Dependency Injection (Dual-Scope):**
-- **Request-scoped DI:** DB/Redis inject qua Hono middleware → `c.get('db')`. CẤM global singleton imports **trong route handlers**.
-- **Application-scoped DI:** Background jobs (Stale Hold Reaper, Orphan VM Monitor) và Circuit Breaker state sử dụng **Application Container** — singleton khởi tạo tại `index.ts`, inject vào middleware và jobs cùng lúc.
-
-**AI Tool Factory Pattern:**
-```typescript
-export const createExecuteCodeTool = (ctx: ToolContext) => tool({ ... })
+**apps/web Component Organization:**
 ```
-- AI Tools PHẢI wrap logic trong `try/catch`. Return error message string cho LLM, KHÔNG throw unhandled exception.
+apps/web/src/
+  app/(dashboard)/<feature>/   ← Next.js pages
+  components/<feature>/        ← Feature-specific components
+  components/ui/               ← Generic UI primitives
+  stores/<feature>-store.ts    ← Zustand stores
+  lib/                         ← Utilities, SDK clients
+  hooks/use-<feature>.ts       ← Custom React hooks
+```
 
-**Lifecycle Hooks:**
-- `GET /healthz` → liveness. `GET /readyz` → DB + Redis check (dedicated connection, timeout 1s max).
-- `GET /api/v1/version` → trả build hash để Frontend kiểm tra **Version Handshake** khi khởi tạo RPC client.
-- `SIGTERM` → drain streams → **kill active sandbox processes** → settle credit → shutdown.
-- **Orphan Sandbox Monitor:** Background job định kỳ quét và kill các sandbox process/VM không có parent process.
+**Test Location:**
+- Backend: `apps/api/src/__tests__/` hoặc co-located `<file>.test.ts`
+- E2E: `tests/e2e/` (Playwright)
+- Unit: Bun test runner
+
+---
 
 ### Format Patterns
 
-**API Response:** Type inference Hono RPC. Lỗi Business: `{ success: false, error: "CODE", message }`.
+**API Response Format:**
+Hono trả về trực tiếp — KHÔNG dùng response wrapper `{data: ..., error: ...}`
+```typescript
+// ✅ Correct
+return c.json({ id: sandbox.id, status: sandbox.status })
+return c.json({ error: 'Not found' }, 404)
 
-**Error Code Taxonomy:**
-```
-INSUFFICIENT_CREDITS | SANDBOX_TIMEOUT | SANDBOX_CIRCUIT_OPEN |
-RATE_LIMITED | IDEMPOTENCY_CONFLICT | LOCK_CONTENTION |
-REDIS_UNAVAILABLE | VALIDATION_ERROR | LLM_PROVIDER_ERROR
+// ❌ Wrong
+return c.json({ data: { id: sandbox.id }, success: true })
 ```
 
-**AI SDK:** `streamText`/`streamObject` cho UX. `generateObject` + Zod cho structured data.
+**Error Response Structure:**
+```typescript
+// Standard error shape
+{ error: string, code?: string }
+
+// Validation error
+{ error: 'Validation failed', details: ZodError.issues }
+```
+
+**Date Format:**
+- API: ISO 8601 strings — `"2026-05-09T10:00:00.000Z"`
+- DB: Drizzle `timestamp()` với mode `'string'`
+- KHÔNG dùng Unix timestamps trong API responses
+
+**JSON Field Naming:**
+- API responses: camelCase — `{ sandboxId, createdAt, isActive }`
+- DB columns: snake_case (Drizzle tự map khi dùng `.$type<>()`)
+
+---
 
 ### Communication Patterns
 
-**Frontend State:** `useChat`/`useObject` cho AI. `hc` RPC cho static requests.
+**Sandbox → API Communication:**
+- OpenCode LLM calls: `POST /chat/completions` với `x-epsilon-auth-token`
+- Health checks: `GET /health` trên Epsilon Master (port 8000)
+- KHÔNG gọi apps/api từ sandbox cho business logic — chỉ LLM proxy + health
 
-**Frontend Resilience:**
-- Optimistic UI cho tin nhắn user.
-- Giữ partial response kèm badge `[Interrupted]` khi stream lỗi.
-- Nút `Retry` cho user.
-- **Version Mismatch Banner:** Khi build hash frontend ≠ backend → hiển thị `"Hệ thống đang cập nhật, vui lòng refresh trang"`.
-- **LLM Provider Error UX:** Khi AI service lỗi (429/500), hiển thị thông báo rõ ràng: `"AI service tạm thời quá tải, vui lòng thử lại sau 30s"`. KHÔNG hiển thị raw error.
+**Frontend → Sandbox:**
+- Qua `OpencodeClient` (`lib/opencode-sdk.ts`) — KHÔNG gọi sandbox URL trực tiếp
+- Auth token injection: qua `authenticatedFetch` wrapper
+- SSE streaming: SDK handles reconnection tự động
 
-**Request Tracing (Observability):**
-- Middleware đầu tiên gán/propagate `x-request-id` (UUID).
-- Truyền `requestId` vào: logs, Sandbox calls, Redis ops, AI SDK metadata.
-- **Logging format chuẩn (JSON structured):**
-  ```json
-  { "timestamp": "...", "level": "info", "requestId": "uuid", "userId": "...", "action": "sandbox.execute", "durationMs": 1234 }
-  ```
-- CẤM dùng `console.log` text thuần trong production code.
+**Inter-module Communication (apps/api):**
+- Import qua module's `index.ts` — KHÔNG import internal files trực tiếp
+- Async jobs: BullMQ queue, KHÔNG gọi async functions fire-and-forget
 
-**Alerting Rules (Critical Triggers):**
-- Sandbox Circuit Breaker OPEN → alert (Slack/PagerDuty).
-- Redis unavailable > 30s → alert.
-- Stale Hold Reaper xử lý > 3 holds/phút → alert (anomaly, có thể leak).
-- Credit balance âm (should never happen) → **P0 alert** + auto-pause billing.
+**Event Naming (BullMQ queues):**
+- Queue names: `kebab-case` — `sandbox-provision`, `credit-replenish`
+- Job names: verb-noun — `provision-sandbox`, `deduct-credits`
 
-**Partial Failure Isolation:**
-- Sandbox failure CHỈ ảnh hưởng code execution endpoint. Advisory chat và structured extraction tiếp tục hoạt động bình thường.
-- Redis failure ảnh hưởng TOÀN BỘ AI endpoints (vì cần lock + rate limit).
-- LLM Provider failure ảnh hưởng AI features, nhưng static data (RPC) vẫn hoạt động.
+---
 
 ### Process Patterns
 
-**Redis Dependency Policy:**
-- Khi Redis unavailable → toàn bộ AI endpoints trả `503 Service Unavailable` ngay tại middleware.
-- `readyz` trả `false` → load balancer tự ngắt traffic. KHÔNG cố gắng xử lý request mà thiếu lock/rate-limit.
+**Validation:**
+- Zod schemas tại route level trong apps/api
+- Validate request body và query params trước khi xử lý
+- Type inference từ Zod schema — KHÔNG define types riêng cho validated input
 
-**Error Handling & Sandbox Timeout (Self-Healing):**
-- `app.onError` bắt lỗi tổng. Sanitize lỗi từ `SandboxProvider` (strip internal paths, process IDs).
-- `Promise.race` timeout ~5s cho Sandbox. Sau timeout → gửi **explicit kill signal** tới sandbox process đang chờ. Trả message để LLM tự sửa sai.
+```typescript
+const schema = z.object({ sandboxId: z.string().uuid() })
+const { sandboxId } = schema.parse(await c.req.json())
+```
 
-**Sandbox Circuit Breaker:**
-- Sau 3 consecutive sandbox timeout → mở circuit → trả `503` trực tiếp trong 30s mà KHÔNG tạo sandbox process mới.
-- Circuit tự đóng sau 30s (half-open state: thử 1 request, nếu OK → đóng, nếu fail → mở lại).
+**Auth Middleware:**
+- Luôn dùng `authMiddleware` từ `middleware/auth.ts` — KHÔNG manually verify JWT
+- User context available qua `c.get('user')` sau middleware
+- Service routes: `serviceAuthMiddleware` cho internal calls
 
-**Tool Output Sanitization (Chống Prompt Injection):**
-- **Strip non-printable/control characters** (zero-width, RTL override, etc.) bằng allowlist: chỉ giữ ASCII printable + basic whitespace.
-- Truncate max 2000 chars/lượt. Bọc `[SANDBOX_OUTPUT_START/END]`.
-- **Cross-turn Protection:** Giới hạn tổng sandbox output tích lũy trong conversation context ≤ 5000 chars. Vượt → tự động tóm tắt output cũ.
-- **Context Rotation:** Sau mỗi 10 lượt, tóm tắt conversation và loại bỏ raw sandbox output cũ khỏi context window.
-- System prompt chỉ dẫn LLM coi nội dung trong block là data, KHÔNG phải instruction.
+**Error Handling:**
+- Route handlers: throw errors, Hono `onError` global handler catches
+- Known errors: return với HTTP status code thích hợp
+- Unexpected errors: log tới Logtail + Sentry, return 500
+- KHÔNG swallow errors silently
 
-**Local Dev Mocking:** `USE_MOCK_SANDBOX=true` → fallback Bun/Docker trên Mac.
+**Sandbox Lifecycle:**
+- Luôn qua `SandboxProvider` interface — KHÔNG gọi JustaVPS/Docker APIs trực tiếp
+- Health check trước khi forward requests
+- Pool manager cho sandbox provisioning
 
-**Rate Limiting (Tiered by Endpoint Cost):**
-- **Advisory (chat):** 20 req/min/user — chi phí thấp, user gửi nhanh trong multi-turn.
-- **Sandbox execution:** 5 req/min/user — chi phí cao, cần VM resources.
-- **Structured extraction:** 10 req/min/user — chi phí trung bình.
-- **Stream Initiation Rate Limit:** Tách riêng, max 3 stream initiation/min/user. Ngăn abuse qua liên tục disconnect/reconnect SSE.
-- **2-Tier Middleware Order:** (1) IP-based global rate limit **trước Auth** (anti-DDoS, 60 req/min/IP). (2) User-based tiered rate limit **sau Auth** (cần `userId`).
-- Vượt giới hạn → `429 Too Many Requests` ngay lập tức.
-
-**Idempotency Key:**
-- Frontend gửi header `x-idempotency-key` (UUID, sinh 1 lần per user action) cho mọi request tính phí.
-- Backend dùng Redis `SETNX` (TTL=5 phút) với key `chainlens:idempotency:<userId>:<key>`. Key đã tồn tại → `409 Conflict`, KHÔNG xử lý lại.
-- PHẢI scope theo `userId` để chống idempotency key spoofing (DoS).
-
-**DB Connection Discipline:**
-- AI stream KHÔNG ĐƯỢC giữ DB connection suốt quá trình streaming.
-- Chỉ mở connection cho các thao tác rời rạc: Hold credit → release → stream → reconnect → Settle credit → release.
-- `readyz` sử dụng dedicated connection với timeout 1s riêng biệt.
-
-**Lock Contention Strategy:**
-- Khi lock đã bị giữ bởi request khác → **Fail-fast**, trả `429 Too Many Requests` ngay lập tức. KHÔNG queue/wait.
-- Giới hạn **max 1 concurrent AI stream per user** tại middleware layer.
-
-**Hold-and-Settle Process:**
-1. `acquireLock(TTL=60s)`.
-2. **Hold** credit = Max Tokens.
-3. Stream via Vercel AI SDK.
-4. `onFinish` → tính usage → **Settle** (refund dư) → ghi **Credit Audit Log**.
-5. `releaseLock()` — CHỈ gọi SAU KHI Settle thành công. Nếu Settle fail → giữ lock, Stale Hold Reaper sẽ xử lý.
-6. **Stale Hold Reaper:** Background job (interval 60s) tự động settle/refund các hold > 5 phút không có `onFinish` (client disconnect, crash, etc.). *Đây là P1 nhưng có thể defer 2 tuần sau MVP launch nếu cần ship nhanh.*
-
-**Credit Audit Trail:**
-- Mỗi thao tác Hold, Settle, và Refund PHẢI tạo immutable audit record trong DB.
-- Schema tối thiểu: `{ id, requestId, userId, action: 'hold'|'settle'|'refund', amount, balanceBefore, balanceAfter, timestamp }`.
-- CẤM xóa hoặc sửa audit records. Chỉ `INSERT`.
+---
 
 ### Enforcement Guidelines
 
 **All AI Agents MUST:**
-- CẤM global singleton imports **trong route handlers**. Application-scoped singletons (Container) CHỈ được khởi tạo tại `index.ts`.
-- KHÔNG export endpoint mà không có Zod validation.
-- KHÔNG bypass Hold & Settle cho API tính phí.
-- LUÔN export `AppType` từ root router.
-- **Additive-only DB:** CHỈ thêm table/column. CẤM rename/drop. CẤM tự chạy `drizzle-kit generate`.
-- **Sanitize tool output** (strip non-printable → truncate → wrap markers) trước khi đưa vào LLM context.
-- **Structured JSON logging** với `requestId`. CẤM `console.log`.
-- **`x-idempotency-key`** cho mọi mutation có tính phí.
-- **Atomic Deploy:** Khi thay đổi RPC interface, `chainlens-agent` và `apps/web` PHẢI deploy cùng lúc. Mọi breaking change trên RPC phải backward-compatible ít nhất 1 version.
-- **Mock Guard:** CI/CD pipeline PHẢI chặn build nếu `USE_MOCK_SANDBOX=true` trên môi trường staging/production.
-- **Redis Network Security:** Redis PHẢI nằm trong private VPC (no public access), bật TLS encryption, và cấu hình ACL chỉ cho phép chainlens-agent service user.
-- **Credit Audit Integrity:** CẤM xóa/sửa credit audit records. Mọi thao tác tài chính phải có audit trail.
-- **Settle-before-Release:** `releaseLock()` CHỈ được gọi sau khi `Settle` thành công. CẤM release lock trước settle.
-- **AI Tool Error Contract:** Tools PHẢI wrap trong try/catch. Return error string cho LLM, CẤM throw unhandled.
+- Import DB operations qua `@epsilon/db` — KHÔNG import Drizzle client trực tiếp
+- Dùng `@epsilon/shared` types cho cross-package types
+- Dùng Bun APIs (`Bun.file`, `Bun.write`) thay Node.js `fs`
+- Validate với Zod tại route level
+- Dùng `c.get('user')` cho auth context sau middleware
+- Thêm DB migrations additive-only (KHÔNG rename/drop)
 
-## Step 7: Validation & Readiness Assessment
+**Anti-Patterns:**
+```typescript
+// ❌ Raw SQL
+db.execute(sql`SELECT * FROM sandboxes`)
 
-### Validation Methods Applied (6 rounds)
+// ✅ Drizzle ORM
+db.select().from(sandboxes).where(eq(sandboxes.userId, userId))
 
-| # | Phương pháp | Category | Phát hiện chính |
-|---|------------|----------|------------------|
-| 1 | Pre-mortem Analysis | Risk | Stale Hold Reaper, SIGTERM cleanup, lock contention fail-fast, atomic deploy |
-| 2 | Chaos Monkey Scenarios | Risk | Redis 503 policy, Sandbox Circuit Breaker, Version Handshake, userId-scoped idempotency |
-| 3 | Security Audit Personas | Technical | Context Rotation, Credit Audit Trail, stream initiation rate limit, Redis VPC/TLS/ACL |
-| 4 | First Principles Analysis | Core | Lock = reservation (not atomicity), SandboxProvider abstraction, tiered rate limit, dual-scope DI |
-| 5 | Self-Consistency Validation | Advanced | Genericize Firecracker → Sandbox, 2-tier rate limit middleware, DI enforcement scope, project tree update |
-| 6 | Code Review Gauntlet | Competitive | Error taxonomy, env var convention, tool error contract, alerting rules, partial failure isolation |
+// ❌ Direct Node.js fs
+import { readFile } from 'fs/promises'
 
-### Readiness Checklist
+// ✅ Bun API
+const content = await Bun.file(path).text()
 
-- [x] **Coherence:** Mọi section nhất quán sau Self-Consistency Validation (vòng 5).
-- [x] **Security:** Sandbox isolation, prompt injection defense, Redis network security, credit audit trail.
-- [x] **Reliability:** Circuit Breaker, Redis dependency policy, partial failure isolation, graceful degradation.
-- [x] **Financial Integrity:** Hold-and-Settle atomic sequence, Settle-before-Release, Stale Hold Reaper, immutable audit log.
-- [x] **Observability:** Structured JSON logging, requestId tracing, alerting rules, error taxonomy.
-- [x] **Developer Experience:** Naming conventions, env var prefix, DI patterns, tool error contract, project tree.
-- [x] **Deployment Safety:** Atomic deploy, Mock Guard, Version Handshake.
+// ❌ any type
+const data: any = await response.json()
 
-### Status: ✅ READY FOR IMPLEMENTATION
+// ✅ Typed with Zod/TypeScript
+const data = ResponseSchema.parse(await response.json())
 
-Tài liệu kiến trúc đã qua 6 vòng stress-test với ~30 phát hiện đã được tích hợp. Không còn blocking issues hoặc mâu thuẫn nội bộ. Sẵn sàng chuyển sang Implementation Phase.
+// ❌ Adding AI tools as Hono routes
+app.get('/api/crypto/price', fetchCryptoPrice)
+
+// ✅ AI tools as MCP servers in sandbox container (core/)
+```
+
+## Step 6: Project Structure & Boundaries
+
+### Complete Project Directory Structure
+
+```
+epsilon/ (monorepo root)
+├── apps/
+│   ├── api/                          ← Hono/Bun backend API
+│   │   └── src/
+│   │       ├── index.ts              ← Entry point, app composition
+│   │       ├── middleware/
+│   │       │   └── auth.ts           ← JWT + API key auth middleware
+│   │       ├── router/
+│   │       │   ├── routes/
+│   │       │   │   ├── llm.ts        ← LLM proxy + billing (POST /chat/completions)
+│   │       │   │   ├── proxy.ts      ← General LLM provider proxy
+│   │       │   │   ├── search-web.ts
+│   │       │   │   └── search-image.ts
+│   │       │   └── services/
+│   │       │       └── billing.ts    ← Credit deduction logic
+│   │       ├── platform/             ← Sandbox lifecycle management
+│   │       │   ├── index.ts
+│   │       │   └── pool/             ← Pre-warmed sandbox pool
+│   │       ├── sandbox-proxy/        ← /:sandboxId/:port/* → container
+│   │       │   └── index.ts
+│   │       ├── billing/              ← Stripe + RevenueCat
+│   │       ├── auth/                 ← OAuth flows
+│   │       ├── access-control/       ← RBAC
+│   │       ├── teams/                ← Multi-workspace
+│   │       ├── integrations/         ← OAuth connector store
+│   │       ├── queue/                ← BullMQ background jobs
+│   │       ├── secrets/              ← Credential management
+│   │       ├── repositories/         ← Git repo management
+│   │       └── admin/                ← Admin endpoints
+│   │
+│   ├── web/                          ← Next.js 15 frontend
+│   │   └── src/
+│   │       ├── app/
+│   │       │   ├── (dashboard)/      ← Authenticated dashboard routes
+│   │       │   │   ├── [...catchAll]/ ← Tab-based catch-all
+│   │       │   │   ├── agents/
+│   │       │   │   ├── sessions/
+│   │       │   │   ├── tools/
+│   │       │   │   ├── skills/
+│   │       │   │   ├── connectors/
+│   │       │   │   ├── memory/
+│   │       │   │   ├── terminal/
+│   │       │   │   ├── browser/
+│   │       │   │   ├── files/
+│   │       │   │   ├── marketplace/
+│   │       │   │   └── admin/
+│   │       │   └── (auth)/           ← Login/signup pages
+│   │       ├── components/
+│   │       │   ├── thread/
+│   │       │   │   └── tool-views/   ← OpenCode tool result renderers
+│   │       │   ├── session/          ← Session layout, chat input
+│   │       │   └── ui/               ← Radix-based primitives
+│   │       ├── stores/
+│   │       │   └── tab-store.ts      ← Multi-tab session state
+│   │       ├── lib/
+│   │       │   └── opencode-sdk.ts   ← OpencodeClient singleton
+│   │       └── hooks/
+│   │
+│   ├── mobile/                       ← Expo + NativeWind (React Native)
+│   └── desktop/                      ← Tauri (Rust shell)
+│
+├── core/                             ← Docker sandbox container build
+│   ├── Dockerfile
+│   ├── s6-services/                  ← Process supervisor config
+│   │   ├── svc-epsilon-master/
+│   │   │   └── run                   ← Port 8000, proxies → OpenCode:4096
+│   │   ├── svc-opencode-serve/
+│   │   │   └── run                   ← Port 4096, managed by Epsilon Master
+│   │   ├── svc-chromium/
+│   │   ├── svc-sshd/
+│   │   ├── svc-agent-browser-session/
+│   │   ├── svc-lss-sync/
+│   │   └── svc-static-web/
+│   └── opencode-config/              ← OpenCode config + MCP server definitions
+│
+├── packages/
+│   ├── db/                           ← Drizzle ORM + Supabase migrations
+│   │   └── src/
+│   │       ├── schema/               ← 1 file per table
+│   │       ├── migrations/           ← Additive-only migration files
+│   │       └── index.ts
+│   ├── shared/                       ← Cross-package TypeScript types
+│   │   └── src/
+│   │       └── types/
+│   ├── agent-tunnel/                 ← Network relay for agent connections
+│   ├── epsilon-ocx-registry/         ← Cloudflare Workers OCX registry
+│   └── voice/                        ← Python FastAPI voice backend
+│
+├── tests/
+│   └── e2e/                          ← Playwright E2E tests
+│
+├── package.json                      ← pnpm workspaces root
+├── pnpm-workspace.yaml
+├── turbo.json                        ← Turborepo pipeline
+└── supabase/                         ← Supabase local dev config
+    └── migrations/
+```
+
+---
+
+### Architectural Boundaries
+
+**API Boundaries:**
+```
+Public API (apps/api):
+  POST /chat/completions         ← LLM proxy (called BY OpenCode in sandbox)
+  GET/POST /api/sandboxes/*      ← Sandbox lifecycle
+  GET/POST /api/billing/*        ← Subscription + credits
+  /:sandboxId/:port/*            ← Sandbox proxy (called BY apps/web)
+  GET/POST /api/integrations/*   ← OAuth connectors
+  GET/POST /api/admin/*          ← Admin panel
+
+Internal Only (không expose ra ngoài):
+  Queue workers (BullMQ)
+  Provisioning poller
+  Auto-update loop
+  Pool manager
+```
+
+**Component Boundaries:**
+```
+apps/web ←→ apps/api:
+  - Auth: Supabase JWT từ client
+  - Sandbox proxy: qua /:sandboxId/:port/*
+  - REST API: qua /api/* endpoints
+
+apps/web ←→ sandbox (qua proxy):
+  - OpenCode SDK: HTTP/SSE tới sandbox:8000
+  - Tất cả AI interactions đi qua này
+
+sandbox (OpenCode) ←→ apps/api:
+  - LLM calls: POST /chat/completions (bắt buộc, để billing)
+  - KHÔNG gọi các /api/* endpoints khác
+
+apps/api ←→ JustaVPS:
+  - Sandbox provision/deprovision
+  - Health monitoring
+  - Chỉ qua SandboxProvider abstraction
+```
+
+**Data Boundaries:**
+```
+packages/db:
+  - Tất cả DB schemas phải định nghĩa ở đây
+  - apps/* KHÔNG define schema riêng
+  - Import: @epsilon/db
+
+packages/shared:
+  - Types dùng across multiple packages
+  - KHÔNG chứa business logic
+  - Import: @epsilon/shared
+
+Sandbox state (trong container):
+  - Filesystem của sandbox (volatile, không persist)
+  - OpenCode session state (trong container memory)
+  - Sync về DB qua lss-sync service khi cần
+```
+
+---
+
+### Integration Points
+
+**External Services:**
+```
+Supabase (PostgreSQL + Auth):
+  - DB: packages/db → Drizzle ORM
+  - Auth: apps/api middleware/auth.ts
+
+OpenRouter (LLM Gateway):
+  - apps/api/router/routes/llm.ts
+  - Inject API key + route to model
+
+JustaVPS (VPS Provider):
+  - apps/api/platform/ → SandboxProvider interface
+  - REST API cho VM lifecycle
+
+Stripe + RevenueCat (Billing):
+  - apps/api/billing/
+  - Webhook handlers
+
+Sentry + Logtail (Observability):
+  - apps/api: error.ts + logger.ts wrappers
+  - apps/web: Sentry client SDK
+
+Cloudflare Workers (OCX Registry):
+  - packages/epsilon-ocx-registry/
+  - Agent capability registry
+```
+
+**Development Workflow:**
+```
+Local dev startup:
+  supabase start          → DB on :54321
+  pnpm dev:api            → apps/api on :8008
+  pnpm dev:frontend       → apps/web on :3000
+  pnpm dev:sandbox        → local Docker sandbox
+
+Build pipeline (Turborepo):
+  turbo build             → builds all apps in dependency order
+  turbo test              → runs all test suites
+
+Docker build:
+  apps/api      → epsilon/epsilon-api image
+  apps/web      → epsilon/epsilon-frontend image
+  core/         → epsilon/computer image
+```
+
+## Step 7: Architecture Validation Results
+
+### Coherence Validation ✅
+
+**Decision Compatibility:**
+Tất cả technology choices đã proven production-compatible: Bun runtime + Hono + Drizzle ORM + Supabase PostgreSQL + Next.js App Router hoạt động trong production. Không có version conflicts — tech stack ổn định.
+
+**Pattern Consistency:**
+- Naming conventions (snake_case DB, camelCase TS API responses, kebab-case files) nhất quán với existing code
+- Auth pattern (JWT → API key fallback qua single middleware) áp dụng nhất quán toàn bộ `apps/api`
+- Sandbox provider abstraction được respected: không có direct JustaVPS API calls ngoài `platform/`
+
+**Structure Alignment:**
+- `packages/db` là single source of truth cho tất cả DB schemas — enforced bởi import convention
+- `sandbox-proxy` là single entry point cho mọi frontend-sandbox communication — không có direct sandbox calls
+- MCP servers trong `core/opencode-config/` là correct location cho AI tools — KHÔNG phải Hono routes
+
+---
+
+### Requirements Coverage Validation ✅
+
+**Component Coverage:**
+- ✅ Sandbox container (`epsilon/computer`): core/, s6-services, OpenCode + Epsilon Master
+- ✅ Backend API (`epsilon/epsilon-api`): apps/api, tất cả modules documented
+- ✅ Frontend (`epsilon/epsilon-frontend`): apps/web, tất cả dashboard routes documented
+- ✅ Shared packages: packages/db, packages/shared, packages/agent-tunnel, packages/voice
+
+**Cross-Cutting Concerns:**
+- ✅ Auth: Supabase JWT + API key, 2-mode middleware, sandbox token injection
+- ✅ Billing: LLM proxy 3-mode billing, credit ledger, Stripe + RevenueCat
+- ✅ Observability: Sentry + Logtail, cả api lẫn web
+- ✅ Sandbox health: 3-layer model, provisioning poller, auto-update loop
+- ✅ Background jobs: BullMQ queues cho async operations
+
+**Non-Functional Requirements:**
+- ✅ Performance: sandbox pool (pre-warmed), SSE streaming (không buffer), BullMQ async
+- ✅ Security: RLS tại Supabase, JWT verification, service key cho internal calls
+- ✅ Scalability: stateless API (sandbox state trong containers), provider abstraction cho multi-VPS
+
+---
+
+### Implementation Readiness Validation ✅
+
+**Decision Completeness:**
+- ✅ Tất cả critical decisions documented với file paths cụ thể
+- ✅ 3 billing modes documented với implementation location
+- ✅ Auth flow documented với middleware file reference
+- ✅ Sandbox lifecycle documented với provider abstraction pattern
+
+**Structure Completeness:**
+- ✅ Full monorepo tree với file-level detail
+- ✅ API boundaries documented (public vs internal)
+- ✅ Component communication boundaries explicit
+- ✅ External service integration points mapped
+
+**Pattern Completeness:**
+- ✅ TypeScript naming conventions với examples
+- ✅ API response format với ✅/❌ code examples
+- ✅ Error handling pattern documented
+- ✅ Anti-patterns với concrete TypeScript examples
+
+---
+
+### Gap Analysis Results
+
+**Critical Gaps:** Không có.
+
+**Minor Gaps (non-blocking):**
+- OpenCode MCP server configuration format chưa được document chi tiết (nằm trong `core/opencode-config/` nhưng spec chưa được included)
+- Drizzle schema file naming convention cho từng entity chưa có example cụ thể
+- BullMQ job retry policy chưa được specify
+
+**Note:** Đây là brownfield documentation — tất cả gaps trên đều là documentation gaps, không phải implementation gaps.
+
+---
+
+### Architecture Completeness Checklist
+
+**Requirements Analysis**
+- [x] Project context thoroughly analyzed
+- [x] Scale and complexity assessed (Brownfield Monorepo, high complexity, 3 deployment units)
+- [x] Technical constraints identified (Bun APIs, additive migrations, strict TS, App Router)
+- [x] Cross-cutting concerns mapped (auth, billing, sandbox lifecycle, observability)
+
+**Architectural Decisions**
+- [x] Critical decisions documented with versions
+- [x] Technology stack fully specified (Step 3 tech matrix)
+- [x] Integration patterns defined (Step 4: all communication patterns)
+- [x] Performance considerations addressed (pool, SSE, BullMQ)
+
+**Implementation Patterns**
+- [x] Naming conventions established (DB snake_case, TS camelCase, routes kebab-case)
+- [x] Structure patterns defined (feature-based api, component-based web)
+- [x] Communication patterns specified (sandbox↔api, frontend↔sandbox, inter-module)
+- [x] Process patterns documented (validation, auth middleware, error handling, anti-patterns)
+
+**Project Structure**
+- [x] Complete directory structure defined (full monorepo tree with file-level detail)
+- [x] Component boundaries established (API/sandbox/frontend with explicit rules)
+- [x] Integration points mapped (all external services documented)
+- [x] Requirements to structure mapping complete (all feature directories mapped)
+
+---
+
+### Architecture Readiness Assessment
+
+**Overall Status:** READY FOR IMPLEMENTATION
+
+**Confidence Level:** High — tài liệu này reflect chính xác production codebase đang chạy, không phải planned architecture.
+
+**Key Strengths:**
+- Document based on actual codebase investigation — không phải assumptions
+- Critical insight documented: OpenCode là AI brain (KHÔNG phải apps/api)
+- Anti-patterns với code examples prevent phổ biến nhất của AI implementation mistakes
+- Boundary rules explicit: MCP servers cho tools, provider abstraction cho sandbox lifecycle
+
+**Areas for Future Enhancement:**
+- Document OpenCode MCP server configuration format khi implement Chainlens crypto tools
+- Add Drizzle schema examples cho từng entity type
+- Document BullMQ retry policies khi implement background jobs
+
+---
+
+### Implementation Handoff
+
+**AI Agent Guidelines:**
+- Follow all architectural decisions exactly as documented in Steps 4-6
+- Use implementation patterns from Step 5 consistently — đặc biệt anti-patterns
+- Respect project structure from Step 6 — KHÔNG tạo thêm apps/ hoặc packages/ mới nếu không cần
+- Refer to this document cho tất cả architectural questions trước khi implement
+
+**First Implementation Priority:**
+Project đã initialized. Tất cả feature mới phải extend vào codebase hiện tại theo sequence:
+1. `packages/db/src/schema/<entity>.ts` — additive DB schema
+2. `packages/shared/src/types/<feature>.ts` — shared types
+3. `apps/api/src/router/routes/<feature>.ts` — API handlers
+4. `apps/web/src/app/(dashboard)/<feature>/` — Frontend pages
+5. `core/opencode-config/` — MCP server configs (nếu cần AI tools)

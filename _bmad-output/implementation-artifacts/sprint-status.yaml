@@ -1,6 +1,6 @@
-# generated: 2026-05-08T09:55:00Z
-# last_updated: 2026-05-08T09:55:00Z
-# project: chainlens
+# generated: 2026-05-09
+# last_updated: 2026-05-09
+# project: chainlensnlens
 # project_key: NOKEY
 # tracking_system: file-system
 # story_location: _bmad-output/implementation-artifacts
@@ -34,54 +34,73 @@
 # - Developer typically creates next story after previous one is 'done' to incorporate learnings
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
-generated: 2026-05-08T09:55:00Z
-last_updated: 2026-05-08T09:55:00Z
-project: chainlens
+generated: 2026-05-09
+last_updated: 2026-05-09
+project: chainlensnlens
 project_key: NOKEY
 tracking_system: file-system
 story_location: _bmad-output/implementation-artifacts
 
 development_status:
-  epic-1: in-progress
-  1-1-khoi-tao-project-lifecycle-hooks: completed
-  1-2-ai-chat-endpoint-legal-disclaimers: backlog
-  1-3-background-data-workers: backlog
-  1-4-ai-tools-external-integrations: backlog
-  1-5-jit-data-sync-risk-warnings: backlog
+  # ─── Phase 1 — MVP ───
+
+  # Epic 1: AI Crypto Research Tools
+  epic-1: backlog
+  1-1-deep-research-tool-perplexity-sonar: backlog
+  1-2-jit-crypto-data-snapshot: backlog
+  1-3-ai-generated-code-validation-layer: backlog
+  1-4-chainlens-tier-1-and-tier-2-subagent-definitions: backlog
   epic-1-retrospective: optional
+
+  # Epic 2: Crypto Data Infrastructure
   epic-2: backlog
-  2-1-idempotency-distributed-locking-middleware: backlog
-  2-2-the-hold-and-settle-credit-engine-core-db: backlog
-  2-3-tich-hop-billing-vao-ai-chat-endpoints: backlog
-  2-4-background-reapers-alerting-metrics: backlog
+  2-1-crypto-data-worker-with-bullmq: backlog
+  2-2-ai-generated-discover-feed: backlog
+  2-3-dune-and-nansen-on-chain-index-worker: backlog
   epic-2-retrospective: optional
+
+  # Epic 3: Crypto Native Trading UI
   epic-3: backlog
-  3-1-custom-bot-agent-configuration: backlog
-  3-2-vulnerability-scanner-validation-layer: backlog
-  3-3-secure-sandbox-execution-environment: backlog
-  3-4-backtesting-with-vibe-trading-api: backlog
-  3-5-sandbox-resource-management-monitors: backlog
-  3-6-agnostic-multi-chain-code-generation: backlog
+  3-1-defi-and-market-dashboard-page: backlog
+  3-2-tradingview-advanced-charting: backlog
+  3-3-generative-ai-chat-widgets: backlog
+  3-4-token-detail-page: backlog
   epic-3-retrospective: optional
+
+  # Epic 4: Web3 Identity
   epic-4: backlog
-  4-1-team-collaboration-workspaces: backlog
-  4-2-inbound-only-rag-sync-on-premise: backlog
+  4-1-wallet-connection-with-siwe-authentication: backlog
+  4-2-phantom-wallet-and-multi-chain-switcher: backlog
+  4-3-wallet-user-account-binding: backlog
   epic-4-retrospective: optional
+
+  # Epic 5: Backtesting Sandbox
   epic-5: backlog
-  5-1-credit-monitoring-dashboard: backlog
-  5-2-tokenomics-actions-burn-buy-back: backlog
+  5-1-vibe-trading-api-integration-in-sandbox: backlog
+  5-2-backtest-strategy-editor-monaco-editor: backlog
+  5-3-backtest-results-visualizer: backlog
   epic-5-retrospective: optional
-  epic-6: in-progress
-  6-1-he-thong-web3-auth-wallet-management: backlog
-  6-2-phat-trien-crypto-ui-component-library: backlog
-  6-3-tich-hop-vercel-ai-sdk-generative-ui: backlog
-  6-4-advanced-market-dashboard: backlog
-  6-5-sandbox-ide-backtest-visualizer: backlog
-  6-6-ai-generated-discover-news-page: backlog
-  6-7-vigilant-companion-browser-extension: in-progress
+
+  # Epic 6: Browser Intelligence Extension
+  epic-6: backlog
+  6-1-extension-core-and-token-auto-detection: backlog
+  6-2-risk-tooltip-and-expand-to-full-app: backlog
+  6-3-extension-web-account-sync: backlog
   epic-6-retrospective: optional
+
+  # ─── Phase 2 — Tokenomics & Enterprise ───
+
+  # Epic 7: Credit Economy & Tokenomics
   epic-7: backlog
-  7-1-byok-bring-your-own-key-data-contribution-rewards: backlog
-  7-2-llm-proxy-gateway-model-as-a-service-maas: backlog
-  7-3-local-compute-integration-via-ollama: backlog
+  7-1-internal-credits-system: backlog
+  7-2-clens-token-smart-contract: backlog
+  7-3-affiliate-and-airdrop-reward-system: backlog
   epic-7-retrospective: optional
+
+  # Epic 8: Enterprise & Privacy
+  epic-8: backlog
+  8-1-byok-bring-your-own-api-key: backlog
+  8-2-ollama-local-llm-integration: backlog
+  8-3-llm-proxy-and-maas: backlog
+  8-4-zero-data-leakage-enforcement-tier-3: backlog
+  epic-8-retrospective: optional

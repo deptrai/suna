@@ -56,8 +56,8 @@ Chainlens is an evolution of the existing code structure, reimagined into a dyna
 ## 3. Integration with Existing Architecture
 This UX design is a direct extension of the established architectural decisions:
 *   **Vercel AI SDK:** Powers the streaming chat and dynamic tooltips (using generated UI).
-*   **Hono RPC:** Ensures fast, type-safe data delivery to both the web app and the extension.
-*   **Fault Isolation:** The resource-intensive AI orchestration and sandbox execution happen in the `chainlens-agent`, ensuring the web UI and extension remain perfectly smooth and responsive.
+*   **REST API:** `apps/api` (Epsilon API) provides fast data delivery to both the web app and the extension.
+*   **Fault Isolation:** The resource-intensive AI orchestration and sandbox execution happen in `apps/api` with async workers, ensuring the web UI and extension remain perfectly smooth and responsive.
 
 ## 4. Visual Design Foundation: "Epsilon Cyber-Glass"
 
