@@ -62,7 +62,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
         if (a.priority !== b.priority) {
           return (b.priority || 0) - (a.priority || 0);
         }
-        return a.name.localeCompare(b.name);
+        return a.label.localeCompare(b.label);
       });
     });
 
@@ -162,7 +162,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
           >
             {selectedModelInfo ? getModelIcon(selectedModelInfo) : <Cpu className="w-4 h-4" />}
             <span className="truncate text-sm">
-              {selectedModelInfo ? selectedModelInfo.name : 'Select Model'}
+              {selectedModelInfo ? selectedModelInfo.label : 'Select Model'}
             </span>
             <ChevronDown className="w-4 h-4 flex-shrink-0" />
           </Button>
