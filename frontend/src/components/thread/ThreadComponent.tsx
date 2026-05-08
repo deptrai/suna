@@ -79,7 +79,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
     setSelectedAgent,
     initializeFromAgents,
     getCurrentAgent,
-    isChainLensAgent,
+    isChainlensAgent,
   } = useAgentSelection();
 
   const { data: agentsResponse } = useAgents();
