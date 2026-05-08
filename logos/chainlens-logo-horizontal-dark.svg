@@ -1,0 +1,121 @@
+<svg width="2400" height="800" viewBox="0 0 2400 800" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Hexagon symbol -->
+    <g id="hex">
+      <polygon points="24,0 12,-20.78 -12,-20.78 -24,0 -12,20.78 12,20.78" fill="#0F172A" stroke="#0EA5E9" stroke-width="4"/>
+      <circle cx="0" cy="0" r="6" fill="#0EA5E9" />
+    </g>
+
+    <!-- Aperture Blade -->
+    <g id="blade">
+      <!-- Dark slate blade with bright cyan border -->
+      <path d="M 25,0 L 12.5,21.65 L -30,95.4 A 100,100 0 0,0 86.6,50 Z" fill="#1E293B" stroke="#0EA5E9" stroke-width="2" />
+    </g>
+  </defs>
+
+  <!-- Transparent Background -->
+
+  <!-- Left Side: Mark -->
+  <g transform="translate(400, 400)">
+    <!-- Outer Underlay -->
+    <circle cx="0" cy="0" r="280" fill="#0EA5E9" opacity="0.03" />
+
+    <g>
+      <!-- Inner Concentric Rings -->
+      <circle cx="0" cy="0" r="130" fill="none" stroke="#475569" stroke-width="3" opacity="0.4" />
+      <circle cx="0" cy="0" r="160" fill="none" stroke="#475569" stroke-width="4" opacity="0.5" />
+      <circle cx="0" cy="0" r="180" fill="none" stroke="#0EA5E9" stroke-width="2" opacity="0.8" />
+
+      <!-- Outer Network Ring -->
+      <circle cx="0" cy="0" r="280" fill="none" stroke="#0EA5E9" stroke-width="4" opacity="0.9" />
+
+      <!-- Criss-cross Web -->
+      <path d="
+        M 280,0 L 155.88,90
+        M 280,0 L 155.88,-90
+        M 242.49,140 L 180,0
+        M 242.49,140 L 90,155.88
+        M 140,242.49 L 155.88,90
+        M 140,242.49 L 0,180
+        M 0,280 L 90,155.88
+        M 0,280 L -90,155.88
+        M -140,242.49 L 0,180
+        M -140,242.49 L -155.88,90
+        M -242.49,140 L -90,155.88
+        M -242.49,140 L -180,0
+        M -280,0 L -155.88,90
+        M -280,0 L -155.88,-90
+        M -242.49,-140 L -180,0
+        M -242.49,-140 L -90,-155.88
+        M -140,-242.49 L -155.88,-90
+        M -140,-242.49 L 0,-180
+        M 0,-280 L -90,-155.88
+        M 0,-280 L 90,-155.88
+        M 140,-242.49 L 0,-180
+        M 140,-242.49 L 155.88,-90
+        M 242.49,-140 L 90,-155.88
+        M 242.49,-140 L 180,0
+      " stroke="#334155" stroke-width="2" fill="none" opacity="0.6"/>
+
+      <!-- Straight connecting lines -->
+      <path d="
+        M 280,0 L 180,0
+        M 0,280 L 0,180
+        M -280,0 L -180,0
+        M 0,-280 L 0,-180
+      " stroke="#0EA5E9" stroke-width="4" fill="none"/>
+
+      <!-- Inner nodes (r=180) -->
+      <circle cx="180" cy="0" r="7" fill="#0EA5E9" />
+      <circle cx="155.88" cy="90" r="7" fill="#0EA5E9" />
+      <circle cx="90" cy="155.88" r="7" fill="#0EA5E9" />
+      <circle cx="0" cy="180" r="7" fill="#0EA5E9" />
+      <circle cx="-90" cy="155.88" r="7" fill="#0EA5E9" />
+      <circle cx="-155.88" cy="90" r="7" fill="#0EA5E9" />
+      <circle cx="-180" cy="0" r="7" fill="#0EA5E9" />
+      <circle cx="-155.88" cy="-90" r="7" fill="#0EA5E9" />
+      <circle cx="-90" cy="-155.88" r="7" fill="#0EA5E9" />
+      <circle cx="0" cy="-180" r="7" fill="#0EA5E9" />
+      <circle cx="90" cy="-155.88" r="7" fill="#0EA5E9" />
+      <circle cx="155.88" cy="-90" r="7" fill="#0EA5E9" />
+
+      <!-- Outer nodes (r=280) -->
+      <circle cx="242.49" cy="140" r="10" fill="#0EA5E9" />
+      <circle cx="140" cy="242.49" r="10" fill="#0EA5E9" />
+      <circle cx="-140" cy="242.49" r="10" fill="#0EA5E9" />
+      <circle cx="-242.49" cy="140" r="10" fill="#0EA5E9" />
+      <circle cx="-242.49" cy="-140" r="10" fill="#0EA5E9" />
+      <circle cx="-140" cy="-242.49" r="10" fill="#0EA5E9" />
+      <circle cx="140" cy="-242.49" r="10" fill="#0EA5E9" />
+      <circle cx="242.49" cy="-140" r="10" fill="#0EA5E9" />
+
+      <!-- Hexagons at 0, 90, 180, 270 -->
+      <use href="#hex" x="280" y="0" />
+      <use href="#hex" x="0" y="280" />
+      <use href="#hex" x="-280" y="0" />
+      <use href="#hex" x="0" y="-280" />
+    </g>
+
+    <!-- APERTURE / LENS -->
+    <circle cx="0" cy="0" r="100" fill="#0F172A" stroke="#0EA5E9" stroke-width="6" />
+    <use href="#blade" transform="rotate(0)" />
+    <use href="#blade" transform="rotate(60)" />
+    <use href="#blade" transform="rotate(120)" />
+    <use href="#blade" transform="rotate(180)" />
+    <use href="#blade" transform="rotate(240)" />
+    <use href="#blade" transform="rotate(300)" />
+
+    <!-- Highlights -->
+    <path d="M -70,-65 A 95 95 0 0 1 70,-65 A 80 80 0 0 0 -70,-65 Z" fill="#FFFFFF" opacity="0.1" />
+    <path d="M -50,85 A 95 95 0 0 0 50,85 A 85 85 0 0 1 -50,85 Z" fill="#FFFFFF" opacity="0.05" />
+    <circle cx="-40" cy="-40" r="15" fill="#FFFFFF" opacity="0.15" />
+  </g>
+
+  <!-- Right Side: Logotype -->
+  <g transform="translate(800, 400)">
+    <text x="0" y="60" font-family="system-ui, -apple-system, sans-serif" font-size="240" font-weight="800" text-anchor="start" letter-spacing="10">
+      <tspan fill="#FFFFFF">CHAIN</tspan><tspan fill="#0EA5E9">LENS</tspan>
+    </text>
+    <text x="15" y="180" font-family="system-ui, -apple-system, sans-serif" font-size="70" font-weight="600" fill="#64748B" text-anchor="start" letter-spacing="24">AGENT</text>
+  </g>
+</svg>
