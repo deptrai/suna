@@ -66,7 +66,7 @@ export async function deepResearchPerplexity(
         Authorization: `Bearer ${config.PERPLEXITY_API_KEY}`,
       },
       body: JSON.stringify(requestBody),
-      signal: AbortSignal.timeout(60_000),
+      signal: AbortSignal.timeout(200_000),
     });
   } catch (e) {
     throw new Error(

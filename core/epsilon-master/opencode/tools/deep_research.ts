@@ -79,7 +79,7 @@ export default tool({
           Authorization: `Bearer ${epsilonToken}`,
         },
         body: JSON.stringify(body),
-        signal: AbortSignal.timeout(90_000),
+        signal: AbortSignal.timeout(220_000),
       });
     } catch (e) {
       return JSON.stringify(
