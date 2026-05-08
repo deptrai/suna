@@ -3,6 +3,7 @@ import { config } from '../config';
 import { apiKeyAuth } from '../middleware/auth';
 import { webSearch } from './routes/search-web';
 import { imageSearch } from './routes/search-image';
+import { deepResearch } from './routes/deep-research';
 import { llm } from './routes/llm';
 import { proxy } from './routes/proxy';
 import { anthropic } from './routes/anthropic';
@@ -16,14 +17,17 @@ router.get('/health', (c) => {
     service: 'epsilon-router',
     timestamp: new Date().toISOString(),
     env: config.ENV_MODE,
+    uptime: process.uptime(),
   });
 });
 
 // Search routes (apiKeyAuth)
 router.use('/web-search/*', apiKeyAuth);
 router.use('/image-search/*', apiKeyAuth);
+router.use('/deep-research/*', apiKeyAuth);
 router.route('/web-search', webSearch);
 router.route('/image-search', imageSearch);
+router.route('/deep-research', deepResearch);
 
 // LLM routes (apiKeyAuth)
 router.use('/chat/*', apiKeyAuth);

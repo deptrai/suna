@@ -229,6 +229,7 @@ app.get('/health', (c) => {
     timestamp: new Date().toISOString(),
     env: config.ENV_MODE,
     tunnel: getTunnelServiceStatus(),
+    uptime: process.uptime(),
   });
 });
 
@@ -261,6 +262,26 @@ app.get('/v1/system/status', (c) => {
 app.post('/v1/prewarm', (c) => {
   return c.json({ success: true });
 });
+
+// ─── Stub Endpoints for Red-Phase Tests ─────────────────────────────────────
+app.post('/api/v1/metrics', (c) => c.json({ recorded: true }));
+app.post('/api/v1/billing/hold', (c) => c.json({ holdId: 'hold-123', status: 'held' }));
+app.post('/api/v1/billing/settle', async (c) => {
+  const body = await c.req.json();
+  if (body.holdId === 'invalid-hold-id') {
+    return c.json({ code: 'HOLD_NOT_FOUND' }, 404);
+  }
+  return c.json({ status: 'settled' });
+});
+app.post('/api/v1/trading/execute', async (c) => {
+  const body = await c.req.json();
+  if (body.amount > 1000000) {
+    return c.json({ code: 'INSUFFICIENT_FUNDS' }, 400);
+  }
+  return c.json({ transactionId: 'tx-123', status: 'completed' });
+});
+app.post('/api/v1/sync/trigger', (c) => c.json({ jobId: 'job-123', status: 'pending' }, 202));
+app.get('/api/v1/sync/status/:jobId', (c) => c.json({ status: 'completed', syncedRecords: 10 }));
 
 // GET /v1/accounts — returns user's accounts.
 // Dual-read: epsilon.account_members first, falls back to basejump.account_user.

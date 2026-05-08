@@ -302,3 +302,30 @@ export interface DeductResult {
   transaction_id?: string;
   error?: string;
 }
+
+// === Deep Research (Perplexity Sonar) ===
+
+export const DeepResearchRequestSchema = z.object({
+  query: z.string().min(1, 'Query is required'),
+  reasoning_effort: z.enum(['low', 'medium', 'high']).default('medium'),
+  max_tokens: z.number().int().min(100).max(4000).default(2000),
+  search_recency_filter: z.enum(['hour', 'day', 'week', 'month', 'year']).optional(),
+  session_id: z.string().optional(),
+});
+
+export type DeepResearchRequest = z.infer<typeof DeepResearchRequestSchema>;
+
+export interface DeepResearchCitation {
+  title: string;
+  url: string;
+  snippet: string;
+}
+
+export interface DeepResearchResponse {
+  query: string;
+  answer: string;
+  citations: DeepResearchCitation[];
+  reasoning_effort: string;
+  search_queries_count: number;
+  cost: number;
+}

@@ -82,6 +82,8 @@ const envSchema = z.object({
   // ── Search Providers (optional — features degrade gracefully) ────────────
   TAVILY_API_URL:              optUrl('https://api.tavily.com'),
   TAVILY_API_KEY:              optStr,
+  PERPLEXITY_API_URL:          optUrl('https://api.perplexity.ai'),
+  PERPLEXITY_API_KEY:          optStr,
   SERPER_API_URL:              optUrl('https://google.serper.dev'),
   SERPER_API_KEY:              optStr,
 
@@ -378,6 +380,8 @@ export const config = {
   // ─── Search Providers ──────────────────────────────────────────────────────
   TAVILY_API_URL: env.TAVILY_API_URL,
   TAVILY_API_KEY: env.TAVILY_API_KEY,
+  PERPLEXITY_API_URL: env.PERPLEXITY_API_URL,
+  PERPLEXITY_API_KEY: env.PERPLEXITY_API_KEY,
   SERPER_API_URL: env.SERPER_API_URL,
   SERPER_API_KEY: env.SERPER_API_KEY,
 
@@ -642,6 +646,21 @@ export const TOOL_PRICING: Record<string, ToolPricing> = {
   },
   proxy_freestyle_deploy: {
     baseCost: 0.01,
+    perResultCost: 0,
+    markupMultiplier: 1.5,
+  },
+  deep_research_low: {
+    baseCost: 0.10,
+    perResultCost: 0,
+    markupMultiplier: 1.5,
+  },
+  deep_research_medium: {
+    baseCost: 0.25,
+    perResultCost: 0,
+    markupMultiplier: 1.5,
+  },
+  deep_research_high: {
+    baseCost: 0.50,
     perResultCost: 0,
     markupMultiplier: 1.5,
   },

@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'bun:test';
 
-const API_URL = process.env.API_URL || 'http://localhost:3000';
+const API_URL = process.env.API_URL || 'http://localhost:8008';
 
 describe('Data Worker Sync API Tests', () => {
   test('[P0] should trigger data sync job successfully', async () => {
