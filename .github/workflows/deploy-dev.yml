@@ -53,16 +53,11 @@ jobs:
         with:
           filters: |
             api:
-              - 'apps/api/**'
-              - 'packages/**'
-              - 'pnpm-lock.yaml'
-              - 'pnpm-workspace.yaml'
+              - 'backend/**'
             frontend:
-              - 'apps/web/**'
-              - 'packages/shared/**'
-              - 'pnpm-lock.yaml'
+              - 'frontend/**'
             computer:
-              - 'core/**'
+              - 'services/chainlens-core/**'
       - name: Summary
         run: |
           echo "### Changes detected" >> "$GITHUB_STEP_SUMMARY"
@@ -88,9 +83,9 @@ jobs:
       - name: Build and push
         run: |
           SHA8="${GITHUB_SHA::8}"
-          docker build --file apps/api/Dockerfile --build-arg SERVICE=apps/api \
+          docker build --file backend/Dockerfile \
             --tag "ghcr.io/deptrai/epsilon-api:dev-${SHA8}-amd64" \
-            --tag "ghcr.io/deptrai/epsilon-api:dev-latest-amd64" .
+            --tag "ghcr.io/deptrai/epsilon-api:dev-latest-amd64" backend/
           docker push "ghcr.io/deptrai/epsilon-api:dev-${SHA8}-amd64"
           docker push "ghcr.io/deptrai/epsilon-api:dev-latest-amd64"
 
@@ -114,9 +109,9 @@ jobs:
       - name: Build and push
         run: |
           SHA8="${GITHUB_SHA::8}"
-          docker build --file apps/api/Dockerfile --build-arg SERVICE=apps/api \
+          docker build --file backend/Dockerfile \
             --tag "ghcr.io/deptrai/epsilon-api:dev-${SHA8}-arm64" \
-            --tag "ghcr.io/deptrai/epsilon-api:dev-latest-arm64" .
+            --tag "ghcr.io/deptrai/epsilon-api:dev-latest-arm64" backend/
           docker push "ghcr.io/deptrai/epsilon-api:dev-${SHA8}-arm64"
           docker push "ghcr.io/deptrai/epsilon-api:dev-latest-arm64"
 
@@ -166,9 +161,9 @@ jobs:
       - name: Build and push
         run: |
           SHA8="${GITHUB_SHA::8}"
-          docker build --file apps/web/Dockerfile \
+          docker build --file frontend/Dockerfile \
             --tag "ghcr.io/deptrai/epsilon-frontend:dev-${SHA8}-amd64" \
-            --tag "ghcr.io/deptrai/epsilon-frontend:dev-latest-amd64" .
+            --tag "ghcr.io/deptrai/epsilon-frontend:dev-latest-amd64" frontend/
           docker push "ghcr.io/deptrai/epsilon-frontend:dev-${SHA8}-amd64"
           docker push "ghcr.io/deptrai/epsilon-frontend:dev-latest-amd64"
 
@@ -192,9 +187,9 @@ jobs:
       - name: Build and push
         run: |
           SHA8="${GITHUB_SHA::8}"
-          docker build --file apps/web/Dockerfile \
+          docker build --file frontend/Dockerfile \
             --tag "ghcr.io/deptrai/epsilon-frontend:dev-${SHA8}-arm64" \
-            --tag "ghcr.io/deptrai/epsilon-frontend:dev-latest-arm64" .
+            --tag "ghcr.io/deptrai/epsilon-frontend:dev-latest-arm64" frontend/
           docker push "ghcr.io/deptrai/epsilon-frontend:dev-${SHA8}-arm64"
           docker push "ghcr.io/deptrai/epsilon-frontend:dev-latest-arm64"
 
@@ -239,10 +234,10 @@ jobs:
       - name: Build and push
         run: |
           SHA8="${GITHUB_SHA::8}"
-          docker build --file core/docker/Dockerfile \
+          docker build --file services/chainlens-core/Dockerfile \
             --build-arg "SANDBOX_VERSION=dev-${SHA8}" \
             --tag "ghcr.io/deptrai/computer:dev-${SHA8}-amd64" \
-            --tag "ghcr.io/deptrai/computer:dev-latest-amd64" .
+            --tag "ghcr.io/deptrai/computer:dev-latest-amd64" services/chainlens-core/
           docker push "ghcr.io/deptrai/computer:dev-${SHA8}-amd64"
           docker push "ghcr.io/deptrai/computer:dev-latest-amd64"
 
