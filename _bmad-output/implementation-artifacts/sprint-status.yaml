@@ -1,0 +1,72 @@
+# generated: 2026-05-07T20:30:50Z
+# last_updated: 2026-05-07T20:30:50Z
+# project: chainlens
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: _bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2026-05-07T20:30:50Z
+last_updated: 2026-05-07T20:30:50Z
+project: chainlens
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+
+development_status:
+  epic-1: backlog
+  1-1-khoi-tao-project-lifecycle-hooks: backlog
+  1-2-ai-chat-endpoint-legal-disclaimers: backlog
+  1-3-background-data-workers: backlog
+  1-4-ai-tools-external-integrations: backlog
+  1-5-jit-data-sync-risk-warnings: backlog
+  epic-1-retrospective: optional
+  epic-2: backlog
+  2-1-idempotency-distributed-locking-middleware: backlog
+  2-2-the-hold-and-settle-credit-engine-core-db: backlog
+  2-3-tich-hop-billing-vao-ai-chat-endpoints: backlog
+  2-4-background-reapers-alerting-metrics: backlog
+  epic-2-retrospective: optional
+  epic-3: backlog
+  3-1-custom-bot-agent-configuration: backlog
+  3-2-vulnerability-scanner-validation-layer: backlog
+  3-3-secure-sandbox-execution-environment: backlog
+  3-4-backtesting-with-vibe-trading-api: backlog
+  3-5-sandbox-resource-management-monitors: backlog
+  epic-3-retrospective: optional
+  epic-4: backlog
+  4-1-team-collaboration-workspaces: backlog
+  4-2-inbound-only-rag-sync-on-premise: backlog
+  epic-4-retrospective: optional
+  epic-5: backlog
+  5-1-credit-monitoring-dashboard: backlog
+  5-2-tokenomics-actions-burn-buy-back: backlog
+  epic-5-retrospective: optional

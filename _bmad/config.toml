@@ -11,7 +11,7 @@
 # ─────────────────────────────────────────────────────────────────
 
 [core]
-project_name = "suna"
+project_name = "chainlens"
 document_output_language = "viet nam"
 output_folder = "{project-root}/_bmad-output"
 

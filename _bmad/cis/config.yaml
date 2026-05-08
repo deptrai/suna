@@ -7,7 +7,7 @@ visual_tools: intermediate
 
 # Core Configuration Values
 user_name: Luisphan
-project_name: suna
+project_name: chainlens
 communication_language: viet nam
 document_output_language: viet nam
 output_folder: "{project-root}/_bmad-output"
