@@ -1,11 +1,20 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 import { ownerEmail, ownerPassword, apiBase, getAccessTokenFromPage } from '../helpers/auth';
 import { waitForSandboxReady } from '../helpers/wait';
 
-test.describe('05 — Onboarding wizard to dashboard', () => {
-  test.setTimeout(600_000);
+test.describe.serial('05 — Onboarding to Dashboard Flow', () => {
+  let page: Page;
 
-  test('full flow: login -> wizard -> provider -> skip -> dashboard', async ({ page }) => {
+  test.beforeAll(async ({ browser }) => {
+    page = await browser.newPage();
+  });
+
+  test.afterAll(async () => {
+    await page.close();
+  });
+
+  test('[P0] should bootstrap owner and sign in', async () => {
+    test.setTimeout(120_000);
     // ── 1. Bootstrap owner (idempotent) ────────────────────────────
     const bootstrapRes = await page.request.post(`${apiBase}/setup/bootstrap-owner`, {
       data: { email: ownerEmail, password: ownerPassword },
@@ -14,23 +23,26 @@ test.describe('05 — Onboarding wizard to dashboard', () => {
 
     // ── 2. Sign in ─────────────────────────────────────────────────
     await page.goto('/auth');
-    await page.waitForTimeout(2_000);
 
-    // Click through lock screen overlay (div intercepts pointer events)
     const lockScreen = page.getByText('Click or press Enter to sign in');
-    if (await lockScreen.isVisible({ timeout: 5_000 }).catch(() => false)) {
+    const signInHeading = page.getByRole('heading', { name: 'Sign in to Epsilon' });
+
+    // Wait for either the lock screen or the sign in heading to be visible
+    await expect(lockScreen.or(signInHeading)).toBeVisible({ timeout: 15_000 });
+
+    if (await lockScreen.isVisible()) {
       await page.locator('div.fixed.inset-0.cursor-pointer').first().click({ force: true });
-      await page.waitForTimeout(1_500);
     }
 
-    await expect(page.getByRole('heading', { name: 'Sign in to Epsilon' })).toBeVisible({
-      timeout: 15_000,
-    });
+    await expect(signInHeading).toBeVisible({ timeout: 15_000 });
 
     await page.locator('input[name="email"]').fill(ownerEmail);
     await page.locator('input[name="password"]').fill(ownerPassword);
     await page.getByRole('button', { name: 'Sign in' }).click();
+  });
 
+  test('[P0] should navigate through onboarding wizard', async () => {
+    test.setTimeout(240_000);
     // ── 3. Wait for "Connect a provider" step ──────────────────────
     await expect(
       page.getByRole('heading', { name: /Connect a provider/i }),
@@ -43,34 +55,38 @@ test.describe('05 — Onboarding wizard to dashboard', () => {
 
     // ── 5. Click "Configure LLM Provider" ──────────────────────────
     const configureBtn = page.getByRole('button', { name: /Configure LLM Provider/i });
-    if (await configureBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
+    if (await configureBtn.isVisible()) {
       await configureBtn.click();
-      // Wait for provider dialog / options
-      await page.waitForTimeout(2_000);
     }
 
     // ── 6. Try to advance past provider step ───────────────────────
-    // If there's a Continue button, click it. If not, use skip.
     const continueBtn = page.getByRole('button', { name: /Continue/i });
-    if (await continueBtn.isVisible({ timeout: 3_000 }).catch(() => false)) {
-      await continueBtn.click();
-    }
-
-    // ── 7. Handle tool keys step (skip) ────────────────────────────
     const skipBtn = page.getByRole('button', { name: /Skip for now/i });
-    if (await skipBtn.isVisible({ timeout: 10_000 }).catch(() => false)) {
+    
+    // Wait for either continue or skip to be visible indicating the next state
+    await expect(continueBtn.or(skipBtn)).toBeVisible({ timeout: 10_000 });
+
+    if (await continueBtn.isVisible()) {
+      await continueBtn.click();
+    } else if (await skipBtn.isVisible()) {
       await skipBtn.click();
     }
+  });
 
+  test('[P0] should skip onboarding to reach dashboard', async () => {
+    test.setTimeout(60_000);
     // ── 8. Skip onboarding to reach dashboard ──────────────────────
     await page.goto('/onboarding?skip_onboarding=1');
-    await expect(page).toHaveURL(/\/dashboard/, { timeout: 30_000 });
+    await page.waitForURL(/\/dashboard/, { timeout: 30_000 });
 
     // ── 9. Verify dashboard content ────────────────────────────────
     await expect(page.getByRole('button', { name: /New session/i })).toBeVisible({
       timeout: 15_000,
     });
+  });
 
+  test('[P1] should verify API access from dashboard', async () => {
+    test.setTimeout(60_000);
     // ── 10. Verify API access from dashboard ───────────────────────
     const token = await getAccessTokenFromPage(page);
     expect(token).toBeTruthy();
@@ -82,7 +98,10 @@ test.describe('05 — Onboarding wizard to dashboard', () => {
     expect(sshRes.status()).toBe(200);
     const sshData = await sshRes.json();
     expect(sshData.success).toBeTruthy();
+  });
 
+  test('[P1] should verify re-login works and retains authenticated state', async () => {
+    test.setTimeout(120_000);
     // ── 11. Verify re-login works (user is authenticated) ──────────
     await page.context().clearCookies();
     await page.evaluate(() => {
@@ -91,11 +110,14 @@ test.describe('05 — Onboarding wizard to dashboard', () => {
     });
 
     await page.goto('/auth');
-    await page.waitForTimeout(2_000);
-    const lockScreen2 = page.getByText('Click or press Enter to sign in');
-    if (await lockScreen2.isVisible({ timeout: 5_000 }).catch(() => false)) {
+    
+    const lockScreen = page.getByText('Click or press Enter to sign in');
+    const signInHeading = page.getByRole('heading', { name: 'Sign in to Epsilon' });
+
+    await expect(lockScreen.or(signInHeading)).toBeVisible({ timeout: 15_000 });
+
+    if (await lockScreen.isVisible()) {
       await page.locator('div.fixed.inset-0.cursor-pointer').first().click({ force: true });
-      await page.waitForTimeout(1_500);
     }
 
     // Login form should appear
@@ -108,16 +130,15 @@ test.describe('05 — Onboarding wizard to dashboard', () => {
     // After re-login: may go to dashboard, onboarding, or stay on /auth
     // showing the wizard. All are valid — the key test is that the user
     // is authenticated and sees either the wizard or the dashboard.
-    await page.waitForTimeout(5_000);
+    
+    const wizardHeading = page.getByRole('heading', { name: /Connect a provider/i });
+    const newSessionBtn = page.getByRole('button', { name: /New session/i });
 
-    const wizardVisible = await page
-      .getByRole('heading', { name: /Connect a provider/i })
-      .isVisible()
-      .catch(() => false);
-    const dashboardVisible = await page
-      .getByRole('button', { name: /New session/i })
-      .isVisible()
-      .catch(() => false);
+    // Wait for the UI to settle into either state
+    await expect(wizardHeading.or(newSessionBtn)).toBeVisible({ timeout: 15_000 });
+
+    const wizardVisible = await wizardHeading.isVisible();
+    const dashboardVisible = await newSessionBtn.isVisible();
     const onboardingUrl = page.url().includes('/onboarding');
     const dashboardUrl = page.url().includes('/dashboard');
 
