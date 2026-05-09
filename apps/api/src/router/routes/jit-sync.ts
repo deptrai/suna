@@ -1,5 +1,9 @@
 import { Hono } from 'hono';
+import { db } from '../../shared/db';
+import { onChainDataIndex } from '@epsilon/db';
+import { desc, eq } from 'drizzle-orm';
 import { HTTPException } from 'hono/http-exception';
+import { logger } from '../../lib/logger';
 import { JitSyncRequestSchema } from '../../types';
 import type {
   JitSyncProxyResponse,
@@ -135,6 +139,74 @@ jitSync.post('/', async (c) => {
   }
 
   return result;
+});
+
+const ONCHAIN_PAGE_SIZE = 50;
+const ONCHAIN_MAX_OFFSET = 1000;
+const ONCHAIN_MAX_IDENTIFIER = 255;
+const EVM_ADDRESS = /^0x[a-f0-9]{40}$/;
+
+function clampOffset(raw: string | undefined): number {
+  if (!raw) return 0;
+  const n = Number.parseInt(raw, 10);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return Math.min(n, ONCHAIN_MAX_OFFSET);
+}
+
+function normalizeIdentifier(raw: string): { value: string; isEvmAddress: boolean } {
+  const trimmed = raw.trim();
+  const lowered = trimmed.toLowerCase();
+  // EVM addresses are case-insensitive (we lowercase for comparison).
+  // Other chains (Solana base58, Cosmos bech32) preserve original case.
+  if (EVM_ADDRESS.test(lowered)) return { value: lowered, isEvmAddress: true };
+  return { value: trimmed, isEvmAddress: false };
+}
+
+jitSync.get('/onchain/:identifier', async (c) => {
+  const raw = c.req.param('identifier');
+  if (!raw || raw.length > ONCHAIN_MAX_IDENTIFIER) {
+    throw new HTTPException(400, { message: 'invalid identifier' });
+  }
+  const { value: identifier } = normalizeIdentifier(raw);
+  if (!identifier) {
+    throw new HTTPException(400, { message: 'invalid identifier' });
+  }
+
+  const offset = clampOffset(c.req.query('offset'));
+
+  // Branch on input shape: token-like vs wallet-like to use a single index path.
+  // Both columns are searched only when the input shape is ambiguous.
+  const filter = EVM_ADDRESS.test(identifier)
+    ? eq(onChainDataIndex.walletAddress, identifier)
+    : eq(onChainDataIndex.tokenAddress, identifier);
+
+  try {
+    const items = await db
+      .select({
+        id: onChainDataIndex.id,
+        source: onChainDataIndex.source,
+        metricName: onChainDataIndex.metricName,
+        timestamp: onChainDataIndex.timestamp,
+        walletAddress: onChainDataIndex.walletAddress,
+        tokenAddress: onChainDataIndex.tokenAddress,
+      })
+      .from(onChainDataIndex)
+      .where(filter)
+      .orderBy(desc(onChainDataIndex.timestamp))
+      .limit(ONCHAIN_PAGE_SIZE)
+      .offset(offset);
+
+    const nextOffset = items.length === ONCHAIN_PAGE_SIZE ? offset + ONCHAIN_PAGE_SIZE : null;
+    c.header('Cache-Control', 'public, max-age=60');
+    return c.json({
+      success: true,
+      items,
+      pagination: { offset, limit: ONCHAIN_PAGE_SIZE, nextOffset },
+    });
+  } catch (err) {
+    logger.error('[jit-sync] onchain query failed', { error: String(err) });
+    return c.json({ success: false, error: 'onchain_unavailable' }, 503);
+  }
 });
 
 export { jitSync };

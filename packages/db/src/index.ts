@@ -78,6 +78,9 @@ export {
   // Discover Feeds
   discoverFeeds,
   warningLevelEnum,
+  // On-Chain Data
+  onChainDataIndex,
+  onchainSourceEnum,
   // Pool
   poolResources,
   poolSandboxes,

@@ -214,6 +214,12 @@ const envSchema = z.object({
   DISCOVER_RETENTION_DAYS:     optInt(30),
   NEWS_API_URL:                optUrl('https://newsapi.org/v2'),
   NEWS_API_KEY:                optStr,
+
+  // ─── On-Chain Data Providers ──────────────────────────────────────────────
+  DUNE_API_KEY:                optStr,
+  NANSEN_API_KEY:              optStr,
+  ONCHAIN_WORKER_ENABLED:      optBoolFalse,
+  ONCHAIN_RETENTION_DAYS:      optInt(30),
   });
 
 // ─── Validation + Conditional Checks ────────────────────────────────────────
@@ -556,6 +562,13 @@ export const config = {
   DISCOVER_RETENTION_DAYS: env.DISCOVER_RETENTION_DAYS,
   NEWS_API_URL: env.NEWS_API_URL,
   NEWS_API_KEY: env.NEWS_API_KEY,
+
+  // ─── On-Chain Data Providers ──────────────────────────────────────────────
+  ONCHAIN_WORKER_ENABLED: true,
+  ONCHAIN_RETENTION_DAYS: 30,
+  DUNE_API_KEY: env.DUNE_API_KEY,
+  NANSEN_API_KEY: env.NANSEN_API_KEY,
+  // Removed duplicates
 
   // ─── Helper Methods ────────────────────────────────────────────────────────
 

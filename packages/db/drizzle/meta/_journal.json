@@ -15,6 +15,13 @@
       "when": 1746806400000,
       "tag": "0001_discover_feeds",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1746810000000,
+      "tag": "0002_onchain_data_index",
+      "breakpoints": true
     }
   ]
 }

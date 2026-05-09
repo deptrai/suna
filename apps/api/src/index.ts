@@ -32,7 +32,7 @@ import { setupApp } from './setup';
 import { providersApp } from './providers/routes';
 import { secretsApp } from './secrets/routes';
 import { integrationsApp } from './integrations';
-import { queueApp, startDrainer, stopDrainer, startDiscoverFeedWorker, setupDiscoverFeedJobs, stopDiscoverFeedWorker } from './queue';
+import { queueApp, startDrainer, stopDrainer, startDiscoverFeedWorker, setupDiscoverFeedJobs, stopDiscoverFeedWorker, startOnChainIndexWorker, setupOnChainIndexJobs, stopOnChainIndexWorker } from './queue';
 import { serversApp } from './servers';
 // WoA is now mounted under the router at /v1/router/woa (see router/index.ts)
 import { supabaseAuth, combinedAuth } from './middleware/auth';
@@ -1058,6 +1058,8 @@ function startBackgroundServices() {
   startDrainer();
   startDiscoverFeedWorker();
   setupDiscoverFeedJobs().catch((e) => appLogger.error('[discover-feed] setup failed', { error: String(e) }));
+  startOnChainIndexWorker();
+  setupOnChainIndexJobs().catch((e) => appLogger.error('[onchain-index] setup failed', { error: String(e) }));
   startTunnelService();
   startAutoReplenish();
   startInviteCleanup(appDb);
@@ -1121,6 +1123,9 @@ async function shutdown(signal: string) {
   stopInviteCleanup();
   await stopDiscoverFeedWorker().catch((e) =>
     appLogger.error('[discover-feed] shutdown failed', { error: String(e) }),
+  );
+  await stopOnChainIndexWorker().catch((e) =>
+    appLogger.error('[onchain-index] shutdown failed', { error: String(e) }),
   );
   // Flush observability data before exit
   await Promise.allSettled([appLogger.flush(), flushSentry()]);

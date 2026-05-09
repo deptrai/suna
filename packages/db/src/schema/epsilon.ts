@@ -1024,3 +1024,38 @@ export const discoverFeeds = epsilonSchema.table(
   ]
 );
 
+// ─── On-Chain Data ──────────────────────────────────────────────────────────
+
+export const onchainSourceEnum = epsilonSchema.enum('onchain_source', ['dune', 'nansen']);
+
+export const onChainDataIndex = epsilonSchema.table(
+  'onchain_data_index',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    source: onchainSourceEnum('source').notNull(),
+    walletAddress: varchar('wallet_address', { length: 512 }),
+    tokenAddress: varchar('token_address', { length: 512 }),
+    metricName: varchar('metric_name', { length: 255 }).notNull(),
+    metricValue: jsonb('metric_value').notNull().$type<Record<string, unknown>>(),
+    timestamp: timestamp('timestamp', { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('idx_onchain_data_source_ts').on(table.source, table.timestamp),
+    index('idx_onchain_data_timestamp').on(table.timestamp),
+    index('idx_onchain_data_wallet')
+      .on(table.walletAddress)
+      .where(sql`${table.walletAddress} IS NOT NULL`),
+    index('idx_onchain_data_token')
+      .on(table.tokenAddress)
+      .where(sql`${table.tokenAddress} IS NOT NULL`),
+    uniqueIndex('uq_onchain_natural').on(
+      table.source,
+      table.metricName,
+      table.timestamp,
+      table.walletAddress,
+      table.tokenAddress,
+    ),
+  ]
+);
+
