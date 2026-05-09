@@ -1,10 +1,18 @@
-import Redis from 'ioredis';
+import Redis, { type RedisOptions } from 'ioredis';
 import { config } from '../../config';
 import { logger } from '../../lib/logger';
 
-export const redisConnection = new Redis(config.REDIS_URL || 'redis://localhost:6379', {
+const redisUrl = config.REDIS_URL || 'redis://localhost:6379';
+
+const redisOptions: RedisOptions = {
   maxRetriesPerRequest: null,
-});
+};
+
+if (redisUrl.startsWith('rediss://')) {
+  redisOptions.tls = {};
+}
+
+export const redisConnection = new Redis(redisUrl, redisOptions);
 
 redisConnection.on('error', (err) => {
   logger.error('[redis] connection error', { error: String(err) });

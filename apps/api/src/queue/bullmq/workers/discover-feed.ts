@@ -1,5 +1,6 @@
 import { Worker, Job, Queue } from 'bullmq';
 import { createHash } from 'node:crypto';
+import { lt } from 'drizzle-orm';
 import { redisConnection } from '../connection';
 import { db } from '../../../shared/db';
 import { discoverFeeds } from '@epsilon/db';
@@ -11,9 +12,13 @@ import { generateObject } from 'ai';
 import { z } from 'zod';
 
 export const QUEUE_NAME = 'discover-feed-summarization';
-const SCHEDULER_ID = 'discover-feed-hourly';
-const CRON_PATTERN = '0 * * * *';
+const SUMMARIZE_SCHEDULER_ID = 'discover-feed-hourly';
+const CLEANUP_SCHEDULER_ID = 'discover-feed-cleanup-daily';
+const SUMMARIZE_CRON = '0 * * * *';
+const CLEANUP_CRON = '13 3 * * *';
 const TITLE_MAX = 500;
+const SUMMARIZE_JOB = 'summarize';
+const CLEANUP_JOB = 'cleanup';
 
 let _queue: Queue | null = null;
 let _worker: Worker | null = null;
@@ -23,12 +28,47 @@ function deterministicId(title: string, summary: string): string {
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
 }
 
-async function fetchRawNews() {
-  return [
-    { source: 'Twitter', content: 'Vitalik says Ethereum fees might go down soon.' },
-    { source: 'CoinDesk', content: 'New zero-day exploit found in popular smart contract protocol.' },
-    { source: 'Nansen', content: 'A whale moved 5000 ETH to Binance.' },
-  ];
+const NEWS_API_QUERY = 'crypto OR DeFi OR blockchain OR "smart contract" OR NFT OR "layer 2"';
+const NEWS_API_PAGE_SIZE = 20;
+
+async function fetchRawNews(): Promise<{ source: string; url: string; content: string }[]> {
+  if (!config.NEWS_API_KEY) {
+    logger.warn('[discover-feed] NEWS_API_KEY not set — skipping news fetch');
+    return [];
+  }
+  const url = new URL(`${config.NEWS_API_URL}/everything`);
+  url.searchParams.set('q', NEWS_API_QUERY);
+  url.searchParams.set('sortBy', 'publishedAt');
+  url.searchParams.set('language', 'en');
+  url.searchParams.set('pageSize', String(NEWS_API_PAGE_SIZE));
+  url.searchParams.set('apiKey', config.NEWS_API_KEY);
+
+  const res = await fetch(url.toString(), { signal: AbortSignal.timeout(15_000) });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`[discover-feed] NewsAPI error ${res.status}: ${body.slice(0, 200)}`);
+  }
+
+  const data = (await res.json()) as {
+    status: string;
+    articles?: Array<{
+      source?: { name?: string };
+      title?: string;
+      description?: string;
+      content?: string;
+      url?: string;
+    }>;
+  };
+
+  if (data.status !== 'ok' || !data.articles?.length) return [];
+
+  return data.articles
+    .filter((a) => a.title && (a.description || a.content))
+    .map((a) => ({
+      source: a.source?.name ?? 'NewsAPI',
+      url: a.url ?? '',
+      content: `${a.title}. ${a.description ?? a.content ?? ''}`.slice(0, 1000),
+    }));
 }
 
 function getOpenRouter() {
@@ -58,13 +98,18 @@ async function runSummarizationJob(jobId: string | undefined) {
   logger.info('[discover-feed] job started', { jobId });
 
   const rawData = await fetchRawNews();
+  if (!rawData.length) {
+    logger.warn('[discover-feed] no raw news fetched — skipping summarization', { jobId });
+    return { inserted: 0, skipped: 0 };
+  }
   const dataString = JSON.stringify(rawData);
 
   const openrouter = getOpenRouter();
   const { object } = await generateObject({
     model: openrouter('anthropic/claude-3-haiku'),
     schema: itemsSchema,
-    prompt: `You are a crypto intelligence analyst. Summarize the raw data into feed items.
+    prompt: `You are a crypto intelligence analyst. Summarize the raw news into feed items.
+Each item must use source names and URLs from the raw data — do not invent sources.
 CRITICAL: Anonymize aggressively. Strip wallet addresses, transaction hashes, ENS names, emails, IPs, phone numbers — replace with generic descriptors ("a whale", "an exchange wallet").
 If an event indicates a hack, exploit, or massive dump, mark it as anomaly with appropriate warningLevel.
 Data: ${dataString}`,
@@ -106,6 +151,17 @@ Data: ${dataString}`,
   return { inserted, skipped };
 }
 
+async function runCleanupJob(jobId: string | undefined) {
+  const days = config.DISCOVER_RETENTION_DAYS;
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const deleted = await db
+    .delete(discoverFeeds)
+    .where(lt(discoverFeeds.timestamp, cutoff))
+    .returning({ id: discoverFeeds.id });
+  logger.info('[discover-feed] cleanup complete', { jobId, deleted: deleted.length, retentionDays: days });
+  return { deleted: deleted.length };
+}
+
 export function getDiscoverFeedQueue(): Queue {
   if (!_queue) {
     _queue = new Queue(QUEUE_NAME, { connection: redisConnection });
@@ -122,7 +178,10 @@ export function startDiscoverFeedWorker(): Worker | null {
 
   _worker = new Worker(
     QUEUE_NAME,
-    async (job: Job) => runSummarizationJob(job.id),
+    async (job: Job) => {
+      if (job.name === CLEANUP_JOB) return runCleanupJob(job.id);
+      return runSummarizationJob(job.id);
+    },
     { connection: redisConnection, concurrency: 1, lockDuration: 60_000 },
   );
 
@@ -143,11 +202,20 @@ export async function setupDiscoverFeedJobs() {
   if (!config.DISCOVER_WORKER_ENABLED) return;
   const queue = getDiscoverFeedQueue();
   await queue.upsertJobScheduler(
-    SCHEDULER_ID,
-    { pattern: CRON_PATTERN },
-    { name: 'summarize', data: {}, opts: { attempts: 3, backoff: { type: 'exponential', delay: 30_000 } } },
+    SUMMARIZE_SCHEDULER_ID,
+    { pattern: SUMMARIZE_CRON },
+    { name: SUMMARIZE_JOB, data: {}, opts: { attempts: 3, backoff: { type: 'exponential', delay: 30_000 } } },
   );
-  logger.info('[discover-feed] hourly scheduler registered', { pattern: CRON_PATTERN });
+  await queue.upsertJobScheduler(
+    CLEANUP_SCHEDULER_ID,
+    { pattern: CLEANUP_CRON },
+    { name: CLEANUP_JOB, data: {}, opts: { attempts: 2, backoff: { type: 'exponential', delay: 60_000 } } },
+  );
+  logger.info('[discover-feed] schedulers registered', {
+    summarize: SUMMARIZE_CRON,
+    cleanup: CLEANUP_CRON,
+    retentionDays: config.DISCOVER_RETENTION_DAYS,
+  });
 }
 
 export async function stopDiscoverFeedWorker() {

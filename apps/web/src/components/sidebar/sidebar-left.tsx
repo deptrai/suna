@@ -27,6 +27,7 @@ import {
   AlertTriangle,
   Copy,
   ShieldAlert,
+  Compass,
 } from 'lucide-react';
 import posthog from 'posthog-js';
 
@@ -1591,6 +1592,23 @@ export function SidebarLeft({ ...props }: React.ComponentProps<typeof Sidebar>) 
             >
               <FolderOpen className="h-4 w-4 flex-shrink-0 text-sidebar-foreground" />
               <span className="flex-1 text-left">Files</span>
+            </Button>
+
+            {/* Discover */}
+            <Button
+              onClick={() => {
+                openTabAndNavigate({
+                  id: 'page:/discover',
+                  title: 'Discover',
+                  type: 'page',
+                  href: '/discover',
+                });
+              }}
+              variant="sidebar"
+              className="rounded-lg"
+            >
+              <Compass className="h-4 w-4 flex-shrink-0 text-sidebar-foreground" />
+              <span className="flex-1 text-left">Discover</span>
             </Button>
 
             {/* Board lives in the right sidebar (menu-registry entry

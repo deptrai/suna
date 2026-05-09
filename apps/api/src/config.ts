@@ -211,6 +211,9 @@ const envSchema = z.object({
 
   // ─── Discover Feed Worker ─────────────────────────────────────────────────
   DISCOVER_WORKER_ENABLED:     optBoolFalse,
+  DISCOVER_RETENTION_DAYS:     optInt(30),
+  NEWS_API_URL:                optUrl('https://newsapi.org/v2'),
+  NEWS_API_KEY:                optStr,
   });
 
 // ─── Validation + Conditional Checks ────────────────────────────────────────
@@ -550,6 +553,9 @@ export const config = {
 
   // ─── Discover Feed Worker ─────────────────────────────────────────────────
   DISCOVER_WORKER_ENABLED: env.DISCOVER_WORKER_ENABLED,
+  DISCOVER_RETENTION_DAYS: env.DISCOVER_RETENTION_DAYS,
+  NEWS_API_URL: env.NEWS_API_URL,
+  NEWS_API_KEY: env.NEWS_API_KEY,
 
   // ─── Helper Methods ────────────────────────────────────────────────────────
 

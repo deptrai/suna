@@ -82,6 +82,24 @@ const DeploymentsPage = lazy(() =>
 	})),
 );
 
+const DiscoverPage = lazy(() =>
+	import('@/app/(dashboard)/discover/discover-feed-client').then((m) => ({
+		default: function DiscoverPageWrapper() {
+			return (
+				<div className="container max-w-4xl py-8 space-y-8">
+					<div className="space-y-2">
+						<h1 className="text-3xl font-bold tracking-tight">Discover</h1>
+						<p className="text-muted-foreground">
+							AI-generated news and alpha insights synthesized from multiple sources.
+						</p>
+					</div>
+					<m.DiscoverFeedClient />
+				</div>
+			);
+		},
+	})),
+);
+
 // Admin pages (currently live under the dashboard route group)
 const AdminAnalyticsPage = lazy(() =>
 	import('@/app/(dashboard)/admin/analytics/page'),
@@ -137,6 +155,7 @@ const PAGE_COMPONENTS: Record<string, ComponentType> = {
 	'/files': FilesPage,
 	'/tunnel': TunnelOverviewPage,
 	...(DEPLOYMENTS_ENABLED ? { '/deployments': DeploymentsPage } : {}),
+	'/discover': DiscoverPage,
 	// Admin
 	'/admin/analytics': AdminAnalyticsPage,
 	'/admin/feedback': AdminFeedbackPage,

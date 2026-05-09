@@ -1018,7 +1018,9 @@ export const discoverFeeds = epsilonSchema.table(
   },
   (table) => [
     index('idx_discover_feeds_timestamp').on(table.timestamp),
-    index('idx_discover_feeds_anomaly').on(table.isAnomaly),
+    index('idx_discover_feeds_anomaly')
+      .on(table.timestamp)
+      .where(sql`${table.isAnomaly} = true`),
   ]
 );
 
