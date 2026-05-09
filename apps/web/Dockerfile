@@ -16,9 +16,15 @@ RUN corepack enable pnpm && corepack prepare pnpm@8.15.8 --activate && \
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV SKIP_ENV_VALIDATION=1
+# Placeholder values — replaced at runtime by docker-entrypoint.sh
+ENV NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=local-build-placeholder-anon-key
+ENV NEXT_PUBLIC_BACKEND_URL=http://localhost:8008/v1
+ENV NEXT_PUBLIC_BILLING_ENABLED=false
 RUN pnpm --filter ./apps/web build
 
 FROM base AS runner
