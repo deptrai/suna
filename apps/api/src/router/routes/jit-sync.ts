@@ -1,19 +1,27 @@
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { JitSyncRequestSchema } from '../../types';
-import type { JitSyncProxyResponse, JitSyncSource, AppContext } from '../../types';
+import type {
+  JitSyncProxyResponse,
+  JitSyncErrorResponse,
+  JitSyncSource,
+  ProtocolSnapshot,
+  AppContext,
+} from '../../types';
 import { fetchProtocolSnapshot } from '../services/defillama';
 import {
   cacheKey,
   getCached,
   getCachedAny,
-  setCache,
   dedupedFetch,
   formatSnapshot,
 } from '../services/jit-cache';
 import { checkCredits, deductToolCredits } from '../services/billing';
+import { getToolCost } from '../../config';
 
 const jitSync = new Hono<{ Variables: AppContext }>();
+
+const JIT_TOOL_NAME = 'jit_sync';
 
 jitSync.post('/', async (c) => {
   const accountId = c.get('accountId');
@@ -30,15 +38,17 @@ jitSync.post('/', async (c) => {
     });
   }
 
-  const { protocol_slug: slug, chain, metrics, session_id } = parseResult.data;
+  const slug = parseResult.data.protocol_slug.trim().toLowerCase();
+  const chain = parseResult.data.chain?.trim().toLowerCase();
+  const { session_id } = parseResult.data;
 
   const creditCheck = await checkCredits(accountId);
   if (!creditCheck.hasCredits) {
-    throw new HTTPException(402, { message: creditCheck.message });
+    throw new HTTPException(402, { message: 'Insufficient credits' });
   }
 
   const key = cacheKey(slug, chain);
-  let data: import('../../types').ProtocolSnapshot;
+  let data: ProtocolSnapshot;
   let source: JitSyncSource;
   let fetched_at: string;
   let stale = false;
@@ -52,8 +62,7 @@ jitSync.post('/', async (c) => {
       fetched_at = fresh.fetched_at;
       shouldDeduct = true;
     } else {
-      data = await dedupedFetch(key, () => fetchProtocolSnapshot(slug, { chain, metrics }));
-      setCache(key, data);
+      data = await dedupedFetch(key, () => fetchProtocolSnapshot(slug, { chain }));
       source = 'live';
       fetched_at = new Date().toISOString();
       shouldDeduct = true;
@@ -66,19 +75,33 @@ jitSync.post('/', async (c) => {
       fetched_at = cached.fetched_at;
       stale = true;
       shouldDeduct = true;
+      console.warn(
+        `[EPSILON] JIT sync stale-fallback for '${slug}' (chain=${chain ?? 'all'}): ${
+          defillamaErr instanceof Error ? defillamaErr.message : String(defillamaErr)
+        }`,
+      );
     } else {
-      return c.json({
+      console.warn(
+        `[EPSILON] JIT sync no-data for '${slug}' (chain=${chain ?? 'all'}): ${
+          defillamaErr instanceof Error ? defillamaErr.message : String(defillamaErr)
+        }`,
+      );
+      const errorResponse: JitSyncErrorResponse = {
         slug,
         success: false,
         snapshot: '',
         error: 'DeFiLlama unavailable and no cached data',
         stale: true,
-        source: 'cache_stale' as JitSyncSource,
+        source: 'no_data',
         fetched_at: new Date().toISOString(),
         cost: 0,
-      } as Partial<JitSyncProxyResponse>);
+      };
+      c.header('X-Cache-Status', 'no-data');
+      return c.json(errorResponse);
     }
   }
+
+  const cost = getToolCost(JIT_TOOL_NAME, 0);
 
   const response: JitSyncProxyResponse = {
     ...data,
@@ -87,17 +110,26 @@ jitSync.post('/', async (c) => {
     stale,
     source,
     fetched_at,
-    cost: 0,
+    cost,
   };
+
+  c.header(
+    'X-Cache-Status',
+    source === 'live' ? 'fresh' : source === 'cache_fresh' ? 'hit' : 'stale-fallback',
+  );
 
   const result = c.json(response);
 
   if (shouldDeduct) {
     queueMicrotask(async () => {
       try {
-        await deductToolCredits(accountId, 'jit_sync', 0, `JIT sync: ${slug}`, session_id);
+        await deductToolCredits(accountId, JIT_TOOL_NAME, 0, `JIT sync: ${slug}`, session_id);
       } catch (err) {
-        console.warn(`[EPSILON] JIT sync billing failed for ${accountId}: ${err}`);
+        console.warn(
+          `[EPSILON][billing-failure] tool=${JIT_TOOL_NAME} account=${accountId} slug=${slug} source=${source} cost=${cost} err=${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
       }
     });
   }

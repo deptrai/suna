@@ -333,33 +333,52 @@ export interface DeepResearchResponse {
 // === JIT Crypto Data Snapshot (DeFiLlama) ===
 
 export const JitSyncRequestSchema = z.object({
-  protocol_slug: z.string().min(1, 'protocol_slug is required'),
-  chain: z.string().optional(),
-  metrics: z.array(z.enum(['tvl', 'apy', 'volume', 'fees'])).optional(),
-  session_id: z.string().optional(),
+  protocol_slug: z
+    .string()
+    .min(1, 'protocol_slug is required')
+    .max(64, 'protocol_slug too long')
+    .regex(
+      /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/,
+      'protocol_slug must be lowercase alphanumeric with internal dashes only (no leading/trailing dash)',
+    ),
+  chain: z.string().max(64).optional(),
+  session_id: z.string().max(128).optional(),
 });
 
 export type JitSyncRequest = z.infer<typeof JitSyncRequestSchema>;
 
-export type JitSyncSource = 'live' | 'cache_fresh' | 'cache_stale';
+export type JitSyncSource = 'live' | 'cache_fresh' | 'cache_stale' | 'no_data';
 
 export interface ProtocolSnapshot {
   slug: string;
   name: string;
   tvl_usd: number;
-  tvl_change_24h_pct: number;
+  tvl_change_24h_pct: number | null;
   apy_avg: number | null;
   chains: string[];
 }
 
 export interface JitSyncProxyResponse extends ProtocolSnapshot {
-  success: boolean;
+  success: true;
   snapshot: string;
   stale: boolean;
   source: JitSyncSource;
   fetched_at: string;
   cost: number;
 }
+
+export interface JitSyncErrorResponse {
+  slug: string;
+  success: false;
+  snapshot: string;
+  error: string;
+  stale: boolean;
+  source: JitSyncSource;
+  fetched_at: string;
+  cost: number;
+}
+
+export type JitSyncResult = JitSyncProxyResponse | JitSyncErrorResponse;
 
 /** @deprecated Use JitSyncProxyResponse */
 export type JitSyncResponse = JitSyncProxyResponse;

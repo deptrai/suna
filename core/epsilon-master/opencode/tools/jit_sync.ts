@@ -1,30 +1,42 @@
 import { tool } from "@opencode-ai/plugin";
 import { getEnv } from "./lib/get-env";
 
-const JIT_TOOL_TIMEOUT_MS = 1500;
+const JIT_TOOL_TIMEOUT_MS = 3000;
+const SLUG_REGEX = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
 
-interface JitSyncProxyResponse {
-  slug: string;
-  name: string;
-  success: boolean;
-  snapshot: string;
-  tvl_usd: number;
-  tvl_change_24h_pct: number;
-  apy_avg: number | null;
-  chains: string[];
-  stale: boolean;
-  source: 'live' | 'cache_fresh' | 'cache_stale';
-  fetched_at: string;
-  cost: number;
-  error?: string;
-}
+type JitSyncProxyResponse =
+  | {
+      slug: string;
+      name: string;
+      success: true;
+      snapshot: string;
+      tvl_usd: number;
+      tvl_change_24h_pct: number | null;
+      apy_avg: number | null;
+      chains: string[];
+      stale: boolean;
+      source: 'live' | 'cache_fresh' | 'cache_stale';
+      fetched_at: string;
+      cost: number;
+    }
+  | {
+      slug: string;
+      success: false;
+      snapshot: string;
+      error: string;
+      stale: boolean;
+      source: 'no_data';
+      fetched_at: string;
+      cost: number;
+    };
 
 export default tool({
   description:
-    "Fetch real-time crypto protocol snapshot from DeFiLlama (TVL, APY, chain data). " +
+    "Fetch real-time crypto protocol snapshot from DeFiLlama (TVL + chain data). " +
     "Use BEFORE answering crypto queries to ensure data is current — your training data is stale. " +
     "Returns formatted markdown snapshot ready to inject into your reasoning. " +
     "Completes in <1.5s; falls back to cached data if DeFiLlama is slow. " +
+    "APY/yield data not yet available (planned in a future release). " +
     "Use protocol slug from defillama.com (e.g. 'uniswap', 'aave', 'curve-dex').",
   args: {
     protocol_slug: tool.schema
@@ -34,10 +46,6 @@ export default tool({
       .string()
       .optional()
       .describe("Filter by chain — 'ethereum', 'arbitrum', 'solana'. Omit for all chains."),
-    metrics: tool.schema
-      .array(tool.schema.string())
-      .optional()
-      .describe("Subset of ['tvl','apy','volume','fees']. Omit for all."),
   },
   async execute(args, _context) {
     const epsilonToken = getEnv("EPSILON_TOKEN");
@@ -49,11 +57,16 @@ export default tool({
       return "Error: EPSILON_API_URL must start with http:// or https://.";
     }
 
-    const slug = args.protocol_slug?.trim();
+    const slug = args.protocol_slug?.trim().toLowerCase();
     if (!slug) return JSON.stringify({ success: false, error: "protocol_slug is required" }, null, 2);
-    if (!/^[a-z0-9-]+$/.test(slug)) {
+    if (!SLUG_REGEX.test(slug)) {
       return JSON.stringify(
-        { slug, success: false, error: "protocol_slug must be lowercase letters, numbers, and dashes only" },
+        {
+          slug,
+          success: false,
+          error:
+            "protocol_slug must be lowercase letters/numbers/dashes, no leading/trailing dash",
+        },
         null,
         2,
       );
@@ -62,8 +75,8 @@ export default tool({
     const proxyEndpoint = `${epsilonApiUrl.replace(/\/+$/, "")}/v1/router/jit-sync`;
 
     const body: Record<string, unknown> = { protocol_slug: slug };
-    if (args.chain) body.chain = args.chain;
-    if (args.metrics?.length) body.metrics = args.metrics;
+    const chainArg = args.chain?.trim();
+    if (chainArg) body.chain = chainArg;
 
     const startTime = Date.now();
 
@@ -97,7 +110,7 @@ export default tool({
     if (!response.ok) {
       const errorBody = await response.text().catch(() => "(unreadable)");
       return JSON.stringify(
-        { slug, success: false, error: `Proxy error ${response.status}: ${errorBody}` },
+        { slug, success: false, error: `Proxy error ${response.status}: ${errorBody.slice(0, 500)}` },
         null,
         2,
       );
