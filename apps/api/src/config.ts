@@ -84,6 +84,7 @@ const envSchema = z.object({
   TAVILY_API_KEY:              optStr,
   PERPLEXITY_API_URL:          optUrl('https://api.perplexity.ai'),
   PERPLEXITY_API_KEY:          optStr,
+  DEFILLAMA_API_URL:           optUrl('https://api.llama.fi'),
   SERPER_API_URL:              optUrl('https://google.serper.dev'),
   SERPER_API_KEY:              optStr,
 
@@ -382,6 +383,7 @@ export const config = {
   TAVILY_API_KEY: env.TAVILY_API_KEY,
   PERPLEXITY_API_URL: env.PERPLEXITY_API_URL,
   PERPLEXITY_API_KEY: env.PERPLEXITY_API_KEY,
+  DEFILLAMA_API_URL: env.DEFILLAMA_API_URL,
   SERPER_API_URL: env.SERPER_API_URL,
   SERPER_API_KEY: env.SERPER_API_KEY,
 
@@ -661,6 +663,11 @@ export const TOOL_PRICING: Record<string, ToolPricing> = {
   },
   deep_research_high: {
     baseCost: 0.50,
+    perResultCost: 0,
+    markupMultiplier: 1.5,
+  },
+  jit_sync: {
+    baseCost: 0.001,
     perResultCost: 0,
     markupMultiplier: 1.5,
   },

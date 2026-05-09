@@ -83,3 +83,14 @@ core/epsilon-master/opencode/.epsilon/
 .pulumi
 .pulumi/
 .vercel
+
+# Agents & Tools
+_bmad/
+_bmad-output/
+.agent/
+.agents/
+.claude/
+.code-review-graph/
+.serena/
+.symdex/
+

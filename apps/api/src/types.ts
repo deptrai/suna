@@ -329,3 +329,37 @@ export interface DeepResearchResponse {
   search_queries_count: number;
   cost: number;
 }
+
+// === JIT Crypto Data Snapshot (DeFiLlama) ===
+
+export const JitSyncRequestSchema = z.object({
+  protocol_slug: z.string().min(1, 'protocol_slug is required'),
+  chain: z.string().optional(),
+  metrics: z.array(z.enum(['tvl', 'apy', 'volume', 'fees'])).optional(),
+  session_id: z.string().optional(),
+});
+
+export type JitSyncRequest = z.infer<typeof JitSyncRequestSchema>;
+
+export type JitSyncSource = 'live' | 'cache_fresh' | 'cache_stale';
+
+export interface ProtocolSnapshot {
+  slug: string;
+  name: string;
+  tvl_usd: number;
+  tvl_change_24h_pct: number;
+  apy_avg: number | null;
+  chains: string[];
+}
+
+export interface JitSyncProxyResponse extends ProtocolSnapshot {
+  success: boolean;
+  snapshot: string;
+  stale: boolean;
+  source: JitSyncSource;
+  fetched_at: string;
+  cost: number;
+}
+
+/** @deprecated Use JitSyncProxyResponse */
+export type JitSyncResponse = JitSyncProxyResponse;
