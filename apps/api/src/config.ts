@@ -671,6 +671,11 @@ export const TOOL_PRICING: Record<string, ToolPricing> = {
     perResultCost: 0,
     markupMultiplier: 1.5,
   },
+  code_validator: {
+    baseCost: 0.002,
+    perResultCost: 0,
+    markupMultiplier: 1.5,
+  },
 };
 
 export function getToolCost(toolName: string, resultCount: number = 0): number {

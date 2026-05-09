@@ -5,6 +5,7 @@ import { webSearch } from './routes/search-web';
 import { imageSearch } from './routes/search-image';
 import { deepResearch } from './routes/deep-research';
 import { jitSync } from './routes/jit-sync';
+import { codeValidator } from './routes/code-validator';
 import { llm } from './routes/llm';
 import { proxy } from './routes/proxy';
 import { anthropic } from './routes/anthropic';
@@ -27,10 +28,12 @@ router.use('/web-search/*', apiKeyAuth);
 router.use('/image-search/*', apiKeyAuth);
 router.use('/deep-research/*', apiKeyAuth);
 router.use('/jit-sync/*', apiKeyAuth);
+router.use('/code-validator/*', apiKeyAuth);
 router.route('/web-search', webSearch);
 router.route('/image-search', imageSearch);
 router.route('/deep-research', deepResearch);
 router.route('/jit-sync', jitSync);
+router.route('/code-validator', codeValidator);
 
 // LLM routes (apiKeyAuth)
 router.use('/chat/*', apiKeyAuth);

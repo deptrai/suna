@@ -382,3 +382,32 @@ export type JitSyncResult = JitSyncProxyResponse | JitSyncErrorResponse;
 
 /** @deprecated Use JitSyncProxyResponse */
 export type JitSyncResponse = JitSyncProxyResponse;
+
+// === Code Validator ===
+
+export const CodeValidatorRequestSchema = z.object({
+  code: z.string().min(1).max(50000).refine(s => s.trim().length > 0, { message: 'code must contain non-whitespace content' }),
+  language: z.enum(['solidity', 'move']),
+  session_id: z.string().max(128).optional()
+});
+
+export type CodeValidatorRequest = z.infer<typeof CodeValidatorRequestSchema>;
+
+export interface ValidationWarning {
+  severity: 'HIGH' | 'MEDIUM' | 'LOW';
+  rule: string;
+  message: string;
+  line: number | null;
+}
+
+export interface CodeValidatorResponse {
+  language: 'solidity' | 'move';
+  warnings: ValidationWarning[];
+  warning_count: number;
+  has_high_severity: boolean;
+  sandbox_recommended: boolean;
+  report: string;
+  disclaimer: string;
+  cost: number;
+}
+
