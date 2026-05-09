@@ -75,6 +75,9 @@ export {
   platformSettings,
   accessAllowlist,
   accessRequests,
+  // Discover Feeds
+  discoverFeeds,
+  warningLevelEnum,
   // Pool
   poolResources,
   poolSandboxes,

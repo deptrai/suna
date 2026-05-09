@@ -32,7 +32,7 @@ import { setupApp } from './setup';
 import { providersApp } from './providers/routes';
 import { secretsApp } from './secrets/routes';
 import { integrationsApp } from './integrations';
-import { queueApp, startDrainer, stopDrainer } from './queue';
+import { queueApp, startDrainer, stopDrainer, startDiscoverFeedWorker, setupDiscoverFeedJobs, stopDiscoverFeedWorker } from './queue';
 import { serversApp } from './servers';
 // WoA is now mounted under the router at /v1/router/woa (see router/index.ts)
 import { supabaseAuth, combinedAuth } from './middleware/auth';
@@ -391,6 +391,10 @@ app.route('/v1/pipedream', integrationsApp);
 
 // Access control — public endpoints for signup gating
 app.route('/v1/access', accessControlApp); // /v1/access/signup-status, /v1/access/check-email, /v1/access/request-access
+
+// Discover Feed — public AI-generated news feed (Story 2.2, no auth — feed is anonymized)
+import { discoverApp } from './discover/routes';
+app.route('/v1/discover', discoverApp);     // GET /v1/discover
 
 // Legacy thread migration — authenticated endpoints
 app.route('/v1/legacy', legacyApp); // /v1/legacy/threads, /v1/legacy/threads/:id/migrate
@@ -1049,16 +1053,22 @@ initModelPricing().catch((err) =>
 let schemaReady = false;
 export function isSchemaReady() { return schemaReady; }
 
+function startBackgroundServices() {
+  startAccessControlCache();
+  startDrainer();
+  startDiscoverFeedWorker();
+  setupDiscoverFeedJobs().catch((e) => appLogger.error('[discover-feed] setup failed', { error: String(e) }));
+  startTunnelService();
+  startAutoReplenish();
+  startInviteCleanup(appDb);
+}
+
 // Ensure DB schema exists before starting services that depend on it.
 // This is idempotent — safe to run on every startup.
 ensureSchema()
   .then(async () => {
     schemaReady = true;
-    startAccessControlCache();
-    startDrainer();
-    startTunnelService();
-    startAutoReplenish();
-    startInviteCleanup(appDb);
+    startBackgroundServices();
 
     if (config.isLocalDockerEnabled() && config.DATABASE_URL) {
       // Non-blocking: sandbox registration + token sync runs in background.
@@ -1081,11 +1091,7 @@ ensureSchema()
   .catch(async (err) => {
     console.error('[startup] ensureSchema failed, starting services anyway:', err);
     schemaReady = true;
-    startAccessControlCache();
-    startDrainer();
-    startTunnelService();
-    startAutoReplenish();
-    startInviteCleanup(appDb);
+    startBackgroundServices();
 
     if (config.isLocalDockerEnabled() && config.DATABASE_URL) {
       ensureLocalSandboxRegistered().catch((e) =>
@@ -1113,6 +1119,9 @@ async function shutdown(signal: string) {
   stopAutoReplenish();
   stopAccessControlCache();
   stopInviteCleanup();
+  await stopDiscoverFeedWorker().catch((e) =>
+    appLogger.error('[discover-feed] shutdown failed', { error: String(e) }),
+  );
   // Flush observability data before exit
   await Promise.allSettled([appLogger.flush(), flushSentry()]);
   process.exit(0);

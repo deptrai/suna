@@ -25,11 +25,13 @@
     "@supabase/supabase-js": "^2.95.3",
     "agent-tunnel": "workspace:@epsilon/agent-tunnel@*",
     "ai": "^6.0.77",
+    "bullmq": "^5.76.6",
     "croner": "^9.0.0",
     "dockerode": "^4.0.4",
     "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.4.0",
+    "ioredis": "^5.10.1",
     "postgres": "^3.4.8",
     "stripe": "^14.0.0",
     "zod": "^3.23.0"

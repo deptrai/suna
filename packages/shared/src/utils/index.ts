@@ -7,3 +7,4 @@ export * from './url-autolink';
 export * from './unicode';
 export * from './credit-formatter';
 export * from './string';
+export * from './discover-feed';

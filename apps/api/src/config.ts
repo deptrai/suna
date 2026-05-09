@@ -200,12 +200,18 @@ const envSchema = z.object({
   BETTERSTACK_API_LOG_HOST:    optStr,  // Logtail ingesting host (e.g. s1234.us-east-9.betterstackdata.com)
   BETTERSTACK_API_SENTRY_DSN:  optStr,  // Sentry DSN for error tracking (Better Stack compatible)
 
-  // ── Stray env vars used directly in other files (centralized here) ───────
+  // ─── Stray env vars used directly in other files (centralized here) ───────
   CORS_ALLOWED_ORIGINS:        optStr,
   EPSILON_MASTER_URL:           optStr,
   OPENCODE_URL:                optStr,
   EPSILON_DATA_DIR:             optStr,
-});
+
+  // ─── Redis (BullMQ) ────────────────────────────────────────────────────────
+  REDIS_URL:                   optStr,
+
+  // ─── Discover Feed Worker ─────────────────────────────────────────────────
+  DISCOVER_WORKER_ENABLED:     optBoolFalse,
+  });
 
 // ─── Validation + Conditional Checks ────────────────────────────────────────
 
@@ -538,6 +544,12 @@ export const config = {
   EPSILON_MASTER_URL: env.EPSILON_MASTER_URL,
   OPENCODE_URL: env.OPENCODE_URL,
   EPSILON_DATA_DIR: env.EPSILON_DATA_DIR,
+
+  // ─── Redis (BullMQ) ────────────────────────────────────────────────────────
+  REDIS_URL: env.REDIS_URL,
+
+  // ─── Discover Feed Worker ─────────────────────────────────────────────────
+  DISCOVER_WORKER_ENABLED: env.DISCOVER_WORKER_ENABLED,
 
   // ─── Helper Methods ────────────────────────────────────────────────────────
 

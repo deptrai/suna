@@ -994,3 +994,31 @@ export const accessRequests = epsilonSchema.table(
   ],
 );
 
+// ─── Discover Feed ──────────────────────────────────────────────────────────
+
+export const warningLevelEnum = epsilonSchema.enum('warning_level', [
+  'none',
+  'low',
+  'medium',
+  'high',
+  'critical',
+]);
+
+export const discoverFeeds = epsilonSchema.table(
+  'discover_feeds',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    title: varchar('title', { length: 500 }).notNull(),
+    summary: text('summary').notNull(),
+    timestamp: timestamp('timestamp', { withTimezone: true }).defaultNow().notNull(),
+    isAnomaly: boolean('is_anomaly').default(false).notNull(),
+    warningLevel: warningLevelEnum('warning_level').default('none').notNull(),
+    sources: jsonb('sources').default([]).$type<{ name: string; url?: string }[]>(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('idx_discover_feeds_timestamp').on(table.timestamp),
+    index('idx_discover_feeds_anomaly').on(table.isAnomaly),
+  ]
+);
+
