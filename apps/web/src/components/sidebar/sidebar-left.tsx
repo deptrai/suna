@@ -28,6 +28,7 @@ import {
   Copy,
   ShieldAlert,
   Compass,
+  LineChart,
 } from 'lucide-react';
 import posthog from 'posthog-js';
 
@@ -1609,6 +1610,23 @@ export function SidebarLeft({ ...props }: React.ComponentProps<typeof Sidebar>) 
             >
               <Compass className="h-4 w-4 flex-shrink-0 text-sidebar-foreground" />
               <span className="flex-1 text-left">Discover</span>
+            </Button>
+
+            {/* Markets */}
+            <Button
+              onClick={() => {
+                openTabAndNavigate({
+                  id: 'page:/markets',
+                  title: 'Markets',
+                  type: 'page',
+                  href: '/markets',
+                });
+              }}
+              variant="sidebar"
+              className="rounded-lg"
+            >
+              <LineChart className="h-4 w-4 flex-shrink-0 text-sidebar-foreground" />
+              <span className="flex-1 text-left">Markets</span>
             </Button>
 
             {/* Board lives in the right sidebar (menu-registry entry

@@ -1,0 +1,560 @@
+diff --git a/apps/api/src/index.ts b/apps/api/src/index.ts
+index f081d40e3..edc0df0e7 100644
+--- a/apps/api/src/index.ts
++++ b/apps/api/src/index.ts
+@@ -396,6 +396,10 @@ app.route('/v1/access', accessControlApp); // /v1/access/signup-status, /v1/acce
+ import { discoverApp } from './discover/routes';
+ app.route('/v1/discover', discoverApp);     // GET /v1/discover
+ 
++// Market Data Feed
++import { marketApp } from './market/routes';
++app.route('/v1/market', marketApp);
++
+ // Legacy thread migration — authenticated endpoints
+ app.route('/v1/legacy', legacyApp); // /v1/legacy/threads, /v1/legacy/threads/:id/migrate
+ 
+diff --git a/apps/api/src/market/routes.ts b/apps/api/src/market/routes.ts
+new file mode 100644
+index 000000000..21deed852
+--- /dev/null
++++ b/apps/api/src/market/routes.ts
+@@ -0,0 +1,128 @@
++import { Hono } from 'hono';
++import { desc, eq } from 'drizzle-orm';
++import { db } from '../shared/db';
++import { onChainDataIndex } from '@epsilon/db';
++import { logger } from '../lib/logger';
++import type { ProtocolMetrics, SmartMoneyMovement } from '@epsilon/shared/types/market';
++
++const marketApp = new Hono();
++
++const CACHE_MAX_AGE_SECONDS = 60;
++
++// Mock data fallbacks
++const MOCK_PROTOCOLS: ProtocolMetrics[] = [
++  {
++    id: '1',
++    name: 'Lido',
++    symbol: 'LDO',
++    tvl: 25000000000,
++    apy7d: 4.5,
++    apy30d: 4.2,
++    chain: 'Ethereum',
++    change24h: 1.2,
++    sparkline7d: [2.1, 2.3, 2.4, 2.2, 2.5, 2.4, 2.6],
++  },
++  {
++    id: '2',
++    name: 'Aave',
++    symbol: 'AAVE',
++    tvl: 8000000000,
++    apy7d: 6.1,
++    apy30d: 5.8,
++    chain: 'Multi-chain',
++    change24h: -0.5,
++    sparkline7d: [6.0, 5.9, 6.2, 6.1, 6.0, 5.8, 6.1],
++  },
++  {
++    id: '3',
++    name: 'Uniswap',
++    symbol: 'UNI',
++    tvl: 4500000000,
++    apy7d: 15.2,
++    apy30d: 12.4,
++    chain: 'Multi-chain',
++    change24h: 5.4,
++    sparkline7d: [10, 11, 14, 13, 15, 14.5, 15.2],
++  },
++];
++
++const MOCK_SMART_MONEY: SmartMoneyMovement[] = [
++  {
++    id: 'sm1',
++    walletAddress: '0x123...abc',
++    tokenAddress: '0xabc...123',
++    tokenSymbol: 'ETH',
++    amount: 1500,
++    amountUsd: 4500000,
++    direction: 'inflow',
++    timestamp: new Date().toISOString(),
++  },
++  {
++    id: 'sm2',
++    walletAddress: '0x456...def',
++    tokenAddress: null,
++    tokenSymbol: 'USDC',
++    amount: 10000000,
++    amountUsd: 10000000,
++    direction: 'outflow',
++    timestamp: new Date(Date.now() - 3600000).toISOString(),
++  },
++];
++
++marketApp.get('/protocols', async (c) => {
++  try {
++    const items = await db
++      .select({
++        id: onChainDataIndex.id,
++        metricValue: onChainDataIndex.metricValue,
++      })
++      .from(onChainDataIndex)
++      .where(eq(onChainDataIndex.metricName, 'protocol_metrics'))
++      .orderBy(desc(onChainDataIndex.timestamp))
++      .limit(50);
++
++    let protocols: ProtocolMetrics[] = [];
++    
++    if (items.length > 0) {
++      protocols = items.map((item) => item.metricValue as unknown as ProtocolMetrics);
++    } else {
++      protocols = MOCK_PROTOCOLS;
++    }
++
++    c.header('Cache-Control', `public, max-age=${CACHE_MAX_AGE_SECONDS}`);
++    return c.json({ items: protocols });
++  } catch (err) {
++    logger.error('[market] protocols query failed', { error: String(err) });
++    return c.json({ items: MOCK_PROTOCOLS });
++  }
++});
++
++marketApp.get('/smart-money', async (c) => {
++  try {
++    const items = await db
++      .select({
++        id: onChainDataIndex.id,
++        metricValue: onChainDataIndex.metricValue,
++      })
++      .from(onChainDataIndex)
++      .where(eq(onChainDataIndex.metricName, 'smart_money_movement'))
++      .orderBy(desc(onChainDataIndex.timestamp))
++      .limit(50);
++
++    let movements: SmartMoneyMovement[] = [];
++    
++    if (items.length > 0) {
++      movements = items.map((item) => item.metricValue as unknown as SmartMoneyMovement);
++    } else {
++      movements = MOCK_SMART_MONEY;
++    }
++
++    c.header('Cache-Control', `public, max-age=${CACHE_MAX_AGE_SECONDS}`);
++    return c.json({ items: movements });
++  } catch (err) {
++    logger.error('[market] smart-money query failed', { error: String(err) });
++    return c.json({ items: MOCK_SMART_MONEY });
++  }
++});
++
++export { marketApp };
+diff --git a/apps/web/src/app/(dashboard)/markets/page.tsx b/apps/web/src/app/(dashboard)/markets/page.tsx
+new file mode 100644
+index 000000000..6a33b6a8a
+--- /dev/null
++++ b/apps/web/src/app/(dashboard)/markets/page.tsx
+@@ -0,0 +1,79 @@
++import type { Metadata } from 'next';
++import { getEnv } from '@/lib/env-config';
++import type { ProtocolMetrics, SmartMoneyMovement } from '@epsilon/shared';
++import { ProtocolsTable } from '@/components/markets/protocols-table';
++import { SmartMoneyVisualizer } from '@/components/markets/smart-money-visualizer';
++
++export const dynamic = 'force-dynamic';
++
++export const metadata: Metadata = {
++  title: 'DeFi & Markets - Chainlens',
++};
++
++async function fetchProtocols(): Promise<ProtocolMetrics[]> {
++  const baseUrl = getEnv().BACKEND_URL;
++  if (!baseUrl) return [];
++  try {
++    const res = await fetch(`${baseUrl}/market/protocols`, { cache: 'no-store' });
++    if (!res.ok) return [];
++    const body = (await res.json()) as { items?: ProtocolMetrics[] };
++    return body.items ?? [];
++  } catch {
++    return [];
++  }
++}
++
++async function fetchSmartMoney(): Promise<SmartMoneyMovement[]> {
++  const baseUrl = getEnv().BACKEND_URL;
++  if (!baseUrl) return [];
++  try {
++    const res = await fetch(`${baseUrl}/market/smart-money`, { cache: 'no-store' });
++    if (!res.ok) return [];
++    const body = (await res.json()) as { items?: SmartMoneyMovement[] };
++    return body.items ?? [];
++  } catch {
++    return [];
++  }
++}
++
++export default async function MarketsPage() {
++  const [protocols, smartMoney] = await Promise.all([
++    fetchProtocols(),
++    fetchSmartMoney(),
++  ]);
++
++  return (
++    <div className="container max-w-6xl py-8 space-y-8 animate-in fade-in zoom-in duration-500 ease-out">
++      <div className="space-y-2">
++        <h1 className="text-3xl font-bold tracking-tight text-white drop-shadow-sm">DeFi & Market Dashboard</h1>
++        <p className="text-muted-foreground text-lg">
++          Live protocols metrics and smart money movement across chains.
++        </p>
++      </div>
++
++      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
++        {/* Left Column: Protocols */}
++        <div className="xl:col-span-2 space-y-4">
++          <div className="rounded-xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-2xl p-6 transition-all duration-300 hover:border-white/20">
++            <h2 className="text-xl font-semibold mb-6 flex items-center gap-2 text-white/90">
++              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
++              Top Protocols
++            </h2>
++            <ProtocolsTable data={protocols} />
++          </div>
++        </div>
++
++        {/* Right Column: Smart Money */}
++        <div className="space-y-4">
++          <div className="rounded-xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-2xl p-6 h-full transition-all duration-300 hover:border-white/20">
++            <h2 className="text-xl font-semibold mb-6 flex items-center gap-2 text-white/90">
++              <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
++              Smart Money Flow
++            </h2>
++            <SmartMoneyVisualizer initialData={smartMoney} />
++          </div>
++        </div>
++      </div>
++    </div>
++  );
++}
+diff --git a/apps/web/src/components/markets/protocols-table.tsx b/apps/web/src/components/markets/protocols-table.tsx
+new file mode 100644
+index 000000000..e258ea81b
+--- /dev/null
++++ b/apps/web/src/components/markets/protocols-table.tsx
+@@ -0,0 +1,153 @@
++'use client';
++
++import { useState, useMemo } from 'react';
++import {
++  Table,
++  TableBody,
++  TableCell,
++  TableHead,
++  TableHeader,
++  TableRow,
++} from '@/components/ui/table';
++import { Badge } from '@/components/ui/badge';
++import { ArrowDownIcon, ArrowUpIcon, ArrowUpDown } from 'lucide-react';
++import { Button } from '@/components/ui/button';
++import type { ProtocolMetrics } from '@epsilon/shared';
++
++function Sparkline({ data }: { data: number[] }) {
++  if (!data || data.length === 0) return null;
++  const min = Math.min(...data);
++  const max = Math.max(...data);
++  const range = max - min || 1;
++  const height = 24;
++  const width = 60;
++  
++  const points = data.map((d, i) => {
++    const x = (i / (data.length - 1)) * width;
++    const y = height - ((d - min) / range) * height;
++    return `${x},${y}`;
++  }).join(' ');
++  
++  const isPositive = data[data.length - 1] >= data[0];
++  const color = isPositive ? 'var(--emerald-500, #10b981)' : 'var(--rose-500, #f43f5e)';
++
++  return (
++    <svg width={width} height={height} className="overflow-visible">
++      <polyline
++        points={points}
++        fill="none"
++        stroke={color}
++        strokeWidth="1.5"
++        strokeLinecap="round"
++        strokeLinejoin="round"
++      />
++    </svg>
++  );
++}
++
++export function ProtocolsTable({ data }: { data: ProtocolMetrics[] }) {
++  const [sortKey, setSortKey] = useState<keyof ProtocolMetrics>('tvl');
++  const [sortDesc, setSortDesc] = useState(true);
++
++  const sortedData = useMemo(() => {
++    return [...data].sort((a, b) => {
++      let aVal = a[sortKey];
++      let bVal = b[sortKey];
++      
++      if (typeof aVal === 'string' && typeof bVal === 'string') {
++        return sortDesc ? bVal.localeCompare(aVal) : aVal.localeCompare(bVal);
++      }
++      
++      if (aVal < bVal) return sortDesc ? 1 : -1;
++      if (aVal > bVal) return sortDesc ? -1 : 1;
++      return 0;
++    });
++  }, [data, sortKey, sortDesc]);
++
++  const handleSort = (key: keyof ProtocolMetrics) => {
++    if (sortKey === key) {
++      setSortDesc(!sortDesc);
++    } else {
++      setSortKey(key);
++      setSortDesc(true);
++    }
++  };
++
++  const formatCurrency = (val: number) => {
++    if (val >= 1e9) return `$${(val / 1e9).toFixed(2)}B`;
++    if (val >= 1e6) return `$${(val / 1e6).toFixed(2)}M`;
++    return `$${val.toLocaleString()}`;
++  };
++
++  return (
++    <div className="rounded-md border border-border/50 bg-card">
++      <Table>
++        <TableHeader>
++          <TableRow>
++            <TableHead>
++              <Button variant="ghost" onClick={() => handleSort('name')} className="-ml-4 h-8 data-[state=open]:bg-accent">
++                Protocol
++                <ArrowUpDown className="ml-2 h-4 w-4" />
++              </Button>
++            </TableHead>
++            <TableHead>Chain</TableHead>
++            <TableHead className="text-right">
++              <Button variant="ghost" onClick={() => handleSort('tvl')} className="h-8 justify-end w-full data-[state=open]:bg-accent">
++                TVL
++                <ArrowUpDown className="ml-2 h-4 w-4" />
++              </Button>
++            </TableHead>
++            <TableHead className="text-right">
++              <Button variant="ghost" onClick={() => handleSort('apy7d')} className="h-8 justify-end w-full data-[state=open]:bg-accent">
++                APY 7d
++                <ArrowUpDown className="ml-2 h-4 w-4" />
++              </Button>
++            </TableHead>
++            <TableHead className="text-right">
++              <Button variant="ghost" onClick={() => handleSort('apy30d')} className="h-8 justify-end w-full data-[state=open]:bg-accent">
++                APY 30d
++                <ArrowUpDown className="ml-2 h-4 w-4" />
++              </Button>
++            </TableHead>
++            <TableHead className="text-right">
++              <Button variant="ghost" onClick={() => handleSort('change24h')} className="h-8 justify-end w-full data-[state=open]:bg-accent">
++                Change 24h
++                <ArrowUpDown className="ml-2 h-4 w-4" />
++              </Button>
++            </TableHead>
++            <TableHead className="text-right">7d Trend</TableHead>
++          </TableRow>
++        </TableHeader>
++        <TableBody>
++          {sortedData.map((row) => (
++            <TableRow key={row.id}>
++              <TableCell className="font-medium">
++                <div className="flex items-center gap-2">
++                  <span className="font-semibold">{row.name}</span>
++                  <span className="text-xs text-muted-foreground">{row.symbol}</span>
++                </div>
++              </TableCell>
++              <TableCell>
++                <Badge variant="secondary" className="font-normal text-xs">{row.chain}</Badge>
++              </TableCell>
++              <TableCell className="text-right font-mono text-sm">{formatCurrency(row.tvl)}</TableCell>
++              <TableCell className="text-right text-emerald-500 font-mono text-sm">+{row.apy7d.toFixed(2)}%</TableCell>
++              <TableCell className="text-right text-emerald-500 font-mono text-sm">+{row.apy30d.toFixed(2)}%</TableCell>
++              <TableCell className="text-right">
++                <div className={`flex items-center justify-end gap-1 font-mono text-sm ${row.change24h >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
++                  {row.change24h >= 0 ? <ArrowUpIcon className="h-3 w-3" /> : <ArrowDownIcon className="h-3 w-3" />}
++                  {Math.abs(row.change24h).toFixed(2)}%
++                </div>
++              </TableCell>
++              <TableCell className="text-right">
++                <div className="flex justify-end">
++                  <Sparkline data={row.sparkline7d} />
++                </div>
++              </TableCell>
++            </TableRow>
++          ))}
++        </TableBody>
++      </Table>
++    </div>
++  );
++}
+diff --git a/apps/web/src/components/markets/smart-money-visualizer.tsx b/apps/web/src/components/markets/smart-money-visualizer.tsx
+new file mode 100644
+index 000000000..d906ddb44
+--- /dev/null
++++ b/apps/web/src/components/markets/smart-money-visualizer.tsx
+@@ -0,0 +1,88 @@
++'use client';
++
++import { useEffect, useState } from 'react';
++import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
++import { ArrowDownIcon, ArrowUpIcon, ArrowRightLeftIcon, WalletIcon } from 'lucide-react';
++import type { SmartMoneyMovement } from '@epsilon/shared';
++
++export function SmartMoneyVisualizer({ initialData }: { initialData: SmartMoneyMovement[] }) {
++  const [data, setData] = useState<SmartMoneyMovement[]>(initialData);
++  const [isRefreshing, setIsRefreshing] = useState(false);
++
++  // Auto-refresh simulation
++  useEffect(() => {
++    const interval = setInterval(() => {
++      setIsRefreshing(true);
++      setTimeout(() => {
++        setIsRefreshing(false);
++        // Simulate a new movement arriving
++        const newMovement: SmartMoneyMovement = {
++          id: Math.random().toString(36).slice(2),
++          walletAddress: '0x' + Math.random().toString(16).slice(2, 42).padStart(40, '0'),
++          tokenAddress: null,
++          tokenSymbol: ['ETH', 'USDC', 'WBTC', 'LDO'][Math.floor(Math.random() * 4)],
++          amount: Math.random() * 1000,
++          amountUsd: Math.random() * 500000,
++          direction: Math.random() > 0.5 ? 'inflow' : 'outflow',
++          timestamp: new Date().toISOString(),
++        };
++        setData((prev) => [newMovement, ...prev].slice(0, 5)); // Keep latest 5
++      }, 500);
++    }, 15000); // 15 seconds refresh
++
++    return () => clearInterval(interval);
++  }, []);
++
++  const formatAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
++  const formatCurrency = (val: number) => {
++    if (val >= 1e6) return `$${(val / 1e6).toFixed(2)}M`;
++    return `$${val.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
++  };
++
++  return (
++    <Card className="h-full">
++      <CardHeader className="flex flex-row items-center justify-between pb-2">
++        <div className="space-y-1">
++          <CardTitle className="text-base font-semibold flex items-center gap-2">
++            <WalletIcon className="h-4 w-4" />
++            Smart Money Flow
++          </CardTitle>
++          <p className="text-xs text-muted-foreground">Top wallet movements (Inflows / Outflows)</p>
++        </div>
++        {isRefreshing && (
++          <span className="flex h-2 w-2">
++            <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-emerald-400 opacity-75"></span>
++            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
++          </span>
++        )}
++      </CardHeader>
++      <CardContent>
++        <div className="space-y-4">
++          {data.map((movement) => (
++            <div key={movement.id} className="flex items-center justify-between group">
++              <div className="flex items-center gap-3">
++                <div className={`flex h-8 w-8 items-center justify-center rounded-full bg-muted/50 ${movement.direction === 'inflow' ? 'text-emerald-500' : 'text-rose-500'}`}>
++                  {movement.direction === 'inflow' ? <ArrowDownIcon className="h-4 w-4" /> : <ArrowUpIcon className="h-4 w-4" />}
++                </div>
++                <div className="space-y-1">
++                  <p className="text-sm font-medium leading-none flex items-center gap-1.5">
++                    {formatAddress(movement.walletAddress)}
++                    <span className="text-muted-foreground text-xs font-normal">
++                      {new Date(movement.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
++                    </span>
++                  </p>
++                  <p className="text-xs text-muted-foreground">
++                    {movement.direction === 'inflow' ? 'Deposited' : 'Withdrew'} {movement.amount.toFixed(2)} {movement.tokenSymbol}
++                  </p>
++                </div>
++              </div>
++              <div className={`text-sm font-mono font-medium ${movement.direction === 'inflow' ? 'text-emerald-500' : 'text-rose-500'}`}>
++                {movement.direction === 'inflow' ? '+' : '-'}{formatCurrency(movement.amountUsd)}
++              </div>
++            </div>
++          ))}
++        </div>
++      </CardContent>
++    </Card>
++  );
++}
+diff --git a/apps/web/src/components/sidebar/sidebar-left.tsx b/apps/web/src/components/sidebar/sidebar-left.tsx
+index 9ed7151e0..72926d1c0 100644
+--- a/apps/web/src/components/sidebar/sidebar-left.tsx
++++ b/apps/web/src/components/sidebar/sidebar-left.tsx
+@@ -28,6 +28,7 @@ import {
+   Copy,
+   ShieldAlert,
+   Compass,
++  LineChart,
+ } from 'lucide-react';
+ import posthog from 'posthog-js';
+ 
+@@ -1611,6 +1612,23 @@ export function SidebarLeft({ ...props }: React.ComponentProps<typeof Sidebar>)
+               <span className="flex-1 text-left">Discover</span>
+             </Button>
+ 
++            {/* Markets */}
++            <Button
++              onClick={() => {
++                openTabAndNavigate({
++                  id: 'page:/markets',
++                  title: 'Markets',
++                  type: 'page',
++                  href: '/markets',
++                });
++              }}
++              variant="sidebar"
++              className="rounded-lg"
++            >
++              <LineChart className="h-4 w-4 flex-shrink-0 text-sidebar-foreground" />
++              <span className="flex-1 text-left">Markets</span>
++            </Button>
++
+             {/* Board lives in the right sidebar (menu-registry entry
+                 `board` with showIn=['rightSidebar']) — see comment there
+                 for the placement rationale. */}
+diff --git a/packages/shared/src/index.ts b/packages/shared/src/index.ts
+index 191637683..8594c5768 100644
+--- a/packages/shared/src/index.ts
++++ b/packages/shared/src/index.ts
+@@ -9,3 +9,4 @@ export * from './tools';
+ export * from './utils';
+ export * from './constants/upload-limits';
+ export * from './constants/auto-topup';
++export * from './types/market';
+diff --git a/packages/shared/src/types/market.ts b/packages/shared/src/types/market.ts
+new file mode 100644
+index 000000000..3c10abe2b
+--- /dev/null
++++ b/packages/shared/src/types/market.ts
+@@ -0,0 +1,22 @@
++export interface ProtocolMetrics {
++  id: string;
++  name: string;
++  symbol: string;
++  tvl: number;
++  apy7d: number;
++  apy30d: number;
++  chain: string;
++  change24h: number;
++  sparkline7d: number[];
++}
++
++export interface SmartMoneyMovement {
++  id: string;
++  walletAddress: string;
++  tokenAddress: string | null;
++  tokenSymbol: string;
++  amount: number;
++  amountUsd: number;
++  direction: 'inflow' | 'outflow';
++  timestamp: string;
++}

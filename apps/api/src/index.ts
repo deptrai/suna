@@ -35,7 +35,7 @@ import { integrationsApp } from './integrations';
 import { queueApp, startDrainer, stopDrainer, startDiscoverFeedWorker, setupDiscoverFeedJobs, stopDiscoverFeedWorker, startOnChainIndexWorker, setupOnChainIndexJobs, stopOnChainIndexWorker } from './queue';
 import { serversApp } from './servers';
 // WoA is now mounted under the router at /v1/router/woa (see router/index.ts)
-import { supabaseAuth, combinedAuth } from './middleware/auth';
+import { supabaseAuth, combinedAuth, apiKeyAuth } from './middleware/auth';
 import { ensureSchema } from './ensure-schema';
 import { initModelPricing, stopModelPricing } from './router/config/model-pricing';
 import { tunnelApp, wsHandlers as tunnelWsHandlers, startTunnelService, stopTunnelService, getTunnelServiceStatus } from './tunnel';
@@ -395,6 +395,11 @@ app.route('/v1/access', accessControlApp); // /v1/access/signup-status, /v1/acce
 // Discover Feed — public AI-generated news feed (Story 2.2, no auth — feed is anonymized)
 import { discoverApp } from './discover/routes';
 app.route('/v1/discover', discoverApp);     // GET /v1/discover
+
+// Market Data Feed
+import { marketApp } from './market/routes';
+app.use('/v1/market/*', apiKeyAuth);
+app.route('/v1/market', marketApp);
 
 // Legacy thread migration — authenticated endpoints
 app.route('/v1/legacy', legacyApp); // /v1/legacy/threads, /v1/legacy/threads/:id/migrate
