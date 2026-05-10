@@ -398,7 +398,7 @@ app.route('/v1/discover', discoverApp);     // GET /v1/discover
 
 // Market Data Feed
 import { marketApp } from './market/routes';
-app.use('/v1/market/*', apiKeyAuth);
+app.use('/v1/market/*', combinedAuth);
 app.route('/v1/market', marketApp);
 
 // Legacy thread migration — authenticated endpoints

@@ -87,97 +87,139 @@ interface NormalizedRow {
   tokenAddress: string | null;
 }
 
-async function fetchDuneData(): Promise<NormalizedRow[]> {
-  if (!config.DUNE_API_KEY) {
-    logger.warn('[onchain-index] DUNE_API_KEY not set — skipping Dune fetch');
-    return [];
-  }
-  // NOTE: Placeholder query ID. Real Dune integration requires:
-  //  1. POST /api/v1/query/{id}/execute   → execution_id
-  //  2. GET  /api/v1/execution/{id}/status (poll)
-  //  3. GET  /api/v1/execution/{id}/results
-  // Worker is feature-flagged off (ONCHAIN_WORKER_ENABLED) until real query lands.
-  const url = 'https://api.dune.com/api/v1/query/12345/results';
-  const res = await fetch(url, {
-    headers: { 'X-Dune-Api-Key': config.DUNE_API_KEY },
-    signal: AbortSignal.timeout(15_000),
-  });
-
-  if (res.status === 429) throw new RateLimitError('dune');
-  if (!res.ok) {
-    if (res.status === 404) {
-      logger.warn(`[onchain-index] Dune API 404, returning mock data for testing`);
-      return [{
-        source: 'dune',
-        metricName: 'mock_dune_metric',
-        metricValue: { volume: 1000000 },
-        timestamp: new Date(),
-        walletAddress: '0x1234567890abcdef1234567890abcdef12345678',
-        tokenAddress: null,
-      }];
-    }
-    const body = await res.text().catch(() => '');
-    throw new Error(`[onchain-index] Dune API error ${res.status}: ${body.slice(0, 200)}`);
-  }
-
-  const data = await res.json().catch(() => null) as { result?: { rows?: unknown[] } } | null;
-  if (!data || !Array.isArray(data.result?.rows)) return [];
-
-  return data.result.rows.map((row) => {
-    const r = (row ?? {}) as Record<string, unknown>;
-    return {
-      source: 'dune' as const,
-      metricName: 'custom_query_12345',
-      metricValue: row,
-      timestamp: safeTimestamp(r.executed_at ?? r.timestamp),
-      walletAddress: safeAddr(r.wallet_address),
-      tokenAddress: safeAddr(r.token_address),
-    };
-  });
+// DefiLlama yields pool shape (subset we care about)
+interface DefiLlamaPool {
+  pool: string;
+  chain: string;
+  project: string;
+  symbol: string;
+  tvlUsd: number;
+  apy: number | null;
+  apyPct7D: number | null;
+  apyPct30D: number | null;
+  apyBase: number | null;
+  apyReward: number | null;
+  apyMean30d: number | null;
+  apyBase7d: number | null;
+  underlyingTokens: string[] | null;
 }
 
+// Fetch top DeFi protocol metrics from DefiLlama (free, no API key required).
+// Maps pools → protocol_metrics rows compatible with ProtocolMetricsSchema.
+async function fetchDefiLlamaData(): Promise<NormalizedRow[]> {
+  const res = await fetch('https://yields.llama.fi/pools', {
+    signal: AbortSignal.timeout(20_000),
+  });
+  if (res.status === 429) throw new RateLimitError('dune');
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`[onchain-index] DefiLlama API error ${res.status}: ${body.slice(0, 200)}`);
+  }
+
+  const data = await res.json().catch(() => null) as { data?: DefiLlamaPool[] } | null;
+  if (!data || !Array.isArray(data.data)) return [];
+
+  // Keep top 50 pools by TVL with valid APY, dedupe by project+chain+symbol
+  const seen = new Set<string>();
+  const pools = data.data
+    .filter((p) => p.tvlUsd > 100_000 && p.apy != null && Number.isFinite(p.apy))
+    .sort((a, b) => b.tvlUsd - a.tvlUsd);
+
+  const rows: NormalizedRow[] = [];
+  for (const pool of pools) {
+    const key = `${pool.project}:${pool.chain}:${pool.symbol}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const protocolId = `defillama:${pool.project}:${pool.chain}`;
+    const apy7d = pool.apyBase7d ?? pool.apy ?? 0;
+    const apy30d = pool.apyMean30d ?? pool.apy ?? 0;
+    const change24h = pool.apyPct7D != null ? pool.apyPct7D / 7 : 0; // approximate daily from weekly
+
+    const metricValue = {
+      id: protocolId,
+      name: pool.project.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+      symbol: pool.symbol.slice(0, 10),
+      tvl: pool.tvlUsd,
+      apy7d: Number((apy7d).toFixed(4)),
+      apy30d: Number((apy30d).toFixed(4)),
+      chain: pool.chain.toLowerCase(),
+      change24h: Number((change24h).toFixed(4)),
+      sparkline7d: [], // DefiLlama historical requires separate endpoint; omit for now
+    };
+
+    rows.push({
+      source: 'dune' as const,
+      metricName: 'protocol_metrics',
+      metricValue,
+      timestamp: new Date(),
+      walletAddress: null,
+      tokenAddress: pool.underlyingTokens?.[0] ?? null,
+    });
+
+    if (rows.length >= 50) break;
+  }
+
+  logger.info('[onchain-index] DefiLlama fetch complete', { count: rows.length });
+  return rows;
+}
+
+// Nansen Smart Money Holdings → SmartMoneyMovement rows
 async function fetchNansenData(): Promise<NormalizedRow[]> {
   if (!config.NANSEN_API_KEY) {
     logger.warn('[onchain-index] NANSEN_API_KEY not set — skipping Nansen fetch');
     return [];
   }
-  // NOTE: URL placeholder — real Nansen Smart Money endpoint TBD.
-  // Worker is feature-flagged off until real path is verified.
-  const url = 'https://api.nansen.ai/v1/smart-money/movements';
-  const res = await fetch(url, {
-    headers: { 'api-key': config.NANSEN_API_KEY },
+  const res = await fetch('https://api.nansen.ai/api/v1/smart-money/holdings', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': config.NANSEN_API_KEY,
+    },
+    body: JSON.stringify({ chains: ['ethereum'], pagination: { page: 1, per_page: 20 } }),
     signal: AbortSignal.timeout(15_000),
   });
 
   if (res.status === 429) throw new RateLimitError('nansen');
   if (!res.ok) {
-    if (res.status === 404) {
-      logger.warn(`[onchain-index] Nansen API 404, returning mock data for testing`);
-      return [{
-        source: 'nansen',
-        metricName: 'smart_money_movement',
-        metricValue: { amount: 500 },
-        timestamp: new Date(),
-        walletAddress: '0x1234567890abcdef1234567890abcdef12345678',
-        tokenAddress: null,
-      }];
-    }
     const body = await res.text().catch(() => '');
     throw new Error(`[onchain-index] Nansen API error ${res.status}: ${body.slice(0, 200)}`);
   }
 
-  const data = await res.json().catch(() => null) as { movements?: unknown[] } | null;
-  if (!data || !Array.isArray(data.movements)) return [];
+  const data = await res.json().catch(() => null) as { data?: unknown[] } | null;
+  if (!data || !Array.isArray(data.data)) return [];
 
-  return data.movements.map((mov) => {
-    const m = (mov ?? {}) as Record<string, unknown>;
+  const now = new Date();
+  return data.data.map((item) => {
+    const m = (item ?? {}) as Record<string, unknown>;
+    const change = typeof m.balance_24h_percent_change === 'number' ? m.balance_24h_percent_change : 0;
+    const valueUsd = typeof m.value_usd === 'number' ? m.value_usd : 0;
+    const direction = change >= 0 ? 'inflow' : 'outflow';
+    const tokenAddr = safeAddr(m.token_address);
+    const tokenSymbol = typeof m.token_symbol === 'string' ? m.token_symbol : 'UNKNOWN';
+
+    // Generate a stable wallet placeholder (Nansen holdings don't expose individual wallets)
+    const walletHash = createHash('sha256').update(tokenAddr ?? tokenSymbol).digest('hex');
+    const walletAddr = `0x${walletHash.slice(0, 40)}`;
+
+    const metricValue = {
+      id: `nansen:${tokenAddr ?? tokenSymbol}:${now.toISOString()}`,
+      walletAddress: walletAddr,
+      tokenAddress: tokenAddr,
+      tokenSymbol,
+      amount: Math.abs(valueUsd * change),
+      amountUsd: valueUsd,
+      direction,
+      timestamp: now.toISOString(),
+    };
+
     return {
       source: 'nansen' as const,
       metricName: 'smart_money_movement',
-      metricValue: mov,
-      timestamp: safeTimestamp(m.timestamp),
-      walletAddress: safeAddr(m.wallet_address),
-      tokenAddress: safeAddr(m.token_address),
+      metricValue,
+      timestamp: now,
+      walletAddress: walletAddr,
+      tokenAddress: tokenAddr,
     };
   });
 }
@@ -232,7 +274,7 @@ async function insertSourceBatch(jobId: string | undefined, rows: NormalizedRow[
 async function runFetchJob(jobId: string | undefined) {
   logger.info('[onchain-index] job started', { jobId });
 
-  const [duneResult, nansenResult] = await Promise.allSettled([fetchDuneData(), fetchNansenData()]);
+  const [duneResult, nansenResult] = await Promise.allSettled([fetchDefiLlamaData(), fetchNansenData()]);
 
   const duneRows: NormalizedRow[] = duneResult.status === 'fulfilled' ? duneResult.value : [];
   const nansenRows: NormalizedRow[] = nansenResult.status === 'fulfilled' ? nansenResult.value : [];

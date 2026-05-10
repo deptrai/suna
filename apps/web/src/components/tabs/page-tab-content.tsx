@@ -82,6 +82,12 @@ const DeploymentsPage = lazy(() =>
 	})),
 );
 
+const MarketsPage = lazy(() =>
+	import('@/app/(dashboard)/markets/markets-client').then((m) => ({
+		default: m.MarketsClient,
+	})),
+);
+
 const DiscoverPage = lazy(() =>
 	import('@/app/(dashboard)/discover/discover-feed-client').then((m) => ({
 		default: function DiscoverPageWrapper() {
@@ -156,6 +162,7 @@ const PAGE_COMPONENTS: Record<string, ComponentType> = {
 	'/tunnel': TunnelOverviewPage,
 	...(DEPLOYMENTS_ENABLED ? { '/deployments': DeploymentsPage } : {}),
 	'/discover': DiscoverPage,
+	'/markets': MarketsPage,
 	// Admin
 	'/admin/analytics': AdminAnalyticsPage,
 	'/admin/feedback': AdminFeedbackPage,

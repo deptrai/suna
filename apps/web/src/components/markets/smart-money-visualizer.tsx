@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowDownIcon, ArrowUpIcon, WalletIcon } from 'lucide-react';
 import { getEnv } from '@/lib/env-config';
+import { getAuthToken } from '@/lib/auth-token';
 import type { SmartMoneyMovement } from '@epsilon/shared';
 
 const POLL_INTERVAL_MS = 60_000;
@@ -28,8 +29,10 @@ function formatTime(ts: string): string {
 async function fetchSmartMoney(): Promise<SmartMoneyMovement[]> {
   const baseUrl = getEnv().BACKEND_URL;
   if (!baseUrl) return [];
-  const res = await fetch(`${baseUrl}/market/smart-money`, { cache: 'no-store' });
-  if (!res.ok) throw new Error(`smart-money fetch failed: ${res.status}`);
+  const token = await getAuthToken();
+  const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
+  const res = await fetch(`${baseUrl}/market/smart-money`, { cache: 'no-store', headers });
+  if (!res.ok) return [];
   const body = (await res.json()) as { items?: SmartMoneyMovement[] };
   return body.items ?? [];
 }
@@ -39,9 +42,10 @@ export function SmartMoneyVisualizer({ initialData }: { initialData: SmartMoneyM
     queryKey: ['markets-smart-money'],
     queryFn: fetchSmartMoney,
     initialData,
+    initialDataUpdatedAt: 0, // treat initialData as stale → fetch immediately
     refetchInterval: POLL_INTERVAL_MS,
     refetchOnWindowFocus: true,
-    refetchIntervalInBackground: false, // pauses when tab hidden
+    refetchIntervalInBackground: false,
     staleTime: POLL_INTERVAL_MS / 2,
   });
 
