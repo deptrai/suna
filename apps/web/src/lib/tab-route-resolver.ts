@@ -169,6 +169,13 @@ const STATIC_TAB_ROUTES: Record<string, TabDescriptor> = {
     type: 'settings',
     href: '/settings/providers',
   },
+  // Dashboard pages
+  '/dashboard/backtest': {
+    id: 'page:/dashboard/backtest',
+    title: 'Backtest',
+    type: 'page',
+    href: '/dashboard/backtest',
+  },
   // Admin pages
   '/admin/analytics': {
     id: 'page:/admin/analytics',

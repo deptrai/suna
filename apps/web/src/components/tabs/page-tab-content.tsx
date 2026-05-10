@@ -94,6 +94,10 @@ const ChartPageComponent = lazy(() =>
 	})),
 );
 
+const BacktestPage = lazy(() =>
+	import('@/app/(dashboard)/dashboard/backtest/page'),
+);
+
 const DiscoverPage = lazy(() =>
 	import('@/app/(dashboard)/discover/discover-feed-client').then((m) => ({
 		default: function DiscoverPageWrapper() {
@@ -169,6 +173,7 @@ const PAGE_COMPONENTS: Record<string, ComponentType> = {
 	...(DEPLOYMENTS_ENABLED ? { '/deployments': DeploymentsPage } : {}),
 	'/discover': DiscoverPage,
 	'/markets': MarketsPage,
+	'/dashboard/backtest': BacktestPage,
 	// Admin
 	'/admin/analytics': AdminAnalyticsPage,
 	'/admin/feedback': AdminFeedbackPage,
