@@ -24,9 +24,6 @@ importers:
       '@ai-sdk/google':
         specifier: ^3.0.22
         version: 3.0.23(zod@3.25.76)
-      '@ai-sdk/openai':
-        specifier: ^3.0.26
-        version: 3.0.26(zod@3.25.76)
       '@ai-sdk/openai-compatible':
         specifier: ^2.0.28
         version: 2.0.28(zod@3.25.76)
@@ -1042,6 +1039,9 @@ importers:
       libphonenumber-js:
         specifier: ^1.12.10
         version: 1.12.36
+      lightweight-charts:
+        specifier: ^5.2.0
+        version: 5.2.0
       liquid-glass-react:
         specifier: ^1.1.1
         version: 1.1.1(react-dom@18.3.1)(react@18.3.1)
@@ -22621,6 +22621,10 @@ packages:
     resolution: {integrity: sha512-QAWcuwxnL9pisK7YfuG8qab6IF7UD6bbKTjiM+QTJ9Xvfi7fBymQd/xTFaPhkzkB5kyq+wla3AHanM7LInFLaQ==}
     dev: false
 
+  /fancy-canvas@2.1.0:
+    resolution: {integrity: sha512-nifxXJ95JNLFR2NgRV4/MxVP45G9909wJTEKz5fg/TZS20JJZA6hfgRVh/bC9bwl2zBtBNcYPjiBE4njQHVBwQ==}
+    dev: false
+
   /fast-check@4.7.0:
     resolution: {integrity: sha512-NsZRtqvSSoCP0HbNjUD+r1JH8zqZalyp6gLY9e7OYs7NK9b6AHOs2baBFeBG7bVNsuoukh89x2Yg3rPsul8ziQ==}
     engines: {node: '>=12.17.0'}
@@ -24993,6 +24997,12 @@ packages:
       lightningcss-linux-x64-musl: 1.30.2
       lightningcss-win32-arm64-msvc: 1.30.2
       lightningcss-win32-x64-msvc: 1.30.2
+
+  /lightweight-charts@5.2.0:
+    resolution: {integrity: sha512-ey3Vas8UhV06ni+LT9TA1nEe4y8So4Mi6CL/oarNHFMyTktz/xy8e8+oh04Q//eO3t6etvFXgayz2fClyFQb5w==}
+    dependencies:
+      fancy-canvas: 2.1.0
+    dev: false
 
   /lilconfig@3.1.3:
     resolution: {integrity: sha512-/vlFKAoH5Cgt3Ie+JLhRbwOsCQePABiU3tJ1egGvyQ+33R/vcwM2Zl2QR/LzjsBeItPt3oSVXapn+m4nQDvpzw==}

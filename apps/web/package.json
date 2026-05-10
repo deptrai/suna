@@ -196,6 +196,7 @@
     "katex": "^0.16.22",
     "konva": "^9.3.16",
     "libphonenumber-js": "^1.12.10",
+    "lightweight-charts": "^5.2.0",
     "liquid-glass-react": "^1.1.1",
     "lodash": "^4.17.21",
     "lottie-react": "^2.4.1",

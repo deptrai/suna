@@ -88,6 +88,12 @@ const MarketsPage = lazy(() =>
 	})),
 );
 
+const ChartPageComponent = lazy(() =>
+	import('@/components/chart/chart-page-wrapper').then((m) => ({
+		default: m.ChartPageWrapper,
+	})),
+);
+
 const DiscoverPage = lazy(() =>
 	import('@/app/(dashboard)/discover/discover-feed-client').then((m) => ({
 		default: function DiscoverPageWrapper() {
@@ -188,6 +194,11 @@ function resolveComponent(routeKey: string): { Component: ComponentType<any>; pa
 	const taskMatch = routeKey.match(/^\/tasks\/([^/]+)$/);
 	if (taskMatch) {
 		return { Component: TaskDetailPage, params: { id: decodeURIComponent(taskMatch[1]) } };
+	}
+
+	const chartMatch = routeKey.match(/^\/chart\/([^/]+)$/);
+	if (chartMatch) {
+		return { Component: ChartPageComponent, params: { token: decodeURIComponent(chartMatch[1]) } };
 	}
 
 	return null;

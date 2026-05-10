@@ -10,9 +10,10 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ArrowDownIcon, ArrowUpIcon, ArrowUpDown } from 'lucide-react';
+import { ArrowDownIcon, ArrowUpIcon, ArrowUpDown, LineChart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { ProtocolMetrics } from '@epsilon/shared';
+import { openTabAndNavigate } from '@/stores/tab-store';
 
 // ─── Pure helpers (exported for unit tests) ────────────────────────────────
 
@@ -161,12 +162,14 @@ export function ProtocolsTable({ data }: { data: ProtocolMetrics[] }) {
               </Button>
             </TableHead>
             <TableHead className="text-right">7d Trend</TableHead>
+            <TableHead className="w-10"><span className="sr-only">View chart</span></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {sortedData.map((row) => {
             const positive = row.change24h >= 0;
             const change24hLabel = `${positive ? 'Up' : 'Down'} ${Math.abs(row.change24h).toFixed(2)} percent`;
+            const chartSlug = row.symbol.toLowerCase().replace(/[^a-z0-9]/g, '');
             return (
               <TableRow key={row.id}>
                 <TableCell className="font-medium">
@@ -202,6 +205,21 @@ export function ProtocolsTable({ data }: { data: ProtocolMetrics[] }) {
                       positive={positive}
                     />
                   </div>
+                </TableCell>
+                <TableCell>
+                  {chartSlug ? (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-violet-400"
+                      title={`View ${row.symbol} chart`}
+                      onClick={() => openTabAndNavigate(
+                        { id: `page:/chart/${chartSlug}`, type: 'page', href: `/chart/${chartSlug}`, title: `${row.symbol} Chart` },
+                      )}
+                    >
+                      <LineChart className="h-3.5 w-3.5" />
+                    </Button>
+                  ) : null}
                 </TableCell>
               </TableRow>
             );
