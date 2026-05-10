@@ -40,8 +40,13 @@ function buildEnvPayload(serviceKey: string, metadata?: Record<string, unknown>)
     FIRECRAWL_API_URL: `${routerBase}/firecrawl`,
     TUNNEL_API_URL: sandboxApiBase,
     TUNNEL_TOKEN: serviceKey,
-    ...(config.VIBE_TRADING_API_KEY ? { VIBE_TRADING_API_KEY: config.VIBE_TRADING_API_KEY } : {}),
-    VIBE_TRADING_INTERNAL_URL: config.VIBE_TRADING_INTERNAL_URL,
+    // Both vars only injected when feature enabled (key set). Missing key means
+    // sandbox shouldn't attempt to call vibe-trading at all — avoid confusing
+    // connection errors by omitting URL too.
+    ...(config.VIBE_TRADING_API_KEY ? {
+      VIBE_TRADING_API_KEY: config.VIBE_TRADING_API_KEY,
+      VIBE_TRADING_INTERNAL_URL: config.VIBE_TRADING_INTERNAL_URL,
+    } : {}),
   };
 
   // Compute PUBLIC_BASE_URL from JustAVPS metadata so getMasterPublicBaseUrl()

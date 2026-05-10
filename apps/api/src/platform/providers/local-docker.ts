@@ -967,6 +967,11 @@ export class LocalDockerProvider implements SandboxProvider {
       `REPLICATE_API_URL=${routerBase}/replicate`,
       `SERPER_API_URL=${routerBase}/serper`,
       `FIRECRAWL_API_URL=${routerBase}/firecrawl`,
+      // Vibe-Trading internal service (Story 5.0). Injected here so fresh sandboxes
+      // (not just pool-claimed ones) get the credentials. Only inject if API key set
+      // (avoids exporting empty string when feature disabled).
+      ...(config.VIBE_TRADING_API_KEY ? [`VIBE_TRADING_API_KEY=${config.VIBE_TRADING_API_KEY}`] : []),
+      ...(config.VIBE_TRADING_API_KEY && config.VIBE_TRADING_INTERNAL_URL ? [`VIBE_TRADING_INTERNAL_URL=${config.VIBE_TRADING_INTERNAL_URL}`] : []),
       ...(config.EPSILON_LOCAL_IMAGES ? ['EPSILON_LOCAL_SOURCE=1'] : []),
       `ENV_MODE=${config.EPSILON_BILLING_INTERNAL_ENABLED ? 'cloud' : 'local'}`,
       `CORS_ALLOWED_ORIGINS=${[config.FRONTEND_URL, config.EPSILON_URL].filter(Boolean).join(',')}`,

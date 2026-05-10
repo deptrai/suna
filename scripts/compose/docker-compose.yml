@@ -16,6 +16,8 @@ services:
       - "3000:3000"
     profiles: [frontend, all]
     restart: unless-stopped
+    networks:
+      - sandbox-network
 
   epsilon-api:
     build:
@@ -30,61 +32,66 @@ services:
         required: false
     profiles: [backend, all]
     restart: unless-stopped
+    networks:
+      - sandbox-network
 
   vibe-trading:
     build:
       context: ../../Vibe-Trading
       dockerfile: Dockerfile
+    image: chainlens-vibe-trading:latest
     ports:
       - "127.0.0.1:8899:8899"
     environment:
       API_AUTH_KEY: ${VIBE_TRADING_API_KEY}
       REDIS_URL: redis://redis:6379/0
-      ALLOWED_IPS: ${VIBE_TRADING_ALLOWED_IPS:-172.20.0.0/16}
+      # IP allowlist must match sandbox-network subnet defined below.
+      ALLOWED_IPS: ${VIBE_TRADING_ALLOWED_IPS:-172.30.0.0/16}
     env_file:
-      - path: Vibe-Trading/agent/.env
+      # Path resolved relative to this compose file (scripts/compose/), so go up to repo root.
+      - path: ../../Vibe-Trading/agent/.env
         required: false
     volumes:
       - vibe-trading-runs:/app/agent/runs
       - vibe-trading-sessions:/app/agent/sessions
-    depends_on: [redis]
+    depends_on:
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     profiles: [backend, all]
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 512M
-        reservations:
-          cpus: '0.1'
-          memory: 128M
+    networks:
+      - sandbox-network
+    # Top-level resource keys (compose v2) — `deploy:` block is Swarm-only and ignored by `docker compose up`.
+    cpus: 0.5
+    mem_limit: 512M
+    mem_reservation: 128M
 
   vibe-trading-worker:
-    build:
-      context: ../../Vibe-Trading
-      dockerfile: Dockerfile
+    # Reuse the image built by `vibe-trading` service to avoid duplicate Docker build.
+    image: chainlens-vibe-trading:latest
+    depends_on:
+      vibe-trading:
+        condition: service_started
+      redis:
+        condition: service_healthy
     command: >
       sh -c "PYTHONPATH=/app/agent celery -A src.worker.celery_app worker
       --loglevel=info -Q backtest,default --concurrency=2"
     environment:
       REDIS_URL: redis://redis:6379/0
     env_file:
-      - path: Vibe-Trading/agent/.env
+      - path: ../../Vibe-Trading/agent/.env
         required: false
     volumes:
       - vibe-trading-runs:/app/agent/runs
       - vibe-trading-sessions:/app/agent/sessions
-    depends_on: [redis]
     restart: unless-stopped
     profiles: [backend, all]
-    deploy:
-      resources:
-        limits:
-          cpus: '1.5'
-          memory: 1536M
-        reservations:
-          cpus: '0.2'
-          memory: 256M
+    networks:
+      - sandbox-network
+    cpus: 1.5
+    mem_limit: 1536M
+    mem_reservation: 256M
 
   redis:
     image: redis:7-alpine
@@ -93,11 +100,29 @@ services:
       - redis-data:/data
     restart: unless-stopped
     profiles: [backend, all]
-    deploy:
-      resources:
-        limits:
-          cpus: '0.3'
-          memory: 256M
+    networks:
+      - sandbox-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    cpus: 0.3
+    mem_limit: 256M
+
+# Explicit network with fixed subnet — required because:
+#   1. ALLOWED_IPS in vibe-trading must match for IP whitelist (api_server.py:351-357)
+#   2. Sandbox containers (provisioned by apps/api) join this network for Docker DNS resolution of vibe-trading
+#   3. Without explicit subnet, Docker auto-assigns from 172.16-31.x non-deterministically
+networks:
+  sandbox-network:
+    name: ${SANDBOX_NETWORK:-sandbox-network}
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: ${VIBE_TRADING_ALLOWED_IPS:-172.30.0.0/16}
 
 volumes:
   redis-data:

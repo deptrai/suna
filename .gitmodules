@@ -2,3 +2,7 @@
 	path = packages/epsilon-ocx-registry
 	url = https://github.com/epsilon-ai/epsilon-ocx-registry.git
 	branch = master
+[submodule "Vibe-Trading"]
+	path = Vibe-Trading
+	url = https://github.com/deptrai/Vibe-Trading.git
+	branch = main

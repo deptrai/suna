@@ -597,6 +597,10 @@ export class JustAVPSProvider implements SandboxProvider {
       REPLICATE_API_URL: `${routerBase}/replicate`,
       SERPER_API_URL: `${routerBase}/serper`,
       FIRECRAWL_API_URL: `${routerBase}/firecrawl`,
+      // Vibe-Trading internal service (Story 5.0). Inject only when key set;
+      // missing key means feature disabled, so omit env var to avoid confusing tools.
+      ...(config.VIBE_TRADING_API_KEY ? { VIBE_TRADING_API_KEY: config.VIBE_TRADING_API_KEY } : {}),
+      ...(config.VIBE_TRADING_API_KEY && config.VIBE_TRADING_INTERNAL_URL ? { VIBE_TRADING_INTERNAL_URL: config.VIBE_TRADING_INTERNAL_URL } : {}),
       PUID: '911',
       PGID: '911',
       ...opts.envVars,

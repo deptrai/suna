@@ -490,6 +490,10 @@ export const config = {
   SANDBOX_PORT_BASE: env.SANDBOX_PORT_BASE,
   SANDBOX_CONTAINER_NAME: env.SANDBOX_CONTAINER_NAME,
 
+  // Vibe-Trading internal service (Story 5.0)
+  VIBE_TRADING_API_KEY: env.VIBE_TRADING_API_KEY,
+  VIBE_TRADING_INTERNAL_URL: env.VIBE_TRADING_INTERNAL_URL,
+
   /**
    * INTERNAL_SERVICE_KEY -- direction: epsilon-api -> sandbox.
    *
