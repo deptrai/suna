@@ -232,6 +232,7 @@ function SessionTabsContainer({ children }: { children: React.ReactNode }) {
 	const activeTabId = useTabStore((s) => s.activeTabId);
 	const obActive = useOnboardingModeStore((s) => s.active);
 	const obSessionId = useOnboardingModeStore((s) => s.sessionId);
+	const pathname = usePathname();
 
 	// Collect tab IDs by type
 	const sessionTabIds = tabOrder.filter((id) => tabs[id]?.type === "session");
@@ -246,8 +247,9 @@ function SessionTabsContainer({ children }: { children: React.ReactNode }) {
 		return t === "settings" || t === "page" || t === "project" || t === "dashboard";
 	});
 	const activeTab = activeTabId ? tabs[activeTabId] : null;
-	// All tab types are now pre-mounted — route-based children are never shown
-	const showingMountedTab = !!activeTab;
+	// Route-based pages (e.g. /token/*) bypass the tab system entirely
+	const isRoutePage = pathname.startsWith('/token/');
+	const showingMountedTab = !!activeTab && !isRoutePage;
 
 	return (
 		<div

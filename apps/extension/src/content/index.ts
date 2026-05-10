@@ -1,4 +1,5 @@
 // content/index.ts
+import { getCanonicalBaseUrl } from '../lib/canonical';
 
 const TOKEN_REGEX = /(?:\$([A-Za-z0-9]{2,10}))|(?:0x[a-fA-F0-9]{40})/g;
 
@@ -161,7 +162,7 @@ async function showTooltip(target: HTMLElement, token: string) {
           <p>Contract: Verified, No Mint Function</p>
         </div>
         <div class="footer">
-          <button class="expand-btn" onclick="window.open('https://app.chainlens.com/analyze?token=${token}')">Deep Dive on Chainlens</button>
+          <button class="expand-btn" onclick="window.open('${getCanonicalBaseUrl()}/dashboard/token/${token}')">Deep Dive on Chainlens</button>
         </div>
       </div>
     `;

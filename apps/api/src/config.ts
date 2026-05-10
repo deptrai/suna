@@ -228,6 +228,11 @@ const envSchema = z.object({
   NANSEN_API_KEY:              optStr,
   ONCHAIN_WORKER_ENABLED:      optBoolFalse,
   ONCHAIN_RETENTION_DAYS:      optInt(30),
+  MORALIS_API_KEY:             optStr,
+  ETHERSCAN_API_KEY:           optStr,
+  ARBISCAN_API_KEY:            optStr,
+  BASESCAN_API_KEY:            optStr,
+  POLYGONSCAN_API_KEY:         optStr,
   });
 
 // ─── Validation + Conditional Checks ────────────────────────────────────────
@@ -735,6 +740,21 @@ export const TOOL_PRICING: Record<string, ToolPricing> = {
   },
   tx_simulator: {
     baseCost: 0.50,
+    perResultCost: 0,
+    markupMultiplier: 1.0,
+  },
+  token_holders: {
+    baseCost: 0.15,
+    perResultCost: 0,
+    markupMultiplier: 1.0,
+  },
+  token_transactions: {
+    baseCost: 0.12,
+    perResultCost: 0,
+    markupMultiplier: 1.0,
+  },
+  token_search: {
+    baseCost: 0.02,
     perResultCost: 0,
     markupMultiplier: 1.0,
   },

@@ -17,14 +17,14 @@ project_id = "epsilon-local"
 # ─── API (PostgREST) ─────────────────────────────────────────────────────────
 [api]
 enabled = true
-port = 54331
+port = 54341
 schemas = ["public", "epsilon"]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
 
 # ─── Database ─────────────────────────────────────────────────────────────────
 [db]
-port = 54332
+port = 54342
 major_version = 17
 
 [db.pooler]
@@ -56,12 +56,12 @@ enabled = false
 # ─── Studio (Dashboard UI) ───────────────────────────────────────────────────
 [studio]
 enabled = true
-port = 54333
+port = 54343
 
 # ─── Inbucket (Email testing) ────────────────────────────────────────────────
 [inbucket]
 enabled = true
-port = 54334
+port = 54344
 
 # ─── Analytics ────────────────────────────────────────────────────────────────
 [analytics]

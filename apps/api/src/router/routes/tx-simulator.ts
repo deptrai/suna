@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
+import { EVM_ADDRESS } from '@epsilon/shared';
 import { simulateTransaction, type TxSimulationSnapshot } from '../services/tx-simulator';
 import { widgetCacheKey, cacheGet, cacheGetStale, cacheSet } from '../services/widget-cache';
 import { checkCredits, deductToolCredits } from '../services/billing';
@@ -10,7 +11,6 @@ import type { AppContext } from '../../types';
 const TOOL = 'tx_simulator';
 const TTL_MS = 30_000;
 
-const EVM_ADDRESS = /^0x[a-fA-F0-9]{40}$/;
 const HEX_DATA = /^0x[a-fA-F0-9]*$/;
 const HEX_OR_DECIMAL_VALUE = /^(0x[a-fA-F0-9]+|[0-9]+)$/;
 const SESSION_ID = z.string().max(128).regex(/^[A-Za-z0-9_-]+$/, 'session_id must be alphanumeric/dash/underscore').optional();

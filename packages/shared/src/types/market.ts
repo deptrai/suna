@@ -20,3 +20,31 @@ export interface SmartMoneyMovement {
   direction: 'inflow' | 'outflow';
   timestamp: string;
 }
+
+export interface TokenInfoSnapshot {
+  name: string;
+  symbol: string;
+  price_usd: number | null;
+  market_cap_usd: number | null;
+  change_24h_pct: number | null;
+  logo_url?: string | null;
+  stale?: boolean;
+}
+
+export interface HolderEntry {
+  address: string;
+  balance: string;
+  percentage: number;
+  rank: number;
+}
+
+export interface TokenHoldersSnapshot {
+  holders: HolderEntry[];
+  total_holders: number | null;
+  chain?: string;
+  address?: string;
+  checked_at?: string;
+  source?: string;
+  // Set to true when MORALIS_API_KEY is missing — UI can show actionable message instead of "no data".
+  unconfigured?: boolean;
+}

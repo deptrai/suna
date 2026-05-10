@@ -1,0 +1,18 @@
+src/app/(dashboard)/token/[address]/_components/HeaderSection.tsx(4,40): error TS2307: Cannot find module '@chainlens/api/src/router/services/token-info' or its corresponding type declarations.
+src/app/(dashboard)/token/[address]/_components/HeaderSection.tsx(91,11): error TS2339: Property 'symbol' does not exist on type 'TokenInfoResponse'.
+src/app/(dashboard)/token/[address]/_components/HeaderSection.tsx(91,19): error TS2339: Property 'name' does not exist on type 'TokenInfoResponse'.
+src/app/(dashboard)/token/[address]/_components/HeaderSection.tsx(91,25): error TS2339: Property 'price_usd' does not exist on type 'TokenInfoResponse'.
+src/app/(dashboard)/token/[address]/_components/HeaderSection.tsx(91,36): error TS2339: Property 'market_cap_usd' does not exist on type 'TokenInfoResponse'.
+src/app/(dashboard)/token/[address]/_components/HeaderSection.tsx(91,52): error TS2339: Property 'change_24h_pct' does not exist on type 'TokenInfoResponse'.
+src/app/(dashboard)/token/[address]/_components/HoldersSection.tsx(4,43): error TS2307: Cannot find module '@chainlens/api/src/router/services/token-holders' or its corresponding type declarations.
+src/app/(dashboard)/token/[address]/_components/HoldersSection.tsx(70,15): error TS2339: Property 'total_holders' does not exist on type 'TokenHoldersResponse'.
+src/app/(dashboard)/token/[address]/_components/HoldersSection.tsx(70,46): error TS2339: Property 'total_holders' does not exist on type 'TokenHoldersResponse'.
+src/app/(dashboard)/token/[address]/_components/HoldersSection.tsx(71,72): error TS2339: Property 'total_holders' does not exist on type 'TokenHoldersResponse'.
+src/app/(dashboard)/token/[address]/_components/HoldersSection.tsx(79,16): error TS2339: Property 'holders' does not exist on type 'TokenHoldersResponse'.
+src/app/(dashboard)/token/[address]/_components/HoldersSection.tsx(79,32): error TS2339: Property 'holders' does not exist on type 'TokenHoldersResponse'.
+src/app/(dashboard)/token/[address]/_components/HoldersSection.tsx(91,21): error TS2339: Property 'holders' does not exist on type 'TokenHoldersResponse'.
+src/app/(dashboard)/token/[address]/_components/HoldersSection.tsx(91,34): error TS7006: Parameter 'holder' implicitly has an 'any' type.
+src/app/(dashboard)/token/[address]/page.tsx(4,47): error TS2307: Cannot find module '@chainlens/shared/address' or its corresponding type declarations.
+src/app/(dashboard)/token/[address]/page.tsx(12,40): error TS2307: Cannot find module '@chainlens/api/src/router/services/token-info' or its corresponding type declarations.
+src/components/thread/tool-views/opencode/OcContractRiskToolView.tsx(11,31): error TS2307: Cannot find module '../../widgets/RiskBadgeCard' or its corresponding type declarations.
+src/components/thread/tool-views/opencode/OcContractRiskToolView.tsx(12,52): error TS2307: Cannot find module '../../widgets/risk-badge-utils' or its corresponding type declarations.

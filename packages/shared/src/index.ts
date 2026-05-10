@@ -10,3 +10,4 @@ export * from './utils';
 export * from './constants/upload-limits';
 export * from './constants/auto-topup';
 export * from './types/market';
+export * from './address';

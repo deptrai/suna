@@ -15,6 +15,7 @@ const SESSION_ID = z.string().max(128).regex(/^[A-Za-z0-9_-]+$/, 'session_id mus
 const TokenInfoRequestSchema = z.object({
   slug: z.string().min(1).max(128).optional(),
   address: z.string().min(1).max(128).optional(),
+  chain: z.string().min(1).max(32).optional(),
   session_id: SESSION_ID,
 }).refine((d) => d.slug || d.address, { message: 'At least one of slug or address is required' });
 
@@ -31,9 +32,10 @@ tokenInfo.post('/', async (c) => {
     throw new HTTPException(400, { message: `Validation error: ${parseResult.error.message}` });
   }
 
-  const { slug, address, session_id } = parseResult.data;
+  const { slug, address, chain, session_id } = parseResult.data;
   const primaryArg = (slug ?? address ?? '').trim().toLowerCase();
-  const key = widgetCacheKey(TOOL, primaryArg);
+  // Cache key includes chain so same EVM address across chains doesn't collide
+  const key = widgetCacheKey(TOOL, chain ? `${chain}:${primaryArg}` : primaryArg);
 
   const creditCheck = await checkCredits(accountId);
   if (!creditCheck.hasCredits) throw new HTTPException(402, { message: 'Insufficient credits' });
@@ -51,7 +53,7 @@ tokenInfo.post('/', async (c) => {
       data = fresh.data;
       cache_status = 'cache_fresh';
     } else {
-      data = await fetchTokenInfo(primaryArg);
+      data = await fetchTokenInfo(primaryArg, { chain });
       cacheSet(key, data, TTL_MS);
       cache_status = 'live';
     }
