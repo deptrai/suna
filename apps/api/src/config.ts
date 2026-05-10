@@ -85,6 +85,14 @@ const envSchema = z.object({
   PERPLEXITY_API_URL:          optUrl('https://api.perplexity.ai'),
   PERPLEXITY_API_KEY:          optStr,
   DEFILLAMA_API_URL:           optUrl('https://api.llama.fi'),
+  COINGECKO_API_URL:           optUrl('https://api.coingecko.com/api/v3'),
+  COINGECKO_API_KEY:           optStr,
+  GOPLUS_API_URL:              optUrl('https://api.gopluslabs.io'),
+  RUGCHECK_API_URL:            optUrl('https://api.rugcheck.xyz/v1'),
+  TENDERLY_ACCOUNT:            optStr,
+  TENDERLY_PROJECT:            optStr,
+  TENDERLY_ACCESS_KEY:         optStr,
+  RPC_URL_ETHEREUM:            optStr,
   SERPER_API_URL:              optUrl('https://google.serper.dev'),
   SERPER_API_KEY:              optStr,
 
@@ -399,6 +407,14 @@ export const config = {
   PERPLEXITY_API_URL: env.PERPLEXITY_API_URL,
   PERPLEXITY_API_KEY: env.PERPLEXITY_API_KEY,
   DEFILLAMA_API_URL: env.DEFILLAMA_API_URL,
+  COINGECKO_API_URL: env.COINGECKO_API_URL,
+  COINGECKO_API_KEY: env.COINGECKO_API_KEY,
+  GOPLUS_API_URL: env.GOPLUS_API_URL,
+  RUGCHECK_API_URL: env.RUGCHECK_API_URL,
+  TENDERLY_ACCOUNT: env.TENDERLY_ACCOUNT,
+  TENDERLY_PROJECT: env.TENDERLY_PROJECT,
+  TENDERLY_ACCESS_KEY: env.TENDERLY_ACCESS_KEY,
+  RPC_URL_ETHEREUM: env.RPC_URL_ETHEREUM,
   SERPER_API_URL: env.SERPER_API_URL,
   SERPER_API_KEY: env.SERPER_API_KEY,
 
@@ -706,6 +722,21 @@ export const TOOL_PRICING: Record<string, ToolPricing> = {
     baseCost: 0.002,
     perResultCost: 0,
     markupMultiplier: 1.5,
+  },
+  token_info: {
+    baseCost: 0.05,
+    perResultCost: 0,
+    markupMultiplier: 1.0,
+  },
+  contract_risk: {
+    baseCost: 0.20,
+    perResultCost: 0,
+    markupMultiplier: 1.0,
+  },
+  tx_simulator: {
+    baseCost: 0.50,
+    perResultCost: 0,
+    markupMultiplier: 1.0,
   },
 };
 

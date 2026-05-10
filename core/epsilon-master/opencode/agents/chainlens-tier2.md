@@ -7,6 +7,9 @@ permission:
   web_search: allow
   deep_research: allow
   jit_sync: allow
+  token_info: allow
+  contract_risk: allow
+  simulate_transaction: allow
   code_validator: allow
   bash: allow
   read: allow

@@ -6,6 +6,9 @@ import { imageSearch } from './routes/search-image';
 import { deepResearch } from './routes/deep-research';
 import { jitSync } from './routes/jit-sync';
 import { codeValidator } from './routes/code-validator';
+import { tokenInfo } from './routes/token-info';
+import { contractRisk } from './routes/contract-risk';
+import { txSimulator } from './routes/tx-simulator';
 import { llm } from './routes/llm';
 import { proxy } from './routes/proxy';
 import { anthropic } from './routes/anthropic';
@@ -29,11 +32,17 @@ router.use('/image-search/*', apiKeyAuth);
 router.use('/deep-research/*', apiKeyAuth);
 router.use('/jit-sync/*', apiKeyAuth);
 router.use('/code-validator/*', apiKeyAuth);
+router.use('/token-info/*', apiKeyAuth);
+router.use('/contract-risk/*', apiKeyAuth);
+router.use('/tx-simulator/*', apiKeyAuth);
 router.route('/web-search', webSearch);
 router.route('/image-search', imageSearch);
 router.route('/deep-research', deepResearch);
 router.route('/jit-sync', jitSync);
 router.route('/code-validator', codeValidator);
+router.route('/token-info', tokenInfo);
+router.route('/contract-risk', contractRisk);
+router.route('/tx-simulator', txSimulator);
 
 // LLM routes (apiKeyAuth)
 router.use('/chat/*', apiKeyAuth);

@@ -118,6 +118,9 @@ import { parseMemoryEntryOutput } from '@/lib/utils/memory-entry-output';
 import { useIntegrationConnectStore } from '@/stores/integration-connect-store';
 import { useAuth } from '@/components/AuthProvider';
 import { Badge } from '@/components/ui/badge';
+import { OcTokenInfoToolView } from '@/components/thread/tool-views/opencode/OcTokenInfoToolView';
+import { OcContractRiskToolView } from '@/components/thread/tool-views/opencode/OcContractRiskToolView';
+import { OcTxSimulationToolView } from '@/components/thread/tool-views/opencode/OcTxSimulationToolView';
 
 import {
   type ApplyPatchFile,
@@ -8806,3 +8809,43 @@ export function ToolPartRenderer({
     </ToolNavigationContext.Provider>
   );
 }
+
+// ── Chainlens Widget Tools ────────────────────────────────────────────────────
+// Adapters convert ToolProps (part-based) → ToolViewProps (toolCall/toolResult-based)
+function ocPartToViewProps(part: ToolPart, sessionId?: string) {
+  const args = partInput(part) as Record<string, any>;
+  const status = partStatus(part);
+  const toolCall = { tool_call_id: part.callID, function_name: part.tool, arguments: args, source: 'native' as const };
+
+  // Preserve backend `success: false` returned via HTTP 200 stale-fallback path —
+  // don't mask it with a hardcoded `success: true` when status is `completed`.
+  let toolResult: { success: boolean; output: string; error?: string } | undefined;
+  if (status === 'completed') {
+    const output = partOutput(part);
+    let backendSuccess = true;
+    try {
+      const parsed = JSON.parse(output) as { success?: boolean };
+      if (parsed && typeof parsed === 'object' && parsed.success === false) {
+        backendSuccess = false;
+      }
+    } catch {
+      // non-JSON output — keep success true; view's parseOutput will handle the parse failure
+    }
+    toolResult = { success: backendSuccess, output };
+  } else if (status === 'error') {
+    const errMsg = (part.state as any).error ?? '';
+    toolResult = { success: false, output: errMsg, error: errMsg };
+  }
+
+  const isStreaming = status === 'pending' || status === 'running';
+  return { toolCall, toolResult, isStreaming, sessionId };
+}
+function OcTokenInfoTool({ part, sessionId }: ToolProps) { return <OcTokenInfoToolView {...ocPartToViewProps(part, sessionId)} />; }
+function OcContractRiskTool({ part, sessionId }: ToolProps) { return <OcContractRiskToolView {...ocPartToViewProps(part, sessionId)} />; }
+function OcTxSimulationTool({ part, sessionId }: ToolProps) { return <OcTxSimulationToolView {...ocPartToViewProps(part, sessionId)} />; }
+ToolRegistry.register('token_info', OcTokenInfoTool);
+ToolRegistry.register('token-info', OcTokenInfoTool);
+ToolRegistry.register('contract_risk', OcContractRiskTool);
+ToolRegistry.register('contract-risk', OcContractRiskTool);
+ToolRegistry.register('simulate_transaction', OcTxSimulationTool);
+ToolRegistry.register('simulate-transaction', OcTxSimulationTool);

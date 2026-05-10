@@ -380,3 +380,13 @@ export function useModelStore(allModels: FlatModel[]) {
     userPrefs: store.user,
   };
 }
+
+/**
+ * Lightweight hook that reads only session agent name fields.
+ * Does NOT require allModels — safe to call from any context without model data.
+ */
+export function useSessionAgentName(sessionId?: string): string | undefined {
+  const store = useSyncExternalStore(subscribe, getStore, getStore);
+  const fromSession = sessionId ? store.sessionAgentName?.[sessionId] : undefined;
+  return fromSession ?? store.lastAgentName;
+}
