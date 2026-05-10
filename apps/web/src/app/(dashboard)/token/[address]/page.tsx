@@ -3,12 +3,12 @@ import type { Metadata } from 'next';
 import { ALLOWED_EVM_CHAINS, detectChain, normalizeAddress, type TokenInfoSnapshot } from '@epsilon/shared';
 import { getServerAuthHeader } from './_components/getServerAuthHeader';
 import { HeaderSection } from './_components/HeaderSection';
-import { ChartPlaceholderCard } from './_components/ChartPlaceholderCard';
+import { ChartSection } from './_components/ChartSection';
 import { RiskSection } from './_components/RiskSection';
 import { HoldersSection } from './_components/HoldersSection';
 import { TxsSection } from './_components/TxsSection';
 import { TokenNotFound, type SearchResult } from './_components/TokenNotFound';
-import { HeaderSkeleton, RiskSkeleton, HoldersSkeleton, TxsSkeleton } from './_components/skeletons';
+import { HeaderSkeleton, ChartSkeleton, RiskSkeleton, HoldersSkeleton, TxsSkeleton } from './_components/skeletons';
 
 const ALLOWED_CHAINS_SET = new Set<string>([...ALLOWED_EVM_CHAINS, 'solana']);
 // AC5: search-suggestion gate — only invoke /router/token-search when raw param looks
@@ -142,7 +142,9 @@ export default async function TokenDetailPage({
         <HeaderSection address={address} chain={chain} />
       </Suspense>
 
-      <ChartPlaceholderCard symbol={null} />
+      <Suspense fallback={<ChartSkeleton />}>
+        <ChartSection address={address} chain={chain} />
+      </Suspense>
 
       <Suspense fallback={<RiskSkeleton />}>
         <RiskSection address={address} chain={chain} />

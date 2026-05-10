@@ -6,6 +6,7 @@ const DEFAULT_TTL: Record<string, number> = {
   token_info: 60_000,
   contract_risk: 300_000,
   tx_simulator: 30_000,
+  token_ohlcv: 5 * 60_000,
 };
 
 interface WidgetCacheEntry<T = unknown> {

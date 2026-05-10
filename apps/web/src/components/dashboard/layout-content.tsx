@@ -263,7 +263,7 @@ function SessionTabsContainer({ children }: { children: React.ReactNode }) {
 					key={id}
 					className={cn(
 						"absolute inset-0 flex flex-col",
-						id !== activeTabId && "hidden",
+						(isRoutePage || id !== activeTabId) && "hidden",
 					)}
 				>
 					<Suspense fallback={null}>
@@ -285,7 +285,7 @@ function SessionTabsContainer({ children }: { children: React.ReactNode }) {
 						key={id}
 						className={cn(
 							"absolute inset-0 flex flex-col",
-							id !== activeTabId && "hidden",
+							(isRoutePage || id !== activeTabId) && "hidden",
 						)}
 					>
 						<Suspense fallback={null}>
@@ -301,7 +301,7 @@ function SessionTabsContainer({ children }: { children: React.ReactNode }) {
 					key={id}
 					className={cn(
 						"absolute inset-0 flex flex-col",
-						id !== activeTabId && "hidden",
+						(isRoutePage || id !== activeTabId) && "hidden",
 					)}
 				>
 					<Suspense fallback={null}>
@@ -318,7 +318,7 @@ function SessionTabsContainer({ children }: { children: React.ReactNode }) {
 						key={id}
 						className={cn(
 							"absolute inset-0 flex flex-col",
-							id !== activeTabId && "hidden",
+							(isRoutePage || id !== activeTabId) && "hidden",
 						)}
 					>
 						<Suspense fallback={null}>
@@ -338,7 +338,7 @@ function SessionTabsContainer({ children }: { children: React.ReactNode }) {
 					key={id}
 					className={cn(
 						"absolute inset-0 flex flex-col",
-						id !== activeTabId && "hidden",
+						(isRoutePage || id !== activeTabId) && "hidden",
 					)}
 				>
 					<Suspense fallback={null}>
@@ -353,7 +353,7 @@ function SessionTabsContainer({ children }: { children: React.ReactNode }) {
 			key={id}
 			className={cn(
 				"absolute inset-0 flex flex-col",
-				id !== activeTabId && "hidden",
+				(isRoutePage || id !== activeTabId) && "hidden",
 			)}
 		>
 			<Suspense fallback={null}>
@@ -368,7 +368,7 @@ function SessionTabsContainer({ children }: { children: React.ReactNode }) {
 			key={id}
 			className={cn(
 				"absolute inset-0 flex flex-col",
-				id !== activeTabId && "hidden",
+				(isRoutePage || id !== activeTabId) && "hidden",
 			)}
 		>
 			<Suspense fallback={null}>
@@ -386,7 +386,7 @@ function SessionTabsContainer({ children }: { children: React.ReactNode }) {
 						key={id}
 						className={cn(
 							"absolute inset-0 flex flex-col overflow-y-auto",
-							id !== activeTabId && "hidden",
+							(isRoutePage || id !== activeTabId) && "hidden",
 						)}
 					>
 						<Suspense fallback={null}>

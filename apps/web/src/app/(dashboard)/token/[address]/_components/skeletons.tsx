@@ -46,6 +46,14 @@ export function HoldersSkeleton() {
   );
 }
 
+export function ChartSkeleton() {
+  return (
+    <div className="rounded-xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-2xl" style={{ height: '520px' }}>
+      <Skeleton className="w-full h-full rounded-xl" />
+    </div>
+  );
+}
+
 export function TxsSkeleton() {
   return (
     <div className="rounded-xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-2xl p-6 space-y-4">

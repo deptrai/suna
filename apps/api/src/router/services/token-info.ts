@@ -1,4 +1,5 @@
 import { config } from '../../config';
+import { isEvmAddress, buildCoinGeckoHeaders, resolveCoinIdFromAddress } from './coingecko-helpers';
 
 const TOKEN_INFO_TIMEOUT_MS = 1200;
 
@@ -14,16 +15,6 @@ export interface TokenInfoSnapshot {
   source: 'coingecko';
 }
 
-interface CoinGeckoSimplePrice {
-  [id: string]: {
-    usd?: number;
-    usd_market_cap?: number;
-    usd_24h_vol?: number;
-    usd_24h_change?: number;
-    last_updated_at?: number;
-  };
-}
-
 interface CoinGeckoCoinsMarkets {
   id: string;
   symbol: string;
@@ -35,56 +26,18 @@ interface CoinGeckoCoinsMarkets {
   last_updated: string | null;
 }
 
-// CoinGecko platform IDs for `/coins/{platform}/contract/{address}` lookup
-const COINGECKO_PLATFORM_MAP: Record<string, string> = {
-  ethereum: 'ethereum',
-  arbitrum: 'arbitrum-one',
-  base: 'base',
-  polygon: 'polygon-pos',
-  bsc: 'binance-smart-chain',
-  avalanche: 'avalanche',
-  optimism: 'optimistic-ethereum',
-};
-
 export async function fetchTokenInfo(
   slug: string,
   options: { signal?: AbortSignal; chain?: string } = {},
 ): Promise<TokenInfoSnapshot> {
   const baseUrl = config.COINGECKO_API_URL.replace(/\/+$/, '');
-  const headers: Record<string, string> = {
-    Accept: 'application/json',
-  };
-  if (config.COINGECKO_API_KEY) {
-    headers['x-cg-demo-api-key'] = config.COINGECKO_API_KEY;
-  }
-
+  const headers = buildCoinGeckoHeaders();
   const signal = options.signal ?? AbortSignal.timeout(TOKEN_INFO_TIMEOUT_MS);
 
   // If input looks like an EVM address, resolve it to a CoinGecko coin ID first.
-  // CoinGecko /coins/markets only accepts coin IDs (e.g. "uniswap"), not addresses.
   let coinId = slug;
-  const isEvmAddress = /^0x[a-fA-F0-9]{40}$/.test(slug);
-  if (isEvmAddress) {
-    const platform = COINGECKO_PLATFORM_MAP[options.chain ?? 'ethereum'] ?? 'ethereum';
-    const contractUrl = `${baseUrl}/coins/${platform}/contract/${slug.toLowerCase()}`;
-    try {
-      const contractRes = await fetch(contractUrl, { headers, signal });
-      if (contractRes.ok) {
-        const contractData = (await contractRes.json()) as { id?: string };
-        if (contractData.id) {
-          coinId = contractData.id;
-        } else {
-          throw new Error(`CoinGecko: token '${slug}' not found`);
-        }
-      } else if (contractRes.status === 404) {
-        throw new Error(`CoinGecko: token '${slug}' not found`);
-      } else {
-        throw new Error(`CoinGecko API error: ${contractRes.status}`);
-      }
-    } catch (e) {
-      if (e instanceof Error && e.message.includes('CoinGecko')) throw e;
-      throw new Error(`CoinGecko request failed: ${e instanceof Error ? e.message : String(e)}`);
-    }
+  if (isEvmAddress(slug)) {
+    coinId = await resolveCoinIdFromAddress(slug, options.chain, { signal });
   }
 
   const url = `${baseUrl}/coins/markets?vs_currency=usd&ids=${encodeURIComponent(coinId)}&per_page=1&page=1`;

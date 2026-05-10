@@ -6,7 +6,7 @@ export interface OhlcvBar {
   high: number;
   low: number;
   close: number;
-  volume: number;
+  volume?: number;
 }
 
 export function calcMA(bars: OhlcvBar[], period: number): LineData[] {
