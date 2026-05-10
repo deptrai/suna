@@ -95,7 +95,9 @@ const ChartPageComponent = lazy(() =>
 );
 
 const BacktestPage = lazy(() =>
-	import('@/app/(dashboard)/dashboard/backtest/page'),
+	import('@/app/(dashboard)/dashboard/backtest/backtest-client').then((m) => ({
+		default: m.BacktestClient,
+	})),
 );
 
 const DiscoverPage = lazy(() =>

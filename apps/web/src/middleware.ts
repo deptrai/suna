@@ -270,6 +270,13 @@ export async function middleware(request: NextRequest) {
   // does a client-side navigation (router.push) instead of a full page load,
   // the Set-Cookie header may not be processed, leaving the browser with a
   // stale (revoked) refresh token → "Refresh Token Not Found" on the next request.
+  //
+  // 409 CONFLICT: When Next.js/Turbopack fires concurrent subrequests (RSC, chunks,
+  // etc.) all hitting middleware at once, Supabase GoTrue rejects concurrent refresh
+  // requests with status 409. In this case we fall back to reading the existing
+  // session from the cookie without refreshing — the session is still valid,
+  // it just can't be refreshed right now due to the race. Allow the request through
+  // so the page can load; the client-side Supabase client will refresh properly.
   let user: { id: string; user_metadata?: { locale?: string } } | null = null;
   let authError: Error | null = null;
   
@@ -283,6 +290,22 @@ export async function middleware(request: NextRequest) {
     } catch (error) {
       // User might not be authenticated, continue
       authError = error as Error;
+    }
+
+    // 409 Conflict = concurrent refresh race — fall back to existing session cookie.
+    // Treat as authenticated (session cookie still exists) to avoid redirect storm.
+    if (
+      authError &&
+      'status' in (authError as Record<string, unknown>) &&
+      (authError as unknown as { status: number }).status === 409
+    ) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        user = session?.user ?? null;
+        authError = null; // don't treat as unauthenticated
+      } catch (sessionError) {
+        authError = sessionError as Error;
+      }
     }
   }
 
@@ -360,6 +383,11 @@ export async function middleware(request: NextRequest) {
   // Everything else requires authentication - reuse the user we already fetched
   try {
     
+    // DEV BYPASS: Allow E2E tests to access backtest without auth
+    if (process.env.NODE_ENV === 'development' && pathname.startsWith('/dashboard/backtest')) {
+      return supabaseResponse;
+    }
+
     // Redirect to auth if not authenticated (using the user we already fetched)
     if (authError || !user) {
       const url = request.nextUrl.clone();

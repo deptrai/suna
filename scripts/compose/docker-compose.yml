@@ -79,6 +79,7 @@ services:
       --loglevel=info -Q backtest,default --concurrency=2"
     environment:
       REDIS_URL: redis://redis:6379/0
+      RUNS_DIR: /app/agent/runs
     env_file:
       - path: ../../Vibe-Trading/agent/.env
         required: false

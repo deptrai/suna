@@ -19,7 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { BacktestResultPlaceholder } from './result-placeholder';
+import { BacktestResultVisualizer } from './result-visualizer';
 import {
   submitBacktest,
   pollRun,
@@ -354,7 +354,7 @@ export function BacktestStrategyEditorClient() {
       </p>
 
       {/* Result placeholder */}
-      {result && <BacktestResultPlaceholder result={result} />}
+      {result && <BacktestResultVisualizer result={result} />}
 
       <AlertDialog open={resetOpen} onOpenChange={setResetOpen}>
         <AlertDialogContent>
