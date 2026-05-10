@@ -1,6 +1,6 @@
 ---
 description: "Hands-on lead. Works directly on tasks, spawns workers for complex or parallel work, manages the team. Default: DO IT YOURSELF."
-model: v98store/gpt-5.4
+model: epsilon/gpt-5.4
 mode: primary
 permission:
   question: allow

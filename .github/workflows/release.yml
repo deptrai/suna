@@ -87,10 +87,10 @@ jobs:
           timeout: 600s
           script: |
             set -e
-            if [ ! -d ~/suna ]; then
-              git clone https://github.com/deptrai/suna.git ~/suna
+            if [ ! -d ~/chainlens ]; then
+              git clone https://github.com/deptrai/chainlens.git ~/chainlens
             fi
-            cd ~/suna
+            cd ~/chainlens
             git -c fetch.recurseSubmodules=false fetch origin main
             git reset --hard origin/main
             git submodule sync --recursive
@@ -173,7 +173,7 @@ jobs:
           gh release create "v${{ env.VERSION }}" \
             --title "v${{ env.VERSION }} — ${{ env.TITLE }}" \
             --notes-file /tmp/release-notes.md \
-            --repo deptrai/suna
+            --repo deptrai/chainlens
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

@@ -13,6 +13,7 @@ import { tokenHolders } from './routes/token-holders';
 import { tokenTransactions } from './routes/token-transactions';
 import { tokenSearch } from './routes/token-search';
 import { tokenOhlcv } from './routes/token-ohlcv';
+import { vibeTrading } from './routes/vibe-trading';
 import { llm } from './routes/llm';
 import { proxy } from './routes/proxy';
 import { anthropic } from './routes/anthropic';
@@ -43,6 +44,7 @@ router.use('/token-holders/*', combinedAuth);
 router.use('/token-transactions/*', combinedAuth);
 router.use('/token-search/*', combinedAuth);
 router.use('/token-ohlcv/*', combinedAuth);
+router.use('/vibe-trading/*', combinedAuth);
 router.route('/web-search', webSearch);
 router.route('/image-search', imageSearch);
 router.route('/deep-research', deepResearch);
@@ -55,6 +57,7 @@ router.route('/token-holders', tokenHolders);
 router.route('/token-transactions', tokenTransactions);
 router.route('/token-search', tokenSearch);
 router.route('/token-ohlcv', tokenOhlcv);
+router.route('/vibe-trading', vibeTrading);
 
 // LLM routes (apiKeyAuth)
 router.use('/chat/*', apiKeyAuth);

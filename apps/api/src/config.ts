@@ -771,6 +771,11 @@ export const TOOL_PRICING: Record<string, ToolPricing> = {
     perResultCost: 0,
     markupMultiplier: 1.0,
   },
+  vibe_trading_backtest: {
+    baseCost: 1.00,
+    perResultCost: 0,
+    markupMultiplier: 1.0,
+  },
 };
 
 export function getToolCost(toolName: string, resultCount: number = 0): number {

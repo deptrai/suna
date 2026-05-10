@@ -118,10 +118,19 @@ function readContainerBootstrapKey(): string | null {
     if (config.DOCKER_HOST && !config.DOCKER_HOST.includes('://')) {
       env.DOCKER_HOST = `unix://${config.DOCKER_HOST}`;
     }
-    const out = execSync(
-      `docker exec ${shellQuote(config.SANDBOX_CONTAINER_NAME)} cat /workspace/.secrets/.bootstrap-env.json`,
-      { timeout: 5_000, stdio: ['pipe', 'pipe', 'pipe'], env },
-    ).toString('utf8');
+    // Try both paths: new layout (.persistent-system/secrets/) and legacy (.secrets/)
+    let out: string;
+    try {
+      out = execSync(
+        `docker exec ${shellQuote(config.SANDBOX_CONTAINER_NAME)} cat /workspace/.persistent-system/secrets/.bootstrap-env.json`,
+        { timeout: 5_000, stdio: ['pipe', 'pipe', 'pipe'], env },
+      ).toString('utf8');
+    } catch {
+      out = execSync(
+        `docker exec ${shellQuote(config.SANDBOX_CONTAINER_NAME)} cat /workspace/.secrets/.bootstrap-env.json`,
+        { timeout: 5_000, stdio: ['pipe', 'pipe', 'pipe'], env },
+      ).toString('utf8');
+    }
     const json = JSON.parse(out);
     return typeof json.EPSILON_TOKEN === 'string' && json.EPSILON_TOKEN.length > 0 ? json.EPSILON_TOKEN : null;
   } catch {

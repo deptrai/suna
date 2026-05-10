@@ -10,6 +10,7 @@ permission:
   token_info: allow
   contract_risk: allow
   simulate_transaction: allow
+  vibe_trading_backtest: allow
   code_validator: allow
   bash: allow
   read: allow

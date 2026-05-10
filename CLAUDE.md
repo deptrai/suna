@@ -1,11 +1,11 @@
-# Chainlens / Suna — Project Instructions
+# Chainlens / Chainlens — Project Instructions
 
 ## MCP Trio (BẮT BUỘC dùng cho mọi review/exploration)
 
 Repo này lớn (3,642 indexed files / 83k functions). **Đừng `grep -r` hoặc đọc nguyên file** khi chưa narrow scope. Thứ tự bắt buộc:
 
 ### Session start
-1. `mcp__serena__activate_project` với path `/Users/luisphan/Documents/suna` — luôn chạy ngay khi mở session
+1. `mcp__serena__activate_project` với path `/Users/luisphan/Documents/chainlens` — luôn chạy ngay khi mở session
 2. `mcp__symdex__get_index_stats` — verify index up-to-date (3,642 files, 83,293 functions). Nếu `indexed_files: 0` thì gọi `index_directory`.
 3. `mcp__code-review-graph__list_graph_stats_tool` — verify CRG graph (158 files, 1,280 nodes). Build/update nếu cần.
 
