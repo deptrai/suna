@@ -296,6 +296,7 @@ RUN printf '#!/bin/bash\nPID_FILE="/de-pid"\nif [ ! -r "$PID_FILE" ]; then exit 
 
 # ── Container init scripts ───────────────────────────────────────────────────
 RUN mkdir -p /custom-cont-init.d
+COPY core/init-scripts/95-egress-whitelist.sh /custom-cont-init.d/95-egress-whitelist
 COPY core/init-scripts/95-setup-sshd.sh /custom-cont-init.d/95-setup-sshd
 COPY core/init-scripts/97-secrets-to-s6-env.sh /custom-cont-init.d/97-secrets-to-s6-env
 COPY core/init-scripts/epsilon-env-setup.sh /custom-cont-init.d/98-epsilon-env

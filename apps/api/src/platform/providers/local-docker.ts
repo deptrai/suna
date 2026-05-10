@@ -992,6 +992,7 @@ export class LocalDockerProvider implements SandboxProvider {
       HostConfig: {
         PortBindings: PORT_BINDINGS,
         Privileged: true,
+        CapAdd: ['NET_ADMIN'],
         ShmSize: 2 * 1024 * 1024 * 1024,
         RestartPolicy: { Name: 'unless-stopped' },
         Binds: [

@@ -163,6 +163,10 @@ const envSchema = z.object({
   // Empty string treated as unset so env_file with missing key is safe.
   SANDBOX_CONTAINER_NAME:      z.string().optional().transform(v => v || undefined).default('epsilon-sandbox'),
 
+  // ── Vibe Trading (optional — backtesting sandbox service) ────────────────
+  VIBE_TRADING_API_KEY:         optStr,
+  VIBE_TRADING_INTERNAL_URL:    optUrl('http://vibe-trading:8899'),
+
   // ── Internal Service Key (auto-generated if missing — never fails) ───────
   INTERNAL_SERVICE_KEY:        optStr,
 

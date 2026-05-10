@@ -30,3 +30,76 @@ services:
         required: false
     profiles: [backend, all]
     restart: unless-stopped
+
+  vibe-trading:
+    build:
+      context: ../../Vibe-Trading
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:8899:8899"
+    environment:
+      API_AUTH_KEY: ${VIBE_TRADING_API_KEY}
+      REDIS_URL: redis://redis:6379/0
+      ALLOWED_IPS: ${VIBE_TRADING_ALLOWED_IPS:-172.20.0.0/16}
+    env_file:
+      - path: Vibe-Trading/agent/.env
+        required: false
+    volumes:
+      - vibe-trading-runs:/app/agent/runs
+      - vibe-trading-sessions:/app/agent/sessions
+    depends_on: [redis]
+    restart: unless-stopped
+    profiles: [backend, all]
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+  vibe-trading-worker:
+    build:
+      context: ../../Vibe-Trading
+      dockerfile: Dockerfile
+    command: >
+      sh -c "PYTHONPATH=/app/agent celery -A src.worker.celery_app worker
+      --loglevel=info -Q backtest,default --concurrency=2"
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    env_file:
+      - path: Vibe-Trading/agent/.env
+        required: false
+    volumes:
+      - vibe-trading-runs:/app/agent/runs
+      - vibe-trading-sessions:/app/agent/sessions
+    depends_on: [redis]
+    restart: unless-stopped
+    profiles: [backend, all]
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 1536M
+        reservations:
+          cpus: '0.2'
+          memory: 256M
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --maxmemory 200mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    profiles: [backend, all]
+    deploy:
+      resources:
+        limits:
+          cpus: '0.3'
+          memory: 256M
+
+volumes:
+  redis-data:
+  vibe-trading-runs:
+  vibe-trading-sessions:

@@ -40,6 +40,8 @@ function buildEnvPayload(serviceKey: string, metadata?: Record<string, unknown>)
     FIRECRAWL_API_URL: `${routerBase}/firecrawl`,
     TUNNEL_API_URL: sandboxApiBase,
     TUNNEL_TOKEN: serviceKey,
+    ...(config.VIBE_TRADING_API_KEY ? { VIBE_TRADING_API_KEY: config.VIBE_TRADING_API_KEY } : {}),
+    VIBE_TRADING_INTERNAL_URL: config.VIBE_TRADING_INTERNAL_URL,
   };
 
   // Compute PUBLIC_BASE_URL from JustAVPS metadata so getMasterPublicBaseUrl()
