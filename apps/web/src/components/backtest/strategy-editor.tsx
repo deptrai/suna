@@ -111,6 +111,44 @@ function escapeReplacement(value: string): string {
   return value.replace(/\$/g, '$$$$');
 }
 
+function mergeWithTemplate(code: string): string {
+  try {
+    const parsedCode = JSON5.parse(code);
+    const parsedTemplate = JSON5.parse(INITIAL_TEMPLATE);
+    
+    // Simple deep merge for known top-level objects
+    const merged = { ...parsedTemplate };
+    for (const key of Object.keys(parsedCode)) {
+      if (typeof parsedCode[key] === 'object' && !Array.isArray(parsedCode[key]) && parsedCode[key] !== null) {
+        merged[key] = { ...merged[key], ...parsedCode[key] };
+      } else {
+        merged[key] = parsedCode[key];
+      }
+    }
+    
+    // Sanitize common LLM errors
+    if (merged.risk_management) {
+      if (merged.risk_management.max_drawdown_percentage) {
+        let md = parseFloat(merged.risk_management.max_drawdown_percentage);
+        if (md > 1) {
+          merged.risk_management.max_drawdown_percentage = (md / 100).toString();
+        }
+      }
+      if (merged.risk_management.position_sizing) {
+        // Fix issues like "100%" or "full"
+        const val = String(merged.risk_management.position_sizing).replace(/[^0-9.]/g, '');
+        let ps = parseFloat(val);
+        if (isNaN(ps) || ps > 1) ps = 1.0;
+        merged.risk_management.position_sizing = ps.toString();
+      }
+    }
+    
+    return JSON.stringify(merged, null, 2);
+  } catch (e) {
+    return code; // Fallback to raw code if parse fails
+  }
+}
+
 export function BacktestStrategyEditorClient({
   initialCode,
   initialAsset,
@@ -126,7 +164,7 @@ export function BacktestStrategyEditorClient({
   const router = useRouter();
 
   const [content, setContent] = useState(() => {
-    if (initialCode) return initialCode;
+    if (initialCode) return mergeWithTemplate(initialCode);
     let temp = INITIAL_TEMPLATE;
     if (initialAsset) {
       temp = temp.replace(
