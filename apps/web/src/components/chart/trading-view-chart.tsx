@@ -8,6 +8,7 @@ import type {
   UTCTimestamp,
 } from 'lightweight-charts';
 import { calcMA, calcRSI, type OhlcvBar } from './chart-indicators';
+import { ContextualBacktestModal } from '@/components/backtest/contextual-backtest-modal';
 
 interface Props {
   token: string;
@@ -22,7 +23,7 @@ const THEME = {
   timeScale: { borderColor: 'rgba(255,255,255,0.1)', timeVisible: true },
 };
 
-export function TradingViewChart({ data }: Props) {
+export function TradingViewChart({ data, token }: Props) {
   const mainRef = useRef<HTMLDivElement>(null);
   const rsiRef = useRef<HTMLDivElement>(null);
   const mainChartRef = useRef<IChartApi | null>(null);
@@ -34,6 +35,7 @@ export function TradingViewChart({ data }: Props) {
   const fitDoneRef = useRef(false);
 
   const [showRsi, setShowRsi] = useState(false);
+  const [showBacktestModal, setShowBacktestModal] = useState(false);
   const [chartsReady, setChartsReady] = useState(false);
   const loading = data.length === 0;
 
@@ -178,7 +180,14 @@ export function TradingViewChart({ data }: Props) {
             MA50
           </span>
         </div>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowBacktestModal(true)}
+            className="text-xs px-3 py-1 rounded-full border border-violet-500/50 text-violet-300 bg-violet-500/10 hover:border-violet-400 hover:text-violet-200 transition-all flex items-center gap-1"
+          >
+            ⚡ Review & Run Backtest
+          </button>
           <button
             onClick={() => setShowRsi((v) => !v)}
             className={`text-xs px-3 py-1 rounded-full border transition-all ${
@@ -202,6 +211,13 @@ export function TradingViewChart({ data }: Props) {
       <div
         ref={rsiRef}
         className={`w-full transition-all duration-300 ${showRsi ? 'block' : 'hidden'}`}
+      />
+
+      <ContextualBacktestModal
+        open={showBacktestModal}
+        onOpenChange={setShowBacktestModal}
+        initialAsset={`${token.toUpperCase()}-USDT`}
+        initialTimeframe="4h"
       />
     </div>
   );

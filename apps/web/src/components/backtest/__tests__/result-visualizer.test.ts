@@ -256,8 +256,12 @@ describe('classifyResultBranch', () => {
     ).toBe('phase-a');
   });
 
-  test('nothing → "empty"', () => {
-    expect(classifyResultBranch({ ...base, status: 'unknown' })).toBe('empty');
+  test('status="unknown" with no payload → "phase-a"', () => {
+    expect(classifyResultBranch({ ...base, status: 'unknown' })).toBe('phase-a');
+  });
+
+  test('status="success" with no metrics/equity/data_summary → "empty"', () => {
+    expect(classifyResultBranch({ ...base, status: 'success' })).toBe('empty');
   });
 
   test('failed takes precedence over metrics', () => {

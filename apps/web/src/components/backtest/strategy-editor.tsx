@@ -106,11 +106,42 @@ export function saveDraft(accountId: string, content: string): SaveDraftResult {
   }
 }
 
-export function BacktestStrategyEditorClient() {
+// Escape a string for safe insertion as a regex replacement value (Section "$" handling)
+function escapeReplacement(value: string): string {
+  return value.replace(/\$/g, '$$$$');
+}
+
+export function BacktestStrategyEditorClient({
+  initialCode,
+  initialAsset,
+  initialTimeframe,
+  onExecutingChange,
+}: {
+  initialCode?: string;
+  initialAsset?: string;
+  initialTimeframe?: string;
+  onExecutingChange?: (executing: boolean) => void;
+} = {}) {
   const { user } = useAuth();
   const router = useRouter();
 
-  const [content, setContent] = useState(INITIAL_TEMPLATE);
+  const [content, setContent] = useState(() => {
+    if (initialCode) return initialCode;
+    let temp = INITIAL_TEMPLATE;
+    if (initialAsset) {
+      temp = temp.replace(
+        /"assets":\s*\["[^"]+"\]/,
+        `"assets": ["${escapeReplacement(initialAsset)}"]`,
+      );
+    }
+    if (initialTimeframe) {
+      temp = temp.replace(
+        /"timeframe":\s*"[^"]+"/,
+        `"timeframe": "${escapeReplacement(initialTimeframe)}"`,
+      );
+    }
+    return temp;
+  });
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [isExecuting, setIsExecuting] = useState(false);
   const [isPolling, setIsPolling] = useState(false);
@@ -126,14 +157,44 @@ export function BacktestStrategyEditorClient() {
   const streamRef = useRef<{ close: () => void } | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const quotaWarnedRef = useRef(false);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
+  const lastScrollStageRef = useRef<'idle' | 'loading' | 'result'>('idle');
 
   // Load draft once user auth resolves
   useEffect(() => {
     if (user?.id) {
       const draft = loadDraft(user.id);
-      if (draft) setContent(draft);
+      if (draft && !initialCode) setContent(draft);
     }
-  }, [user?.id]);
+  }, [user?.id, initialCode]);
+
+  useEffect(() => {
+    onExecutingChange?.(isExecuting);
+  }, [isExecuting, onExecutingChange]);
+
+  // Scroll into view only on stage transitions (idle→loading, loading→result),
+  // not on every loadingPhase / result update — preserves manual user scroll.
+  useEffect(() => {
+    const nextStage: 'idle' | 'loading' | 'result' = result
+      ? 'result'
+      : loadingPhase
+        ? 'loading'
+        : 'idle';
+    if (nextStage === 'idle' || nextStage === lastScrollStageRef.current) {
+      lastScrollStageRef.current = nextStage;
+      return;
+    }
+    lastScrollStageRef.current = nextStage;
+    let alive = true;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (alive) bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      });
+    });
+    return () => {
+      alive = false;
+    };
+  }, [loadingPhase, result]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -442,6 +503,8 @@ export function BacktestStrategyEditorClient() {
 
       {/* Result placeholder */}
       {result && <BacktestResultVisualizer result={result} onRetry={handleSubmit} />}
+
+      <div ref={bottomRef} />
 
       <AlertDialog open={resetOpen} onOpenChange={setResetOpen}>
         <AlertDialogContent>

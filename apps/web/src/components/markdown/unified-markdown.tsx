@@ -20,6 +20,7 @@ import { wrapChildrenWithPaths } from '@/components/common/clickable-path';
 import { looksLikeFilePath as sharedLooksLikeFilePath } from '@/lib/utils/path-detection';
 import { stripEpsilonSystemTags } from '@/lib/utils/epsilon-system-tags';
 import { toast } from '@/lib/toast';
+import { ContextualBacktestTrigger } from '@/components/backtest/contextual-backtest-trigger';
 
 // ---------------------------------------------------------------------------
 // LaTeX / KaTeX support: custom remark + rehype plugin overrides
@@ -452,6 +453,7 @@ function CodeBlock({ children, isStreaming }: { children: React.ReactNode; isStr
         {children}
       </pre>
       {codeText && !isStreaming && <CopyButton code={codeText} />}
+      {codeText && !isStreaming && <ContextualBacktestTrigger code={codeText} />}
     </div>
   );
 }
@@ -572,10 +574,12 @@ export function CodeHighlight({
   code,
   language,
   className,
+  isStreaming = false,
 }: {
   code: string;
   language: string;
   className?: string;
+  isStreaming?: boolean;
 }) {
   return (
     <div className={cn('relative group', className)}>
@@ -595,6 +599,7 @@ export function CodeHighlight({
         </HighlightedCode>
       </pre>
       {code && <CopyButton code={code} />}
+      {code && !isStreaming && <ContextualBacktestTrigger code={code} />}
     </div>
   );
 }
