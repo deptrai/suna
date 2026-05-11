@@ -9,22 +9,22 @@ describe("Extension Token Regex", () => {
     const text = "Check out this token at 0x1234567890123456789012345678901234567890!";
     const matches = [...text.matchAll(TOKEN_REGEX)];
     expect(matches.length).toBe(1);
-    expect(matches[0][0]).toBe("0x1234567890123456789012345678901234567890");
+    expect(matches[0]![0]).toBe("0x1234567890123456789012345678901234567890");
   });
 
   test("should match Solana addresses", () => {
     const text = "Send SOL to HN7cABqLq46Es1jh92dQQisAq662SmxELLLsHHe4YWrH";
     const matches = [...text.matchAll(TOKEN_REGEX)];
     expect(matches.length).toBe(1);
-    expect(matches[0][0]).toBe("HN7cABqLq46Es1jh92dQQisAq662SmxELLLsHHe4YWrH");
+    expect(matches[0]![0]).toBe("HN7cABqLq46Es1jh92dQQisAq662SmxELLLsHHe4YWrH");
   });
 
   test("should match Token Tickers", () => {
     const text = "I am bullish on $BTC and $ETH.";
     const matches = [...text.matchAll(TOKEN_REGEX)];
     expect(matches.length).toBe(2);
-    expect(matches[0][0]).toBe("$BTC");
-    expect(matches[1][0]).toBe("$ETH");
+    expect(matches[0]![0]).toBe("$BTC");
+    expect(matches[1]![0]).toBe("$ETH");
   });
 
   test("should not match regular words", () => {

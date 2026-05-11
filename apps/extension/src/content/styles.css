@@ -12,11 +12,11 @@
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
 }
 
-.chainlens-token-highlight {
-  @apply border-b border-dashed border-blue-500 cursor-help rounded-sm px-0.5 transition-colors duration-200 bg-blue-500/10 hover:bg-blue-500/20;
-}
-
-/* Base resets for shadow DOM to ensure tailwind works if needed */
+/* Explicit resets so Tailwind utilities work correctly inside Shadow DOM */
 :host {
   all: initial;
+  font-size: 16px;
+  line-height: 1.5;
+  color: inherit;
+  box-sizing: border-box;
 }
