@@ -32,7 +32,7 @@ const VibeTradingJobSchema = z
     }),
     context_rules: z.object({
       assets: z.array(z.string()).min(1),
-      timeframe: z.string().regex(/^\d+[mhdwM]$/), // Pydantic pattern — accepts 1m/2h/1w/1M
+      timeframe: z.string().regex(/^\d+[mhdwHMD]$/), // Pydantic pattern
       indicators: z.array(z.string()).optional(),
       natural_language_rules: z.string().max(10000).optional(),
       executable_code: z.string().max(50000).optional(),

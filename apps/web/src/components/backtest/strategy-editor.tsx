@@ -36,7 +36,7 @@ const POLL_MAX_MS = 30_000;
 export const INITIAL_TEMPLATE = `{
   // Backtest BTC-USDT SPOT strategy with 90-day historical data
   "simulation_environment": {
-    "exchange": "binance",
+    "exchange": "okx",
     "instrument_type": "SPOT", // SPOT | PERPETUAL — for SPOT, leverage must be <= 1.0
     "initial_capital": "15000",
     "historical_range": 90, // days, integer

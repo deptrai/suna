@@ -122,25 +122,16 @@ const nextConfig = (): NextConfig => ({
 
 const withMDX = createMDX();
 
-// Compose config wrappers: MDX → Better Stack (structured logs) → Sentry (error tracking)
-export default withSentryConfig(withBetterStack(withMDX(nextConfig())), {
-  // Suppresses source map uploading logs during build
-  silent: true,
+const isDev = process.env.NODE_ENV !== 'production';
 
-  // Don't upload source maps during build (we can enable this later)
-  sourcemaps: {
-    disable: true,
-  },
-
-  // Disable Sentry CLI telemetry
-  telemetry: false,
-
-  // Tree-shake Sentry debug logger statements to reduce bundle size
-  bundleSizeOptimizations: {
-    excludeDebugStatements: true,
-  },
-
-  // Route Sentry envelopes through our server to bypass ad-blockers.
-  // Creates an auto-generated route at /monitoring that forwards to the DSN host.
-  tunnelRoute: '/monitoring',
-});
+// On local dev: skip Sentry + BetterStack wrappers — they add instrumentation
+// overhead on every request and slow down Turbopack compilation significantly.
+export default isDev
+  ? withMDX(nextConfig())
+  : withSentryConfig(withBetterStack(withMDX(nextConfig())), {
+      silent: true,
+      sourcemaps: { disable: true },
+      telemetry: false,
+      bundleSizeOptimizations: { excludeDebugStatements: true },
+      tunnelRoute: '/monitoring',
+    });
