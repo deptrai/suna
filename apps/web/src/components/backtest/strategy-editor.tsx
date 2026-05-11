@@ -23,6 +23,7 @@ import { BacktestResultVisualizer } from './result-visualizer';
 import {
   submitBacktest,
   pollRun,
+  streamRun,
   BacktestError,
   type RunResponse,
 } from '@/lib/backtest-api';
@@ -117,8 +118,12 @@ export function BacktestStrategyEditorClient() {
   const [error, setError] = useState<{ status: number; message: string } | null>(null);
   const [showInsufficientCredits, setShowInsufficientCredits] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
+  // Story 5.3: per-phase loading label
+  const [loadingPhase, setLoadingPhase] = useState<'data_loading' | 'simulation_running' | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
+  // Story 5.3: track active SSE stream so we can close on unmount / new submit
+  const streamRef = useRef<{ close: () => void } | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const quotaWarnedRef = useRef(false);
 
@@ -135,6 +140,7 @@ export function BacktestStrategyEditorClient() {
     return () => {
       clearTimeout(debounceRef.current);
       abortRef.current?.abort();
+      streamRef.current?.close();
     };
   }, []);
 
@@ -193,13 +199,16 @@ export function BacktestStrategyEditorClient() {
       return;
     }
 
-    // Abort any in-flight request before starting a new one
+    // Abort any in-flight request + close any in-flight stream before starting a new one
     abortRef.current?.abort();
+    streamRef.current?.close();
+    streamRef.current = null;
     const ctrl = new AbortController();
     abortRef.current = ctrl;
 
     setIsExecuting(true);
     setIsPolling(false);
+    setLoadingPhase(null);
 
     let submittedJobId: string | undefined;
 
@@ -207,22 +216,86 @@ export function BacktestStrategyEditorClient() {
       const submitResult = await submitBacktest(parsed, ctrl.signal);
       submittedJobId = submitResult.job_id;
       setIsPolling(true);
-      const runResult = await pollRun(submitResult.job_id, {
-        signal: ctrl.signal,
-        maxWaitMs: POLL_MAX_MS,
+      setLoadingPhase('data_loading');
+
+      // Story 5.3 — replace polling with SSE stream
+      await new Promise<void>((resolve, reject) => {
+        let resolved = false;
+        const finish = () => {
+          if (resolved) return;
+          resolved = true;
+          resolve();
+        };
+        streamRun(
+          submitResult.job_id,
+          {
+            onDataLoading: () => {
+              setLoadingPhase('data_loading');
+            },
+            onPhaseA: (data) => {
+              setLoadingPhase('simulation_running');
+              setResult(data);
+            },
+            onPhaseB: (data) => {
+              setResult(data);
+              finish();
+            },
+            onFailed: (data) => {
+              setResult(data);
+              finish();
+            },
+            onTimeout: () => {
+              toast.warning(
+                submittedJobId
+                  ? `Backtest đang chạy nền. Job ID: ${submittedJobId}. Retry với params nhỏ hơn hoặc disable Monte Carlo.`
+                  : 'Backtest đang chạy nền. Retry với params nhỏ hơn hoặc disable Monte Carlo.',
+              );
+              finish();
+            },
+            onError: (err) => {
+              if (ctrl.signal.aborted) return;
+              if (resolved) return;
+              resolved = true;
+              reject(err);
+            },
+          },
+          ctrl.signal,
+        )
+          .then((s) => {
+            // Only claim streamRef if this submit's controller is still the active one.
+            // Prevents a slow #1 from overwriting streamRef set by a rapid resubmit #2.
+            if (ctrl.signal.aborted || abortRef.current !== ctrl) {
+              s.close();
+              return;
+            }
+            streamRef.current = s;
+          })
+          .catch((err) => {
+            if (!resolved) {
+              resolved = true;
+              reject(err);
+            }
+          });
+
+        ctrl.signal.addEventListener(
+          'abort',
+          () => {
+            // Close THIS submit's stream (when .then has resolved by now), not whatever
+            // streamRef currently points at — which may already belong to a newer submit.
+            if (abortRef.current === ctrl) {
+              streamRef.current?.close();
+              streamRef.current = null;
+            }
+            if (!resolved) {
+              resolved = true;
+              resolve();
+            }
+          },
+          { once: true },
+        );
       });
-      setResult(runResult);
     } catch (err) {
       if (ctrl.signal.aborted) return;
-
-      if (err instanceof Error && err.message === 'timeout') {
-        toast.warning(
-          submittedJobId
-            ? `Backtest đang chạy nền. Job ID: ${submittedJobId}. Retry với params nhỏ hơn hoặc disable Monte Carlo.`
-            : 'Backtest đang chạy nền. Retry với params nhỏ hơn hoặc disable Monte Carlo.',
-        );
-        return;
-      }
 
       if (err instanceof BacktestError) {
         if (err.status === 401) {
@@ -244,18 +317,32 @@ export function BacktestStrategyEditorClient() {
         return;
       }
 
-      setError({ status: 503, message: 'Unexpected error' });
+      setError({ status: 503, message: err instanceof Error ? err.message : 'Unexpected error' });
     } finally {
       if (!ctrl.signal.aborted) {
         setIsExecuting(false);
         setIsPolling(false);
+        setLoadingPhase(null);
         abortRef.current = null;
+        streamRef.current = null;
       }
     }
   }, [content, router]);
 
   const isJsonValid = jsonError === null;
-  const buttonLabel = isPolling ? 'Running...' : isExecuting ? 'Submitting...' : 'Run Backtest';
+  // Story 5.3: button label progresses through SSE event phases
+  let buttonLabel: string;
+  if (!isExecuting) {
+    buttonLabel = 'Run Backtest';
+  } else if (!isPolling) {
+    buttonLabel = 'Submitting...';
+  } else if (loadingPhase === 'simulation_running') {
+    buttonLabel = 'Running simulation...';
+  } else if (loadingPhase === 'data_loading') {
+    buttonLabel = 'Loading data...';
+  } else {
+    buttonLabel = 'Running...';
+  }
   const showRetry = error?.status === 503 || error?.status === 500;
 
   return (
@@ -354,7 +441,7 @@ export function BacktestStrategyEditorClient() {
       </p>
 
       {/* Result placeholder */}
-      {result && <BacktestResultVisualizer result={result} />}
+      {result && <BacktestResultVisualizer result={result} onRetry={handleSubmit} />}
 
       <AlertDialog open={resetOpen} onOpenChange={setResetOpen}>
         <AlertDialogContent>

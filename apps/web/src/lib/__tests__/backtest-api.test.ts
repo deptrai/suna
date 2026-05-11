@@ -1,4 +1,42 @@
-import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach, mock, afterAll } from 'bun:test';
+
+// ── Mock createSSEStream BEFORE importing backtest-api ───────────────────────
+// Records calls and exposes hooks so tests can emit fake events.
+type FakeSSEStream = {
+  connect: () => void;
+  close: () => void;
+  addEventListener: (event: string, handler: (data: string) => void) => void;
+  removeEventListener: (event: string, handler: (data: string) => void) => void;
+};
+let lastSSEOptions: Record<string, unknown> | null = null;
+let lastSSEListeners: Map<string, Array<(data: string) => void>> = new Map();
+let lastSSEClosed = false;
+let connectCalled = false;
+function emitToLastStream(event: string, data: string) {
+  const handlers = lastSSEListeners.get(event);
+  if (handlers) for (const h of handlers) h(data);
+}
+mock.module('@/lib/utils/sse-stream', () => ({
+  createSSEStream: (opts: Record<string, unknown>): FakeSSEStream => {
+    lastSSEOptions = opts;
+    lastSSEListeners = new Map();
+    lastSSEClosed = false;
+    connectCalled = false;
+    return {
+      connect: () => {
+        connectCalled = true;
+      },
+      close: () => {
+        lastSSEClosed = true;
+      },
+      addEventListener: (event, handler) => {
+        if (!lastSSEListeners.has(event)) lastSSEListeners.set(event, []);
+        lastSSEListeners.get(event)!.push(handler);
+      },
+      removeEventListener: () => {},
+    };
+  },
+}));
 
 // ── Bootstrap auth so authenticatedFetch doesn't call Supabase ───────────────
 import { setBootstrapAuthToken } from '@/lib/auth-token';
@@ -204,4 +242,173 @@ describe('pollRun', () => {
 
     expect(caught?.message).toBe('Cancelled');
   });
+});
+
+// ── streamRun (Story 5.3) ────────────────────────────────────────────────────
+
+describe('streamRun', () => {
+  beforeEach(() => {
+    lastSSEOptions = null;
+    lastSSEListeners = new Map();
+    lastSSEClosed = false;
+    connectCalled = false;
+  });
+
+  test('passes Bearer token + correct URL to createSSEStream and calls connect()', async () => {
+    const { streamRun } = await import('@/lib/backtest-api');
+    await streamRun('job-1', {});
+    expect(lastSSEOptions).not.toBeNull();
+    expect(lastSSEOptions!.url).toBe(`${BACKEND_URL}/router/vibe-trading/runs/job-1/stream`);
+    expect(lastSSEOptions!.token).toBe('test-token');
+    expect(connectCalled).toBe(true);
+  });
+
+  test('dispatches data_loading event to onDataLoading callback with parsed RunResponse', async () => {
+    const { streamRun } = await import('@/lib/backtest-api');
+    let received: unknown = null;
+    await streamRun('job-2', {
+      onDataLoading: (data) => {
+        received = data;
+      },
+    });
+    emitToLastStream(
+      'data_loading',
+      JSON.stringify({ success: true, run_id: 'job-2', status: 'unknown' }),
+    );
+    expect(received).toEqual({ success: true, run_id: 'job-2', status: 'unknown' });
+  });
+
+  test('dispatches phase_a event and keeps stream open (non-terminal)', async () => {
+    const { streamRun } = await import('@/lib/backtest-api');
+    let received: unknown = null;
+    await streamRun('job-3', {
+      onPhaseA: (data) => {
+        received = data;
+      },
+    });
+    emitToLastStream(
+      'phase_a',
+      JSON.stringify({
+        success: true,
+        run_id: 'job-3',
+        status: 'unknown',
+        data_summary: { 'BTC-USDT': { rows_fetched: 540 } },
+      }),
+    );
+    expect((received as { data_summary?: unknown })?.data_summary).toBeDefined();
+    expect(lastSSEClosed).toBe(false);
+  });
+
+  test('dispatches phase_b event and proactively closes stream (terminal)', async () => {
+    const { streamRun } = await import('@/lib/backtest-api');
+    let received: unknown = null;
+    await streamRun('job-4', {
+      onPhaseB: (data) => {
+        received = data;
+      },
+    });
+    emitToLastStream(
+      'phase_b',
+      JSON.stringify({
+        success: true,
+        run_id: 'job-4',
+        status: 'success',
+        metrics: { sharpe: 1.2 },
+        equity_curve: [],
+      }),
+    );
+    expect((received as { metrics?: unknown })?.metrics).toBeDefined();
+    expect(lastSSEClosed).toBe(true);
+  });
+
+  test('dispatches failed event and closes stream', async () => {
+    const { streamRun } = await import('@/lib/backtest-api');
+    let received: unknown = null;
+    await streamRun('job-5', {
+      onFailed: (data) => {
+        received = data;
+      },
+    });
+    emitToLastStream(
+      'failed',
+      JSON.stringify({
+        success: true,
+        run_id: 'job-5',
+        status: 'failed',
+        reason: 'Strategy exception',
+      }),
+    );
+    expect((received as { status?: string })?.status).toBe('failed');
+    expect(lastSSEClosed).toBe(true);
+  });
+
+  test('dispatches timeout event with job_id and closes stream', async () => {
+    const { streamRun } = await import('@/lib/backtest-api');
+    let received: { run_id?: string; reason?: string } | null = null;
+    await streamRun('job-6', {
+      onTimeout: (data) => {
+        received = data;
+      },
+    });
+    emitToLastStream(
+      'timeout',
+      JSON.stringify({ success: false, run_id: 'job-6', status: 'timeout', reason: 'budget' }),
+    );
+    expect(received).not.toBeNull();
+    expect(received!.run_id).toBe('job-6');
+    expect(lastSSEClosed).toBe(true);
+  });
+
+  test('malformed event payload surfaces onError but does not throw', async () => {
+    const { streamRun } = await import('@/lib/backtest-api');
+    let received: unknown = null;
+    let errorMsg: string | null = null;
+    await streamRun('job-7', {
+      onPhaseB: (data) => {
+        received = data;
+      },
+      onError: (err) => {
+        errorMsg = err.message;
+      },
+    });
+    emitToLastStream('phase_b', '{not valid json');
+    expect(received).toBeNull();
+    expect(errorMsg).toContain('Malformed');
+  });
+
+  // Note: "no auth token → onError(401)" path is exercised manually; not in tests
+  // because mocking out getSupabaseAccessTokenWithRetry across an already-imported
+  // module is brittle under Bun's shared mock registry. The path is straightforward
+  // (early-return no-op stream) and visually inspected in [backtest-api.ts streamRun].
+
+  test('signal forwarded to createSSEStream', async () => {
+    const { streamRun } = await import('@/lib/backtest-api');
+    const ctrl = new AbortController();
+    await streamRun('job-9', {}, ctrl.signal);
+    expect(lastSSEOptions?.signal).toBe(ctrl.signal);
+  });
+
+  test('only callbacks registered for emitted events get parsed (no cross-invocation)', async () => {
+    const { streamRun } = await import('@/lib/backtest-api');
+    let phaseB: unknown = null;
+    let phaseA: unknown = null;
+    await streamRun('job-10', {
+      onPhaseA: (d) => {
+        phaseA = d;
+      },
+      onPhaseB: (d) => {
+        phaseB = d;
+      },
+    });
+    emitToLastStream(
+      'phase_a',
+      JSON.stringify({ success: true, run_id: 'job-10', status: 'unknown', data_summary: {} }),
+    );
+    expect(phaseA).not.toBeNull();
+    expect(phaseB).toBeNull();
+  });
+});
+
+afterAll(() => {
+  mock.restore();
 });

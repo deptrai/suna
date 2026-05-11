@@ -452,6 +452,7 @@ app.route('/v1/tunnel', tunnelApp);
 // Direct server-to-server proxy. Avoids double-CORS from the /v1/p/ path.
 // Auth: Supabase JWT (global middleware). Sandbox auth: INTERNAL_SERVICE_KEY.
 import { epsilonProxyHandler } from './routes/epsilon-projects';
+import { streamVibeTradingSSE } from './router/routes/vibe-trading';
 app.use('/v1/epsilon/*', combinedAuth);
 app.use('/v1/epsilon', combinedAuth);
 app.all('/v1/epsilon/*', epsilonProxyHandler);
@@ -1356,6 +1357,8 @@ function resolveWsTarget(
 
 export default {
   port: config.PORT,
+  // Disable Bun's default 10s HTTP idle timeout — SSE streams need to stay alive for 60s+.
+  idleTimeout: 0,
 
   async fetch(req: Request, server: any): Promise<Response | undefined> {
     const host = req.headers.get('host') || '';
@@ -1651,6 +1654,29 @@ export default {
           if (success) return undefined;
         }
       }
+    }
+
+    // ── VT SSE bypass: handle /v1/router/vibe-trading/runs/:jobId/stream ──
+    // Hono's CORS middleware mutates c.res.headers after next(), which causes
+    // Bun to abort the ReadableStream body after the first flush. We intercept
+    // here and use a native ReadableStream Response that bypasses Hono entirely.
+    const sseMatch = url.pathname.match(/^\/v1\/router\/vibe-trading\/runs\/([A-Za-z0-9_-]{1,128})\/stream$/);
+    if (sseMatch && req.method === 'GET') {
+      const authHeader = req.headers.get('Authorization');
+      const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+      const sseToken = bearerToken ?? url.searchParams.get('token');
+      if (!sseToken) {
+        return new Response(JSON.stringify({ error: true, message: 'Missing authentication token', status: 401 }), {
+          status: 401, headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      const sseJwt = await verifySupabaseJwt(sseToken).catch(() => null);
+      if (!sseJwt) {
+        return new Response(JSON.stringify({ error: true, message: 'Invalid or expired token', status: 401 }), {
+          status: 401, headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      return streamVibeTradingSSE(sseMatch[1], req.headers.get('origin'));
     }
 
     return app.fetch(req, server);

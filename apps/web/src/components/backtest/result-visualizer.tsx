@@ -23,7 +23,18 @@ import {
   CartesianGrid,
 } from 'recharts';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import type { RunResponse } from '@/lib/backtest-api';
+import {
+  formatPercent,
+  formatNumber,
+  sentiment,
+  buildEquityCurve,
+  hasMetrics as hasMetricsHelper,
+  hasBenchmark as hasBenchmarkHelper,
+  classifyResultBranch,
+  type Sentiment,
+} from './result-visualizer.utils';
 
 // ---------- Types ----------
 
@@ -31,64 +42,8 @@ interface KpiItem {
   label: string;
   value: string;
   subtext?: string;
-  sentiment: 'positive' | 'negative' | 'neutral';
+  sentiment: Sentiment;
   icon: LucideIcon;
-}
-
-interface EquityPoint {
-  date: string;
-  strategy: number;
-  benchmark: number;
-}
-
-// ---------- Helpers ----------
-
-function formatPercent(v: unknown): string {
-  if (v === undefined || v === null) return '—';
-  const num = typeof v === 'string' ? parseFloat(v) : Number(v);
-  if (isNaN(num)) return '—';
-  return `${(num * 100).toFixed(2)}%`;
-}
-
-function formatNumber(v: unknown, decimals = 2): string {
-  if (v === undefined || v === null) return '—';
-  const num = typeof v === 'string' ? parseFloat(v) : Number(v);
-  if (isNaN(num)) return '—';
-  return num.toFixed(decimals);
-}
-
-function sentiment(v: unknown, invert = false): 'positive' | 'negative' | 'neutral' {
-  if (v === undefined || v === null) return 'neutral';
-  const num = typeof v === 'string' ? parseFloat(v) : Number(v);
-  if (isNaN(num)) return 'neutral';
-  const positive = invert ? num < 0 : num > 0;
-  return positive ? 'positive' : num === 0 ? 'neutral' : 'negative';
-}
-
-function buildEquityCurve(raw: RunResponse['equity_curve']): EquityPoint[] {
-  if (!raw || !Array.isArray(raw) || raw.length === 0) return [];
-
-  return raw.map((pt) => {
-    if (!pt || typeof pt !== 'object') return { date: '', strategy: 0, benchmark: 0 };
-    const ts = (pt as any).timestamp ?? (pt as any).date ?? (pt as any).time ?? '';
-    const dateStr = typeof ts === 'string' ? ts.slice(0, 10) : String(ts);
-
-    const rawVal = (pt as any).value !== undefined
-      ? (pt as any).value
-      : (pt as any).strategy !== undefined
-        ? (pt as any).strategy
-        : (pt as any).equity;
-    const strategyVal = typeof rawVal === 'string' ? parseFloat(rawVal) : Number(rawVal);
-    
-    const rawBench = (pt as any).benchmark;
-    const benchmarkVal = typeof rawBench === 'string' ? parseFloat(rawBench) : Number(rawBench);
-    
-    return {
-      date: dateStr,
-      strategy: isNaN(strategyVal) ? 0 : strategyVal,
-      benchmark: isNaN(benchmarkVal) ? 0 : benchmarkVal,
-    };
-  });
 }
 
 // ---------- KPI Card ----------
@@ -134,9 +89,11 @@ const equityChartConfig: ChartConfig = {
 
 interface BacktestResultVisualizerProps {
   result: RunResponse;
+  /** Story 5.3: invoked when user clicks Retry on failed-state banner. */
+  onRetry?: () => void;
 }
 
-export function BacktestResultVisualizer({ result }: BacktestResultVisualizerProps) {
+export function BacktestResultVisualizer({ result, onRetry }: BacktestResultVisualizerProps) {
   const [open, setOpen] = useState(true);
 
   const metrics = result.metrics as {
@@ -147,8 +104,8 @@ export function BacktestResultVisualizer({ result }: BacktestResultVisualizerPro
     [key: string]: unknown;
   } | null | undefined;
 
-  const isFailed = result.status === 'failed';
-  const hasMetrics = metrics && typeof metrics === 'object' && Object.keys(metrics).length > 0;
+  const branch = classifyResultBranch(result);
+  const hasMetrics = hasMetricsHelper(metrics);
 
   const kpis = useMemo<KpiItem[]>(() => {
     if (!hasMetrics) return [];
@@ -189,10 +146,10 @@ export function BacktestResultVisualizer({ result }: BacktestResultVisualizerPro
     [result.equity_curve],
   );
 
-  const hasBenchmark = equityData.some((pt) => pt.benchmark > 0);
+  const hasBenchmark = hasBenchmarkHelper(equityData);
 
   // Failed backtest: show actionable error
-  if (isFailed) {
+  if (branch === 'failed') {
     const reason =
       (result as { reason?: string }).reason ??
       (metrics as Record<string, unknown> | null)?.error_message as string | undefined ??
@@ -200,9 +157,16 @@ export function BacktestResultVisualizer({ result }: BacktestResultVisualizerPro
 
     return (
       <div className="rounded-xl border border-red-200 dark:border-red-800/60 bg-red-50/50 dark:bg-red-900/10 p-5 space-y-2">
-        <p className="text-sm font-semibold text-red-700 dark:text-red-400">
-          ⚠ Backtest Failed
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-sm font-semibold text-red-700 dark:text-red-400">
+            ⚠ Backtest Failed
+          </p>
+          {onRetry && (
+            <Button variant="outline" size="sm" onClick={onRetry} className="flex-shrink-0">
+              Retry
+            </Button>
+          )}
+        </div>
         <p className="text-sm text-red-600 dark:text-red-400/80">{reason}</p>
         <p className="text-xs text-muted-foreground">
           Tip: giảm <code className="bg-muted px-1 py-0.5 rounded text-xs font-mono">historical_range</code>,
@@ -212,8 +176,8 @@ export function BacktestResultVisualizer({ result }: BacktestResultVisualizerPro
     );
   }
 
-  // No metrics yet (Phase A only — data loaded, simulation not complete)
-  if (!hasMetrics && equityData.length === 0) {
+  // Phase A only — data loaded, simulation not complete (or empty result)
+  if (branch === 'phase-a' || branch === 'empty') {
     const summary = (result as { data_summary?: Record<string, unknown> }).data_summary;
     const assetKeys = summary ? Object.keys(summary) : [];
     return (

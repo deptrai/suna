@@ -1,5 +1,6 @@
 import { getEnv } from '@/lib/env-config';
-import { authenticatedFetch } from '@/lib/auth-token';
+import { authenticatedFetch, getSupabaseAccessTokenWithRetry } from '@/lib/auth-token';
+import { createSSEStream, type SSEStream } from '@/lib/utils/sse-stream';
 
 export interface SubmitResponse {
   success: true;
@@ -96,6 +97,11 @@ export interface PollOptions {
   signal?: AbortSignal;
 }
 
+/**
+ * @deprecated Use streamRun() instead. Will be removed in a follow-up story
+ * once SSE has soaked in production. Kept as a fallback for environments where
+ * SSE is unavailable (e.g., older proxy chains stripping `text/event-stream`).
+ */
 export async function pollRun(
   jobId: string,
   options: PollOptions = {},
@@ -168,4 +174,88 @@ export async function pollRun(
   }
 
   throw new Error('timeout');
+}
+
+// ─── SSE streaming (Story 5.3) ──────────────────────────────────────────────
+
+export type StreamEventName = 'data_loading' | 'phase_a' | 'phase_b' | 'failed' | 'timeout';
+
+export interface StreamRunCallbacks {
+  onDataLoading?: (data: RunResponse) => void;
+  onPhaseA?: (data: RunResponse) => void;
+  onPhaseB?: (data: RunResponse) => void;
+  onFailed?: (data: RunResponse & { reason?: string }) => void;
+  onTimeout?: (data: { run_id: string; reason?: string }) => void;
+  onError?: (error: Error) => void;
+}
+
+/**
+ * Open an SSE connection to `/router/vibe-trading/runs/:jobId/stream` and dispatch
+ * named events to typed callbacks. Returns the underlying SSEStream so the caller
+ * can `close()` explicitly (or pass an AbortSignal that aborts on unmount).
+ *
+ * Errors:
+ * - Connection failure (non-2xx response) → onError(Error). UI must surface, not retry silently.
+ * - Malformed event data (JSON parse failure) → swallowed per-event (other events keep flowing).
+ * - signal.abort() → stream closes cleanly without invoking callbacks.
+ */
+export async function streamRun(
+  jobId: string,
+  callbacks: StreamRunCallbacks,
+  signal?: AbortSignal,
+): Promise<SSEStream> {
+  const baseUrl = getEnv().BACKEND_URL;
+  const token = await getSupabaseAccessTokenWithRetry();
+  if (!token) {
+    callbacks.onError?.(new BacktestError(401, 'No auth token available'));
+    // Return a no-op stream so the caller's lifecycle expectations hold.
+    return {
+      connect: () => {},
+      close: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    };
+  }
+
+  const parseAndDispatch = <T,>(rawData: string, handler?: (data: T) => void) => {
+    if (!handler) return;
+    try {
+      const parsed = JSON.parse(rawData) as T;
+      handler(parsed);
+    } catch {
+      // Malformed event payload — keep stream alive, surface via onError once.
+      callbacks.onError?.(new BacktestError(500, 'Malformed SSE event payload'));
+    }
+  };
+
+  const stream = createSSEStream({
+    url: `${baseUrl}/router/vibe-trading/runs/${jobId}/stream`,
+    token,
+    signal,
+    onError: (err) => callbacks.onError?.(err),
+  });
+
+  stream.addEventListener('data_loading', (data) =>
+    parseAndDispatch<RunResponse>(data, callbacks.onDataLoading),
+  );
+  stream.addEventListener('phase_a', (data) =>
+    parseAndDispatch<RunResponse>(data, callbacks.onPhaseA),
+  );
+  stream.addEventListener('phase_b', (data) => {
+    parseAndDispatch<RunResponse>(data, callbacks.onPhaseB);
+    // phase_b is terminal — close the stream proactively even though the server already did.
+    stream.close();
+  });
+  stream.addEventListener('failed', (data) => {
+    parseAndDispatch<RunResponse & { reason?: string }>(data, callbacks.onFailed);
+    stream.close();
+  });
+  stream.addEventListener('timeout', (data) => {
+    parseAndDispatch<{ run_id: string; reason?: string }>(data, callbacks.onTimeout);
+    stream.close();
+  });
+  // heartbeat events have no data — ignore.
+
+  stream.connect();
+  return stream;
 }
