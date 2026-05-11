@@ -1,0 +1,12 @@
+.chainlens-token-highlight {
+  border-bottom: 1px dashed #3b82f6;
+  cursor: help;
+  background-color: rgba(59, 130, 246, 0.1);
+  border-radius: 2px;
+  padding: 0 2px;
+  transition: background-color 0.2s ease;
+}
+
+.chainlens-token-highlight:hover {
+  background-color: rgba(59, 130, 246, 0.2);
+}

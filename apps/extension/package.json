@@ -3,8 +3,14 @@
   "module": "index.ts",
   "type": "module",
   "private": true,
+  "scripts": {
+    "build:css": "tailwindcss -i ./src/content/styles.css -o ./dist/styles.css && cp ./src/content/global.css ./dist/global.css",
+    "build": "bun build ./src/content/index.ts --outdir ./dist && bun run build:css"
+  },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@tailwindcss/cli": "^4.0.0",
+    "@types/bun": "latest",
+    "tailwindcss": "^4.0.0"
   },
   "peerDependencies": {
     "typescript": "^5"
