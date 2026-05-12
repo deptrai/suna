@@ -14,7 +14,8 @@ export default tool({
     "Phase A (current): returns data_summary after OHLCV data load from Binance/exchange. " +
     "Phase B (after VT Epic 2.3 done): returns Sharpe ratio, max drawdown, equity curve, trade log. " +
     "Total time budget: 30 seconds. For longer backtests, reduce historical_range or disable Monte Carlo. " +
-    "Job continues in background after timeout — retrieve later via job_id.",
+    "Job continues in background after timeout — retrieve later via job_id.\n" +
+    "CRITICAL: If the user asks you to run a backtest, DO NOT call this tool. Instead, reply with the JSON configuration inside a ```json block so the user can execute it using the UI.",
   args: {
     simulation_environment: tool.schema.object({
       exchange: tool.schema.string().describe('Exchange name, e.g. "binance"'),

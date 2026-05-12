@@ -107,3 +107,10 @@ Repo này lớn (3,642 indexed files / 83k functions). **Đừng `grep -r` hoặ
 - Story 3.2 (TradingView chart) — done (verified browser 2026-05-10)
 - Story 3.3 (Generative AI Chat Widgets) — **ready-for-dev nhưng spec sai stack**, cần reframe để dùng `OcXxxToolView + ToolRegistry` pattern thay vì Vercel `streamUI`
 - Story 3.4 (Token Detail Page) — backlog
+
+## Troubleshooting / Known Issues
+- **Backend API "Cannot connect to API" / 401 Unauthorized**: Có thể do lỗi lệch `INTERNAL_SERVICE_KEY` giữa `.env` của `apps/api` (và `apps/web`) so với sandbox container. Cách fix:
+  1. Đọc key trong sandbox: `docker exec epsilon-sandbox cat /workspace/.persistent-system/secrets/.bootstrap-env.json || docker exec epsilon-sandbox cat /workspace/.secrets/.bootstrap-env.json`
+  2. Lấy giá trị của `INTERNAL_SERVICE_KEY` (hoặc `EPSILON_TOKEN`).
+  3. Cập nhật vào file `apps/api/.env` và `apps/web/.env` sao cho khớp.
+  4. Restart lại tiến trình backend (`bun run dev`).

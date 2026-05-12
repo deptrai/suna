@@ -127,6 +127,11 @@ function mergeWithTemplate(code: string): string {
     }
     
     // Sanitize common LLM errors
+    if (merged.simulation_environment) {
+      if (merged.simulation_environment.exchange === 'binance') {
+        merged.simulation_environment.exchange = 'okx';
+      }
+    }
     if (merged.risk_management) {
       if (merged.risk_management.max_drawdown_percentage) {
         let md = parseFloat(merged.risk_management.max_drawdown_percentage);
