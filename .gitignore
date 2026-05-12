@@ -86,7 +86,7 @@ core/epsilon-master/opencode/.epsilon/
 
 # Agents & Tools
 _bmad/
-_bmad-output/
+# _bmad-output/
 .agent/
 .agents/
 .claude/

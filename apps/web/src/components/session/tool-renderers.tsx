@@ -3,6 +3,7 @@
 import { createTwoFilesPatch } from 'diff';
 import { QuestionPrompt } from '@/components/session/question-prompt';
 import { SubSessionModal } from '@/components/session/sub-session-modal';
+import { SandboxImage } from '@/components/session/sandbox-image';
 import {
   AlertTriangle,
   Ban,
@@ -8530,6 +8531,73 @@ export function ToolError({
     </div>
   );
 }
+
+// ============================================================================
+// BrowserScreenshotTool
+// ============================================================================
+
+function BrowserScreenshotTool({ part, defaultOpen, forceOpen, locked }: ToolProps) {
+  const output = partOutput(part);
+  const status = partStatus(part);
+
+  // Parse image results
+  const { imageBase64, imageUrl } = useMemo(() => {
+    if (!output) return { imageBase64: null, imageUrl: null };
+    try {
+      const parsed = JSON.parse(output);
+      // Case 1: Standard MCP image output
+      // [ { "type": "image", "data": "base64", "mimeType": "image/png" } ]
+      if (Array.isArray(parsed)) {
+        const imagePart = parsed.find((p: any) => p.type === 'image' && p.data);
+        if (imagePart) return { imageBase64: `data:${imagePart.mimeType || 'image/png'};base64,${imagePart.data}`, imageUrl: null };
+      }
+      
+      // Case 2: Legacy output or other custom wrapper
+      if (typeof parsed === 'object' && parsed !== null) {
+        if (parsed.image_url) return { imageBase64: null, imageUrl: parsed.image_url };
+        if (parsed.base64) return { imageBase64: `data:image/png;base64,${parsed.base64}`, imageUrl: null };
+      }
+    } catch {
+      // Not JSON
+    }
+    return { imageBase64: null, imageUrl: null };
+  }, [output]);
+
+  const displaySrc = imageBase64 || imageUrl;
+
+  return (
+    <BasicTool
+      icon={<MonitorPlay className="size-3.5 flex-shrink-0" />}
+      trigger={{
+        title: 'Browser Screenshot',
+        subtitle: 'Viewport snapshot',
+      }}
+      defaultOpen={defaultOpen || !!displaySrc}
+      forceOpen={forceOpen}
+      locked={locked}
+    >
+      {displaySrc ? (
+        <div className="p-2 flex justify-center bg-muted/20">
+          <SandboxImage
+            src={displaySrc}
+            alt="Browser Screenshot"
+            className="max-h-[32rem] max-w-full object-contain rounded-md border border-border/50 shadow-sm"
+            preview
+          />
+        </div>
+      ) : output ? (
+        <ToolOutputFallback
+          output={output}
+          isStreaming={status === 'running'}
+          toolName={part.tool}
+        />
+      ) : null}
+    </BasicTool>
+  );
+}
+ToolRegistry.register('mcp_chrome-devtools_take_screenshot', BrowserScreenshotTool);
+ToolRegistry.register('browser_screenshot', BrowserScreenshotTool);
+ToolRegistry.register('take_screenshot', BrowserScreenshotTool);
 
 // ============================================================================
 // GenericTool (fallback)

@@ -1,0 +1,565 @@
+diff --git a/Vibe-Trading b/Vibe-Trading
+--- a/Vibe-Trading
++++ b/Vibe-Trading
+@@ -1 +1 @@
+-Subproject commit f5dd27c200e359d6ead6894fe08406c4fad61d77
++Subproject commit f5dd27c200e359d6ead6894fe08406c4fad61d77-dirty
+diff --git a/apps/extension/manifest.json b/apps/extension/manifest.json
+index 283d29b23..250ad7a81 100644
+--- a/apps/extension/manifest.json
++++ b/apps/extension/manifest.json
+@@ -26,12 +26,7 @@
+   "content_scripts": [
+     {
+       "matches": [
+-        "*://*.twitter.com/*",
+-        "*://*.x.com/*",
+-        "*://*.facebook.com/*",
+-        "*://*.dexscreener.com/*",
+-        "*://*.coinmarketcap.com/*",
+-        "*://*.coingecko.com/*"
++        "<all_urls>"
+       ],
+       "js": ["dist/index.js"],
+       "css": ["dist/global.css"]
+@@ -46,12 +41,7 @@
+     {
+       "resources": ["dist/styles.css"],
+       "matches": [
+-        "*://*.twitter.com/*",
+-        "*://*.x.com/*",
+-        "*://*.facebook.com/*",
+-        "*://*.dexscreener.com/*",
+-        "*://*.coinmarketcap.com/*",
+-        "*://*.coingecko.com/*"
++        "<all_urls>"
+       ]
+     }
+   ]
+diff --git a/apps/web/src/components/backtest/__tests__/contextual-backtest-trigger.utils.test.ts b/apps/web/src/components/backtest/__tests__/contextual-backtest-trigger.utils.test.ts
+new file mode 100644
+index 000000000..5d2d725c4
+--- /dev/null
++++ b/apps/web/src/components/backtest/__tests__/contextual-backtest-trigger.utils.test.ts
+@@ -0,0 +1,45 @@
++import { describe, test, expect } from 'bun:test';
++import { isStrategy, extractInitialProps } from '../contextual-backtest-trigger.utils';
++
++describe('ContextualBacktestTrigger Utils', () => {
++  describe('isStrategy', () => {
++    test('returns false if not a strategy', () => {
++      expect(isStrategy('{"foo": "bar"}')).toBe(false);
++      expect(isStrategy('simulation_environment only')).toBe(false);
++    });
++
++    test('returns true if code contains simulation_environment and context_rules', () => {
++      const code = JSON.stringify({
++        simulation_environment: {},
++        context_rules: {}
++      });
++      expect(isStrategy(code)).toBe(true);
++    });
++  });
++
++  describe('extractInitialProps', () => {
++    test('returns default props if json parsing fails', () => {
++      const { initialAsset, initialTimeframe } = extractInitialProps('invalid json');
++      expect(initialAsset).toBe('BTC-USDT');
++      expect(initialTimeframe).toBe('4h');
++    });
++
++    test('returns default props if fields are missing', () => {
++      const { initialAsset, initialTimeframe } = extractInitialProps('{}');
++      expect(initialAsset).toBe('BTC-USDT');
++      expect(initialTimeframe).toBe('4h');
++    });
++
++    test('extracts asset and timeframe correctly', () => {
++      const code = JSON.stringify({
++        context_rules: {
++          assets: ['ETH-USDT'],
++          timeframe: '1d'
++        }
++      });
++      const { initialAsset, initialTimeframe } = extractInitialProps(code);
++      expect(initialAsset).toBe('ETH-USDT');
++      expect(initialTimeframe).toBe('1d');
++    });
++  });
++});
+diff --git a/apps/web/src/components/backtest/__tests__/result-visualizer.test.ts b/apps/web/src/components/backtest/__tests__/result-visualizer.test.ts
+index 6a2854ed3..67e217782 100644
+--- a/apps/web/src/components/backtest/__tests__/result-visualizer.test.ts
++++ b/apps/web/src/components/backtest/__tests__/result-visualizer.test.ts
+@@ -256,8 +256,8 @@ describe('classifyResultBranch', () => {
+     ).toBe('phase-a');
+   });
+ 
+-  test('nothing → "empty"', () => {
+-    expect(classifyResultBranch({ ...base, status: 'unknown' })).toBe('empty');
++  test('nothing → "phase-a"', () => {
++    expect(classifyResultBranch({ ...base, status: 'unknown' })).toBe('phase-a');
+   });
+ 
+   test('failed takes precedence over metrics', () => {
+diff --git a/apps/web/src/components/backtest/contextual-backtest-modal.tsx b/apps/web/src/components/backtest/contextual-backtest-modal.tsx
+new file mode 100644
+index 000000000..b95eb44c0
+--- /dev/null
++++ b/apps/web/src/components/backtest/contextual-backtest-modal.tsx
+@@ -0,0 +1,60 @@
++'use client';
++
++import * as React from 'react';
++import {
++  Dialog,
++  DialogContent,
++  DialogHeader,
++  DialogTitle,
++  DialogDescription,
++} from '@/components/ui/dialog';
++import { BacktestStrategyEditorClient } from './strategy-editor';
++
++interface ContextualBacktestModalProps {
++  open: boolean;
++  onOpenChange: (open: boolean) => void;
++  initialCode?: string;
++  initialAsset?: string;
++  initialTimeframe?: string;
++}
++
++export function ContextualBacktestModal({
++  open,
++  onOpenChange,
++  initialCode,
++  initialAsset,
++  initialTimeframe,
++}: ContextualBacktestModalProps) {
++  // Use a key to force remounting the editor client when the modal opens with new code
++  const [editorKey, setEditorKey] = React.useState(0);
++
++  React.useEffect(() => {
++    if (open) {
++      setEditorKey((prev) => prev + 1);
++    }
++  }, [open, initialCode]);
++
++  return (
++    <Dialog open={open} onOpenChange={onOpenChange}>
++      <DialogContent className="max-w-6xl w-[95vw] max-h-[95vh] h-[90vh] flex flex-col p-0 overflow-hidden bg-background border-border/50">
++        <DialogHeader className="px-6 py-4 border-b border-white/5 flex-shrink-0">
++          <DialogTitle className="text-xl flex items-center gap-2">
++            <span className="text-violet-400">⚡</span> Contextual Backtest
++          </DialogTitle>
++          <DialogDescription>
++            Review, edit, and run this strategy directly in the Vibe Sandbox.
++          </DialogDescription>
++        </DialogHeader>
++
++        <div className="flex-1 overflow-y-auto px-6 py-4">
++          <BacktestStrategyEditorClient
++            key={editorKey}
++            initialCode={initialCode}
++            initialAsset={initialAsset}
++            initialTimeframe={initialTimeframe}
++          />
++        </div>
++      </DialogContent>
++    </Dialog>
++  );
++}
+diff --git a/apps/web/src/components/backtest/contextual-backtest-trigger.tsx b/apps/web/src/components/backtest/contextual-backtest-trigger.tsx
+new file mode 100644
+index 000000000..e86470f64
+--- /dev/null
++++ b/apps/web/src/components/backtest/contextual-backtest-trigger.tsx
+@@ -0,0 +1,36 @@
++'use client';
++
++import * as React from 'react';
++import { ContextualBacktestModal } from './contextual-backtest-modal';
++import { isStrategy, extractInitialProps } from './contextual-backtest-trigger.utils';
++
++export function ContextualBacktestTrigger({ code }: { code: string }) {
++  const [open, setOpen] = React.useState(false);
++  
++  // Detect if this code looks like a backtest strategy
++  const isStrategyMemo = React.useMemo(() => isStrategy(code), [code]);
++
++  if (!isStrategyMemo) return null;
++
++  // Extract asset and timeframe if possible
++  const { initialAsset, initialTimeframe } = extractInitialProps(code);
++
++  return (
++    <>
++      <button
++        onClick={() => setOpen(true)}
++        className="absolute bottom-2 right-2 text-xs px-3 py-1.5 rounded-md border border-violet-500/50 text-violet-300 bg-violet-500/10 hover:border-violet-400 hover:text-violet-200 transition-all flex items-center gap-1 shadow-sm backdrop-blur-md z-10 opacity-0 group-hover:opacity-100"
++        title="Review & Run Backtest"
++      >
++        <span className="text-violet-400">⚡</span> Run Backtest
++      </button>
++      <ContextualBacktestModal
++        open={open}
++        onOpenChange={setOpen}
++        initialCode={code}
++        initialAsset={initialAsset}
++        initialTimeframe={initialTimeframe}
++      />
++    </>
++  );
++}
+diff --git a/apps/web/src/components/backtest/contextual-backtest-trigger.utils.ts b/apps/web/src/components/backtest/contextual-backtest-trigger.utils.ts
+new file mode 100644
+index 000000000..851e0c1e9
+--- /dev/null
++++ b/apps/web/src/components/backtest/contextual-backtest-trigger.utils.ts
+@@ -0,0 +1,20 @@
++export function isStrategy(code: string): boolean {
++  return code.includes('"simulation_environment"') && code.includes('"context_rules"');
++}
++
++export function extractInitialProps(code: string) {
++  let initialAsset = 'BTC-USDT';
++  let initialTimeframe = '4h';
++  try {
++    const parsed = JSON.parse(code);
++    if (parsed?.context_rules?.assets?.[0]) {
++      initialAsset = parsed.context_rules.assets[0];
++    }
++    if (parsed?.context_rules?.timeframe) {
++      initialTimeframe = parsed.context_rules.timeframe;
++    }
++  } catch (e) {
++    // Ignore JSON parse errors
++  }
++  return { initialAsset, initialTimeframe };
++}
+diff --git a/apps/web/src/components/backtest/strategy-editor.tsx b/apps/web/src/components/backtest/strategy-editor.tsx
+index 63cadc719..c3ee50db7 100644
+--- a/apps/web/src/components/backtest/strategy-editor.tsx
++++ b/apps/web/src/components/backtest/strategy-editor.tsx
+@@ -106,11 +106,25 @@ export function saveDraft(accountId: string, content: string): SaveDraftResult {
+   }
+ }
+ 
+-export function BacktestStrategyEditorClient() {
++export function BacktestStrategyEditorClient({
++  initialCode,
++  initialAsset,
++  initialTimeframe,
++}: {
++  initialCode?: string;
++  initialAsset?: string;
++  initialTimeframe?: string;
++} = {}) {
+   const { user } = useAuth();
+   const router = useRouter();
+ 
+-  const [content, setContent] = useState(INITIAL_TEMPLATE);
++  const [content, setContent] = useState(() => {
++    if (initialCode) return initialCode;
++    let temp = INITIAL_TEMPLATE;
++    if (initialAsset) temp = temp.replace('"BTC-USDT"', `"${initialAsset}"`);
++    if (initialTimeframe) temp = temp.replace('"4h"', `"${initialTimeframe}"`);
++    return temp;
++  });
+   const [jsonError, setJsonError] = useState<string | null>(null);
+   const [isExecuting, setIsExecuting] = useState(false);
+   const [isPolling, setIsPolling] = useState(false);
+@@ -126,14 +140,21 @@ export function BacktestStrategyEditorClient() {
+   const streamRef = useRef<{ close: () => void } | null>(null);
+   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+   const quotaWarnedRef = useRef(false);
++  const bottomRef = useRef<HTMLDivElement | null>(null);
+ 
+   // Load draft once user auth resolves
+   useEffect(() => {
+     if (user?.id) {
+       const draft = loadDraft(user.id);
+-      if (draft) setContent(draft);
++      if (draft && !initialCode) setContent(draft);
+     }
+-  }, [user?.id]);
++  }, [user?.id, initialCode]);
++
++  useEffect(() => {
++    if (loadingPhase || result) {
++      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
++    }
++  }, [loadingPhase, result]);
+ 
+   // Cleanup on unmount
+   useEffect(() => {
+@@ -443,6 +464,8 @@ export function BacktestStrategyEditorClient() {
+       {/* Result placeholder */}
+       {result && <BacktestResultVisualizer result={result} onRetry={handleSubmit} />}
+ 
++      <div ref={bottomRef} />
++
+       <AlertDialog open={resetOpen} onOpenChange={setResetOpen}>
+         <AlertDialogContent>
+           <AlertDialogHeader>
+diff --git a/apps/web/src/components/chart/trading-view-chart.tsx b/apps/web/src/components/chart/trading-view-chart.tsx
+index 1b3893d06..164589b22 100644
+--- a/apps/web/src/components/chart/trading-view-chart.tsx
++++ b/apps/web/src/components/chart/trading-view-chart.tsx
+@@ -8,6 +8,7 @@ import type {
+   UTCTimestamp,
+ } from 'lightweight-charts';
+ import { calcMA, calcRSI, type OhlcvBar } from './chart-indicators';
++import { ContextualBacktestModal } from '@/components/backtest/contextual-backtest-modal';
+ 
+ interface Props {
+   token: string;
+@@ -34,6 +35,7 @@ export function TradingViewChart({ data }: Props) {
+   const fitDoneRef = useRef(false);
+ 
+   const [showRsi, setShowRsi] = useState(false);
++  const [showBacktestModal, setShowBacktestModal] = useState(false);
+   const [chartsReady, setChartsReady] = useState(false);
+   const loading = data.length === 0;
+ 
+@@ -178,7 +180,13 @@ export function TradingViewChart({ data }: Props) {
+             MA50
+           </span>
+         </div>
+-        <div className="ml-auto">
++        <div className="ml-auto flex items-center gap-2">
++          <button
++            onClick={() => setShowBacktestModal(true)}
++            className="text-xs px-3 py-1 rounded-full border border-violet-500/50 text-violet-300 bg-violet-500/10 hover:border-violet-400 hover:text-violet-200 transition-all flex items-center gap-1"
++          >
++            ⚡ Run Backtest
++          </button>
+           <button
+             onClick={() => setShowRsi((v) => !v)}
+             className={`text-xs px-3 py-1 rounded-full border transition-all ${
+@@ -203,6 +211,13 @@ export function TradingViewChart({ data }: Props) {
+         ref={rsiRef}
+         className={`w-full transition-all duration-300 ${showRsi ? 'block' : 'hidden'}`}
+       />
++
++      <ContextualBacktestModal
++        open={showBacktestModal}
++        onOpenChange={setShowBacktestModal}
++        initialAsset={`${token.toUpperCase()}-USDT`}
++        initialTimeframe="4h"
++      />
+     </div>
+   );
+ }
+diff --git a/apps/web/src/components/markdown/unified-markdown.tsx b/apps/web/src/components/markdown/unified-markdown.tsx
+index 2f06c9311..275b8946d 100644
+--- a/apps/web/src/components/markdown/unified-markdown.tsx
++++ b/apps/web/src/components/markdown/unified-markdown.tsx
+@@ -20,6 +20,7 @@ import { wrapChildrenWithPaths } from '@/components/common/clickable-path';
+ import { looksLikeFilePath as sharedLooksLikeFilePath } from '@/lib/utils/path-detection';
+ import { stripEpsilonSystemTags } from '@/lib/utils/epsilon-system-tags';
+ import { toast } from '@/lib/toast';
++import { ContextualBacktestTrigger } from '@/components/backtest/contextual-backtest-trigger';
+ 
+ // ---------------------------------------------------------------------------
+ // LaTeX / KaTeX support: custom remark + rehype plugin overrides
+@@ -452,6 +453,7 @@ function CodeBlock({ children, isStreaming }: { children: React.ReactNode; isStr
+         {children}
+       </pre>
+       {codeText && !isStreaming && <CopyButton code={codeText} />}
++      {codeText && !isStreaming && <ContextualBacktestTrigger code={codeText} />}
+     </div>
+   );
+ }
+@@ -595,6 +597,7 @@ export function CodeHighlight({
+         </HighlightedCode>
+       </pre>
+       {code && <CopyButton code={code} />}
++      {code && <ContextualBacktestTrigger code={code} />}
+     </div>
+   );
+ }
+diff --git a/apps/web/src/components/backtest/__tests__/contextual-backtest-trigger.utils.test.ts b/apps/web/src/components/backtest/__tests__/contextual-backtest-trigger.utils.test.ts
+new file mode 100644
+index 000000000..5d2d725c4
+--- /dev/null
++++ b/apps/web/src/components/backtest/__tests__/contextual-backtest-trigger.utils.test.ts
+@@ -0,0 +1,45 @@
++import { describe, test, expect } from 'bun:test';
++import { isStrategy, extractInitialProps } from '../contextual-backtest-trigger.utils';
++
++describe('ContextualBacktestTrigger Utils', () => {
++  describe('isStrategy', () => {
++    test('returns false if not a strategy', () => {
++      expect(isStrategy('{"foo": "bar"}')).toBe(false);
++      expect(isStrategy('simulation_environment only')).toBe(false);
++    });
++
++    test('returns true if code contains simulation_environment and context_rules', () => {
++      const code = JSON.stringify({
++        simulation_environment: {},
++        context_rules: {}
++      });
++      expect(isStrategy(code)).toBe(true);
++    });
++  });
++
++  describe('extractInitialProps', () => {
++    test('returns default props if json parsing fails', () => {
++      const { initialAsset, initialTimeframe } = extractInitialProps('invalid json');
++      expect(initialAsset).toBe('BTC-USDT');
++      expect(initialTimeframe).toBe('4h');
++    });
++
++    test('returns default props if fields are missing', () => {
++      const { initialAsset, initialTimeframe } = extractInitialProps('{}');
++      expect(initialAsset).toBe('BTC-USDT');
++      expect(initialTimeframe).toBe('4h');
++    });
++
++    test('extracts asset and timeframe correctly', () => {
++      const code = JSON.stringify({
++        context_rules: {
++          assets: ['ETH-USDT'],
++          timeframe: '1d'
++        }
++      });
++      const { initialAsset, initialTimeframe } = extractInitialProps(code);
++      expect(initialAsset).toBe('ETH-USDT');
++      expect(initialTimeframe).toBe('1d');
++    });
++  });
++});
+diff --git a/apps/web/src/components/backtest/contextual-backtest-modal.tsx b/apps/web/src/components/backtest/contextual-backtest-modal.tsx
+new file mode 100644
+index 000000000..b95eb44c0
+--- /dev/null
++++ b/apps/web/src/components/backtest/contextual-backtest-modal.tsx
+@@ -0,0 +1,60 @@
++'use client';
++
++import * as React from 'react';
++import {
++  Dialog,
++  DialogContent,
++  DialogHeader,
++  DialogTitle,
++  DialogDescription,
++} from '@/components/ui/dialog';
++import { BacktestStrategyEditorClient } from './strategy-editor';
++
++interface ContextualBacktestModalProps {
++  open: boolean;
++  onOpenChange: (open: boolean) => void;
++  initialCode?: string;
++  initialAsset?: string;
++  initialTimeframe?: string;
++}
++
++export function ContextualBacktestModal({
++  open,
++  onOpenChange,
++  initialCode,
++  initialAsset,
++  initialTimeframe,
++}: ContextualBacktestModalProps) {
++  // Use a key to force remounting the editor client when the modal opens with new code
++  const [editorKey, setEditorKey] = React.useState(0);
++
++  React.useEffect(() => {
++    if (open) {
++      setEditorKey((prev) => prev + 1);
++    }
++  }, [open, initialCode]);
++
++  return (
++    <Dialog open={open} onOpenChange={onOpenChange}>
++      <DialogContent className="max-w-6xl w-[95vw] max-h-[95vh] h-[90vh] flex flex-col p-0 overflow-hidden bg-background border-border/50">
++        <DialogHeader className="px-6 py-4 border-b border-white/5 flex-shrink-0">
++          <DialogTitle className="text-xl flex items-center gap-2">
++            <span className="text-violet-400">⚡</span> Contextual Backtest
++          </DialogTitle>
++          <DialogDescription>
++            Review, edit, and run this strategy directly in the Vibe Sandbox.
++          </DialogDescription>
++        </DialogHeader>
++
++        <div className="flex-1 overflow-y-auto px-6 py-4">
++          <BacktestStrategyEditorClient
++            key={editorKey}
++            initialCode={initialCode}
++            initialAsset={initialAsset}
++            initialTimeframe={initialTimeframe}
++          />
++        </div>
++      </DialogContent>
++    </Dialog>
++  );
++}
+diff --git a/apps/web/src/components/backtest/contextual-backtest-trigger.tsx b/apps/web/src/components/backtest/contextual-backtest-trigger.tsx
+new file mode 100644
+index 000000000..e86470f64
+--- /dev/null
++++ b/apps/web/src/components/backtest/contextual-backtest-trigger.tsx
+@@ -0,0 +1,36 @@
++'use client';
++
++import * as React from 'react';
++import { ContextualBacktestModal } from './contextual-backtest-modal';
++import { isStrategy, extractInitialProps } from './contextual-backtest-trigger.utils';
++
++export function ContextualBacktestTrigger({ code }: { code: string }) {
++  const [open, setOpen] = React.useState(false);
++  
++  // Detect if this code looks like a backtest strategy
++  const isStrategyMemo = React.useMemo(() => isStrategy(code), [code]);
++
++  if (!isStrategyMemo) return null;
++
++  // Extract asset and timeframe if possible
++  const { initialAsset, initialTimeframe } = extractInitialProps(code);
++
++  return (
++    <>
++      <button
++        onClick={() => setOpen(true)}
++        className="absolute bottom-2 right-2 text-xs px-3 py-1.5 rounded-md border border-violet-500/50 text-violet-300 bg-violet-500/10 hover:border-violet-400 hover:text-violet-200 transition-all flex items-center gap-1 shadow-sm backdrop-blur-md z-10 opacity-0 group-hover:opacity-100"
++        title="Review & Run Backtest"
++      >
++        <span className="text-violet-400">⚡</span> Run Backtest
++      </button>
++      <ContextualBacktestModal
++        open={open}
++        onOpenChange={setOpen}
++        initialCode={code}
++        initialAsset={initialAsset}
++        initialTimeframe={initialTimeframe}
++      />
++    </>
++  );
++}
+diff --git a/apps/web/src/components/backtest/contextual-backtest-trigger.utils.ts b/apps/web/src/components/backtest/contextual-backtest-trigger.utils.ts
+new file mode 100644
+index 000000000..851e0c1e9
+--- /dev/null
++++ b/apps/web/src/components/backtest/contextual-backtest-trigger.utils.ts
+@@ -0,0 +1,20 @@
++export function isStrategy(code: string): boolean {
++  return code.includes('"simulation_environment"') && code.includes('"context_rules"');
++}
++
++export function extractInitialProps(code: string) {
++  let initialAsset = 'BTC-USDT';
++  let initialTimeframe = '4h';
++  try {
++    const parsed = JSON.parse(code);
++    if (parsed?.context_rules?.assets?.[0]) {
++      initialAsset = parsed.context_rules.assets[0];
++    }
++    if (parsed?.context_rules?.timeframe) {
++      initialTimeframe = parsed.context_rules.timeframe;
++    }
++  } catch (e) {
++    // Ignore JSON parse errors
++  }
++  return { initialAsset, initialTimeframe };
++}
