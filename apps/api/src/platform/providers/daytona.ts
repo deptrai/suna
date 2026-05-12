@@ -56,7 +56,7 @@ export class DaytonaProvider implements SandboxProvider {
 
     const daytonaSandbox = await daytona.create(
       {
-        snapshot,
+        ...(snapshot.includes(':') || snapshot.includes('/') ? { image: snapshot } : { snapshot }),
         envVars: {
           EPSILON_API_URL: sandboxApiBase,
           ENV_MODE: 'cloud',
