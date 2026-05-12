@@ -572,6 +572,25 @@ Prod: frontend → Vercel (production)
 
 ---
 
+
+### Autonomous Agent Architecture (Epic 10)
+
+**Critical Decisions (Quyết định then chốt - Ảnh hưởng trực tiếp đến hệ thống):**
+
+*   **State Management cho DAG Checkpointing:** Lựa chọn lưu trữ trạng thái vào **Database (Postgres thông qua Drizzle ORM)**.
+    *   *Rationale:* Các tác vụ tự trị có thể chạy hàng giờ. Việc lưu trạng thái DAG vào Postgres đảm bảo tính bền vững, cho phép khôi phục tiến trình.
+    *   *Implementation Constraints (Tối ưu Hiệu năng & Rủi ro):* Bắt buộc sử dụng cơ chế **Append-only Events** với cột `JSONB` để lưu trạng thái, thay vì Update liên tục. Để tối ưu truy vấn (Read IO), bảng `dag_events` phải sử dụng index `is_latest` hoặc Materialized View để tránh full-table scan JSONB khi đọc trạng thái. Cần có Cronjob **Data Pruning/Archival** xóa hoặc nén các event chi tiết của Job đã hoàn thành > 30 ngày để chống phình DB.
+
+*   **Sandbox Lifecycle & Limits Management:** Sử dụng **Native Unix Tools & Container/MicroVM Limits** (Occam's Razor).
+    *   *Rationale:* Loại bỏ sự phức tạp của một Supervisor tùy chỉnh. Sử dụng lệnh `timeout` của Linux để bọc các tiến trình thực thi, và cgroups/MicroVM config để giới hạn Hard RAM/CPU.
+    *   *Implementation Constraints (Tối ưu Hiệu năng & Rủi ro):* Chấp nhận Cold-Start 3-5 giây thay vì duy trì Warm-Pool tốn kém; che lấp độ trễ bằng UI Loading State (SSE Streaming). Các tiến trình chạy code (Python/Bash) vẫn phải bị gông quyền **non-root**. Bắt buộc **Pipe Stdout/Stderr liên tục** ra ngoài Sandbox trong lúc chạy để không mất log phân tích khi tiến trình bị OS kill đột ngột.
+
+**Important Decisions (Quyết định quan trọng - Định hình luồng dữ liệu):**
+
+*   **Agent Progress Streaming:** Lựa chọn **Server-Sent Events (SSE)** kết hợp REST API.
+    *   *Rationale:* Dùng SSE để bắn log, Thought-process, và Cost Estimation 1 chiều từ Server về Frontend. Các thao tác tương tác của user (như click [Approve]) sẽ gọi qua REST API thông thường.
+    *   *Implementation Constraints (Tối ưu Hiệu năng & Rủi ro):* API SSE phục vụ Agent Log phải có cơ chế **Log Throttling (Batching)** tối thiểu 200ms để không làm sập Main Thread của trình duyệt. SSE bắt buộc phải implement cơ chế phục hồi **Last-Event-ID** để đảm bảo không mất log khi đứt kết nối mạng. Nếu client reconnect sau khi lỡ quá nhiều events, API sẽ kích hoạt **State Snapshot Fallback** (gửi tóm tắt trạng thái) thay vì bắn bù từng event để tránh nghẽn RAM Node.js.
+
 ### Decision Impact Analysis
 
 **Sequence khi thêm tính năng mới:**

@@ -10,6 +10,9 @@ stepsCompleted:
   - step-06-nfrs
   - step-07-out-of-scope
   - step-08-roadmap
+  - step-e-01-discovery
+  - step-e-02-review
+  - step-e-03-edit
 inputDocuments:
   - docs/config-degradation-visual-handover.md
   - docs/opencode-config-failsafe-spec.md
@@ -87,6 +90,13 @@ Chainlens (Chain = Blockchain + Lens = Soi dữ liệu) định vị là một n
 - **Background Data Workers:** Xây dựng hệ thống lưu trữ thông tin crypto project và các worker chạy 24/7 liên tục phân tích và tạo báo cáo sẵn.
 
 ### 4.2. Growth Features (Post-MVP)
+- **Autonomous AI Agents (Manus.ai Clone Capabilities):** Tận dụng tối đa kiến trúc Sandbox, Triggers, và agent-browser để cung cấp các luồng tự động hóa sâu:
+  1. **Autonomous Deep Research:** Agent tự động mở trình duyệt vượt paywall, cào dữ liệu từ nhiều nguồn và tổng hợp báo cáo chuyên sâu.
+  2. **Data Analyst & Visualizer:** Cung cấp môi trường Sandbox an toàn chạy code Python/Bash để clean dữ liệu thô (từ CSV/DB) và xuất biểu đồ (interactive dashboards).
+  3. **Auto-Dev & QA:** Tự động build ứng dụng (Frontend/Backend) thông qua cơ chế Fork Sandbox, tự động test giao diện với agent-browser và sửa lỗi.
+  4. **Smart Ops & Auto-Resolution:** Kết nối Pipedream webhook và Slack. Khi có lỗi (ví dụ lỗi thanh toán Stripe), Agent kiểm tra log và tự động đề xuất phương án khắc phục qua Slack (chờ Human Approval).
+  5. **24/7 Market Monitor:** Bot chạy ngầm (Heartbeats), theo dõi tin tức/social media real-time và kích hoạt lệnh dừng giao dịch khi phát hiện rủi ro.
+  6. **Multi-Agent Swarm Orchestration:** Người quản lý (Manager Agent) chia nhỏ task cho Researcher Agent, Coder Agent, và QA Agent làm việc song song để giải quyết bài toán lớn.
 - **Dual-Tokenomics System & Universal Billing:** Triển khai mô hình 2 token kết hợp áp dụng cho MỌI user (từ Tier 1 đến Tier 3 Enterprise):
   1. **Internal Credits:** Điểm nạp nội bộ neo theo Fiat (vd: nạp $10 = 10 Credits). Mỗi khi user sử dụng hệ thống (sinh code LLM, query kho RAG data, chạy backtest), hệ thống trừ điểm theo công thức: `Chi phí thực tế × Hệ số lợi nhuận (Markup)`. Kể cả Enterprise (Tier 3) cũng phải nạp Credits để trả phí đồng bộ/mua quyền truy cập kho RAG data khổng lồ do cộng đồng đóng góp.
   2. **Native Token ($CLENS) & Cơ chế Burn:** User thanh toán mua Credits bằng Fiat ($) hoặc $CLENS token.
@@ -100,6 +110,7 @@ Chainlens (Chain = Blockchain + Lens = Soi dữ liệu) định vị là một n
 - **Local Compute (Ollama Integration):** Hỗ trợ user kết nối Local LLM thông qua Ollama. User có thể chạy các model open-source ngay trên máy cá nhân để sử dụng Chainlens hoàn toàn miễn phí và đảm bảo quyền riêng tư tuyệt đối (Zero-Data-Leakage), dữ liệu không gửi qua bất kỳ API bên thứ ba nào.
 - **LLM Proxy & Crypto-Specific MaaS (Model-as-a-Service):** Đóng vòng lặp Tokenomics bằng cách biến Chainlens thành "OpenRouter cho Web3". User nạp `$CLENS` hoặc USDT để mua quyền truy cập ẩn danh vào các model thương mại, hoặc mua quyền truy cập vào model tự host (Qwen 3.6 27B) với giá cực rẻ. Dự án sẽ thu biên lợi nhuận (Profit Margin) cao từ việc bán model do chính mình host.
 - **Agent Marketplace Integration (MMOMarket):** Biến Chainlens thành "Creator Studio" bằng cách cho phép người dùng đăng bán (Sell) hoặc cho thuê (Rent) Custom Agent của họ thông qua nền tảng MMOMarket. Tích hợp SSO để liên kết tài khoản cho cả người bán và người mua. Người bán có nút "One-Click Publish" để đẩy lên sàn; Người mua sau khi thanh toán trên MMOMarket phải kết nối tài khoản với Chainlens để nhận bàn giao. Hệ thống dùng Webhook để tự động Clone code (khi Sell) hoặc cấp quyền Execution-Role (khi Rent - không lộ source code người bán) mỗi khi giao dịch hoàn tất.
+
 ## 5. User Journeys (Hành trình Người dùng)
 
 ### 5.1. Hành trình 1: Minh - Nhà Đầu tư Cá nhân (Tier 1) & "Airdrop Hunter"
@@ -125,6 +136,10 @@ Chainlens (Chain = Blockchain + Lens = Soi dữ liệu) định vị là một n
 ### 5.6. Hành trình 6: David - Người mua Agent (Marketplace Buyer)
 *   **Tình huống:** David đang tìm một bot tự động phân tích dòng tiền Smart Money trên mạng Solana. Anh lên MMOMarket và thấy Agent của Kevin đang cho thuê (Rent) với giá $20/tháng, bảo hành 7 ngày.
 *   **Diễn biến:** David bấm thuê và thanh toán trên MMOMarket. Hệ thống yêu cầu David kết nối tài khoản Chainlens của anh (thông qua SSO hoặc ví Web3). Sau khi kết nối, Chainlens tự động cấp cho David một quyền truy cập (Execution-Role) vào Agent của Kevin. David có thể sử dụng Agent này để phân tích thị trường trên bảng điều khiển Chainlens của mình, nhưng **tuyệt đối không xem được source code** bên trong (để bảo vệ IP của Kevin). Nếu trong 7 ngày đầu, Agent không hoạt động như quảng cáo, David có thể ấn nút "Dispute" (Khiếu nại) trên MMOMarket, lập tức Chainlens sẽ tạm khóa Agent và xuất file log cho ban quản trị xử lý. Nếu David mua đứt (Sell), Chainlens sẽ tự động copy (clone) toàn bộ code của Agent sang workspace của David để anh toàn quyền chỉnh sửa.
+
+### 5.7. Hành trình 7: Ryan - Người dùng Multi-Agent Swarm (Tier 2/3)
+*   **Tình huống:** Ryan muốn phân tích toàn diện một hệ sinh thái DeFi mới nổi và xây dựng luôn một con bot chênh lệch giá (arbitrage) trên đó, nhưng anh không rành về code hay lấy dữ liệu phức tạp.
+*   **Diễn biến:** Ryan yêu cầu Chainlens "Nghiên cứu hệ sinh thái X và viết cho tôi một con bot arbitrage". Hệ thống khởi động **Multi-Agent Swarm**: Manager Agent chia task cho Researcher Agent tự động lướt web (agent-browser) cào whitepaper và tokenomics. Sau đó, Coder Agent vào Sandbox (Epsilon Instance) viết code bot, kết nối API sàn. Cuối cùng QA Agent chạy test thử trên môi trường testnet và vá lỗi (Auto-Dev). Cuối ngày, Ryan nhận được file code hoàn chỉnh cùng báo cáo nghiên cứu chuyên sâu, tất cả diễn ra hoàn toàn tự động mà anh không cần can thiệp.
 
 ## 6. Domain Requirements (Yêu cầu Đặc thù Ngành)
 
@@ -185,15 +200,15 @@ Bởi vì Chainlens hoạt động trong không gian Crypto/Web3, hệ thống p
     *   Tích hợp Vibe Trading API & Sandbox (MicroVM) cho Tier 2 backtest cơ bản.
 *   **Target:** Đạt 10.000 users miễn phí đầu tiên để đóng góp làm giàu RAG Data.
 
-### Phase 2: Dual-Tokenomics & Enterprise - Dòng tiền & Bảo mật
-*   **Mục tiêu:** Kích hoạt mô hình kinh tế bền vững và onboard khách hàng doanh nghiệp.
+### Phase 2: Dual-Tokenomics, Enterprise & Autonomous Agents - Đột phá tính năng & Dòng tiền
+*   **Mục tiêu:** Kích hoạt mô hình kinh tế bền vững, onboard khách hàng doanh nghiệp và triển khai đội ngũ Autonomous AI Agents (tương đương Manus.ai).
 *   **Tính năng chính:**
     *   Phát hành $CLENS Token và Hệ thống quản lý Internal Credits.
     *   Triển khai Smart Contract cho cơ chế Burn / Buy-back.
-    *   Ra mắt tính năng Affiliate/Airdrop trả thưởng cho người dùng cung cấp dữ liệu.
-    *   Đóng gói giải pháp On-premise + Local LLM (Tier 3) và bán cho Quỹ đầu tư đầu tiên.
+    *   Đóng gói giải pháp On-premise + Local LLM (Tier 3).
     *   Tích hợp Agent Marketplace với MMOMarket (One-Click Publish, Webhooks).
-*   **Target:** Đạt doanh thu ổn định, thực hiện đợt Burn token đầu tiên.
+    *   **Phát hành Autonomous Agents Suite:** Deep Research, Data Analyst, Smart Ops, Auto-Dev và Multi-Agent Swarm (sử dụng Sandbox & agent-browser).
+*   **Target:** Đạt doanh thu ổn định, thực hiện đợt Burn token đầu tiên và có ít nhất 1000 lượt Agent được thuê/bán trên Marketplace.
 
 ### Phase 3: Model-as-a-Service (MaaS) - Hệ sinh thái Khép kín
 *   **Mục tiêu:** Trở thành nhà cung cấp hạ tầng AI chuyên biệt cho Web3.

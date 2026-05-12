@@ -1,6 +1,6 @@
 # Story 5.8: Per-User Persistent Memory (v2)
 
-Status: backlog
+Status: ready-for-dev
 
 **Depends on**: Story 5.0 done. Session-ownership layer ([session-ownership.ts](../../core/epsilon-master/src/services/session-ownership.ts)) đã ship — là nguồn `userId` authoritative cho plugin.
 **Blocks**: Không block story nào.
@@ -368,38 +368,79 @@ async function scheduleExtraction(sessionId: string) {
 **UI tests**:
 - List memories grouped by category, delete single, clear all (3 tests)
 
-## Tasks
+## Tasks / Subtasks
 
-### Task 1 — DB schema
-- `packages/db/src/schema/account-memories.ts` — Drizzle schema
-- `packages/db/drizzle/XXXX_account_memories.sql` — auto-generated migration
-- Export từ `packages/db/src/schema/index.ts`
+- [ ] **Task 1 — DB schema** (AC: #1)
+  - [ ] Create `packages/db/src/schema/account-memories.ts` với Drizzle schema (xem AC1 snippet)
+  - [ ] Export `accountMemories` từ `packages/db/src/schema/index.ts`
+  - [ ] Run `pnpm db:generate` → verify migration file tại `packages/db/drizzle/XXXX_account_memories.sql`
+  - [ ] Manual review migration: đảm bảo indexes + unique constraint đúng, FK `account_id → accounts(account_id) ON DELETE CASCADE`
+  - [ ] Test rollback: `DROP TABLE account_memories;` works cleanly
 
-### Task 2 — Memory API routes (apps/api)
-- `apps/api/src/router/services/memory-extraction.ts` — Claude Haiku + conflict resolution
-- `apps/api/src/router/services/memory-render.ts` — top-10 fetch + markdown render
-- `apps/api/src/router/services/memory-account-resolver.ts` — userId → accountId lookup
-- `apps/api/src/router/routes/memory.ts` — 5 routes
-- `apps/api/src/router/index.ts` — register `/memory/*`
-- Rate limiter middleware: 10 extractions/hour/account
+- [ ] **Task 2 — Memory API routes (apps/api)** (AC: #2, #3)
+  - [ ] `apps/api/src/router/services/memory-account-resolver.ts` — `resolveAccountIdFromUserId(userId)` — query `epsilon.account_members WHERE user_id = $1 AND account_role = 'owner'` → return `account_id`
+  - [ ] `apps/api/src/router/services/memory-extraction.ts` — `extractMemories(messages, accountId, userId, sessionId)`:
+    - Call Claude Haiku với system prompt từ AC3
+    - Parse JSON response, validate schema (category whitelist, content max 200 chars)
+    - For mỗi fact → call `resolveConflict(accountId, category, content)` → INSERT hoặc UPDATE
+    - Idempotency: check `source_session_id` trong DB, nếu đã extract < 1h → return cached result
+  - [ ] `apps/api/src/router/services/memory-conflict.ts` — `textSimilarity(a, b)` Levenshtein-based → return 0-1
+  - [ ] `apps/api/src/router/services/memory-conflict.ts` — `enforceCategoryLimit(accountId, category, maxEntries=3)` → nếu vượt → invalidate oldest
+  - [ ] `apps/api/src/router/services/memory-render.ts` — `renderMemoriesForUser(userId, maxTokens=500)`:
+    - Resolve accountId → fetch top 10 active memories (ORDER BY updated_at DESC)
+    - Render markdown: `## Persistent Memory\n[category] content\n...`
+    - Truncate to maxTokens budget (estimate 4 chars/token)
+  - [ ] `apps/api/src/router/routes/memory.ts` — 5 routes với auth:
+    - `POST /v1/memory/render` — `Authorization: Bearer ${EPSILON_TOKEN}` (service-to-service), body validated qua Zod
+    - `POST /v1/memory/extract` — same auth + rate limit 10/hour/account
+    - `GET /v1/memory` — `combinedAuth` (Supabase JWT), list user's memories
+    - `DELETE /v1/memory/:id` — `combinedAuth`, soft-delete (set `invalidated_at`)
+    - `DELETE /v1/memory` — `combinedAuth`, clear all
+  - [ ] Rate limiter: in-memory `Map<accountId, { count, resetAt }>` với TTL 1h, return 429 nếu vượt 10 extractions/h
+  - [ ] Register `/memory/*` trong `apps/api/src/router/index.ts`
 
-### Task 3 — Plugin integration
-- `core/epsilon-master/opencode/plugin/epsilon-system/lib/memory-client.ts` — NEW HTTP client
-- `core/epsilon-master/opencode/plugin/epsilon-system/lib/session-owner-lookup.ts` — NEW SQLite reader
-- `core/epsilon-master/opencode/plugin/epsilon-system/sessions.ts` — integrate Layer 1 + debounce extraction
+- [ ] **Task 3 — Plugin integration (epsilon-master)** (AC: #4, #5)
+  - [ ] `core/epsilon-master/opencode/plugin/epsilon-system/lib/session-owner-lookup.ts` — NEW:
+    - `lookupSessionOwner(sessionId): string | null`
+    - Open SQLite readonly tại path từ `resolveEpsilonDir()` + `epsilon.db` (đã exist từ session-ownership.ts)
+    - Query: `SELECT user_id FROM session_owners WHERE session_id = ?`
+    - Cache result trong Map (key: sessionId, TTL 5min) để tránh repeated SQLite opens
+  - [ ] `core/epsilon-master/opencode/plugin/epsilon-system/lib/memory-client.ts` — NEW:
+    - `fetchAccountMemories(userId, sessionId): Promise<string | null>` — HTTP POST `/v1/memory/render` với `AbortSignal.timeout(1500)`
+    - `triggerExtraction(userId, sessionId, messages): Promise<void>` — fire-and-forget, catch errors non-fatal
+    - `EPSILON_API_URL` + `EPSILON_TOKEN` đọc từ `process.env` (đã inject qua env-injector)
+  - [ ] Modify `core/epsilon-master/opencode/plugin/epsilon-system/sessions.ts`:
+    - Trong `experimental.chat.messages.transform` hook (sau `renderMergedMemoryContext`): thêm Layer 1 fetch
+    - Add `extractionTimers: Map<string, NodeJS.Timeout>` + `scheduleExtraction(sessionId)` function với debounce 10min
+    - Trong `event` hook: nếu `event.type === "session.idle"` → call `scheduleExtraction(sid)`
+    - Trong `event` hook: nếu `event.type === "session.deleted"` → clear timer cho session đó
+  - [ ] Non-fatal guarantees: mọi HTTP call phải có try/catch + timeout, fail → log warning, KHÔNG block session flow
 
-### Task 4 — Settings UI
-- `apps/web/src/app/(dashboard)/settings/memory/page.tsx`
-- `apps/web/src/components/memory/memory-list.tsx` — grouped list + delete actions
+- [ ] **Task 4 — Settings UI** (AC: #6)
+  - [ ] `apps/web/src/app/(dashboard)/settings/memory/page.tsx` — page shell với `MemoryList` component
+  - [ ] `apps/web/src/components/memory/memory-list.tsx`:
+    - Fetch `GET /v1/memory` → group by `category` (Preferences / Trading Style / Risk Profile / Facts / Tool Usage)
+    - Empty state với copy từ AC6
+    - Delete icon per row → `DELETE /v1/memory/:id` → optimistic update
+    - "Clear All" button → confirm dialog → `DELETE /v1/memory` → refetch
+    - Relative time formatting ("3 days ago") — dùng existing helper nếu có, hoặc `date-fns` (đã trong deps)
+  - [ ] Add link "Memory" vào Settings sidebar nav
 
-### Task 5 — Tests
-- Unit: 14 tests (apps/api services)
-- Integration: 2 tests (plugin ↔ apps/api)
-- UI: 3 tests (Settings page)
+- [ ] **Task 5 — Tests** (AC: #7)
+  - [ ] Unit: `apps/api/src/__tests__/unit/memory-extraction.test.ts` (3 tests: Haiku happy path, empty messages, rate limit)
+  - [ ] Unit: `apps/api/src/__tests__/unit/memory-conflict.test.ts` (3 tests: new insert, similarity update, category limit enforce)
+  - [ ] Unit: `apps/api/src/__tests__/unit/memory-render.test.ts` (3 tests: 0 memories, N memories, token budget truncation)
+  - [ ] Unit: `apps/api/src/__tests__/unit/memory-route-auth.test.ts` (2 tests: invalid EPSILON_TOKEN → 401, mismatched auth → 403)
+  - [ ] Unit: `apps/api/src/__tests__/unit/memory-crud.test.ts` (3 tests: insert, update with conflict, soft delete)
+  - [ ] Integration: `apps/api/src/__tests__/integration/memory-plugin-flow.test.ts` (mock plugin SQLite → apps/api HTTP call)
+  - [ ] Integration: debounce scheduler test (fire 3 idle events in 5s → only 1 extraction after 10min, use fake timers)
+  - [ ] Integration: idempotency test (extract same session 2× trong 1h → 2nd returns cached)
+  - [ ] UI: `apps/web/src/components/memory/__tests__/memory-list.test.tsx` (3 tests: list grouped, delete single, clear all)
 
-### Task 6 — Docs
-- Update `core/epsilon-master/opencode/agents/chainlens-tier1.md` và `chainlens-tier2.md` — mô tả brief về persistent memory
-- `apps/api/.env.example` — document `ANTHROPIC_API_KEY` cho Haiku (nếu chưa có)
+- [ ] **Task 6 — Docs + env**
+  - [ ] Verify `apps/api/.env.example` có `ANTHROPIC_API_KEY` (nếu chưa) — dùng cho Haiku extraction
+  - [ ] Update `core/epsilon-master/opencode/agents/chainlens-tier1.md` và `chainlens-tier2.md` — thêm 1 dòng mô tả: "Persistent memory auto-learns your preferences across sessions. View/manage in Settings → Memory."
+  - [ ] Update `apps/web/src/app/(dashboard)/settings/layout.tsx` (hoặc nav component) — thêm link Memory
 
 ## Dev Notes
 
@@ -484,3 +525,48 @@ không network. Nếu gọi API để lookup userId → 2 HTTP calls mỗi sessi
 - Estimated: 5 ngày → 3 ngày
 
 **v1 (2026-05-12)** — Initial draft (deprecated)
+
+## Project Structure Notes
+
+### Alignment với existing patterns
+
+- **Service layer** theo `apps/api/src/router/services/{name}.ts` pattern (giống `defillama.ts`, `perplexity.ts`)
+- **Route layer** theo `apps/api/src/router/routes/{name}.ts` pattern
+- **Auth middleware**: `EPSILON_TOKEN` bearer cho service-to-service (same pattern với existing `/v1/router/*`); `combinedAuth` cho user-facing endpoints (same pattern với `/v1/market/*`)
+- **Drizzle schema** theo `packages/db/src/schema/{name}.ts` pattern, exported qua `index.ts`
+- **Plugin libs** theo `core/epsilon-master/opencode/plugin/epsilon-system/lib/{name}.ts` pattern (giống `paths.ts`, `message-transform.ts`)
+- **Settings UI page** theo `apps/web/src/app/(dashboard)/settings/{name}/page.tsx` pattern
+
+### Conflicts / variances
+
+- **No conflict với existing code**. Tất cả artifacts mới — chỉ modify `sessions.ts` (additive inside hook, non-fatal guarantees preserve existing behavior).
+- **No conflict với Story 5.7 (BYOK)**: Story 5.8 dùng `ANTHROPIC_API_KEY` server-side cho extraction (Chainlens-paid infra cost), không conflict với user's `OPENAI_API_KEY` (user-paid LLM).
+- **Schema naming**: Chọn `epsilon.account_memories` (schema prefix theo convention existing `epsilon.accounts`, `epsilon.account_members`). Verify với Drizzle config — nếu project root schema không prefix `epsilon.` thì follow convention đó.
+
+### MCP Trio verification (per CLAUDE.md)
+
+Trước khi bắt đầu implementation, dev MUST:
+1. `mcp__serena__activate_project` với path `/Users/luisphan/Documents/suna`
+2. `mcp__symdex__get_index_stats` — verify index up-to-date
+3. `mcp__code-review-graph__list_graph_stats_tool` — verify CRG graph
+
+Khi tìm existing patterns (rate limiter, auth middleware, service scaffolding):
+- KHÔNG `grep -r` — dùng `mcp__serena__find_symbol` hoặc `mcp__symdex__search_codebase` với `directory_scope: "apps/api"`
+
+## Dev Agent Record
+
+### Agent Model Used
+
+_To be filled during implementation._
+
+### Debug Log References
+
+_To be filled during implementation._
+
+### Completion Notes List
+
+_To be filled during implementation._
+
+### File List
+
+_To be filled during implementation._

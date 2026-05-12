@@ -1,14 +1,5 @@
 ---
-te
-
-
-
-
-
-2221312312312312313123232
-
-
-stepsCompleted: [1, 2, 3, 4]
+stepsCompleted: []
 inputDocuments:
   - _bmad-output/planning-artifacts/prd.md
   - _bmad-output/planning-artifacts/architecture.md
@@ -137,6 +128,7 @@ AR1–AR8: constraints kiến trúc áp dụng cho từng story trong mọi Epic
 7. **Epic 7: Credit Economy & Tokenomics** — Triển khai Internal Credits System atomic, $CLENS token smart contract, và Affiliate/Airdrop reward system.
 8. **Epic 8: Enterprise & Privacy** — On-premise packaging Tier 3, BYOK, Local LLM (Ollama), LLM Proxy MaaS, và Zero-Data-Leakage enforcement.
 9. **Epic 9: Agent Marketplace Integration** — Tích hợp MMOMarket biến Chainlens thành Creator Studio với tính năng One-Click Publish, SSO Account Linking và Order Lifecycle Webhooks.
+10. **Epic 10: Autonomous AI Agents (Manus Clone Capabilities)** — Ủy quyền cho hệ thống AI Tự trị xử lý toàn bộ các vòng lặp công việc phức tạp mà không cần can thiệp từng bước. Tận dụng kiến trúc Sandbox, Triggers và `agent-browser`.
 
 ## Epic 1: AI Crypto Research Tools
 
@@ -1161,15 +1153,99 @@ So that Chainlens tiết kiệm chi phí hạ tầng (không cấp phát Daytona
 **Given** Agent chạy trong Shared Pool
 **When** Agent cố gọi các tool nguy hiểm (execute_bash, run_python, write_file)
 **Then** các tool này bị disable hoàn toàn để đảm bảo an toàn.
-i chạy ngay lập tức mà không cần chờ khởi động Sandbox,
-So that Chainlens tiết kiệm chi phí hạ tầng (không cấp phát Daytona sandbox mới) nhưng tôi vẫn sử dụng được agent.
+
+
+## Epic 10: Autonomous AI Agents (Manus Clone Capabilities)
+
+Ủy quyền cho hệ thống AI Tự trị xử lý toàn bộ các vòng lặp công việc phức tạp mà không cần can thiệp từng bước. Tận dụng kiến trúc Sandbox, Triggers và `agent-browser` (Playwright) có sẵn.
+
+**FRs:** FR11, FR12, FR13, FR14, FR15, FR16
+**NFRs:** NFR3, NFR10
+**ARs:** AR1, AR2, AR5, AR8
+
+### Story 10.1: Autonomous Web Scraper & Researcher Workflow
+
+As a crypto researcher (Tier 2/3),
+I want Agent có thể tự động duyệt nhiều trang web và vượt qua các rào cản truy cập bằng `agent-browser`,
+So that tôi nhận được một bản báo cáo phân tích sâu thay vì chỉ đọc text tóm tắt tĩnh.
 
 **Acceptance Criteria:**
 
-**Given** đơn hàng đã đồng bộ và user thuộc Tier 1 (Free)
-**When** Clone Agent được cấp phát
-**Then** hệ thống bypass việc gọi API Daytona và gán agent vào `global-tier1-sandbox-01`.
+**Given** User yêu cầu lấy dữ liệu từ một Dashboard Web3 đóng kín (cần thao tác click/login)
+**When** Agent kích hoạt luồng Autonomous Web Scraper
+**Then** Agent sử dụng `agent-browser` (thay vì deep_research.ts) để điều khiển Playwright mở tab, vượt qua các bước bảo mật, snapshot DOM, trích xuất dữ liệu
+**And** tổng hợp dữ liệu thành báo cáo hoàn chỉnh.
+**And** nếu DOM thay đổi hoặc bị block, Agent phải tự động fallback sang cơ chế Vision-based matching (chụp màn hình) hoặc đổi phương pháp thay vì bị treo vô hạn.
+**And** Agent phải tính toán và xin phép user về Budget (số Credits dự kiến) trước khi bắt đầu cào lượng lớn dữ liệu để tránh overcharge.
 
-**Given** Agent chạy trong Shared Pool
-**When** Agent cố gọi các tool nguy hiểm (execute_bash, run_python, write_file)
-**Then** các tool này bị disable hoàn toàn để đảm bảo an toàn.
+### Story 10.2: Data Analyst & Visualizer Workflow
+
+As a quantitative analyst (Tier 2/3),
+I want Agent có thể chạy code Python/Bash trực tiếp trong Epsilon Instance,
+So that tôi có thể ném file CSV thô và nhận lại biểu đồ/dashboards phân tích đã làm sạch.
+
+**Acceptance Criteria:**
+
+**Given** User đính kèm một file `.csv` dữ liệu thô vào khung chat
+**When** User yêu cầu "Làm sạch và vẽ biểu đồ"
+**Then** Agent tự động gọi tool sinh code Python (pandas/matplotlib), chạy trong Epsilon Sandbox
+**And** bắt lỗi (self-heal) nếu code sai, trả về biểu đồ dạng ảnh cho user kèm đoạn code đã thực thi.
+**And** Sandbox phải áp dụng Hard Limits (RAM/CPU/Timeout) và tự động kill process bị vòng lặp vô hạn/OOM để tránh treo tài nguyên.
+
+### Story 10.3: Auto-Dev & UI QA Pipeline
+
+As a Chainlens developer/creator,
+I want Agent tự động build ứng dụng và chạy test UI bằng Playwright,
+So that tôi có thể thấy ứng dụng hoạt động và tự sửa lỗi trước khi bàn giao.
+
+**Acceptance Criteria:**
+
+**Given** User yêu cầu tạo một mini-app Frontend đơn giản
+**When** Agent sinh code React/HTML và khởi chạy local server trong Sandbox
+**Then** Agent điều phối `agent-browser` mở `http://localhost` bên trong Sandbox
+**And** chạy kiểm tra giao diện (snapshot), tìm lỗi UI và tự động vòng lặp sửa code (tối đa 3 lần) cho đến khi app chạy ổn.
+**And** hệ thống tự động dọn dẹp các tiến trình cũ (orphaned processes / cổng mạng) trước mỗi vòng lặp để tránh lỗi Zombie process.
+**And** QA Agent bắt buộc phải sử dụng cơ chế Readiness Probe (ví dụ: wait-on port) để đảm bảo server đã thực sự chạy lên trước khi Playwright vào test, tránh lỗi False Negative.
+
+### Story 10.4: Smart Ops Resolution via Pipedream & Slack
+
+As a system admin / ops manager,
+I want Agent có thể tự đọc log lỗi từ webhook và đề xuất hướng xử lý lên Slack,
+So that tôi chỉ cần 1-click Approve để giải quyết sự cố mà không cần thao tác tay.
+
+**Acceptance penetration:**
+
+**Given** Pipedream webhook được kết nối để nhận log lỗi hệ thống
+**When** Một cảnh báo lỗi được bắn vào kênh Slack nội bộ
+**Then** Ops Agent được kích hoạt, tự động phân tích log, và reply vào Slack thread với đề xuất shell script để fix
+**And** Chỉ khi Admin bấm nút [Approve] trên Slack, lệnh mới được thực thi trên môi trường thật.
+**And** Giao diện Approve phải có Mini-Dashboard hiển thị rõ Diff, Risk Level và có nút [Dry-run] để user kiểm thử an toàn trước khi chạy thật.
+
+### Story 10.5: 24/7 Market Monitor (Heartbeat Trigger)
+
+As a crypto trader,
+I want Agent tự thức dậy định kỳ để kiểm tra tin tức thị trường và giá token,
+So that nó có thể kích hoạt các cảnh báo rủi ro hoặc lệnh dừng giao dịch ngay lập tức.
+
+**Acceptance Criteria:**
+
+**Given** Epsilon có hỗ trợ Cron/Heartbeat triggers
+**When** User cấu hình một task giám sát định kỳ (vd: mỗi 15 phút check funding rate của 1 token)
+**Then** Agent chạy ngầm, tự động gọi các tool (JIT Sync hoặc Web Search) để kiểm tra điều kiện
+**And** Bắn thông báo (Alert) cho user qua Telegram/Web UI nếu điều kiện chạm ngưỡng.
+
+### Story 10.6: General-Purpose Swarm Orchestration
+
+As a user giải quyết bài toán phức tạp,
+I want một Manager Agent có thể chia việc cho nhiều Sub-Agents (Researcher, Coder, QA) làm việc song song,
+So that tôi chỉ cần đưa ra 1 prompt duy nhất và nhận lại kết quả tổng hợp.
+
+**Acceptance Criteria:**
+
+**Given** Hệ thống đã có hạ tầng Swarm Teams cho Vibe Trading
+**When** User có một tác vụ quá lớn vượt khỏi domain Trading (VD: Lập kế hoạch Marketing Web3 và viết bài SEO)
+**Then** Manager Agent tạo một Directed Acyclic Graph (DAG)
+**And** Phân chia task cho Web Searcher Agent và Writer Agent. Kết quả được luân chuyển nội bộ và tổng hợp thành bản cuối cùng.
+**And** Manager Agent có cơ chế Checkpointing cho DAG; nếu 1 sub-agent thất bại do lỗi bên ngoài, toàn bộ tiến trình có thể retry tiếp tục từ node đó thay vì chạy lại từ đầu.
+**And** Manager Agent phải cung cấp Cost Estimation tổng thể cho toàn bộ DAG và yêu cầu user xác nhận Budget trước khi chia task cho các Sub-Agent.
+
