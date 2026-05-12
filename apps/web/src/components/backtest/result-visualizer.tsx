@@ -182,9 +182,16 @@ export function BacktestResultVisualizer({ result, onRetry }: BacktestResultVisu
     const assetKeys = summary ? Object.keys(summary) : [];
     return (
       <div className="rounded-xl border border-amber-200 dark:border-amber-800/60 bg-amber-50/50 dark:bg-amber-900/10 p-5 space-y-2">
-        <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
-          Historical data loaded — simulation pending
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+            Historical data loaded — simulation pending
+          </p>
+          {onRetry && (
+            <Button variant="outline" size="sm" onClick={onRetry} className="flex-shrink-0">
+              Retry
+            </Button>
+          )}
+        </div>
         {assetKeys.length > 0 ? (
           <ul className="text-xs text-muted-foreground space-y-0.5">
             {assetKeys.map((k) => {

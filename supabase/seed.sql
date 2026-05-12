@@ -5,7 +5,7 @@ INSERT INTO epsilon.accounts (account_id, name, personal_account, created_at, up
 INSERT INTO epsilon.account_members (user_id, account_id, account_role, joined_at) VALUES ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000', 'owner', now()) ON CONFLICT DO NOTHING;
 
 -- Local dev sandbox for epsilon agent (matches EPSILON_TOKEN in core/docker/.env)
-INSERT INTO epsilon.sandboxes (sandbox_id, account_id, name, provider, status, base_url, created_at, updated_at)
+INSERT INTO epsilon.sandboxes (sandbox_id, account_id, name, provider, status, base_url, crea![1778567102294](image/seed/1778567102294.png)![1778567105252](image/seed/1778567105252.png)![1778567112330](image/seed/1778567112330.png)![1778567283709](image/seed/1778567283709.png)ted_at, updated_at)
 VALUES ('11111111-1111-1111-1111-111111111111', '00000000-0000-0000-0000-000000000000', 'Local Dev Sandbox', 'local_docker', 'active', 'http://localhost:3002', now(), now())
 ON CONFLICT DO NOTHING;
 

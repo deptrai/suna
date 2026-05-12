@@ -9,6 +9,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { BacktestStrategyEditorClient } from './strategy-editor';
+import type { RunResponse } from '@/lib/backtest-api';
 
 interface ContextualBacktestModalProps {
   open: boolean;
@@ -16,6 +17,8 @@ interface ContextualBacktestModalProps {
   initialCode?: string;
   initialAsset?: string;
   initialTimeframe?: string;
+  initialResult?: RunResponse | null;
+  onResult?: (result: RunResponse | null) => void;
 }
 
 export function ContextualBacktestModal({
@@ -24,6 +27,8 @@ export function ContextualBacktestModal({
   initialCode,
   initialAsset,
   initialTimeframe,
+  initialResult,
+  onResult,
 }: ContextualBacktestModalProps) {
   // Remount editor only when the source code changes — preserves user edits across re-opens
   const [editorKey, setEditorKey] = React.useState(0);
@@ -70,6 +75,8 @@ export function ContextualBacktestModal({
             initialAsset={initialAsset}
             initialTimeframe={initialTimeframe}
             onExecutingChange={setIsExecuting}
+            initialResult={initialResult}
+            onResult={onResult}
           />
         </div>
       </DialogContent>

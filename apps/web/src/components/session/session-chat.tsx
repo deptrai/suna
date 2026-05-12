@@ -2760,6 +2760,60 @@ function SameToolGroup({
 // Session Turn — core turn component
 // ============================================================================
 
+function SubAgentActivityDrawer({
+  working,
+  hasSteps,
+  hasReasoning,
+  children,
+}: {
+  working: boolean;
+  hasSteps: boolean;
+  hasReasoning: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+
+  // Auto-open while working
+  useEffect(() => {
+    if (working) setOpen(true);
+  }, [working]);
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen} className="mt-3 relative z-10">
+      <div className="flex justify-end mb-2 -mt-4">
+        <CollapsibleTrigger asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            className={cn(
+              "rounded-full h-7 px-3 text-xs shadow-sm border bg-background/50 backdrop-blur-md transition-all cursor-pointer",
+              working ? "text-primary border-primary/30" : "text-emerald-500 border-emerald-500/20 opacity-60 hover:opacity-100"
+            )}
+          >
+            {working ? (
+              <>
+                <Loader2 className="size-3 mr-1.5 animate-spin" />
+                <span className="animate-pulse">⚡ Sub-Agent Running...</span>
+              </>
+            ) : (
+              <>
+                <Check className="size-3 mr-1.5" />
+                <span>Sub-Agent Done</span>
+              </>
+            )}
+            <ChevronDown className={cn("size-3 ml-1.5 transition-transform", open && "rotate-180")} />
+          </Button>
+        </CollapsibleTrigger>
+      </div>
+      <CollapsibleContent>
+        <div className="bg-muted/10 border rounded-xl p-3 mb-3 shadow-inner">
+          {children}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
 interface SessionTurnProps {
   turn: Turn;
   allMessages: MessageWithParts[];
@@ -3543,9 +3597,10 @@ function SessionTurn({
 			  (it renders separately below as the Response section). */}
       {(working || hasSteps || hasReasoning) &&
         turn.assistantMessages.length > 0 && (
-          <div className="space-y-2">
-            {(() => {
-              // Same-tool grouping: consecutive calls of the SAME tool
+          <SubAgentActivityDrawer working={working} hasSteps={hasSteps} hasReasoning={hasReasoning}>
+            <div className="space-y-2">
+              {(() => {
+                // Same-tool grouping: consecutive calls of the SAME tool
               // (e.g. 5 reads, 3 greps) fold into one collapsible.
               // Singles stay individual. Reasoning groups separately.
               // ALL tool rows get a left border rail for visual separation.
@@ -3801,7 +3856,8 @@ function SessionTurn({
                 return null;
               });
             })()}
-          </div>
+            </div>
+          </SubAgentActivityDrawer>
         )}
 
       {/* Epsilon logo — shown when there are no steps and not working (otherwise logo is already above the steps trigger) */}

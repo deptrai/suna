@@ -41,7 +41,7 @@ function hideProjectOnly(a: Agent): boolean {
 export function useVisibleAgents(options?: { directory?: string }): Agent[] {
   const { data: agents = [] } = useOpenCodeAgents(options);
   return useMemo(
-    () => agents.filter((a) => !a.hidden && a.mode !== 'subagent' && !hideProjectOnly(a)),
+    () => agents.filter((a) => !a.hidden && !hideProjectOnly(a)),
     [agents]
   );
 }

@@ -19,7 +19,7 @@ const VibeTradingJobSchema = z
       initial_capital: z.string(),
       trading_fees: z.string().optional(),
       slippage_tolerance: z.string().optional(),
-      historical_range: z.number().int().min(1).max(3650), // Pydantic ge=1, le=3650
+      historical_range: z.number().int().min(1).max(730), // Vibe-Trading API actual limit: le=730
       gas_fee_model: z.string().optional(),
       track_impermanent_loss: z.boolean().optional(),
     }),
@@ -64,7 +64,13 @@ vibeTrading.post('/jobs', async (c) => {
   if (body === null) throw new HTTPException(400, { message: 'Invalid JSON body' });
 
   const parsed = VibeTradingJobSchema.safeParse(body);
-  if (!parsed.success) throw new HTTPException(400, { message: parsed.error.message });
+  if (!parsed.success) {
+    const first = parsed.error.issues[0];
+    const msg = first
+      ? `${first.path.join('.') || 'body'} — ${first.message}`
+      : 'Invalid request body';
+    throw new HTTPException(400, { message: msg });
+  }
 
   const { session_id, ...payload } = parsed.data;
 
@@ -145,7 +151,14 @@ interface RunStateLike {
 export function classifyRunState(run: RunStateLike): StreamEventName | null {
   const status = run.status;
   if (status === 'failed' || status === 'aborted') return 'failed';
-  if (status === 'success' && run.metrics && typeof run.metrics === 'object') return 'phase_b';
+  if (status === 'success') {
+    const m = run.metrics as Record<string, unknown> | null | undefined;
+    // Only phase_b when sharpe is present — VT sometimes returns status=success with empty
+    // metrics while the artifact CSV is still being written. Keep polling until sharpe appears.
+    if (m && typeof m === 'object' && typeof m.sharpe !== 'undefined') return 'phase_b';
+    // status=success but metrics not ready — keep polling
+    return 'data_loading';
+  }
   // VT uses status='unknown' for the entire Phase A window (run dir created, simulation pending).
   // data_summary is never populated by VT — treat status='unknown' directly as phase_a.
   if (status === 'unknown') return 'phase_a';

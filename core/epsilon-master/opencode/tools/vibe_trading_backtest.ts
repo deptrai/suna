@@ -10,33 +10,43 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 export default tool({
   description:
-    "Submit a backtest job to Vibe-Trading and wait for completion (Tier 2 only). " +
-    "Phase A (current): returns data_summary after OHLCV data load from Binance/exchange. " +
-    "Phase B (after VT Epic 2.3 done): returns Sharpe ratio, max drawdown, equity curve, trade log. " +
+    "Submit a backtest job to Vibe-Trading and poll for results (Tier 2 only). " +
+    "Returns Sharpe ratio, max drawdown, total return, win rate, and equity curve. " +
     "Total time budget: 30 seconds. For longer backtests, reduce historical_range or disable Monte Carlo. " +
-    "Job continues in background after timeout — retrieve later via job_id.\n" +
-    "CRITICAL: If the user asks you to run a backtest, DO NOT call this tool. Instead, reply with the JSON configuration inside a ```json block so the user can execute it using the UI.",
+    "Job continues in background after timeout — retrieve later via job_id.\n\n" +
+    "SUPPORTED ASSETS (use exact format):\n" +
+    "• Crypto (exchange=okx): BTC-USDT, ETH-USDT, SOL-USDT, BNB-USDT, DOGE-USDT, PEPE-USDT, CAKE-USDT, " +
+    "ARB-USDT, OP-USDT, AVAX-USDT, MATIC-USDT, LINK-USDT, UNI-USDT, AAVE-USDT, etc. " +
+    "Any spot pair listed on OKX works. Format: BASE-QUOTE (e.g. BTC-USDT). Max history: 730 days.\n" +
+    "• US stocks (exchange=yfinance): AAPL, TSLA, NVDA, MSFT, GOOGL, AMZN, META, SPY, QQQ, etc. " +
+    "Any ticker on Yahoo Finance. Format: bare ticker (e.g. AAPL) or TICKER.US.\n" +
+    "• HK stocks (exchange=yfinance): 0700.HK (Tencent), 9988.HK (Alibaba), 1810.HK (Xiaomi), etc. " +
+    "Format: NNNN.HK.\n" +
+    "• NOT supported: gold/commodities, A-shares (CN), futures (no auth token configured).\n\n" +
+    "EXCHANGE VALUES: use 'okx' for crypto, 'yfinance' for US/HK stocks. Never use 'binance'.\n" +
+    "CRITICAL: If the user asks you to run a backtest, DO NOT call this tool. " +
+    "Instead, reply with the JSON configuration inside a ```json block so the user can execute it using the UI.",
   args: {
     simulation_environment: tool.schema.object({
-      exchange: tool.schema.string().describe('Exchange name, e.g. "binance"'),
-      instrument_type: tool.schema.string().describe('"SPOT" or "PERPETUAL" (NOT "FUTURES")'),
+      exchange: tool.schema.string().describe("'okx' for crypto, 'yfinance' for US/HK stocks. Never 'binance'."),
+      instrument_type: tool.schema.string().describe('"SPOT" or "PERPETUAL" (NOT "FUTURES"). Use SPOT for stocks and most crypto.'),
       initial_capital: tool.schema.string().describe('Decimal string, e.g. "15000"'),
-      historical_range: tool.schema.number().describe("Days of history (1–3650, default 730)"),
+      historical_range: tool.schema.number().describe("Days of history (1–730 max). Default 90. Crypto max 730 days."),
       trading_fees: tool.schema.string().optional(),
       slippage_tolerance: tool.schema.string().optional(),
       gas_fee_model: tool.schema.string().optional(),
       track_impermanent_loss: tool.schema.boolean().optional(),
     }),
     risk_management: tool.schema.object({
-      max_drawdown_percentage: tool.schema.string().describe("Decimal string, e.g. \"0.15\" (15%)"),
-      position_sizing: tool.schema.string().describe('Decimal string, e.g. "0.2" (20% per position)'),
-      leverage: tool.schema.string().optional().describe('Decimal string. SPOT must be "1.0"'),
+      max_drawdown_percentage: tool.schema.string().describe('Decimal 0.0–1.0, e.g. "0.15" means 15%. Never use values > 1.'),
+      position_sizing: tool.schema.string().describe('Decimal 0.0–1.0, e.g. "0.2" means 20% per position. Never use values > 1.'),
+      leverage: tool.schema.string().optional().describe('Decimal string, e.g. "1". SPOT must be "1". No "x" suffix.'),
       stop_loss: tool.schema.string().optional(),
       take_profit: tool.schema.string().optional(),
     }),
     context_rules: tool.schema.object({
-      assets: tool.schema.array(tool.schema.string()).describe('e.g. ["BTC-USDT", "ETH-USDT"]'),
-      timeframe: tool.schema.string().describe('Regex /^\\d+[mhdwM]$/, e.g. "1m", "4h", "1d", "1w"'),
+      assets: tool.schema.array(tool.schema.string()).describe('Crypto: ["BTC-USDT", "ETH-USDT"]. US stocks: ["AAPL", "TSLA"]. HK: ["0700.HK"].'),
+      timeframe: tool.schema.string().describe('Pattern /^\\d+[mhdwM]$/. Examples: "1m", "15m", "1h", "4h", "1d", "1w". Lowercase d/h/m/w allowed.'),
       indicators: tool.schema.array(tool.schema.string()).optional(),
       natural_language_rules: tool.schema.string().optional(),
     }),

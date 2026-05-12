@@ -39,7 +39,7 @@ export const INITIAL_TEMPLATE = `{
     "exchange": "okx",
     "instrument_type": "SPOT", // SPOT | PERPETUAL — for SPOT, leverage must be <= 1.0
     "initial_capital": "15000",
-    "historical_range": 90, // days, integer
+    "historical_range": 90, // days, integer, max 730
     "trading_fees": "0.001",
     "slippage_tolerance": "0.002"
   },
@@ -128,8 +128,33 @@ function mergeWithTemplate(code: string): string {
     
     // Sanitize common LLM errors
     if (merged.simulation_environment) {
-      if (merged.simulation_environment.exchange === 'binance') {
-        merged.simulation_environment.exchange = 'okx';
+      // exchange: normalize case, map binance → okx
+      if (typeof merged.simulation_environment.exchange === 'string') {
+        const ex = merged.simulation_environment.exchange.toLowerCase();
+        if (ex === 'binance') merged.simulation_environment.exchange = 'okx';
+      }
+      // instrument_type: normalize to uppercase, map FUTURES → PERPETUAL
+      if (typeof merged.simulation_environment.instrument_type === 'string') {
+        const it = (merged.simulation_environment.instrument_type as string).toUpperCase();
+        if (it === 'FUTURES') {
+          merged.simulation_environment.instrument_type = 'PERPETUAL';
+        } else {
+          merged.simulation_environment.instrument_type = it; // 'spot' → 'SPOT', 'perpetual' → 'PERPETUAL'
+        }
+      }
+      // historical_range must be a number in [1, 730] — VT API hard limit is 730 days
+      if (typeof merged.simulation_environment.historical_range === 'string') {
+        const n = parseInt(merged.simulation_environment.historical_range, 10);
+        merged.simulation_environment.historical_range = isNaN(n) ? 90 : Math.min(Math.max(n, 1), 730);
+      } else if (typeof merged.simulation_environment.historical_range === 'number') {
+        merged.simulation_environment.historical_range = Math.min(Math.max(merged.simulation_environment.historical_range, 1), 730);
+      }
+    }
+    if (merged.risk_management) {
+      // leverage: strip non-numeric suffix (e.g. "1x" → "1", "2X" → "2")
+      if (typeof merged.risk_management.leverage === 'string') {
+        const lev = merged.risk_management.leverage.replace(/[xX\s]+$/, '').trim();
+        merged.risk_management.leverage = lev || undefined;
       }
     }
     if (merged.risk_management) {
@@ -159,11 +184,15 @@ export function BacktestStrategyEditorClient({
   initialAsset,
   initialTimeframe,
   onExecutingChange,
+  initialResult,
+  onResult,
 }: {
   initialCode?: string;
   initialAsset?: string;
   initialTimeframe?: string;
   onExecutingChange?: (executing: boolean) => void;
+  initialResult?: RunResponse | null;
+  onResult?: (result: RunResponse | null) => void;
 } = {}) {
   const { user } = useAuth();
   const router = useRouter();
@@ -188,7 +217,7 @@ export function BacktestStrategyEditorClient({
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [isExecuting, setIsExecuting] = useState(false);
   const [isPolling, setIsPolling] = useState(false);
-  const [result, setResult] = useState<RunResponse | null>(null);
+  const [result, setResult] = useState<RunResponse | null>(initialResult ?? null);
   const [error, setError] = useState<{ status: number; message: string } | null>(null);
   const [showInsufficientCredits, setShowInsufficientCredits] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
@@ -202,6 +231,13 @@ export function BacktestStrategyEditorClient({
   const quotaWarnedRef = useRef(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const lastScrollStageRef = useRef<'idle' | 'loading' | 'result'>('idle');
+
+  const onResultRef = useRef(onResult);
+  onResultRef.current = onResult;
+  const setResultAndNotify = useCallback((r: RunResponse | null) => {
+    setResult(r);
+    onResultRef.current?.(r);
+  }, []);
 
   // Load draft once user auth resolves
   useEffect(() => {
@@ -290,7 +326,7 @@ export function BacktestStrategyEditorClient({
   const handleSubmit = useCallback(async () => {
     setError(null);
     setShowInsufficientCredits(false);
-    setResult(null);
+    setResultAndNotify(null);
 
     // Strip JSON5 comments and parse
     let parsed: Record<string, unknown>;
@@ -338,14 +374,14 @@ export function BacktestStrategyEditorClient({
             },
             onPhaseA: (data) => {
               setLoadingPhase('simulation_running');
-              setResult(data);
+              setResultAndNotify(data);
             },
             onPhaseB: (data) => {
-              setResult(data);
+              setResultAndNotify(data);
               finish();
             },
             onFailed: (data) => {
-              setResult(data);
+              setResultAndNotify(data);
               finish();
             },
             onTimeout: () => {

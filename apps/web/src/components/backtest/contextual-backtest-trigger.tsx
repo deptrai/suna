@@ -3,9 +3,11 @@
 import * as React from 'react';
 import { ContextualBacktestModal } from './contextual-backtest-modal';
 import { isStrategy, extractInitialProps } from './contextual-backtest-trigger.utils';
+import type { RunResponse } from '@/lib/backtest-api';
 
 export function ContextualBacktestTrigger({ code }: { code: string }) {
   const [open, setOpen] = React.useState(false);
+  const [lastResult, setLastResult] = React.useState<RunResponse | null>(null);
 
   const isStrategyMemo = React.useMemo(() => isStrategy(code), [code]);
   const initialProps = React.useMemo(
@@ -31,6 +33,8 @@ export function ContextualBacktestTrigger({ code }: { code: string }) {
         initialCode={code}
         initialAsset={initialProps.initialAsset}
         initialTimeframe={initialProps.initialTimeframe}
+        initialResult={lastResult}
+        onResult={setLastResult}
       />
     </>
   );
