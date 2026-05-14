@@ -1002,6 +1002,7 @@ export const warningLevelEnum = epsilonSchema.enum('warning_level', [
   'medium',
   'high',
   'critical',
+  'alpha',
 ]);
 
 export const discoverFeeds = epsilonSchema.table(
@@ -1088,6 +1089,45 @@ export const onChainDataIndex = epsilonSchema.table(
       table.walletAddress,
       table.tokenAddress,
     ),
+  ]
+);
+
+// ─── Social Sentiment (Story 2.2.2) ─────────────────────────────────────────
+
+export const narrativeCategoryEnum = epsilonSchema.enum('narrative_category', [
+  'ai',
+  'rwa',
+  'memes',
+  'depin',
+  'gaming',
+  'l1',
+  'l2',
+  'defi',
+  'privacy',
+  'other',
+]);
+
+export const tokenSocialSignals = epsilonSchema.table(
+  'token_social_signals',
+  {
+    slug: varchar('slug', { length: 100 }).primaryKey(),
+    symbol: varchar('symbol', { length: 20 }).notNull(),
+    narrative: narrativeCategoryEnum('narrative').default('other').notNull(),
+    socialVolume24h: numeric('social_volume_24h', { precision: 20, scale: 4 }),
+    socialVolumeChange24hPct: numeric('social_volume_change_24h_pct', { precision: 10, scale: 4 }),
+    socialDominancePct: numeric('social_dominance_pct', { precision: 10, scale: 4 }),
+    sentimentScore: numeric('sentiment_score', { precision: 10, scale: 4 }),
+    priceUsd: numeric('price_usd', { precision: 20, scale: 8 }),
+    priceChange24hPct: numeric('price_change_24h_pct', { precision: 10, scale: 4 }),
+    isAlphaSignal: boolean('is_alpha_signal').default(false).notNull(),
+    fetchedAt: timestamp('fetched_at', { withTimezone: true }).notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('idx_token_social_narrative').on(table.narrative),
+    index('idx_token_social_alpha')
+      .on(table.isAlphaSignal, table.socialVolumeChange24hPct)
+      .where(sql`${table.isAlphaSignal} = true`),
   ]
 );
 

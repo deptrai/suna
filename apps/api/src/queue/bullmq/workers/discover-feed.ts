@@ -1,9 +1,9 @@
 import { Worker, Job, Queue } from 'bullmq';
 import { createHash } from 'node:crypto';
-import { lt } from 'drizzle-orm';
+import { lt, eq, desc, and } from 'drizzle-orm';
 import { redisConnection } from '../connection';
 import { db } from '../../../shared/db';
-import { discoverFeeds } from '@epsilon/db';
+import { discoverFeeds, tokenSocialSignals } from '@epsilon/db';
 import { config } from '../../../config';
 import { logger } from '../../../lib/logger';
 import { scrubPii, WARNING_LEVELS, type WarningLevel } from '@epsilon/shared/utils';
@@ -94,6 +94,64 @@ const itemsSchema = z.object({
   ),
 });
 
+async function injectAlphaSignals(jobId: string | undefined) {
+  try {
+    const alphaTokens = await db
+      .select()
+      .from(tokenSocialSignals)
+      .where(and(eq(tokenSocialSignals.isAlphaSignal, true)))
+      .orderBy(desc(tokenSocialSignals.socialVolumeChange24hPct))
+      .limit(5);
+
+    if (!alphaTokens.length) return;
+
+    const openrouter = getOpenRouter();
+    let alphaInserted = 0;
+
+    for (const token of alphaTokens) {
+      const svChange = token.socialVolumeChange24hPct != null ? parseFloat(token.socialVolumeChange24hPct) : null;
+      const priceChange = token.priceChange24hPct != null ? parseFloat(token.priceChange24hPct) : null;
+      if (svChange === null || priceChange === null) continue;
+
+      const context = `Token ${token.symbol} (${token.slug}) under narrative ${token.narrative} has social volume up ${svChange.toFixed(1)}% in 24h but price only changed ${priceChange.toFixed(2)}%.`;
+
+      const { object } = await generateObject({
+        model: openrouter('anthropic/claude-3-haiku'),
+        schema: z.object({
+          title: z.string().min(1),
+          summary: z.string().min(1),
+        }),
+        prompt: `You are a crypto alpha analyst. Write a concise discover feed item for this alpha signal. Be factual and specific. Context: ${context}`,
+      });
+
+      const safeTitle = scrubPii(object.title).slice(0, TITLE_MAX);
+      const safeSummary = scrubPii(object.summary);
+      const id = deterministicId(`alpha:${token.slug}:${new Date().toISOString().slice(0, 10)}`, safeSummary);
+
+      await db
+        .insert(discoverFeeds)
+        .values({
+          id,
+          title: safeTitle,
+          summary: safeSummary,
+          isAnomaly: true,
+          warningLevel: 'alpha',
+          sources: [{ name: 'Santiment', url: `https://app.santiment.net/s/${token.slug}` }],
+        })
+        .onConflictDoNothing({ target: discoverFeeds.id });
+
+      alphaInserted++;
+    }
+
+    logger.info('[discover-feed] alpha signals injected', { jobId, alphaInserted });
+  } catch (err) {
+    logger.warn('[discover-feed] alpha signal injection failed (non-fatal)', {
+      jobId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
+
 async function runSummarizationJob(jobId: string | undefined) {
   logger.info('[discover-feed] job started', { jobId });
 
@@ -148,6 +206,10 @@ Data: ${dataString}`,
   });
 
   logger.info('[discover-feed] job complete', { jobId, inserted, skipped });
+
+  // Integrate alpha signals from social sentiment worker (Story 2.2.2)
+  await injectAlphaSignals(jobId);
+
   return { inserted, skipped };
 }
 

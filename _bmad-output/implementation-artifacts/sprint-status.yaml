@@ -60,7 +60,7 @@ development_status:
   2-1-2-entity-hacker-wallet-tracking: backlog
   2-2-ai-generated-discover-feed: done
   2-2-1-on-chain-fact-checking-layer: backlog
-  2-2-2-social-sentiment-narrative-clustering: backlog
+  2-2-2-social-sentiment-narrative-clustering: review
   2-3-dune-and-nansen-on-chain-index-worker: done
   2-3-1-vip-api-smart-money-flow: backlog
   2-3-2-financial-statement-data-token-terminal: backlog

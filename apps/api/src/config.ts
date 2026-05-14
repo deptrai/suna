@@ -246,6 +246,11 @@ const envSchema = z.object({
   CRYPTO_WORKER_ENABLED:       optBoolFalse,
   CRYPTO_SYNC_INTERVAL_MS:     optInt(300_000),
   CRYPTO_WORKER_CONCURRENCY:   optInt(1),
+
+  // ─── Social Sentiment Worker (Story 2.2.2) ────────────────────────────────
+  SANTIMENT_API_KEY:                optStr,
+  SOCIAL_SENTIMENT_WORKER_ENABLED:  optBoolFalse,
+  SOCIAL_SENTIMENT_INTERVAL_MS:     optInt(1_800_000),
   });
 
 // ─── Validation + Conditional Checks ────────────────────────────────────────
@@ -616,6 +621,11 @@ export const config = {
   CRYPTO_WORKER_ENABLED: env.CRYPTO_WORKER_ENABLED,
   CRYPTO_SYNC_INTERVAL_MS: env.CRYPTO_SYNC_INTERVAL_MS,
   CRYPTO_WORKER_CONCURRENCY: env.CRYPTO_WORKER_CONCURRENCY,
+
+  // ─── Social Sentiment Worker (Story 2.2.2) ────────────────────────────────
+  SANTIMENT_API_KEY: env.SANTIMENT_API_KEY,
+  SOCIAL_SENTIMENT_WORKER_ENABLED: env.SOCIAL_SENTIMENT_WORKER_ENABLED,
+  SOCIAL_SENTIMENT_INTERVAL_MS: env.SOCIAL_SENTIMENT_INTERVAL_MS,
 
   // ─── Helper Methods ────────────────────────────────────────────────────────
 

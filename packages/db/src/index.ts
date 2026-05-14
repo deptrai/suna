@@ -84,6 +84,9 @@ export {
   // Protocol TVL (Crypto Worker)
   protocolWatchlist,
   protocolTvlSnapshots,
+  // Social Sentiment (Story 2.2.2)
+  narrativeCategoryEnum,
+  tokenSocialSignals,
   // Pool
   poolResources,
   poolSandboxes,
