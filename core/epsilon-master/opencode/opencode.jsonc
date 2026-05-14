@@ -25,6 +25,34 @@
       },
       "models": {}
     },
+    "anthropic-proxy": {
+      "npm": "@ai-sdk/openai-compatible",
+      "env": ["ANTHROPIC_PROXY_API_KEY", "ANTHROPIC_PROXY_URL"],
+      "options": {
+        "baseURL": "{env:ANTHROPIC_PROXY_URL}",
+        "apiKey": "{env:ANTHROPIC_PROXY_API_KEY}"
+      },
+      "models": {
+        "claude-opus-4-7": {
+          "name": "Claude Opus 4.7 (Proxy)",
+          "id": "claude-opus-4-7",
+          "family": "anthropic-proxy",
+          "limit": { "context": 200000, "output": 32000 }
+        },
+        "claude-sonnet-4-6": {
+          "name": "Claude Sonnet 4.6 (Proxy)",
+          "id": "claude-sonnet-4-6",
+          "family": "anthropic-proxy",
+          "limit": { "context": 200000, "output": 64000 }
+        },
+        "claude-haiku-4-5": {
+          "name": "Claude Haiku 4.5 (Proxy)",
+          "id": "claude-haiku-4-5-20251001",
+          "family": "anthropic-proxy",
+          "limit": { "context": 200000, "output": 64000 }
+        }
+      }
+    },
     "epsilon-yolo": {
       "npm": "@ai-sdk/anthropic",
       "env": ["EPSILON_YOLO_API_KEY", "EPSILON_YOLO_URL"],

@@ -2,7 +2,7 @@
 stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8]
 lastStep: 8
 status: 'complete'
-completedAt: '2026-05-09'
+completedAt: '2026-05-13'
 inputDocuments:
   - _bmad-output/project-context.md
   - docs/project-overview.md
@@ -591,6 +591,11 @@ Prod: frontend → Vercel (production)
     *   *Rationale:* Dùng SSE để bắn log, Thought-process, và Cost Estimation 1 chiều từ Server về Frontend. Các thao tác tương tác của user (như click [Approve]) sẽ gọi qua REST API thông thường.
     *   *Implementation Constraints (Tối ưu Hiệu năng & Rủi ro):* API SSE phục vụ Agent Log phải có cơ chế **Log Throttling (Batching)** tối thiểu 200ms để không làm sập Main Thread của trình duyệt. SSE bắt buộc phải implement cơ chế phục hồi **Last-Event-ID** để đảm bảo không mất log khi đứt kết nối mạng. Nếu client reconnect sau khi lỡ quá nhiều events, API sẽ kích hoạt **State Snapshot Fallback** (gửi tóm tắt trạng thái) thay vì bắn bù từng event để tránh nghẽn RAM Node.js.
 
+**Risk Mitigation Constraints (Rào chắn Rủi ro - Epic 10):**
+*   **Financial Risk (Negative Balance):** Áp dụng **Circuit Breaker** tại API Gateway. Lập tức cắt đứt kết nối mạng nội bộ của Sandbox ra ngoài nếu phát hiện dấu hiệu lạm dụng (trừ credit > 5 lần/phút hoặc số dư < $5) để bảo đảm nguyên tắc Atomic Credit Deduction (NFR8).
+*   **Compliance Risk (PII Data Leak):** Bắt buộc tích hợp **Data Masking Middleware** (vd: Presidio) để tự động quét và ẩn giấu dữ liệu nhạy cảm (PII) trong file dữ liệu của user trước khi Agent có quyền gửi payload cho LLM bên thứ ba.
+*   **Integration Risk (Webhook Spam):** Áp dụng **Alert Deduplication & Cooldown** tại nguồn phát sinh sự cố trước khi trigger Pipedream Webhook (Story 10.4), đảm bảo các lỗi trùng lặp bị gộp lại kèm bộ đếm (count), tránh Rate Limit và spam channel Slack.
+
 ### Decision Impact Analysis
 
 **Sequence khi thêm tính năng mới:**
@@ -796,7 +801,31 @@ app.get('/api/crypto/price', fetchCryptoPrice)
 // ✅ AI tools as MCP servers in sandbox container (core/)
 ```
 
+### Implementation Patterns for Autonomous Agents (Epic 10)
+
+**1. Naming Patterns (DAG Event Naming):**
+- Sử dụng chuẩn `namespace.action` cho cột `event_type` trong bảng `dag_events` (ví dụ: `swarm.task.started`, `agent.coder.failed`, `sandbox.execution.timeout`).
+- Giúp tối ưu hóa truy vấn lọc (filter) theo từng cấp độ trên cột JSONB.
+
+**2. Structure Patterns (Sandbox Execution):**
+- **Không tạo file vật lý trên host server.** Mọi đoạn code Python/Bash do LLM sinh ra phải được truyền trực tiếp vào Sandbox thông qua `stdin` hoặc API payload.
+- Đảm bảo Zero-Data-Leakage và không để lại rác (orphaned files) trên máy chủ host, tuân thủ nguyên tắc tinh gọn.
+
+**3. Format Patterns (Agent Tool Output):**
+- Tất cả các Custom Tools nội bộ (chạy sandbox, gọi agent-browser) bắt buộc phải trả về dữ liệu được bọc trong **JSON Wrapper**: `{ "success": boolean, "data": any, "error": string | null }`.
+- Nếu lỗi, trường `error` phải chứa chi tiết lỗi (stderr) để Agent dựa vào đó kích hoạt vòng lặp Tự sửa lỗi (Self-heal).
+
+**4. Process Patterns (Self-Healing Loop):**
+- Agent chỉ được phép retry (tự sửa lỗi) tối đa **3 lần** khi nhận về `success: false` từ một Tool. Sau 3 lần, phải báo cáo lỗi tổng hợp lên cho user để tránh vòng lặp vô hạn gây tiêu hao Credit (Cost Budgeting).
+
 ## Step 6: Project Structure & Boundaries
+
+### Epic 10 Boundaries (Autonomous Agents)
+**Separation of Concerns Rule:** Các tính năng tự trị phải tuân thủ nghiêm ngặt ranh giới Monorepo hiện tại:
+1. **OpenCode Domain (`core/epsilon-master/opencode/`)**: Chỉ chứa logic suy nghĩ (Prompts/Agents .md) và Tool definitions (`sandbox_exec.ts`, `swarm_delegate.ts`). **Tuyệt đối không import `packages/db` hoặc kết nối Database trực tiếp.** Đối với các file nhị phân (Binary/PDF) sinh ra từ Agent, Tool phải upload lên Storage/S3 (qua hàm share util) và chỉ trả về URL trong JSON Wrapper. **Luật Chống Phụ thuộc Vòng (No Circular Dependency):** OpenCode tuyệt đối không được gọi HTTP request ngược lại các endpoint của `apps/api`. Mọi kết quả phải được trả về qua Return Value hoặc Callback cho API Proxy tự xử lý. **Định hướng Tương lai:** Cân nhắc đóng gói `opencode` thành một workspace package nội bộ (vd: `packages/opencode`) để đảm bảo tính độc lập tuyệt đối và dễ tách server sau này.
+2. **API Proxy Domain (`apps/api/src/router/routes/swarm/`)**: Đóng vai trò cầu nối duy nhất. Nhận request HTTP/SSE từ Frontend, tương tác với Database (ghi `dag_events`), và chuyển tiếp lệnh sang OpenCode. Đảm nhận logic Billing và Cost Budgeting. **Bắt buộc thiết kế theo mô hình Asynchronous (Fire-and-Forget):** API nhận request, tạo Job ID, ném task vào Queue (BullMQ) và trả về HTTP 202 ngay lập tức để tránh timeout. Client dùng Job ID để nhận stream log qua SSE.
+3. **Database Domain (`packages/db/src/schema/`)**: Bổ sung schema cho DAG Events tại file `swarm.ts` (Tuân thủ AR3 additive-only).
+4. **Frontend Domain (`apps/web/src/components/agent/`)**: Các UI Components mới (Dry-run Dashboard, Action Drawer) phải gọi qua `apps/api`, không bao giờ kết nối thẳng xuống môi trường OpenCode. UI Component phải sử dụng **React Context (vd: `AgentSwarmProvider`)** bọc vòng ngoài để quản lý duy nhất 1 kết nối SSE, tránh việc các component con mở nhiều kết nối mạng dư thừa. **Persistent SSE Context:** Context này bắt buộc phải đồng bộ Job ID đang chạy vào `localStorage`/`IndexedDB` để có thể phục hồi kết nối (gọi API lấy Snapshot) nếu user lỡ tay đóng tab trình duyệt và mở lại.
 
 ### Complete Project Directory Structure
 

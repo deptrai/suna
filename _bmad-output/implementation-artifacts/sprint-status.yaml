@@ -1,5 +1,5 @@
 # generated: 2026-05-09
-# last_updated: 2026-05-09 (Story 1.2 created)
+# last_updated: 2026-05-13 (Story 10.1 ready-for-dev)
 # project: chainlensnlens
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-12 (Story 5.8 v2 ready-for-dev)
+last_updated: 2026-05-13 (Story 10.1 ready-for-dev)
 project: chainlensnlens
 project_key: NOKEY
 tracking_system: file-system
@@ -128,3 +128,15 @@ development_status:
   9-3-shared-pool-routing: ready-for-dev
   epic-9-retrospective: optional
 l
+
+  # ─── Phase 2 — Autonomous AI Agents (Manus Clone) ───
+
+  # Epic 10: Autonomous AI Agents
+  epic-10: in-progress
+  10-1-autonomous-web-scraper: ready-for-dev
+  10-2-data-analyst-visualizer: backlog
+  10-3-auto-dev-ui-qa-pipeline: backlog
+  10-4-smart-ops-resolution: backlog
+  10-5-24-7-market-monitor: backlog
+  10-6-general-purpose-swarm: backlog
+  epic-10-retrospective: optional

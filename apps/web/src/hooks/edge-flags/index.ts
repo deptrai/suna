@@ -84,11 +84,11 @@ export const useMaintenanceConfig = (options?: { enabled?: boolean }) => {
   return useQuery<MaintenanceConfig>({
     queryKey: systemStatusKeys.config,
     queryFn: fetchMaintenanceConfig,
-    staleTime: 30 * 1000,
-    refetchInterval: 60 * 1000,
-    refetchOnWindowFocus: true,
-    refetchOnMount: 'always',
-    retry: 2,
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    retry: 1,
     placeholderData: { level: 'none', title: '', message: '', updatedAt: new Date().toISOString() },
     ...options,
   });
@@ -105,11 +105,11 @@ export const useSystemStatusQuery = (options?: { enabled?: boolean }) => {
       const config = await fetchMaintenanceConfig();
       return toLegacyFormat(config);
     },
-    staleTime: 30 * 1000,
-    refetchInterval: 60 * 1000,
-    refetchOnWindowFocus: true,
-    refetchOnMount: 'always',
-    retry: 2,
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    retry: 1,
     placeholderData: {
       maintenanceNotice: { enabled: false },
       technicalIssue: { enabled: false },

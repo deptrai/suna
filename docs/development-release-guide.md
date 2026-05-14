@@ -65,6 +65,63 @@ pnpm dev            # Both at once
 pnpm dev:sandbox    # Sandbox container with bind mounts
 ```
 
+### Khởi động thủ công (khi pnpm dev không dùng được)
+
+Nếu cần start từng service riêng lẻ mà không qua pnpm workspace:
+
+```bash
+# API (port 8008)
+cd apps/api && bun run dev
+
+# Frontend (port 3000)
+cd apps/web && bun run dev
+# hoặc: bunx next dev --turbopack --port 3000
+```
+
+> **Lưu ý:** `bunx next dev` trực tiếp có thể lỗi `Cannot find module 'styled-jsx/package.json'`
+> nếu chạy với `node` thay vì `bun`. Luôn dùng `bun run dev` (đọc script từ package.json).
+
+### Thứ tự khởi động quan trọng
+
+API phải start **trước** Frontend để tránh lỗi "Cannot connect to API" khi FE load lần đầu.
+Nếu FE đã load mà API chưa sẵn sàng, reload lại trang sau khi API up.
+
+### Kiểm tra sau khi start
+
+```bash
+# API health
+curl http://localhost:8008/v1/health
+
+# Sandbox health (nếu đang chạy)
+curl http://127.0.0.1:14000/epsilon/health
+
+# Frontend: mở http://localhost:3000
+```
+
+### Lỗi thường gặp khi dev local
+
+| Lỗi | Nguyên nhân | Fix |
+|---|---|---|
+| `Cannot find module 'styled-jsx/package.json'` | Chạy `bunx next dev` với node thay vì bun | Dùng `bun run dev` trong `apps/web/` |
+| `Cannot connect to API` / 401 Unauthorized | `INTERNAL_SERVICE_KEY` lệch giữa `.env` và sandbox | Xem mục **Auth mismatch** bên dưới |
+| Frontend redirect về `/auth` sau restart | JWT session hết hạn | Reload trang, login lại |
+| Backtest SSE timeout / không nhận kết quả | SSE heartbeat timeout trước khi job xong | Bình thường với job dài — kết quả vẫn có trong DB, dùng job_id để query lại |
+| Tab store restore session cũ sau backend reconnect | `swapForServer` restore `activeTabId` từ localStorage | Hành vi đúng của tab system — navigate thủ công đến trang cần |
+
+### Auth mismatch (INTERNAL_SERVICE_KEY)
+
+Khi API trả về 401 mặc dù đã login:
+
+```bash
+# 1. Đọc key thực tế trong sandbox
+docker exec epsilon-sandbox cat /workspace/.persistent-system/secrets/.bootstrap-env.json \
+  || docker exec epsilon-sandbox cat /workspace/.secrets/.bootstrap-env.json
+
+# 2. Lấy giá trị INTERNAL_SERVICE_KEY (hoặc EPSILON_TOKEN)
+# 3. Cập nhật vào apps/api/.env và apps/web/.env
+# 4. Restart API: Ctrl+C rồi bun run dev lại
+```
+
 ---
 
 ## Sandbox Dev Details
@@ -373,3 +430,25 @@ docker exec epsilon-sandbox s6-svc -r /run/service/svc-epsilon-master
 docker exec -it epsilon-sandbox bash
 docker compose -f core/docker/docker-compose.yml build
 ```
+
+### Backtest feature (Vibe-Trading)
+
+```bash
+# Submit một backtest job thủ công (để debug)
+curl -s -X POST http://localhost:8008/v1/router/vibe-trading/jobs \
+  -H "Authorization: Bearer <JWT>" \
+  -H "Content-Type: application/json" \
+  -d '{"simulation_environment":{"exchange":"okx","instrument_type":"SPOT","initial_capital":"1000","historical_range":30},"context_rules":{"assets":["BTC-USDT"],"timeframe":"4h","indicators":["SMA_20","SMA_50"],"natural_language_rules":"Long when 20-SMA crosses above 50-SMA"}}'
+
+# Xem kết quả SSE stream của một job
+curl -N --max-time 120 http://localhost:8008/v1/router/vibe-trading/runs/<job_id>/stream \
+  -H "Authorization: Bearer <JWT>" \
+  -H "Accept: text/event-stream"
+
+# Lấy JWT từ browser: DevTools → Application → Cookies → sb-epsilon-auth-token-3000
+# Decode base64 → lấy access_token
+```
+
+**SSE events:** `heartbeat` → `data_loading` → `phase_a` (partial) → `phase_b` (final) hoặc `failed` / `timeout`
+
+**UI route:** `/dashboard/backtest` — Monaco Editor với JSON config, kết quả hiển thị inline sau khi SSE `phase_b` nhận được.
