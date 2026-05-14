@@ -32,7 +32,7 @@ import { setupApp } from './setup';
 import { providersApp } from './providers/routes';
 import { secretsApp } from './secrets/routes';
 import { integrationsApp } from './integrations';
-import { queueApp, startDrainer, stopDrainer, startDiscoverFeedWorker, setupDiscoverFeedJobs, stopDiscoverFeedWorker, startOnChainIndexWorker, setupOnChainIndexJobs, stopOnChainIndexWorker, startCryptoWorker, setupCryptoWorkerJobs, stopCryptoWorker } from './queue';
+import { queueApp, startDrainer, stopDrainer, startDiscoverFeedWorker, setupDiscoverFeedJobs, stopDiscoverFeedWorker, startOnChainIndexWorker, setupOnChainIndexJobs, stopOnChainIndexWorker, startCryptoWorker, setupCryptoWorkerJobs, stopCryptoWorker, startSocialSentimentWorker, setupSocialSentimentJobs, stopSocialSentimentWorker } from './queue';
 import { serversApp } from './servers';
 // WoA is now mounted under the router at /v1/router/woa (see router/index.ts)
 import { supabaseAuth, combinedAuth, apiKeyAuth } from './middleware/auth';
@@ -1072,6 +1072,8 @@ function startBackgroundServices() {
   setupOnChainIndexJobs().catch((e) => appLogger.error('[onchain-index] setup failed', { error: String(e) }));
   startCryptoWorker();
   setupCryptoWorkerJobs().catch((e) => appLogger.error('[crypto-worker] setup failed', { error: String(e) }));
+  startSocialSentimentWorker();
+  setupSocialSentimentJobs().catch((e) => appLogger.error('[social-sentiment] setup failed', { error: String(e) }));
   startTunnelService();
   startAutoReplenish();
   startInviteCleanup(appDb);
@@ -1141,6 +1143,9 @@ async function shutdown(signal: string) {
   );
   await stopCryptoWorker().catch((e) =>
     appLogger.error('[crypto-worker] shutdown failed', { error: String(e) }),
+  );
+  await stopSocialSentimentWorker().catch((e) =>
+    appLogger.error('[social-sentiment] shutdown failed', { error: String(e) }),
   );
   // Flush observability data before exit
   await Promise.allSettled([appLogger.flush(), flushSentry()]);

@@ -5,6 +5,7 @@ import { webSearch } from './routes/search-web';
 import { imageSearch } from './routes/search-image';
 import { deepResearch } from './routes/deep-research';
 import { jitSync } from './routes/jit-sync';
+import { narratives } from './routes/narratives';
 import { codeValidator } from './routes/code-validator';
 import { tokenInfo } from './routes/token-info';
 import { contractRisk } from './routes/contract-risk';
@@ -58,6 +59,9 @@ router.route('/token-transactions', tokenTransactions);
 router.route('/token-search', tokenSearch);
 router.route('/token-ohlcv', tokenOhlcv);
 router.route('/vibe-trading', vibeTrading);
+
+// Public routes (no auth — FR5: discover feed public for all tiers)
+router.route('/narratives', narratives);
 
 // LLM routes (apiKeyAuth)
 router.use('/chat/*', apiKeyAuth);
