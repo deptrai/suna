@@ -1,73 +1,67 @@
 import { Hono } from 'hono';
 import { logger } from 'hono/logger';
-import { createOpenAI } from '@ai-sdk/openai';
-import { streamText } from 'ai';
 
 const app = new Hono();
 
 app.use('*', logger());
 
-app.get('/', (c) => {
-  return c.text('Chainlens MaaS Proxy Gateway is running!');
-});
+const UPSTREAM_BASE_URL = (process.env.UPSTREAM_BASE_URL || 'https://v98store.com/v1').replace(/\/$/, '');
+const UPSTREAM_API_KEY = process.env.UPSTREAM_API_KEY || '';
+const PORT = Number(process.env.PORT || 3002);
 
-// Endpoint cho Chat Completions
-app.post('/v1/chat/completions', async (c) => {
-  try {
-    const body = await c.req.json();
-    const { model, messages, stream } = body;
+app.get('/', (c) => c.text('Chainlens MaaS Proxy Gateway is running!'));
+app.get('/health', (c) => c.json({ ok: true, upstream: UPSTREAM_BASE_URL }));
 
-    // Lấy API Key từ Header (Mô phỏng BYOK)
-    const authHeader = c.req.header('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return c.json({ error: 'Missing or invalid Authorization header' }, 401);
-    }
-    const apiKey = authHeader.replace('Bearer ', '');
+// OpenAI-compatible passthrough. Forwards body 1:1, including streaming.
+// BYOK: caller's `Authorization: Bearer ...` is forwarded if present;
+// otherwise fall back to UPSTREAM_API_KEY (server-side managed key).
+async function passthrough(c: any, subPath: string) {
+  const incomingAuth = c.req.header('Authorization');
+  const apiKey = incomingAuth?.startsWith('Bearer ')
+    ? incomingAuth.slice(7)
+    : UPSTREAM_API_KEY;
 
-    // Khởi tạo Provider động dựa trên BYOK
-    const openai = createOpenAI({
-      apiKey: apiKey,
-      // Có thể cấu hình custom baseURL nếu dùng Local Node (Ollama)
-      // baseURL: 'http://localhost:11434/v1', 
-    });
-
-    // Gọi LLM thông qua Vercel AI SDK
-    const result = await streamText({
-      model: openai(model || 'gpt-3.5-turbo'),
-      messages: messages,
-    });
-
-    if (stream) {
-      // Stream response
-      return result.toTextStreamResponse();
-    } else {
-      // Non-stream response (MVP)
-      const fullResponse = await result.text;
-      return c.json({
-        id: 'chatcmpl-' + crypto.randomUUID(),
-        object: 'chat.completion',
-        created: Math.floor(Date.now() / 1000),
-        model: model,
-        choices: [
-          {
-            index: 0,
-            message: {
-              role: 'assistant',
-              content: fullResponse,
-            },
-            finish_reason: 'stop',
-          },
-        ],
-      });
-    }
-
-  } catch (error: any) {
-    console.error('Error in proxy:', error);
-    return c.json({ error: error.message }, 500);
+  if (!apiKey) {
+    return c.json({ error: 'Missing API key (set UPSTREAM_API_KEY or send Authorization header)' }, 401);
   }
+
+  const url = `${UPSTREAM_BASE_URL}${subPath}`;
+  const body = await c.req.text();
+
+  const upstream = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body,
+  });
+
+  return new Response(upstream.body, {
+    status: upstream.status,
+    headers: {
+      'Content-Type': upstream.headers.get('Content-Type') || 'application/json',
+      'Cache-Control': 'no-cache',
+    },
+  });
+}
+
+app.post('/v1/chat/completions', (c) => passthrough(c, '/chat/completions'));
+app.post('/v1/messages', (c) => passthrough(c, '/messages'));
+
+app.get('/v1/models', async (c) => {
+  const upstream = await fetch(`${UPSTREAM_BASE_URL}/models`, {
+    headers: UPSTREAM_API_KEY ? { Authorization: `Bearer ${UPSTREAM_API_KEY}` } : {},
+  });
+  return new Response(upstream.body, {
+    status: upstream.status,
+    headers: { 'Content-Type': upstream.headers.get('Content-Type') || 'application/json' },
+  });
 });
+
+console.log(`[chainlens-proxy] listening on :${PORT}, upstream=${UPSTREAM_BASE_URL}`);
 
 export default {
-  port: 3000,
+  port: PORT,
   fetch: app.fetch,
 };

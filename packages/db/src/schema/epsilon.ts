@@ -1024,6 +1024,38 @@ export const discoverFeeds = epsilonSchema.table(
   ]
 );
 
+// ─── Protocol Watchlist ──────────────────────────────────────────────────────
+
+export const protocolWatchlist = epsilonSchema.table(
+  'protocol_watchlist',
+  {
+    slug: varchar('slug', { length: 100 }).primaryKey(),
+    displayName: varchar('display_name', { length: 255 }).notNull(),
+    active: boolean('active').default(true).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+);
+
+// ─── Protocol TVL Snapshots ──────────────────────────────────────────────────
+
+export const protocolTvlSnapshots = epsilonSchema.table(
+  'protocol_tvl_snapshots',
+  {
+    slug: varchar('slug', { length: 100 }).primaryKey(),
+    displayName: varchar('display_name', { length: 255 }).notNull(),
+    tvlUsd: numeric('tvl_usd', { precision: 20, scale: 4 }).notNull(),
+    tvlChange24hPct: numeric('tvl_change_24h_pct', { precision: 10, scale: 4 }),
+    apyAvg: numeric('apy_avg', { precision: 10, scale: 4 }),
+    chains: jsonb('chains').notNull().default([]).$type<string[]>(),
+    rawSnapshot: text('raw_snapshot'),
+    fetchedAt: timestamp('fetched_at', { withTimezone: true }).notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('idx_protocol_snapshots_updated').on(table.updatedAt),
+  ],
+);
+
 // ─── On-Chain Data ──────────────────────────────────────────────────────────
 
 export const onchainSourceEnum = epsilonSchema.enum('onchain_source', ['dune', 'nansen']);

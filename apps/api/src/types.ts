@@ -347,7 +347,7 @@ export const JitSyncRequestSchema = z.object({
 
 export type JitSyncRequest = z.infer<typeof JitSyncRequestSchema>;
 
-export type JitSyncSource = 'live' | 'cache_fresh' | 'cache_stale' | 'no_data';
+export type JitSyncSource = 'live' | 'cache_fresh' | 'cache_stale' | 'db_cache' | 'no_data';
 
 export interface ProtocolSnapshot {
   slug: string;

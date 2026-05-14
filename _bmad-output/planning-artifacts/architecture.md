@@ -1290,6 +1290,8 @@ Do not purchase Glassnode, Token Terminal, or Arkham APIs for the initial launch
 *   Rely entirely on **DeFiLlama (Free)** for TVL, Yield, and basic flows.
 *   Purchase **Santiment Max ($249/mo)** as the primary investment for the "AI-Generated Discover Feed" to provide unique social sentiment value that competitors lack.
 
+> ⚠️ **Updated 2026-05-14**: This recommendation is **superseded for Stories 2.4–2.7** by the DeFiLlama Pro integration (Section 9). When shipping Stories 2.4–2.7, the platform commits to DeFiLlama Pro at $300/mo to enable hourly full-database crawls (~7,000 protocols, ~16,000 yield pools) and Pro-only endpoints (hacks, token unlocks). The Free-tier-only stance still applies for Glassnode/Token Terminal/Arkham per this recommendation. See Section 9.10 for cost trade-off analysis.
+
 ### Recommendation 2: Pass-Through Costs via BYOK (Bring Your Own Key)
 For extremely expensive or pay-per-call APIs (like Nansen's $0.05/call), shift the cost to the power users.
 *   **Leverage Epic 8.1 (BYOK):** Allow Quant Traders (Tier 2/3) to input their own Nansen API keys or connect their own Pay.sh wallets.
@@ -1302,3 +1304,177 @@ Do not release the "Deep Dive" OpenCode Tools to Free/Tier 1 users until **Epic 
 
 ### Recommendation 4: Shared Pool Throttling
 For Tier 1 users routed to the `global-tier1-sandbox-01` (Story 9.3), implement strict rate limiting (e.g., 3 premium queries per day) and heavily cache responses (e.g., cache a Token's Nansen data for 15 minutes globally so subsequent users asking about the same token do not trigger a new paid API call).
+
+---
+
+## Step 9: DeFiLlama Pro Integration Architecture (Stories 2.4 — 2.7)
+
+**Added:** 2026-05-14 (Winston — System Architect)
+
+This section documents architectural decisions for the DeFiLlama integration expansion (Stories 2.4 through 2.7) that supersede portions of "Recommendation 1: Aggressive Bootstrapping". With the DeFiLlama Pro subscription ($300/mo) now committed, the platform shifts from a single-protocol JIT lookup model (Story 1.2) to a comprehensive pre-indexed dataset covering TVL, Yields, DEX volumes, Fees, Stablecoins, Hacks, Token Unlocks, and Bridge volumes.
+
+### 9.1. Free vs Pro Endpoint Path Mapping (CRITICAL)
+
+DeFiLlama's Pro API is **not** simply an authenticated wrapper over the Free API. Endpoint paths differ between tiers, and Pro endpoints **embed the API key in the URL path** (not query params or headers):
+
+| Endpoint key | Free URL | Pro URL |
+|---|---|---|
+| `protocols` | `https://api.llama.fi/protocols` | `https://pro-api.llama.fi/{KEY}/api/protocols` |
+| `pools` (yields) | `https://yields.llama.fi/pools` | `https://pro-api.llama.fi/{KEY}/yields/pools` |
+| `dexs` | `https://api.llama.fi/overview/dexs` | `https://pro-api.llama.fi/{KEY}/api/overview/dexs` |
+| `fees` | `https://api.llama.fi/overview/fees` | `https://pro-api.llama.fi/{KEY}/api/overview/fees` |
+| `stablecoins` | `https://stablecoins.llama.fi/stablecoins` | `https://pro-api.llama.fi/{KEY}/stablecoins/stablecoins` |
+| `coin-prices` | `https://coins.llama.fi/prices/current/{coins}` | `https://pro-api.llama.fi/{KEY}/coins/prices/current/{coins}` |
+| `hacks` | (Pro-only) | `https://pro-api.llama.fi/{KEY}/api/hacks` |
+| `emissions` | (Pro-only) | `https://pro-api.llama.fi/{KEY}/api/emissions` |
+| `bridges` | `https://bridges.llama.fi/bridges` | `https://pro-api.llama.fi/{KEY}/bridges/bridges` |
+
+**Decision:** Centralize URL construction in a single helper `getDefillamaUrl(endpoint, proKey?)` exported from `apps/api/src/router/services/defillama.ts`. Story 2.4 introduces this helper; Stories 2.5–2.7 extend it. No service should construct DeFiLlama URLs inline.
+
+**Rationale:** Pro/Free paths diverge in three subdomains (`api.llama.fi`, `yields.llama.fi`, `stablecoins.llama.fi`, `bridges.llama.fi`, `coins.llama.fi`) plus `pro-api.llama.fi`. A central helper prevents future bugs where one service uses the wrong path.
+
+### 9.2. Two-Tier Cache Strategy (Stories 2.1 + 2.4)
+
+Story 2.1 introduces a 5-minute refresh worker for ~15 hot protocols. Story 2.4 adds a 1-hour refresh worker for all ~7,000 protocols. Both write to different tables; the JIT sync route reads from both:
+
+```
+Hot tier:  protocol_watchlist (15 active slugs) → protocol_tvl_snapshots (5min refresh)
+Full tier: defillama_protocols (~7,000 rows, 1h refresh)
+```
+
+**Lookup priority in `jit-sync.ts`:**
+1. If `slug ∈ protocol_watchlist` (active=true) → query `protocol_tvl_snapshots`, freshness window = `CRYPTO_SYNC_INTERVAL_MS` (5 min default).
+2. Else → query `defillama_protocols`, freshness window = `DEFILLAMA_SYNC_INTERVAL_MS` (1 h default).
+3. Both miss/stale → in-memory cache → live fetch (existing logic).
+4. All set `source: 'db_cache'` when serving from DB.
+
+**Rationale:** Hot tier refresh rate (5 min) is overkill for 7,000 protocols (worker would saturate API rate limits and burn $30/mo in unnecessary Pro calls). Full tier refresh (1 h) is too slow for the ~15 protocols rendered in dashboards (Story 3.1) where freshness matters. Two-tier separates concerns: hot path optimizes latency for known-popular protocols; full path provides coverage for the long tail.
+
+### 9.3. Per-Category Retry, Not Job-Level Retry
+
+DeFiLlama Pro plan has a 1,000 req/min rate limit. A naive BullMQ `attempts: 3` would retry the entire job (5 fetches × 3 attempts = 15 calls) on a single 429, wasting budget.
+
+**Decision:**
+- BullMQ job-level: `attempts: 1` (no job-level retry).
+- Per-category retry inline via `fetchWithRetry(url, retries=3, baseDelayMs=60_000)` — exponential backoff (60s, 120s, 240s) on 429/5xx, timeout 30s per fetch.
+- If one category exhausts retries, log and continue with other categories — never throw from `processJob`.
+
+**Rationale:** A single category failure (e.g., `/pools` rate-limited because we hit a 60-second budget cliff) should not invalidate the other 4 categories that succeeded. Job-level retry would re-fetch all 5, doubling the rate-limit pressure.
+
+### 9.4. Database Indexing Strategy
+
+The `defillama_pools` table will hold ~16,000 rows and is queried by Story 2.6 with multiple filters. **Decision:** Add 4 indexes upfront in Story 2.4 migration to avoid post-deploy performance fixes:
+
+```sql
+-- Story 2.6 query patterns:
+-- WHERE chain = ? AND tvl_usd > ? ORDER BY apy DESC
+-- WHERE project = ? ORDER BY apy DESC
+CREATE INDEX idx_defillama_pools_project ON epsilon.defillama_pools(project);
+CREATE INDEX idx_defillama_pools_chain ON epsilon.defillama_pools(chain);
+CREATE INDEX idx_defillama_pools_apy ON epsilon.defillama_pools(apy DESC);
+CREATE INDEX idx_defillama_pools_tvl ON epsilon.defillama_pools(tvl_usd DESC);
+```
+
+Performance target for Story 2.6 JIT route: P95 < 500 ms. Without these indexes, full-table scans on 16,000 rows during peak load would push P95 above 2 s.
+
+**Rationale:** "Postpone optimization" doesn't apply when query patterns are known at design time. The cost of adding 4 indexes during initial migration is trivial; refactoring after a production performance incident is not.
+
+### 9.5. Single Worker, Multiple Schedulers (Story 2.7)
+
+Story 2.7 needs to crawl Hacks/Emissions **daily** (low-frequency historical data) and Bridges **hourly** (alongside Story 2.4's main job). Naive solutions:
+- ❌ One scheduler with hourly cron: wastes Pro API budget on hacks (data unchanged for hours).
+- ❌ Two separate workers + queues: doubles process overhead, complicates lifecycle.
+
+**Decision:** One worker, one queue (`defillama-sync`), two `upsertJobScheduler` registrations:
+- `sync-defillama-full` — `every: 3_600_000ms`, job name `fetch-defillama-all` (Story 2.4 + bridges).
+- `sync-defillama-pro-daily` — `pattern: '41 2 * * *'` UTC, job name `fetch-defillama-pro-daily` (hacks + emissions).
+
+The worker handler dispatches by `job.name`:
+```typescript
+new Worker(QUEUE_NAME, async (job) => {
+  if (job.name === 'fetch-defillama-all') return processJob(job.id);
+  if (job.name === 'fetch-defillama-pro-daily') return processProDailyJob(job.id);
+  throw new Error(`Unknown job name: ${job.name}`);
+});
+```
+
+**Rationale:** BullMQ supports multiple schedulers per queue out of the box. One worker process keeps lifecycle simple (`startDefillamaWorker` / `stopDefillamaWorker` are still single-call), and dispatch-by-name keeps each handler focused.
+
+### 9.6. Bulk Upsert with Generated `set` Clauses
+
+Story 2.4 upserts 5 tables × ~50 columns total. Hand-written `set: { col1: sql\`excluded.col1\`, col2: sql\`excluded.col2\`, ... }` is ~50 lines of repetitive code per migration. Mistake-prone.
+
+**Decision:** Provide a `buildExcludedSet(table, excludeColumns?)` helper in `apps/api/src/queue/bullmq/workers/defillama-worker.ts` that introspects Drizzle table columns and emits an excluded-set object dynamically:
+
+```typescript
+function buildExcludedSet<T extends PgTable>(
+  table: T,
+  excludeColumns: string[] = [],
+): Record<string, unknown> {
+  const cols = getTableColumns(table);
+  const result: Record<string, unknown> = {};
+  for (const [name, col] of Object.entries(cols)) {
+    if (excludeColumns.includes(name) || name === 'createdAt') continue;
+    result[name] = sql.raw(`excluded.${(col as { name: string }).name}`);
+  }
+  return result;
+}
+
+// Usage:
+await db.insert(defillamaProtocols)
+  .values(batch)
+  .onConflictDoUpdate({
+    target: defillamaProtocols.slug,
+    set: buildExcludedSet(defillamaProtocols, ['slug']),
+  });
+```
+
+**Rationale:** Schema evolution (adding columns later) automatically includes the new column in upsert without manual update. Reduces boilerplate by ~80%.
+
+### 9.7. Memory Considerations for Bulk Crawls
+
+`/protocols` returns ~3-8 MB JSON (~7,000 objects). `/pools` returns ~5-15 MB (~16,000 objects). Combined peak heap during a crawl run: ~500 MB.
+
+**Decision:**
+- Chunk inserts at 500 rows/batch to stay below Postgres's 65,535 parameter limit and to release intermediate references between batches.
+- Document expected peak memory in worker file header comment.
+- Operator note: if deploying to a < 1 GB VPS, run worker in a separate process (future `WORKER_ONLY=true` env split — flagged as a follow-up but not blocking for current deployment targets).
+
+### 9.8. ILIKE Pattern Sanitization (Story 2.7)
+
+Story 2.7's risk lookup uses `ILIKE '%protocol%'` to match hack/unlock records. Postgres treats `%` and `_` as wildcards, so user input `100%` would match every row.
+
+**Decision:** Always sanitize ILIKE patterns:
+```typescript
+function escapeLikePattern(input: string): string {
+  return input.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+}
+```
+
+This is defensive even though the input flows through the `protocol_slug` Zod schema (no `%` or `_` typically) — defense in depth costs nothing.
+
+### 9.9. Migration Sequencing Constraint
+
+Stories 2.4 and 2.7 each generate a migration file:
+- Story 2.4 → `0004_defillama_tables.sql`
+- Story 2.7 → `0005_defillama_pro_tables.sql`
+
+**Constraint:** Story 2.4 migration MUST be committed before any work begins on Stories 2.5/2.6/2.7. Otherwise, parallel stories may both attempt to generate `0005_*.sql` and collide.
+
+This is documented in each story's "Dev Notes" section. Sprint sequencing in `sprint-status.yaml` enforces this implicitly: only Story 2.4 is `ready-for-dev`; 2.5/2.6/2.7 remain `backlog` until 2.4 reaches `done`.
+
+### 9.10. Cost Impact
+
+| Item | Monthly Cost |
+|---|---|
+| DeFiLlama Pro subscription | $300 |
+| Postgres storage (~50 MB additional for new tables) | <$1 |
+| Background worker compute (1 core, ~10% utilization) | ~$5 (incremental on existing API host) |
+| **Total incremental** | **~$306/mo** |
+
+**Trade-off vs Free:**
+- Free tier rate limit (~10 req/min, anecdotal) → could not sustain hourly full crawls of all 5 categories.
+- Pro tier (1,000 req/min) → sustains full crawls plus burst capacity for Stories 2.5/2.6/2.7 JIT routes.
+- Pro-only data (hacks, emissions) unlocks Story 2.7's risk-scoring use case, which is a differentiator vs competitors.
+
+This $300/mo investment supersedes the original "DeFiLlama Free only" recommendation in Section 3.1 for any deployment that ships Stories 2.4–2.7.

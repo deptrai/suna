@@ -162,3 +162,15 @@ Items deferred from code reviews — pre-existing issues or hard policy calls th
 - Obtrusive UI overlay for trigger button: absolute placement. Deferred as it's transparent (opacity-0) until hovered, mitigating obtrusiveness.
 - Global performance drag in markdown renderer: trigger injected in generic component. Deferred because logic is fast and low-impact.
 - Hardcoded defaults in TradingViewChart: defaults to 4h and BTC-USDT. Deferred, acceptable for this MVP/Story boundary.
+
+## Deferred from: code review of 2-1-crypto-data-worker-with-bullmq (2026-05-14)
+
+- `rawSnapshot` column always null [crypto-worker.ts:57] — reserved for future use, documented in Dev Notes; either remove or populate later.
+- `stopCryptoWorker` no timeout on `worker.close()` [crypto-worker.ts:144-152] — hang risk during shutdown if job in-flight; add `Promise.race` with timeout.
+- Multiple horizontal worker instances → 2x DeFiLlama requests on same slug [crypto-worker.ts:108-116] — operator-level concern; BullMQ row-level lock + Postgres upsert prevents data corruption but wastes API budget.
+- DB cache hit but chain filter mismatch (worker stores aggregate TVL, JIT route ignores `chain=` param in DB lookup) [jit-sync.ts:63-72 + crypto-worker.ts:37] — chain-filtered request gets stale all-chain TVL; worker should store per-chain rows OR JIT route should skip db_cache when chain is set.
+- `db_cache` path charges full credits same as live fetch [jit-sync.ts:101] — product decision needed; if intent is DB-cached cheaper, requires config knob.
+- Empty `protocol_watchlist` → silent no-op success [crypto-worker.ts:29-32] — operator monitoring concern; add warn log if active count is 0.
+- AC1 Redis service not added to `core/docker/docker-compose.dev.yml` (production `scripts/compose/docker-compose.yml` already has it) — document gap.
+- `_journal.json` missing trailing newline [packages/db/drizzle/meta/_journal.json:275] — cosmetic.
+- `updatedAt: new Date()` set explicitly instead of relying on DB `defaultNow()` trigger [crypto-worker.ts:69] — theoretical clock skew issue between app and DB host.

@@ -121,6 +121,10 @@ const envSchema = z.object({
   GEMINI_API_KEY:              optStr,
   GROQ_API_URL:                optUrl('https://api.groq.com/openai/v1'),
   GROQ_API_KEY:                optStr,
+
+  // ── Chainlens MaaS Proxy (optional — exposes claude-* via custom proxy) ─
+  ANTHROPIC_PROXY_URL:         optStr,
+  ANTHROPIC_PROXY_API_KEY:     optStr,
   // ── Billing — Stripe (optional, only for cloud billing) ──────────────────
   STRIPE_SECRET_KEY:           optStr,
   STRIPE_WEBHOOK_SECRET:       optStr,
@@ -219,7 +223,7 @@ const envSchema = z.object({
   EPSILON_DATA_DIR:             optStr,
 
   // ─── Redis (BullMQ) ────────────────────────────────────────────────────────
-  REDIS_URL:                   optStr,
+  REDIS_URL:                   optStrDefault('redis://localhost:6379'),
 
   // ─── Discover Feed Worker ─────────────────────────────────────────────────
   DISCOVER_WORKER_ENABLED:     optBoolFalse,
@@ -237,6 +241,11 @@ const envSchema = z.object({
   ARBISCAN_API_KEY:            optStr,
   BASESCAN_API_KEY:            optStr,
   POLYGONSCAN_API_KEY:         optStr,
+
+  // ─── Crypto Data Worker (BullMQ) ──────────────────────────────────────────
+  CRYPTO_WORKER_ENABLED:       optBoolFalse,
+  CRYPTO_SYNC_INTERVAL_MS:     optInt(300_000),
+  CRYPTO_WORKER_CONCURRENCY:   optInt(1),
   });
 
 // ─── Validation + Conditional Checks ────────────────────────────────────────
@@ -452,6 +461,10 @@ export const config = {
   GEMINI_API_KEY: env.GEMINI_API_KEY,
   GROQ_API_URL: env.GROQ_API_URL,
   GROQ_API_KEY: env.GROQ_API_KEY,
+
+  // ─── Chainlens MaaS Proxy (claude-* via apps/chainlens-proxy) ────────────
+  ANTHROPIC_PROXY_URL: env.ANTHROPIC_PROXY_URL,
+  ANTHROPIC_PROXY_API_KEY: env.ANTHROPIC_PROXY_API_KEY,
   // ─── Stripe (Billing) ─────────────────────────────────────────────────────
   STRIPE_SECRET_KEY: env.STRIPE_SECRET_KEY,
   STRIPE_WEBHOOK_SECRET: env.STRIPE_WEBHOOK_SECRET,
@@ -598,6 +611,11 @@ export const config = {
   DUNE_API_KEY: env.DUNE_API_KEY,
   NANSEN_API_KEY: env.NANSEN_API_KEY,
   // Removed duplicates
+
+  // ─── Crypto Data Worker (BullMQ) ──────────────────────────────────────────
+  CRYPTO_WORKER_ENABLED: env.CRYPTO_WORKER_ENABLED,
+  CRYPTO_SYNC_INTERVAL_MS: env.CRYPTO_SYNC_INTERVAL_MS,
+  CRYPTO_WORKER_CONCURRENCY: env.CRYPTO_WORKER_CONCURRENCY,
 
   // ─── Helper Methods ────────────────────────────────────────────────────────
 

@@ -17,7 +17,7 @@ type JitSyncProxyResponse =
       apy_avg: number | null;
       chains: string[];
       stale: boolean;
-      source: 'live' | 'cache_fresh' | 'cache_stale';
+      source: 'live' | 'cache_fresh' | 'cache_stale' | 'db_cache';
       fetched_at: string;
       cost: number;
     }

@@ -22,6 +22,13 @@
       "when": 1746810000000,
       "tag": "0002_onchain_data_index",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1747180800000,
+      "tag": "0003_crypto_tables",
+      "breakpoints": true
     }
   ]
 }

@@ -29,7 +29,7 @@
 | Docker | 24+ | latest |
 | Bun | 1.x | latest |
 
-**Providers được test:** Hetzner CX22+, JustAVPS pro, DigitalOcean 4GB+
+**Providers được test:** Hetzner CX22+, DigitalOcean 4GB+
 
 ---
 
@@ -94,7 +94,7 @@ npm install -g supabase
 
 ```bash
 cd ~
-git clone https://github.com/epsilon-ai/chainlens.git
+git clone https://github.com/deptrai/chainlens.git
 cd chainlens
 git submodule update --init --recursive
 ```
@@ -131,15 +131,17 @@ API_KEY_SECRET=<64-char-hex>
 TUNNEL_SIGNING_SECRET=<random-string>
 
 # Sandbox provider
-ALLOWED_SANDBOX_PROVIDERS=justavps     # hoặc local_docker nếu chạy sandbox local
+ALLOWED_SANDBOX_PROVIDERS=daytona
 
-# JustAVPS (nếu dùng)
-JUSTAVPS_API_URL=https://justavps.com/api/v1
-JUSTAVPS_API_KEY=<key>
-JUSTAVPS_PROXY_DOMAIN=epsilon.cloud
+# Daytona (sandbox provider)
+DAYTONA_API_KEY=<daytona-api-key>
+DAYTONA_SERVER_URL=https://app.daytona.io/api
+DAYTONA_TARGET=eu                       # QUAN TRỌNG: dùng "eu" (us region không available)
+DAYTONA_SNAPSHOT=vonicvn/computer:latest  # Image sandbox — build từ core/docker/Dockerfile
 
 # LLM (ít nhất 1 provider)
 OPENROUTER_API_KEY=<key>
+ANTHROPIC_API_KEY=<key>
 
 # Vibe Trading (backtest service)
 VIBE_TRADING_API_KEY=<openssl rand -hex 32>
@@ -148,6 +150,7 @@ VIBE_TRADING_ALLOWED_IPS=172.30.0.0/16
 
 # Frontend URL
 FRONTEND_URL=https://yourdomain.com
+EPSILON_URL=https://api.yourdomain.com/v1/router
 
 # CORS
 CORS_ALLOWED_ORIGINS=https://yourdomain.com
@@ -193,7 +196,24 @@ REDIS_URL=redis://redis:6379/0
 
 ## Khởi động services
 
-### Option A: Docker Compose (khuyến nghị cho production)
+### Option A: Dokploy (khuyến nghị cho production)
+
+Chainlens production chạy trên **Dokploy** (Docker Swarm). Các services được quản lý qua Dokploy dashboard tại `http://<server-ip>:3000`.
+
+**Services hiện tại trên production (167.172.66.16):**
+
+| Service | Container | Port | Mô tả |
+|---|---|---|---|
+| `api` | `api-djcsof` | 8008 | Backend API (Bun + Hono) |
+| `frontend` | `frontend-pyzi0j` | 3000 | Next.js web app |
+| `vibe-backend` | `vibe-backend-jlwjp5` | 8899 | Backtest API (FastAPI) |
+| `dokploy-redis` | `dokploy-redis` | 6379 | Redis (Celery queue) |
+
+**Deploy qua Dokploy:**
+- Push code lên branch `feat/rename-chainlens-epsilon` → auto-deploy (autoDeploy=true)
+- Hoặc trigger manual qua Dokploy dashboard
+
+### Option B: Docker Compose (dev/staging)
 
 ```bash
 cd ~/chainlens
@@ -209,19 +229,9 @@ docker compose -f scripts/compose/docker-compose.yml logs -f epsilon-api
 docker compose -f scripts/compose/docker-compose.yml logs -f vibe-trading
 ```
 
-**Services trong compose:**
-
-| Service | Port | Mô tả |
-|---|---|---|
-| `epsilon-api` | 8008 | Backend API (Bun + Hono) |
-| `vibe-trading` | 127.0.0.1:8899 | Backtest API (FastAPI) |
-| `vibe-trading-worker` | — | Celery worker xử lý backtest jobs |
-| `redis` | internal | Queue cho Celery |
-| `frontend` | 3000 | Next.js (nếu dùng profile `frontend`) |
-
 > **Lưu ý:** Frontend thường deploy qua Vercel. Chỉ dùng profile `frontend` nếu self-host.
 
-### Option B: Chạy thủ công (dev/debug)
+### Option C: Chạy thủ công (dev/debug)
 
 ```bash
 # Terminal 1 — API
@@ -315,7 +325,7 @@ cd ~/chainlens
 bash scripts/deploy-zero-downtime.sh
 
 # Deploy từ prebuilt Docker Hub image (nhanh hơn, dùng trong CI)
-PREBUILT_IMAGE=epsilon/epsilon-api:0.8.30 bash scripts/deploy-zero-downtime.sh
+PREBUILT_IMAGE=vonicvn/epsilon-api:0.8.30 bash scripts/deploy-zero-downtime.sh
 ```
 
 **Quy trình:**
@@ -330,13 +340,42 @@ PREBUILT_IMAGE=epsilon/epsilon-api:0.8.30 bash scripts/deploy-zero-downtime.sh
 
 ```bash
 # Trigger dev deploy thủ công
-gh workflow run deploy-dev.yml --repo epsilon-ai/chainlens
+gh workflow run deploy-dev.yml --repo deptrai/chainlens
 
 # Promote lên production
-gh workflow run release.yml --repo epsilon-ai/chainlens \
+gh workflow run release.yml --repo deptrai/chainlens \
   -f version="0.8.30" \
   -f title="Release title"
 ```
+
+---
+
+## Build sandbox image (epsilon/computer)
+
+Sandbox image được build từ `core/docker/Dockerfile` và push lên Docker Hub (`vonicvn/computer`).
+
+```bash
+# Tạo buildx builder (lần đầu)
+docker buildx create --name epsilon-builder --driver docker-container --bootstrap
+docker buildx use epsilon-builder
+
+# Build và push multi-arch (amd64 + arm64)
+cd /path/to/chainlens
+docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  --build-arg SANDBOX_VERSION=0.1.0 \
+  -t vonicvn/computer:0.1.0 \
+  -t vonicvn/computer:latest \
+  -f core/docker/Dockerfile \
+  --push \
+  .
+```
+
+Sau khi push xong, update `DAYTONA_SNAPSHOT=vonicvn/computer:0.1.0` trong Dokploy env của API và redeploy.
+
+**Lưu ý quan trọng:**
+- `DAYTONA_TARGET=eu` — bắt buộc, region `us` không available cho org này
+- `DAYTONA_SNAPSHOT` phải là Docker image name (có `:`) để Daytona pull trực tiếp thay vì dùng snapshot registry
 
 ---
 
@@ -370,10 +409,27 @@ curl -X POST https://api.yourdomain.com/v1/router/vibe-trading/jobs \
 
 ```bash
 # Xem logs
-docker logs epsilon-api-blue 2>&1 | tail -50
+docker logs api-djcsof.1.<task-id> 2>&1 | tail -50
 
 # Kiểm tra env vars bắt buộc
-docker exec epsilon-api-blue env | grep -E "DATABASE_URL|SUPABASE|API_KEY_SECRET"
+docker exec <api-container> env | grep -E "DATABASE_URL|SUPABASE|API_KEY_SECRET"
+```
+
+### Sandbox 502 — port not ready
+
+Nguyên nhân phổ biến:
+1. **`DAYTONA_SNAPSHOT` sai** — đang trỏ vào image không có epsilon-master (vd `kortix/suna:*`)
+2. **`DAYTONA_TARGET=us`** — region us không available, phải dùng `eu`
+3. **Image chưa được build/push** — `vonicvn/computer` chưa tồn tại trên Docker Hub
+
+```bash
+# Kiểm tra env của API container
+docker inspect <api-container> | python3 -c "import json,sys; d=json.load(sys.stdin)[0]; [print(e) for e in d['Config']['Env'] if 'DAYTONA' in e]"
+
+# Kiểm tra Daytona sandbox state
+curl -s 'https://app.daytona.io/api/sandbox/<sandbox-id>' \
+  -H 'Authorization: Bearer <DAYTONA_API_KEY>' \
+  -H 'daytona-target: eu' | python3 -m json.tool
 ```
 
 ### Vibe-Trading 403 từ epsilon-api
@@ -382,7 +438,7 @@ Nguyên nhân: IP của epsilon-api container không nằm trong `ALLOWED_IPS`.
 
 ```bash
 # Kiểm tra IP của epsilon-api trong network
-docker inspect epsilon-api-blue | grep -A5 '"sandbox-network"'
+docker inspect <api-container> | grep -A5 '"sandbox-network"'
 
 # Phải khớp với VIBE_TRADING_ALLOWED_IPS và subnet trong docker-compose.yml
 # Mặc định: 172.30.0.0/16
@@ -398,16 +454,6 @@ curl https://api.yourdomain.com/v1/router/vibe-trading/jobs/<job_id> \
   -H "Authorization: Bearer <JWT>"
 ```
 
-### INTERNAL_SERVICE_KEY mismatch
-
-```bash
-# Đọc key từ sandbox container
-docker exec epsilon-sandbox cat /workspace/.persistent-system/secrets/.bootstrap-env.json
-
-# Cập nhật vào apps/api/.env rồi restart
-docker restart epsilon-api-blue
-```
-
 ### nginx swap fail sau deploy
 
 ```bash
@@ -420,3 +466,20 @@ nginx -t
 # Xem port nào đang active
 ss -tlnp | grep -E "8008|8009"
 ```
+
+### Stripe sync errors trong logs
+
+```
+[resolve-account] Stripe sync error: Failed query: select ... from "basejump"."billing_customers"
+```
+
+Không ảnh hưởng core functionality — `basejump.billing_customers` table không tồn tại vì Stripe chưa được setup. Bỏ qua nếu không dùng billing.
+
+### Tài khoản seed (test)
+
+Production seed account (tạo qua Supabase Admin API + psql trực tiếp):
+- Email: `test@test.com`
+- Password: `password123`
+- User ID: `193acc32-6306-4a83-9415-c7a55ff59f9e`
+
+Đăng nhập bằng password: `https://chainlens.net/auth?auth=password`

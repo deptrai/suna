@@ -2,7 +2,7 @@ import Redis, { type RedisOptions } from 'ioredis';
 import { config } from '../../config';
 import { logger } from '../../lib/logger';
 
-const redisUrl = config.REDIS_URL || 'redis://localhost:6379';
+const redisUrl = config.REDIS_URL;
 
 const redisOptions: RedisOptions = {
   maxRetriesPerRequest: null,

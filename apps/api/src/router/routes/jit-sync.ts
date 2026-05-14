@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { db } from '../../shared/db';
-import { onChainDataIndex } from '@epsilon/db';
+import { onChainDataIndex, protocolTvlSnapshots } from '@epsilon/db';
 import { desc, eq } from 'drizzle-orm';
 import { HTTPException } from 'hono/http-exception';
 import { logger } from '../../lib/logger';
@@ -21,7 +21,7 @@ import {
   formatSnapshot,
 } from '../services/jit-cache';
 import { checkCredits, deductToolCredits } from '../services/billing';
-import { getToolCost } from '../../config';
+import { getToolCost, config } from '../../config';
 
 const jitSync = new Hono<{ Variables: AppContext }>();
 
@@ -58,50 +58,86 @@ jitSync.post('/', async (c) => {
   let stale = false;
   let shouldDeduct = false;
 
-  try {
-    const fresh = getCached(key);
-    if (fresh) {
-      data = fresh.data;
-      source = 'cache_fresh';
-      fetched_at = fresh.fetched_at;
-      shouldDeduct = true;
-    } else {
-      data = await dedupedFetch(key, () => fetchProtocolSnapshot(slug, { chain }));
-      source = 'live';
-      fetched_at = new Date().toISOString();
-      shouldDeduct = true;
-    }
-  } catch (defillamaErr) {
-    const cached = getCachedAny(key);
-    if (cached) {
-      data = cached.data;
-      source = 'cache_stale';
-      fetched_at = cached.fetched_at;
-      stale = true;
-      shouldDeduct = true;
-      console.warn(
-        `[EPSILON] JIT sync stale-fallback for '${slug}' (chain=${chain ?? 'all'}): ${
-          defillamaErr instanceof Error ? defillamaErr.message : String(defillamaErr)
-        }`,
-      );
-    } else {
-      console.warn(
-        `[EPSILON] JIT sync no-data for '${slug}' (chain=${chain ?? 'all'}): ${
-          defillamaErr instanceof Error ? defillamaErr.message : String(defillamaErr)
-        }`,
-      );
-      const errorResponse: JitSyncErrorResponse = {
-        slug,
-        success: false,
-        snapshot: '',
-        error: 'DeFiLlama unavailable and no cached data',
-        stale: true,
-        source: 'no_data',
-        fetched_at: new Date().toISOString(),
-        cost: 0,
-      };
-      c.header('X-Cache-Status', 'no-data');
-      return c.json(errorResponse);
+  // DB cache lookup — populated by BullMQ crypto worker (Story 2.1).
+  // Serves as "warm" path before in-memory cache and live DeFiLlama fetch.
+  const CRYPTO_INTERVAL_MS = config.CRYPTO_SYNC_INTERVAL_MS;
+  const dbRow = await db
+    .select()
+    .from(protocolTvlSnapshots)
+    .where(eq(protocolTvlSnapshots.slug, slug))
+    .limit(1)
+    .then((rows) => rows[0] ?? null)
+    .catch(() => null);
+
+  const dbRowAge =
+    dbRow && dbRow.updatedAt ? Date.now() - new Date(dbRow.updatedAt).getTime() : Infinity;
+  const dbTvl = dbRow ? parseFloat(dbRow.tvlUsd) : NaN;
+  const dbRowFresh =
+    dbRow != null && dbRowAge < CRYPTO_INTERVAL_MS && Number.isFinite(dbTvl);
+
+  if (dbRow && dbRowFresh) {
+    const tvlChange =
+      dbRow.tvlChange24hPct != null ? parseFloat(dbRow.tvlChange24hPct) : null;
+    const apy = dbRow.apyAvg != null ? parseFloat(dbRow.apyAvg) : null;
+    data = {
+      slug: dbRow.slug,
+      name: dbRow.displayName,
+      tvl_usd: dbTvl,
+      tvl_change_24h_pct: tvlChange != null && Number.isFinite(tvlChange) ? tvlChange : null,
+      apy_avg: apy != null && Number.isFinite(apy) ? apy : null,
+      chains: Array.isArray(dbRow.chains) ? (dbRow.chains as string[]) : [],
+    };
+    source = 'db_cache';
+    fetched_at = dbRow.fetchedAt
+      ? new Date(dbRow.fetchedAt).toISOString()
+      : new Date(dbRow.updatedAt).toISOString();
+    shouldDeduct = true;
+  } else {
+    try {
+      const fresh = getCached(key);
+      if (fresh) {
+        data = fresh.data;
+        source = 'cache_fresh';
+        fetched_at = fresh.fetched_at;
+        shouldDeduct = true;
+      } else {
+        data = await dedupedFetch(key, () => fetchProtocolSnapshot(slug, { chain }));
+        source = 'live';
+        fetched_at = new Date().toISOString();
+        shouldDeduct = true;
+      }
+    } catch (defillamaErr) {
+      const cached = getCachedAny(key);
+      if (cached) {
+        data = cached.data;
+        source = 'cache_stale';
+        fetched_at = cached.fetched_at;
+        stale = true;
+        shouldDeduct = true;
+        console.warn(
+          `[EPSILON] JIT sync stale-fallback for '${slug}' (chain=${chain ?? 'all'}): ${
+            defillamaErr instanceof Error ? defillamaErr.message : String(defillamaErr)
+          }`,
+        );
+      } else {
+        console.warn(
+          `[EPSILON] JIT sync no-data for '${slug}' (chain=${chain ?? 'all'}): ${
+            defillamaErr instanceof Error ? defillamaErr.message : String(defillamaErr)
+          }`,
+        );
+        const errorResponse: JitSyncErrorResponse = {
+          slug,
+          success: false,
+          snapshot: '',
+          error: 'DeFiLlama unavailable and no cached data',
+          stale: true,
+          source: 'no_data',
+          fetched_at: new Date().toISOString(),
+          cost: 0,
+        };
+        c.header('X-Cache-Status', 'no-data');
+        return c.json(errorResponse);
+      }
     }
   }
 
@@ -119,7 +155,7 @@ jitSync.post('/', async (c) => {
 
   c.header(
     'X-Cache-Status',
-    source === 'live' ? 'fresh' : source === 'cache_fresh' ? 'hit' : 'stale-fallback',
+    source === 'db_cache' ? 'db-cache' : source === 'live' ? 'fresh' : source === 'cache_fresh' ? 'hit' : 'stale-fallback',
   );
 
   const result = c.json(response);

@@ -81,6 +81,9 @@ export {
   // On-Chain Data
   onChainDataIndex,
   onchainSourceEnum,
+  // Protocol TVL (Crypto Worker)
+  protocolWatchlist,
+  protocolTvlSnapshots,
   // Pool
   poolResources,
   poolSandboxes,

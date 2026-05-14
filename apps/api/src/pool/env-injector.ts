@@ -34,6 +34,10 @@ function buildEnvPayload(serviceKey: string, metadata?: Record<string, unknown>)
     EPSILON_SANDBOX_VERSION: SANDBOX_VERSION,
     EPSILON_YOLO_API_KEY: serviceKey,
     EPSILON_YOLO_URL: config.EPSILON_YOLO_URL,
+    ...(config.ANTHROPIC_PROXY_URL && config.ANTHROPIC_PROXY_API_KEY ? {
+      ANTHROPIC_PROXY_URL: config.ANTHROPIC_PROXY_URL,
+      ANTHROPIC_PROXY_API_KEY: config.ANTHROPIC_PROXY_API_KEY,
+    } : {}),
     TAVILY_API_URL: `${routerBase}/tavily`,
     REPLICATE_API_URL: `${routerBase}/replicate`,
     SERPER_API_URL: `${routerBase}/serper`,

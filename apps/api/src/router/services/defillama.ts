@@ -56,17 +56,18 @@ function compute24hChange(tvlArr: DeFiLlamaTvlEntry[]): number | null {
 
 export async function fetchProtocolSnapshot(
   slug: string,
-  options: { chain?: string } = {},
+  options: { chain?: string; timeoutMs?: number } = {},
 ): Promise<ProtocolSnapshot> {
   const baseUrl = config.DEFILLAMA_API_URL.replace(/\/+$/, '');
   const url = `${baseUrl}/protocol/${encodeURIComponent(slug)}`;
+  const timeoutMs = options.timeoutMs ?? JIT_SYNC_TIMEOUT_MS;
 
   const startTime = Date.now();
 
   let response: Response;
   try {
     response = await fetch(url, {
-      signal: AbortSignal.timeout(JIT_SYNC_TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     });
   } catch (e) {
     throw new Error(`DeFiLlama request failed: ${e instanceof Error ? e.message : String(e)}`);
