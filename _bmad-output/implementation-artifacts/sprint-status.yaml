@@ -1,12 +1,11 @@
 # generated: 2026-05-09
-# last_updated: 2026-05-14 (Story 2.1 done — code review patches applied)
+# last_updated: 2026-05-15 (Story 8.3.1 ready-for-dev — fallback feature documented post-implementation)
 # project: chainlensnlens
 # project_key: NOKEY
 # tracking_system: file-system
 # story_location: _bmad-output/implementation-artifacts
 
 # STATUS DEFINITIONS:
-# ==================
 # Epic Status:
 #   - backlog: Epic not yet started
 #   - in-progress: Epic actively being worked on
@@ -28,15 +27,14 @@
 #   - done: Retrospective has been completed
 #
 # WORKFLOW NOTES:
-# ===============
 # - Epic transitions to 'in-progress' automatically when first story is created
 # - Stories can be worked in parallel if team capacity allows
 # - Developer typically creates next story after previous one is 'done' to incorporate learnings
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-13 (Story 10.1 ready-for-dev)
-project: chainlensnlens
+last_updated: 2026-05-15 (Story 8.3.1 ready-for-dev — fallback feature documented post-implementation)
+project: chainlens
 project_key: NOKEY
 tracking_system: file-system
 story_location: _bmad-output/implementation-artifacts
@@ -55,19 +53,14 @@ development_status:
   # Epic 2: Crypto Data Infrastructure
   epic-2: in-progress
   2-1-crypto-data-worker-with-bullmq: done
-
   2-1-1-mempool-sniffing-mev-tracking: backlog
   2-1-2-entity-hacker-wallet-tracking: backlog
   2-2-ai-generated-discover-feed: done
   2-2-1-on-chain-fact-checking-layer: backlog
-  2-2-2-social-sentiment-narrative-clustering: review
+  2-2-2-social-sentiment-narrative-clustering: done
   2-3-dune-and-nansen-on-chain-index-worker: done
   2-3-1-vip-api-smart-money-flow: backlog
   2-3-2-financial-statement-data-token-terminal: backlog
-  2-4-defillama-full-crawler-worker: ready-for-dev
-  2-5-token-price-lookup-tool: backlog
-  2-6-yields-apy-lookup-tool: backlog
-  2-7-defillama-pro-data-tools: backlog
   epic-2-retrospective: optional
 
   # Epic 3: Crypto Native Trading UI
@@ -117,10 +110,11 @@ development_status:
   epic-7-retrospective: optional
 
   # Epic 8: Enterprise & Privacy
-  epic-8: backlog
+  epic-8: in-progress
   8-1-byok-bring-your-own-api-key: backlog
   8-2-ollama-local-llm-integration: backlog
   8-3-llm-proxy-and-maas: backlog
+  8-3-1-llm-proxy-bidirectional-fallback: ready-for-dev
   8-4-zero-data-leakage-enforcement-tier-3: backlog
   epic-8-retrospective: optional
 

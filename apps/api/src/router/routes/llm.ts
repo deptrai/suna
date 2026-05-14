@@ -56,7 +56,14 @@ llm.post('/chat/completions', async (c) => {
   }
 
   const modelConfig = getModel(modelId);
-  const response = await proxyToOpenRouter(body, isStreaming);
+  // Pass through headers so proxyToOpenRouter can detect the loop-guard
+  // (X-Fallback-Source) when the request is already a fallback retry from
+  // chainlens-proxy.
+  const requestHeaders: Record<string, string> = {};
+  for (const [k, v] of Object.entries(c.req.header())) {
+    if (typeof v === 'string') requestHeaders[k.toLowerCase()] = v;
+  }
+  const response = await proxyToOpenRouter(body, isStreaming, requestHeaders);
 
   if (!response.ok) {
     const errorBody = await response.text();

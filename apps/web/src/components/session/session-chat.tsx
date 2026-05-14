@@ -115,6 +115,10 @@ import { getClient } from '@/lib/opencode-sdk';
 import { playSound } from '@/lib/sounds';
 import { cn } from '@/lib/utils';
 import {
+  isClaudeFallbackModel,
+  getFallbackProvider,
+} from '@/lib/llm/claude-fallback';
+import {
   stripEpsilonSystemTags,
   extractSessionReport,
   extractEpsilonSystemMessages,
@@ -2845,6 +2849,17 @@ interface SessionTurnProps {
     requestId: string,
     reply: 'once' | 'always' | 'reject',
   ) => Promise<void>;
+  /** Currently-selected model — used by fallback retry button. */
+  currentModel?: { providerID: string; modelID: string } | null;
+  /**
+   * Retry the failing turn with the symmetric fallback provider
+   * (epsilon ↔ anthropic-proxy). Only invoked when the model is in the
+   * claude whitelist (see `lib/llm/claude-fallback.ts`).
+   */
+  onRetryWithFallback?: (
+    userMessageId: string,
+    altProviderID: string,
+  ) => Promise<void>;
 }
 
 function SessionTurn({
@@ -2865,6 +2880,8 @@ function SessionTurn({
   commands,
   disableToolNavigation,
   onPermissionReply,
+  currentModel,
+  onRetryWithFallback,
 }: SessionTurnProps) {
   const [copied, setCopied] = useState(false);
   const [userCopied, setUserCopied] = useState(false);
@@ -3003,6 +3020,32 @@ function SessionTurn({
 
   // Shell mode detection
   const shellModePart = useMemo(() => getShellModePart(turn), [turn]);
+
+  // Fallback retry info — populated only when:
+  // - The current model is in the claude whitelist
+  // - A symmetric provider partner exists (epsilon ↔ anthropic-proxy)
+  // - A retry handler is available
+  // The button itself only renders when the error text smells like an
+  // upstream/URL parse failure (TurnErrorDisplay handles that filter).
+  const fallbackInfo = useMemo(() => {
+    if (!currentModel || !onRetryWithFallback) return null;
+    if (!isClaudeFallbackModel(currentModel.modelID)) return null;
+    const altProvider = getFallbackProvider(currentModel.providerID);
+    if (!altProvider) return null;
+    const labelMap: Record<string, string> = {
+      epsilon: 'Epsilon',
+      'anthropic-proxy': 'Anthropic Proxy',
+    };
+    return {
+      altProvider,
+      label: labelMap[altProvider] ?? altProvider,
+    };
+  }, [currentModel, onRetryWithFallback]);
+
+  const handleFallbackRetry = useCallback(async () => {
+    if (!fallbackInfo || !onRetryWithFallback) return;
+    await onRetryWithFallback(turn.userMessage.info.id, fallbackInfo.altProvider);
+  }, [fallbackInfo, onRetryWithFallback, turn.userMessage.info.id]);
 
   // Permission matching for this session (used for tool-level permission overlays)
   const nextPermission = useMemo(
@@ -3392,7 +3435,12 @@ function SessionTurn({
           defaultOpen
         />
         {turnError && (
-          <TurnErrorDisplay errorText={turnError} className="mt-2" />
+          <TurnErrorDisplay
+            errorText={turnError}
+            className="mt-2"
+            onRetryWithFallback={fallbackInfo ? handleFallbackRetry : undefined}
+            fallbackProviderLabel={fallbackInfo?.label}
+          />
         )}
         <ConnectProviderDialog
           open={connectProviderOpen}
@@ -4005,7 +4053,13 @@ function SessionTurn({
       )}
 
       {/* ── Error (abort / failure banner) ── */}
-      {turnError && <TurnErrorDisplay errorText={turnError} />}
+      {turnError && (
+        <TurnErrorDisplay
+          errorText={turnError}
+          onRetryWithFallback={fallbackInfo ? handleFallbackRetry : undefined}
+          fallbackProviderLabel={fallbackInfo?.label}
+        />
+      )}
 
       {/* Question prompt — now rendered inside the chat input card (questionSlot) */}
 
@@ -5458,6 +5512,43 @@ export function SessionChat({
     ],
   );
 
+  const handleRetryWithFallback = useCallback(
+    async (userMessageId: string, altProviderID: string) => {
+      const msg = messages?.find((item) => item.info.id === userMessageId);
+      if (!msg) {
+        console.warn('[fallback-retry] user message not found', userMessageId);
+        return;
+      }
+      const parts = buildForkPrompt(msg.parts);
+      if (parts.length === 0) {
+        console.warn('[fallback-retry] no parts to resend', userMessageId);
+        return;
+      }
+      const currentKey = local.model.currentKey;
+      if (!currentKey) {
+        console.warn('[fallback-retry] no current model selected');
+        return;
+      }
+      const altModel = { providerID: altProviderID, modelID: currentKey.modelID };
+      const client = getClient();
+      const res = await client.session.promptAsync({
+        sessionID: sessionId,
+        parts,
+        ...(session?.directory ? { directory: session.directory } : {}),
+        ...(local.agent.current ? { agent: local.agent.current.name } : {}),
+        model: altModel,
+      } as any);
+      if (res?.error) {
+        const message =
+          (typeof (res.error as any)?.data?.message === 'string' && (res.error as any).data.message) ||
+          (typeof res.error === 'string' && res.error) ||
+          'Fallback retry failed';
+        throw new Error(message);
+      }
+    },
+    [messages, sessionId, session?.directory, local.agent, local.model],
+  );
+
   const handleEditFork = useCallback(
     async (userMessageId: string, newText: string) => {
       const msg = messages?.find((item) => item.info.id === userMessageId);
@@ -6421,6 +6512,8 @@ export function SessionChat({
                         commands={commands}
                         disableToolNavigation={disableToolNavigation}
                         onPermissionReply={handlePermissionReply}
+                        currentModel={local.model.currentKey ?? null}
+                        onRetryWithFallback={handleRetryWithFallback}
                       />
                     </div>
                   );

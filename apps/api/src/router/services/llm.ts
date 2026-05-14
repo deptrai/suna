@@ -1,5 +1,8 @@
 import { config, EPSILON_MARKUP } from '../../config';
 import { getModel, getAllModels, resolveOpenRouterId, type ModelConfig } from '../config/models';
+import { isClaudeFallbackModel, FALLBACK_HEADER } from '../config/claude-fallback';
+
+const FALLBACK_SOURCE_TAG = 'epsilon-router';
 
 /**
  * Calculate cost based on token usage and model pricing.
@@ -37,34 +40,82 @@ export function calculateCost(
  * Forward a chat completion request to OpenRouter as a 1:1 passthrough proxy.
  * Preserves the full request body (tools, tool_choice, response_format, etc).
  *
- * @returns The raw fetch Response from OpenRouter (may be streaming or not).
+ * Symmetric fallback: when the model is in the claude whitelist and the
+ * primary upstream fails (>=500 or fetch throws), retry once via
+ * ANTHROPIC_PROXY_URL (chainlens-proxy → v98store). Skipped when the
+ * incoming request already carries `X-Fallback-Source` (loop guard).
+ *
+ * @returns The raw fetch Response (may be streaming or not).
  */
 export async function proxyToOpenRouter(
   body: Record<string, unknown>,
-  isStreaming: boolean
+  isStreaming: boolean,
+  headers?: Record<string, string>,
 ): Promise<Response> {
   const modelId = body.model as string;
   const openrouterId = resolveOpenRouterId(modelId);
-
-  // Rewrite the model field to the actual OpenRouter model ID
   const forwardBody = { ...body, model: openrouterId };
+  const serializedBody = JSON.stringify(forwardBody);
 
   const url = `${config.OPENROUTER_API_URL}/chat/completions`;
+  const fallbackSource = headers?.[FALLBACK_HEADER.toLowerCase()];
+  const canFallback =
+    !fallbackSource &&
+    isClaudeFallbackModel(modelId) &&
+    !!config.ANTHROPIC_PROXY_URL &&
+    !!config.ANTHROPIC_PROXY_API_KEY;
 
-  console.log(`[LLM] Proxying to OpenRouter: ${modelId} → ${openrouterId} (stream=${isStreaming})`);
+  console.log(`[LLM] Proxying to OpenRouter: ${modelId} → ${openrouterId} (stream=${isStreaming}, fallback=${canFallback})`);
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${config.OPENROUTER_API_KEY}`,
-      'HTTP-Referer': config.FRONTEND_URL || 'https://epsilon.ai',
-      'X-Title': 'Epsilon',
-    },
-    body: JSON.stringify(forwardBody),
-  });
+  let primary: Response | null = null;
+  let primaryErr: unknown = null;
+  try {
+    primary = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.OPENROUTER_API_KEY}`,
+        'HTTP-Referer': config.FRONTEND_URL || 'https://epsilon.ai',
+        'X-Title': 'Epsilon',
+      },
+      body: serializedBody,
+    });
+  } catch (err) {
+    primaryErr = err;
+  }
 
-  return response;
+  const primaryStatus = primary?.status ?? 0;
+  const shouldFallback =
+    canFallback && (primaryErr !== null || primaryStatus >= 500);
+
+  if (!shouldFallback) {
+    if (primaryErr) throw primaryErr;
+    return primary!;
+  }
+
+  console.log(
+    `[LLM] Fallback engaged: ${modelId} primary=${primaryStatus || 'throw'} → ANTHROPIC_PROXY_URL`,
+  );
+
+  const fallbackUrl = `${config.ANTHROPIC_PROXY_URL.replace(/\/$/, '')}/chat/completions`;
+  // Send the user-facing model id (not openrouterId) since chainlens-proxy
+  // checks the whitelist on the original claude-* name.
+  const fallbackBody = JSON.stringify(body);
+  try {
+    return await fetch(fallbackUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.ANTHROPIC_PROXY_API_KEY}`,
+        [FALLBACK_HEADER]: FALLBACK_SOURCE_TAG,
+      },
+      body: fallbackBody,
+    });
+  } catch (err) {
+    console.error(`[LLM] Fallback also failed: ${(err as Error).message}`);
+    if (primary) return primary; // return original (failed) response so caller logs the upstream error
+    throw err;
+  }
 }
 
 export interface UsageInfo {

@@ -1,6 +1,6 @@
 # Story 2.2.2: Social Sentiment & Narrative Clustering (Deep Dive)
 
-Status: review
+Status: done
 
 Epic: 2 — Crypto Data Infrastructure
 Created: 2026-05-14

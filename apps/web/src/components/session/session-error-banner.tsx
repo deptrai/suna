@@ -1,6 +1,7 @@
 'use client';
 
-import { AlertCircle, Loader2, CreditCard, Zap } from 'lucide-react';
+import { AlertCircle, Loader2, CreditCard, Zap, RotateCcw } from 'lucide-react';
+import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useUserSettingsModalStore } from '@/stores/user-settings-modal-store';
@@ -100,6 +101,29 @@ function InsufficientCreditsCard({ errorText, className }: { errorText: string; 
 interface TurnErrorDisplayProps {
   errorText: string;
   className?: string;
+  /**
+   * Optional retry handler — when provided AND `fallbackProviderLabel` is set,
+   * a "Retry with X" button appears next to the error text. Caller should
+   * already have validated that the current model is fallback-eligible
+   * (see `apps/web/src/lib/llm/claude-fallback.ts`).
+   */
+  onRetryWithFallback?: () => void;
+  fallbackProviderLabel?: string;
+}
+
+const FALLBACK_HINT_PATTERNS = [
+  'cannot be parsed as a url',
+  '502',
+  '503',
+  '504',
+  'upstream',
+  'both primary and fallback',
+  'all providers failed',
+];
+
+function looksLikeUpstreamError(text: string): boolean {
+  const lower = text.toLowerCase();
+  return FALLBACK_HINT_PATTERNS.some((p) => lower.includes(p));
 }
 
 /**
@@ -110,7 +134,14 @@ interface TurnErrorDisplayProps {
  * Abort errors (user-initiated stops) get a minimal, lowkey treatment —
  * just muted text, no border/background card.
  */
-export function TurnErrorDisplay({ errorText, className }: TurnErrorDisplayProps) {
+export function TurnErrorDisplay({
+  errorText,
+  className,
+  onRetryWithFallback,
+  fallbackProviderLabel,
+}: TurnErrorDisplayProps) {
+  const [retryState, setRetryState] = useState<'idle' | 'retrying' | 'failed'>('idle');
+
   if (!errorText) return null;
 
   // Abort/cancelled → tiny muted note, no card
@@ -127,20 +158,63 @@ export function TurnErrorDisplay({ errorText, className }: TurnErrorDisplayProps
     return <InsufficientCreditsCard errorText={errorText} className={className} />;
   }
 
+  const showRetry =
+    !!onRetryWithFallback &&
+    !!fallbackProviderLabel &&
+    looksLikeUpstreamError(errorText) &&
+    retryState !== 'retrying';
+
+  const handleRetry = async () => {
+    if (!onRetryWithFallback) return;
+    setRetryState('retrying');
+    try {
+      await Promise.resolve(onRetryWithFallback());
+      // Caller resets state by re-rendering without the error; we don't
+      // proactively flip back to idle here.
+    } catch {
+      setRetryState('failed');
+    }
+  };
+
   // Real errors → full card
   return (
     <div
       className={cn(
-        'flex items-start gap-2 px-3 py-2 rounded-md border',
+        'flex flex-col gap-2 px-3 py-2 rounded-md border',
         'bg-muted/40 dark:bg-muted/30',
         'border-border/60',
         className,
       )}
     >
-      <AlertCircle className="size-3.5 mt-0.5 flex-shrink-0 text-muted-foreground/70" />
-      <p className="text-xs text-muted-foreground break-words min-w-0">
-        {errorText}
-      </p>
+      <div className="flex items-start gap-2">
+        <AlertCircle className="size-3.5 mt-0.5 flex-shrink-0 text-muted-foreground/70" />
+        <p className="text-xs text-muted-foreground break-words min-w-0">
+          {errorText}
+        </p>
+      </div>
+      {showRetry && (
+        <div className="flex items-center gap-1.5 pl-5">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-[11px] px-2.5"
+            onClick={handleRetry}
+            disabled={retryState === 'retrying'}
+          >
+            {retryState === 'retrying' ? (
+              <Loader2 className="size-3 mr-1 animate-spin" />
+            ) : (
+              <RotateCcw className="size-3 mr-1" />
+            )}
+            Retry with {fallbackProviderLabel}
+          </Button>
+          {retryState === 'failed' && (
+            <span className="text-[11px] text-muted-foreground/70">
+              Retry also failed
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -137,7 +137,7 @@ ALLOWED_SANDBOX_PROVIDERS=daytona
 DAYTONA_API_KEY=<daytona-api-key>
 DAYTONA_SERVER_URL=https://app.daytona.io/api
 DAYTONA_TARGET=eu                       # QUAN TRỌNG: dùng "eu" (us region không available)
-DAYTONA_SNAPSHOT=vonicvn/computer:latest  # Image sandbox — build từ core/docker/Dockerfile
+DAYTONA_SNAPSHOT=epsilon/computer:latest  # Image sandbox — build từ core/docker/Dockerfile
 
 # LLM (ít nhất 1 provider)
 OPENROUTER_API_KEY=<key>
@@ -325,7 +325,7 @@ cd ~/chainlens
 bash scripts/deploy-zero-downtime.sh
 
 # Deploy từ prebuilt Docker Hub image (nhanh hơn, dùng trong CI)
-PREBUILT_IMAGE=vonicvn/epsilon-api:0.8.30 bash scripts/deploy-zero-downtime.sh
+PREBUILT_IMAGE=epsilon/epsilon-api:0.8.30 bash scripts/deploy-zero-downtime.sh
 ```
 
 **Quy trình:**
@@ -352,30 +352,83 @@ gh workflow run release.yml --repo deptrai/chainlens \
 
 ## Build sandbox image (epsilon/computer)
 
-Sandbox image được build từ `core/docker/Dockerfile` và push lên Docker Hub (`vonicvn/computer`).
+Sandbox image được build từ `core/docker/Dockerfile` và push lên Docker Hub (`epsilon/computer`).
+
+### KHUYẾN NGHỊ: Build trên server prod, KHÔNG build trên máy local
+
+**Lý do:**
+- Image rất nặng (~4-5GB sau khi nén multi-arch). Mạng VN không đủ ổn định để push lên Docker Hub — sẽ bị **502 Bad Gateway / 400 Bad Request** sau 30-60 phút và mất hết công sức build.
+- Server prod (DigitalOcean/Hetzner) có bandwidth tốt và gần Cloudflare CDN nên push nhanh, không bị throttle.
+- Server amd64 build native — không cần QEMU emulation cho arm64.
+
+### Quy trình build (trên server prod)
 
 ```bash
-# Tạo buildx builder (lần đầu)
-docker buildx create --name epsilon-builder --driver docker-container --bootstrap
-docker buildx use epsilon-builder
-
-# Build và push multi-arch (amd64 + arm64)
+# 1. (Trên máy local) Copy build context lên server (~7MB)
 cd /path/to/chainlens
-docker buildx build \
-  --platform linux/amd64,linux/arm64 \
+ssh root@<server-ip> "mkdir -p /root/build-epsilon-computer"
+rsync -az --exclude 'node_modules' --exclude '.git' --exclude '*.log' \
+  core/ root@<server-ip>:/root/build-epsilon-computer/core/
+scp LICENSE root@<server-ip>:/root/build-epsilon-computer/LICENSE
+
+# 2. (Trên server) Đảm bảo đã login Docker Hub với account có quyền push namespace `epsilon`
+ssh root@<server-ip>
+docker login -u <epsilon-dockerhub-user>
+
+# 3. Build và push (amd64 only — server prod là amd64)
+cd /root/build-epsilon-computer
+nohup docker buildx build \
+  --platform linux/amd64 \
   --build-arg SANDBOX_VERSION=0.1.0 \
-  -t vonicvn/computer:0.1.0 \
-  -t vonicvn/computer:latest \
+  -t epsilon/computer:0.1.0 \
+  -t epsilon/computer:latest \
   -f core/docker/Dockerfile \
   --push \
-  .
+  --progress plain \
+  . > /tmp/build.log 2>&1 &
+
+# 4. Theo dõi progress
+tail -f /tmp/build.log
+
+# 5. Verify trên Docker Hub
+curl -s "https://hub.docker.com/v2/repositories/epsilon/computer/tags/0.1.0" | python3 -m json.tool
 ```
 
-Sau khi push xong, update `DAYTONA_SNAPSHOT=vonicvn/computer:0.1.0` trong Dokploy env của API và redeploy.
+Build mất ~15-25 phút trên server 8 vCPU.
 
-**Lưu ý quan trọng:**
+Sau khi push xong, update `DAYTONA_SNAPSHOT=epsilon/computer:0.1.0` trong Dokploy env của API và redeploy.
+
+### Build multi-arch (chỉ khi cần arm64)
+
+Nếu cần arm64 (vd Apple Silicon servers), build trên một máy arm64 riêng rồi merge manifest:
+
+```bash
+# Trên server amd64
+docker buildx build --platform linux/amd64 -t epsilon/computer:0.1.0-amd64 ... --push .
+
+# Trên server arm64
+docker buildx build --platform linux/arm64 -t epsilon/computer:0.1.0-arm64 ... --push .
+
+# Trên một trong hai
+docker buildx imagetools create -t epsilon/computer:0.1.0 \
+  epsilon/computer:0.1.0-amd64 \
+  epsilon/computer:0.1.0-arm64
+```
+
+### Lưu ý quan trọng
+
 - `DAYTONA_TARGET=eu` — bắt buộc, region `us` không available cho org này
-- `DAYTONA_SNAPSHOT` phải là Docker image name (có `:`) để Daytona pull trực tiếp thay vì dùng snapshot registry
+- `DAYTONA_SNAPSHOT` phải là Docker image name (có `:`) để Daytona pull trực tiếp thay vì dùng snapshot registry. Logic detect ở [daytona.ts:59](apps/api/src/platform/providers/daytona.ts#L59): `snapshot.includes(':') || snapshot.includes('/')` → `{ image: snapshot }`
+- KHÔNG dùng `kortix/suna:*` — đó là image Suna gốc, không có epsilon-master service. Sandbox sẽ trả 502 vĩnh viễn.
+
+### Lessons learned (build push fail từ máy local)
+
+Đã thử build multi-arch (`linux/amd64,linux/arm64`) từ MacBook qua mạng VN:
+- Pull base image (~2GB cho 2 arch): mất ~15 phút (ổn)
+- Build steps (50/50): mất ~30 phút (ổn)
+- **Push lên Docker Hub: FAIL sau ~2 tiếng** với chuỗi 502 Bad Gateway → 400 Bad Request từ `registry-1.docker.io`. Buildx retry liên tục nhưng cuối cùng bỏ cuộc.
+
+Sau khi chuyển sang build trên server prod (Hetzner/DigitalOcean US), build + push hoàn tất trong ~20 phút.
 
 ---
 
