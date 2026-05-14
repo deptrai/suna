@@ -818,6 +818,16 @@ function LoginContent() {
                         </button>
                       </div>
                     )}
+
+                    {/* Password login link */}
+                    <div className="flex justify-center mt-3">
+                      <a
+                        href={`/auth?auth=password${returnUrl ? `&returnUrl=${encodeURIComponent(returnUrl)}` : ''}`}
+                        className="text-[11px] text-foreground/20 hover:text-foreground/40 transition-colors"
+                      >
+                        Sign in with password
+                      </a>
+                    </div>
                   </>
                 )}
               </div>
