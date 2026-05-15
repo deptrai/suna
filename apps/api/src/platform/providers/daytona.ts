@@ -10,7 +10,6 @@ import { sandboxes } from '@epsilon/db';
 import { getDaytona } from '../../shared/daytona';
 import { db } from '../../shared/db';
 import { config, SANDBOX_VERSION } from '../../config';
-import { promises as dns } from 'dns';
 import type {
   SandboxProvider,
   ProviderName,
@@ -61,10 +60,13 @@ export class DaytonaProvider implements SandboxProvider {
     let networkAllowList: string | undefined;
     try {
       const apiHostname = new URL(sandboxApiBase).hostname;
-      const { address } = await dns.lookup(apiHostname);
-      networkAllowList = `${address}/32`;
-    } catch {
-      // Non-fatal — sandbox will fall back to blocked network for API calls
+      const results = await Bun.dns.lookup(apiHostname, { family: 4 });
+      if (results.length > 0) {
+        networkAllowList = `${results[0].address}/32`;
+        console.log(`[DAYTONA] networkAllowList resolved: ${networkAllowList}`);
+      }
+    } catch (err) {
+      console.warn('[DAYTONA] Failed to resolve API hostname for networkAllowList:', err);
     }
 
     const daytonaSandbox = await daytona.create(
