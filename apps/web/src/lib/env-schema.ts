@@ -8,6 +8,11 @@ const RuntimeEnvSchema = z.object({
   APP_URL: z.string().url('APP_URL must be a valid URL').default('http://localhost:3000'),
   /** Default sandbox container name — used as fallback before the store hydrates */
   SANDBOX_ID: z.string().optional().default('epsilon-sandbox'),
+  /**
+   * Explicit billing toggle. When 'false', disables billing UI even in cloud mode.
+   * Useful when Stripe is not configured. Defaults to undefined (falls back to ENV_MODE).
+   */
+  BILLING_ENABLED: z.enum(['true', 'false']).optional(),
 })
 
 export type RuntimeEnv = z.infer<typeof RuntimeEnvSchema>

@@ -70,10 +70,14 @@ export const config: Config = {
 
 /**
  * Whether billing (Stripe, credit tracking) is enabled.
- * True when ENV_MODE is 'cloud'. Self-hosted = everything else.
+ * Checks BILLING_ENABLED env var first; falls back to ENV_MODE === 'cloud'.
+ * Set NEXT_PUBLIC_BILLING_ENABLED=false to disable billing even in cloud mode.
  */
 export const isBillingEnabled = (): boolean => {
-  return getEnv().ENV_MODE === 'cloud';
+  const env = getEnv();
+  if (env.BILLING_ENABLED === 'false') return false;
+  if (env.BILLING_ENABLED === 'true') return true;
+  return env.ENV_MODE === 'cloud';
 };
 
 /**

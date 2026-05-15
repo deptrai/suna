@@ -25,6 +25,7 @@ function readRawEnv(): Partial<RuntimeEnv> {
     ENV_MODE: (process.env.EPSILON_PUBLIC_ENV_MODE || process.env.NEXT_PUBLIC_ENV_MODE) as 'local' | 'cloud' | undefined,
     APP_URL: process.env.EPSILON_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_URL || process.env.PUBLIC_URL,
     SANDBOX_ID: process.env.EPSILON_PUBLIC_SANDBOX_ID || process.env.NEXT_PUBLIC_SANDBOX_ID || undefined,
+    BILLING_ENABLED: (process.env.EPSILON_PUBLIC_BILLING_ENABLED || process.env.NEXT_PUBLIC_BILLING_ENABLED) as 'true' | 'false' | undefined,
   }
 }
 
