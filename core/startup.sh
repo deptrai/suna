@@ -341,6 +341,11 @@ if [ -x /ephemeral/epsilon-master/scripts/install-channel-clis.sh ]; then
   /ephemeral/epsilon-master/scripts/install-channel-clis.sh || echo "[startup] WARNING: channel CLI install failed"
 fi
 
+if [ "${DAYTONA_BOOTSTRAP_ONLY:-0}" = "1" ]; then
+  echo "[startup] Daytona bootstrap-only mode complete; skipping s6 /init handoff"
+  exit 0
+fi
+
 echo "[startup] Starting s6-overlay directly..."
 
 # Docker-in-Docker must work by default. Running the whole sandbox inside an

@@ -1,0 +1,68 @@
+#!/bin/bash
+# Daytona starts custom images under its own long-running PID 1 instead of the
+# image ENTRYPOINT. This bootstraps the sandbox services that Docker Compose
+# normally starts through /ephemeral/startup.sh -> s6-overlay.
+
+set -euo pipefail
+
+log() {
+  echo "[daytona-start] $*"
+}
+
+if pgrep -f "/ephemeral/epsilon-master/src/index.ts" >/dev/null 2>&1; then
+  log "epsilon-master already running"
+  exit 0
+fi
+
+export HOME=/workspace
+export EPSILON_PERSISTENT_ROOT="${EPSILON_PERSISTENT_ROOT:-/persistent}"
+export OPENCODE_STORAGE_BASE="${OPENCODE_STORAGE_BASE:-${EPSILON_PERSISTENT_ROOT}/opencode}"
+export OPENCODE_SHADOW_STORAGE_BASE="${OPENCODE_SHADOW_STORAGE_BASE:-${EPSILON_PERSISTENT_ROOT}/opencode-shadow}"
+export EPSILON_OPENCODE_ARCHIVE_DIR="${EPSILON_OPENCODE_ARCHIVE_DIR:-${EPSILON_PERSISTENT_ROOT}/opencode-archive}"
+export EPSILON_OPENCODE_CACHE_DIR="${EPSILON_OPENCODE_CACHE_DIR:-${EPSILON_PERSISTENT_ROOT}/opencode-cache}"
+export SECRET_FILE_PATH="${SECRET_FILE_PATH:-${EPSILON_PERSISTENT_ROOT}/secrets/.secrets.json}"
+export SALT_FILE_PATH="${SALT_FILE_PATH:-${EPSILON_PERSISTENT_ROOT}/secrets/.salt}"
+export ENCRYPTION_KEY_PATH="${ENCRYPTION_KEY_PATH:-${EPSILON_PERSISTENT_ROOT}/secrets/.encryption-key}"
+export AUTH_JSON_PATH="${AUTH_JSON_PATH:-${OPENCODE_STORAGE_BASE}/auth.json}"
+
+mkdir -p /run/s6/container_environment
+chmod 755 /run/s6/container_environment
+
+log "running startup preparation without s6 handoff"
+DAYTONA_BOOTSTRAP_ONLY=1 /ephemeral/startup.sh
+
+log "running container init scripts"
+for script in /custom-cont-init.d/*; do
+  [ -x "$script" ] || continue
+  log "init $(basename "$script")"
+  "$script"
+done
+
+# s6 normally snapshots the container environment into this directory. The
+# OpenCode runtime wrapper reads these files even when s6 itself is not PID 1.
+env | while IFS='=' read -r key value; do
+  case "$key" in
+    EPSILON*|INTERNAL_SERVICE_KEY|TUNNEL*|OPENAI*|ANTHROPIC*|GEMINI*|GROQ*|XAI*|TAVILY*|FIRECRAWL*|SECRET_FILE_PATH|SALT_FILE_PATH|ENCRYPTION_KEY_PATH|OPENCODE_*|AUTH_JSON_PATH)
+      printf '%s' "$value" > "/run/s6/container_environment/$key"
+      ;;
+  esac
+done
+chown -R abc:users /run/s6/container_environment /workspace "$EPSILON_PERSISTENT_ROOT" 2>/dev/null || true
+
+log "starting epsilon-master on port 8000"
+exec /command/s6-setuidgid abc \
+  env HOME=/workspace \
+      EPSILON_MASTER_PORT=8000 \
+      OPENCODE_HOST=localhost \
+      OPENCODE_PORT=4096 \
+      PATH="/opt/bun/bin:/usr/local/bin:/usr/bin:/bin" \
+      EPSILON_PERSISTENT_ROOT="$EPSILON_PERSISTENT_ROOT" \
+      OPENCODE_STORAGE_BASE="$OPENCODE_STORAGE_BASE" \
+      OPENCODE_SHADOW_STORAGE_BASE="$OPENCODE_SHADOW_STORAGE_BASE" \
+      EPSILON_OPENCODE_ARCHIVE_DIR="$EPSILON_OPENCODE_ARCHIVE_DIR" \
+      EPSILON_OPENCODE_CACHE_DIR="$EPSILON_OPENCODE_CACHE_DIR" \
+      SECRET_FILE_PATH="$SECRET_FILE_PATH" \
+      SALT_FILE_PATH="$SALT_FILE_PATH" \
+      ENCRYPTION_KEY_PATH="$ENCRYPTION_KEY_PATH" \
+      AUTH_JSON_PATH="$AUTH_JSON_PATH" \
+      /opt/bun/bin/bun run /ephemeral/epsilon-master/src/index.ts

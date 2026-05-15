@@ -79,6 +79,7 @@ export class DaytonaProvider implements SandboxProvider {
     );
 
     const externalId = daytonaSandbox.id;
+    await this.startRuntime(daytonaSandbox);
     const preview = await this.resolvePreviewEndpoint(daytonaSandbox, serviceKey, 8000);
     const ready = await this.waitForRuntimeReady(preview.url, preview.headers);
     if (!ready) {
@@ -184,6 +185,19 @@ export class DaytonaProvider implements SandboxProvider {
     if (token) headers['X-Daytona-Preview-Token'] = token;
     if (serviceKey) headers.Authorization = `Bearer ${serviceKey}`;
     return { url, headers };
+  }
+
+  private async startRuntime(sandbox: any): Promise<void> {
+    try {
+      await sandbox.process.executeCommand(
+        'mkdir -p /tmp && nohup /usr/local/bin/epsilon-daytona-start > /tmp/epsilon-daytona-start.log 2>&1 &',
+        undefined,
+        10_000,
+      );
+    } catch (err) {
+      console.warn(`[DAYTONA] Failed to start sandbox runtime bootstrap for ${sandbox.id}:`, err);
+      throw err;
+    }
   }
 
   private async waitForRuntimeReady(url: string, headers: Record<string, string>): Promise<boolean> {

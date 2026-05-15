@@ -398,7 +398,8 @@ RUN set -eo pipefail && echo "[docker] Building sandbox runtime v${SANDBOX_VERSI
 
 # ── Startup entrypoint ────────────────────────────────────────────────────────
 COPY core/startup.sh /ephemeral/startup.sh
-RUN chmod +x /ephemeral/startup.sh
+COPY core/daytona-start.sh /usr/local/bin/epsilon-daytona-start
+RUN chmod +x /ephemeral/startup.sh /usr/local/bin/epsilon-daytona-start
 
 # ── Runtime persistence — user-installed packages survive restarts ────────────
 # These ENVs are set AFTER the build step intentionally. During build, npm/pip
