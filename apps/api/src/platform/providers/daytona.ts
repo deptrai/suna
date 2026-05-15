@@ -54,20 +54,10 @@ export class DaytonaProvider implements SandboxProvider {
     const sandboxApiBase = config.EPSILON_URL.replace(/\/v1\/router\/?$/, '');
     const routerBase = `${sandboxApiBase}/v1/router`;
 
-    // Resolve the API hostname to an IP so Daytona's Envoy proxy allows outbound
-    // TLS connections from the sandbox back to our API server. Daytona blocks
-    // unknown HTTPS destinations by default; networkAllowList whitelists by CIDR.
-    let networkAllowList: string | undefined;
-    try {
-      const apiHostname = new URL(sandboxApiBase).hostname;
-      const results = await Bun.dns.lookup(apiHostname, { family: 4 });
-      if (results.length > 0) {
-        networkAllowList = `${results[0].address}/32`;
-        console.log(`[DAYTONA] networkAllowList resolved: ${networkAllowList}`);
-      }
-    } catch (err) {
-      console.warn('[DAYTONA] Failed to resolve API hostname for networkAllowList:', err);
-    }
+    // Whitelist the API server IP so Daytona's Envoy proxy allows outbound TLS
+    // connections from the sandbox back to our API. Set DAYTONA_NETWORK_ALLOW_LIST
+    // to a comma-separated CIDR list (e.g. "167.172.66.16/32") in the API env.
+    const networkAllowList = config.DAYTONA_NETWORK_ALLOW_LIST || undefined;
 
     const daytonaSandbox = await daytona.create(
       {
