@@ -16,7 +16,7 @@
     "@ai-sdk/google": "^3.0.22",
     "@ai-sdk/openai-compatible": "^2.0.28",
     "@ai-sdk/xai": "^3.0.48",
-    "@daytonaio/sdk": "^0.143.0",
+    "@daytonaio/sdk": "^0.175.0",
     "@epsilon/db": "workspace:*",
     "@epsilon/shared": "workspace:*",
     "@logtail/node": "^0.5.8",
