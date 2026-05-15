@@ -9,6 +9,14 @@
 # tracked in deferred-work.md (Story 5.0 review).
 set -eu
 
+# In Daytona cloud, network isolation is handled by Daytona infrastructure.
+# iptables requires NET_ADMIN cap and Docker-internal DNS (epsilon-api hostname)
+# that don't exist in Daytona's environment. Skip entirely in cloud mode.
+if [ "${ENV_MODE:-local}" = "cloud" ]; then
+  echo "[egress-whitelist] cloud mode — skipping iptables (Daytona handles isolation)" >&2
+  exit 0
+fi
+
 # Verify conntrack module loaded — without it, ESTABLISHED rule fails and
 # `set -e` aborts the script with OUTPUT DROP and no ACCEPT rules. Better to
 # fail-fast with a clear message than brick the sandbox silently.
