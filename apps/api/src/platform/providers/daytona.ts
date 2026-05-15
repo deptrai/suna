@@ -194,15 +194,15 @@ export class DaytonaProvider implements SandboxProvider {
     for (let i = 0; i < maxAttempts; i++) {
       await new Promise((resolve) => setTimeout(resolve, intervalMs));
       try {
-        const res = await fetch(`${url}/global/health`, {
+        const res = await fetch(`${url}/epsilon/health`, {
           method: 'GET',
           headers,
           signal: AbortSignal.timeout(10000),
         });
         if (res.ok) return true;
-        console.warn(`[DAYTONA] Runtime not ready yet (${res.status}) at ${url}/global/health attempt ${i + 1}/${maxAttempts}`);
+        console.warn(`[DAYTONA] Runtime not ready yet (${res.status}) at ${url}/epsilon/health attempt ${i + 1}/${maxAttempts}`);
       } catch (err) {
-        console.warn(`[DAYTONA] Runtime probe failed at ${url}/global/health attempt ${i + 1}/${maxAttempts}:`, err);
+        console.warn(`[DAYTONA] Runtime probe failed at ${url}/epsilon/health attempt ${i + 1}/${maxAttempts}:`, err);
       }
     }
     return false;
