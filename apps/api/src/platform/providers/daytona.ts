@@ -36,15 +36,9 @@ export class DaytonaProvider implements SandboxProvider {
   }
 
   async create(opts: CreateSandboxOpts): Promise<ProvisionResult> {
-    let snapshot = config.DAYTONA_SNAPSHOT;
+    const snapshot = config.DAYTONA_SNAPSHOT;
     if (!snapshot) {
       throw new Error('DAYTONA_SNAPSHOT is not configured — set it to the snapshot name (e.g. epsilon-sandbox-v0.4.1)');
-    }
-    // Hotfix: the current default snapshot has been returning persistent
-    // "port not ready" 502s on production; fall back to last known-good image.
-    if (snapshot === 'epsilonaicrypto/computer:0.1.0') {
-      console.warn('[DAYTONA] Falling back snapshot from epsilonaicrypto/computer:0.1.0 to kortix/suna:0.1.3.19');
-      snapshot = 'kortix/suna:0.1.3.19';
     }
 
     const daytona = getDaytona();
@@ -85,6 +79,17 @@ export class DaytonaProvider implements SandboxProvider {
     );
 
     const externalId = daytonaSandbox.id;
+    const preview = await this.resolvePreviewEndpoint(daytonaSandbox, serviceKey, 8000);
+    const ready = await this.waitForRuntimeReady(preview.url, preview.headers);
+    if (!ready) {
+      try {
+        await daytona.delete(daytonaSandbox);
+      } catch (cleanupErr) {
+        console.warn(`[DAYTONA] Failed to clean up unready sandbox ${externalId}:`, cleanupErr);
+      }
+      throw new Error(`Daytona sandbox ${externalId} runtime on port 8000 was not ready in time`);
+    }
+
     const apiBase = config.EPSILON_URL.replace(/\/v1\/router\/?$/, '').replace(/\/v1\/?$/, '');
     const baseUrl = `${apiBase}/v1/p/${externalId}/8000`;
 
@@ -134,18 +139,9 @@ export class DaytonaProvider implements SandboxProvider {
   async resolveEndpoint(externalId: string): Promise<ResolvedEndpoint> {
     const daytona = getDaytona();
     const sandbox = await daytona.get(externalId);
-    const link = await (sandbox as any).getPreviewLink(8000);
-    const url = (link.url || String(link)).replace(/\/$/, '');
-    const token = link.token || null;
-
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'X-Daytona-Skip-Preview-Warning': 'true',
-      'X-Daytona-Disable-CORS': 'true',
-    };
-    if (token) {
-      headers['X-Daytona-Preview-Token'] = token;
-    }
+    const base = await this.resolvePreviewEndpoint(sandbox, undefined, 8000);
+    const url = base.url;
+    const headers: Record<string, string> = { ...base.headers };
 
     // Look up the service key from config.serviceKey so we can authenticate to the sandbox.
     try {
@@ -170,5 +166,42 @@ export class DaytonaProvider implements SandboxProvider {
     if (status === 'running') return;
     console.log(`[DAYTONA] Sandbox ${externalId} is ${status}, waking up...`);
     await this.start(externalId);
+  }
+
+  private async resolvePreviewEndpoint(
+    sandbox: any,
+    serviceKey?: string,
+    port = 8000,
+  ): Promise<ResolvedEndpoint> {
+    const link = await sandbox.getPreviewLink(port);
+    const url = (link.url || String(link)).replace(/\/$/, '');
+    const token = link.token || null;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-Daytona-Skip-Preview-Warning': 'true',
+      'X-Daytona-Disable-CORS': 'true',
+    };
+    if (token) headers['X-Daytona-Preview-Token'] = token;
+    if (serviceKey) headers.Authorization = `Bearer ${serviceKey}`;
+    return { url, headers };
+  }
+
+  private async waitForRuntimeReady(url: string, headers: Record<string, string>): Promise<boolean> {
+    const delaysMs = [2000, 3000, 5000, 8000, 10000, 12000];
+    for (let i = 0; i < delaysMs.length; i++) {
+      try {
+        const res = await fetch(`${url}/global/health`, {
+          method: 'GET',
+          headers,
+          signal: AbortSignal.timeout(8000),
+        });
+        if (res.ok) return true;
+        console.warn(`[DAYTONA] Runtime not ready yet (${res.status}) at ${url}/global/health attempt ${i + 1}/${delaysMs.length}`);
+      } catch (err) {
+        console.warn(`[DAYTONA] Runtime probe failed at ${url}/global/health attempt ${i + 1}/${delaysMs.length}:`, err);
+      }
+      await new Promise((resolve) => setTimeout(resolve, delaysMs[i]));
+    }
+    return false;
   }
 }
