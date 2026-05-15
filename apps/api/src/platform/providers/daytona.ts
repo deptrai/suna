@@ -36,9 +36,15 @@ export class DaytonaProvider implements SandboxProvider {
   }
 
   async create(opts: CreateSandboxOpts): Promise<ProvisionResult> {
-    const snapshot = config.DAYTONA_SNAPSHOT;
+    let snapshot = config.DAYTONA_SNAPSHOT;
     if (!snapshot) {
       throw new Error('DAYTONA_SNAPSHOT is not configured — set it to the snapshot name (e.g. epsilon-sandbox-v0.4.1)');
+    }
+    // Hotfix: the current default snapshot has been returning persistent
+    // "port not ready" 502s on production; fall back to last known-good image.
+    if (snapshot === 'epsilonaicrypto/computer:0.1.0') {
+      console.warn('[DAYTONA] Falling back snapshot from epsilonaicrypto/computer:0.1.0 to kortix/suna:0.1.3.19');
+      snapshot = 'kortix/suna:0.1.3.19';
     }
 
     const daytona = getDaytona();
