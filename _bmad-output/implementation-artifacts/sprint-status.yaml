@@ -1,5 +1,5 @@
 # generated: 2026-05-09
-# last_updated: 2026-05-15 (Story 8.3.1 ready-for-dev — fallback feature documented post-implementation)
+# last_updated: 2026-05-15 (Story 5.5 VS validated — 15 fixes applied, ready-for-dev confirmed)
 # project: chainlensnlens
 # project_key: NOKEY
 # tracking_system: file-system
@@ -33,7 +33,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-15 (Story 8.3.1 ready-for-dev — fallback feature documented post-implementation)
+last_updated: 2026-05-15 (Story 5.5 VS validated — 15 fixes applied, ready-for-dev confirmed)
 project: chainlens
 project_key: NOKEY
 tracking_system: file-system
@@ -86,7 +86,7 @@ development_status:
   5-2-backtest-strategy-editor-monaco-editor: done
   5-3-backtest-results-visualizer: done
   5-4-contextual-backtest-integration: done
-  5-5-vibe-trading-mcp-proxy: backlog
+  5-5-vibe-trading-mcp-proxy: ready-for-dev
   5-6-shadow-account-swarm-ui: backlog
   5-7-user-llm-key-management: backlog
   5-8-per-user-persistent-memory: ready-for-dev

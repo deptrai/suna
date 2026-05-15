@@ -13,8 +13,10 @@
 5. [Khởi động services](#khởi-động-services)
 6. [Cấu hình nginx + SSL](#cấu-hình-nginx--ssl)
 7. [Deploy update (zero-downtime)](#deploy-update-zero-downtime)
-8. [Kiểm tra sau deploy](#kiểm-tra-sau-deploy)
-9. [Troubleshooting](#troubleshooting)
+8. [Build sandbox image (epsilon/computer)](#build-sandbox-image-epsiloncomputer)
+9. [Daytona sandbox lifecycle (production-critical)](#daytona-sandbox-lifecycle-production-critical)
+10. [Kiểm tra sau deploy](#kiểm-tra-sau-deploy)
+11. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -137,7 +139,7 @@ ALLOWED_SANDBOX_PROVIDERS=daytona
 DAYTONA_API_KEY=<daytona-api-key>
 DAYTONA_SERVER_URL=https://app.daytona.io/api
 DAYTONA_TARGET=eu                       # QUAN TRỌNG: dùng "eu" (us region không available)
-DAYTONA_SNAPSHOT=epsilon/computer:latest  # Image sandbox — build từ core/docker/Dockerfile
+DAYTONA_SNAPSHOT=epsilonaicrypto/computer:daytona-bootstrap  # Image sandbox — phải có cả egress fix + daytona-start.sh (xem section "Daytona sandbox lifecycle")
 
 # LLM (ít nhất 1 provider)
 OPENROUTER_API_KEY=<key>
@@ -352,7 +354,7 @@ gh workflow run release.yml --repo deptrai/chainlens \
 
 ## Build sandbox image (epsilon/computer)
 
-Sandbox image được build từ `core/docker/Dockerfile` và push lên Docker Hub (`epsilon/computer`).
+Sandbox image được build từ `core/docker/Dockerfile` và push lên Docker Hub (`epsilonaicrypto/computer`).
 
 ### KHUYẾN NGHỊ: Build trên server prod, KHÔNG build trên máy local
 
@@ -371,17 +373,17 @@ rsync -az --exclude 'node_modules' --exclude '.git' --exclude '*.log' \
   core/ root@<server-ip>:/root/build-epsilon-computer/core/
 scp LICENSE root@<server-ip>:/root/build-epsilon-computer/LICENSE
 
-# 2. (Trên server) Đảm bảo đã login Docker Hub với account có quyền push namespace `epsilon`
+# 2. (Trên server) Đảm bảo đã login Docker Hub với account `vonicvn` (owner của namespace `epsilonaicrypto`)
 ssh root@<server-ip>
-docker login -u <epsilon-dockerhub-user>
+docker login -u vonicvn
 
 # 3. Build và push (amd64 only — server prod là amd64)
 cd /root/build-epsilon-computer
 nohup docker buildx build \
   --platform linux/amd64 \
   --build-arg SANDBOX_VERSION=0.1.0 \
-  -t epsilon/computer:0.1.0 \
-  -t epsilon/computer:latest \
+  -t epsilonaicrypto/computer:0.1.0 \
+  -t epsilonaicrypto/computer:latest \
   -f core/docker/Dockerfile \
   --push \
   --progress plain \
@@ -391,12 +393,12 @@ nohup docker buildx build \
 tail -f /tmp/build.log
 
 # 5. Verify trên Docker Hub
-curl -s "https://hub.docker.com/v2/repositories/epsilon/computer/tags/0.1.0" | python3 -m json.tool
+curl -s "https://hub.docker.com/v2/repositories/epsilonaicrypto/computer/tags/0.1.0" | python3 -m json.tool
 ```
 
 Build mất ~15-25 phút trên server 8 vCPU.
 
-Sau khi push xong, update `DAYTONA_SNAPSHOT=epsilon/computer:0.1.0` trong Dokploy env của API và redeploy.
+Sau khi push xong, update `DAYTONA_SNAPSHOT=epsilonaicrypto/computer:0.1.0` trong Dokploy env của API và redeploy.
 
 ### Build multi-arch (chỉ khi cần arm64)
 
@@ -404,15 +406,15 @@ Nếu cần arm64 (vd Apple Silicon servers), build trên một máy arm64 riên
 
 ```bash
 # Trên server amd64
-docker buildx build --platform linux/amd64 -t epsilon/computer:0.1.0-amd64 ... --push .
+docker buildx build --platform linux/amd64 -t epsilonaicrypto/computer:0.1.0-amd64 ... --push .
 
 # Trên server arm64
-docker buildx build --platform linux/arm64 -t epsilon/computer:0.1.0-arm64 ... --push .
+docker buildx build --platform linux/arm64 -t epsilonaicrypto/computer:0.1.0-arm64 ... --push .
 
 # Trên một trong hai
-docker buildx imagetools create -t epsilon/computer:0.1.0 \
-  epsilon/computer:0.1.0-amd64 \
-  epsilon/computer:0.1.0-arm64
+docker buildx imagetools create -t epsilonaicrypto/computer:0.1.0 \
+  epsilonaicrypto/computer:0.1.0-amd64 \
+  epsilonaicrypto/computer:0.1.0-arm64
 ```
 
 ### Lưu ý quan trọng
@@ -420,6 +422,35 @@ docker buildx imagetools create -t epsilon/computer:0.1.0 \
 - `DAYTONA_TARGET=eu` — bắt buộc, region `us` không available cho org này
 - `DAYTONA_SNAPSHOT` phải là Docker image name (có `:`) để Daytona pull trực tiếp thay vì dùng snapshot registry. Logic detect ở [daytona.ts:59](apps/api/src/platform/providers/daytona.ts#L59): `snapshot.includes(':') || snapshot.includes('/')` → `{ image: snapshot }`
 - KHÔNG dùng `kortix/suna:*` — đó là image Suna gốc, không có epsilon-master service. Sandbox sẽ trả 502 vĩnh viễn.
+
+### Thin patch build (cho fix nhỏ trong init scripts)
+
+Nếu chỉ sửa file trong `core/init-scripts/` hoặc `core/daytona-start.sh` (KHÔNG sửa Dockerfile build steps), build thin patch trên top base image — nhanh hơn full rebuild rất nhiều (~30s build + 5 phút push thay vì 20-30 phút):
+
+```bash
+# Pull base image về local nếu chưa có
+docker pull epsilonaicrypto/computer:daytona-bootstrap
+
+# Tạo Dockerfile patch
+cat > /tmp/Dockerfile.patch <<'EOF'
+FROM epsilonaicrypto/computer:daytona-bootstrap
+COPY core/init-scripts/95-egress-whitelist.sh /custom-cont-init.d/95-egress-whitelist
+COPY core/daytona-start.sh /usr/local/bin/epsilon-daytona-start
+RUN chmod +x /custom-cont-init.d/95-egress-whitelist /usr/local/bin/epsilon-daytona-start
+EOF
+
+# Build + push (cần docker login Docker Hub với account vonicvn)
+docker buildx build --platform linux/amd64 \
+  --file /tmp/Dockerfile.patch \
+  --tag epsilonaicrypto/computer:daytona-fix-N \
+  --push .
+
+# Update DAYTONA_SNAPSHOT trong Dokploy → redeploy API
+```
+
+**KHÔNG dùng thin patch nếu**:
+- Sửa nội dung được copy/install trong RUN steps (vd `apt install`, `npm install`, `bun install`).
+- Sửa `/ephemeral/epsilon-master/` content — vì nó được rsync trong RUN step của Dockerfile gốc.
 
 ### Lessons learned (build push fail từ máy local)
 
@@ -456,6 +487,148 @@ curl -X POST https://api.yourdomain.com/v1/router/vibe-trading/jobs \
 
 ---
 
+## Daytona sandbox lifecycle (production-critical)
+
+> Section này tổng hợp lessons learned từ debug session 2026-05-15. Đọc trước khi maintain `core/docker/Dockerfile`, `core/daytona-start.sh`, hoặc [`apps/api/src/platform/providers/daytona.ts`](apps/api/src/platform/providers/daytona.ts).
+
+### Daytona dùng PID 1 riêng — KHÔNG chạy ENTRYPOINT image
+
+Daytona Cloud start container của bạn nhưng thay PID 1 = `/usr/local/bin/daytona sleep infinity` (daemon riêng của Daytona để hỗ trợ toolbox proxy). **ENTRYPOINT của image bị bypass hoàn toàn**, nghĩa là:
+
+- `s6-overlay /init` không chạy → không có service nào tự start.
+- `/custom-cont-init.d/*` scripts không chạy.
+- `/ephemeral/startup.sh` không chạy.
+- Port 8000 không có gì listen → `waitForRuntimeReady` timeout sau 5 phút → 3 retries → sandbox bị `daytona.delete()` → user thấy `"Workspace offline"`.
+
+**Verify state trong sandbox sống**:
+```bash
+SBID=<sandbox-uuid>; TOK=$DAYTONA_API_KEY
+curl -s -X POST -H "Authorization: Bearer $TOK" -H "Content-Type: application/json" \
+  "https://proxy.app-eu.daytona.io/toolbox/$SBID/process/execute" \
+  -d '{"command":"ps -ef | head -5","timeout":10}'
+# PID 1 = "daytona sleep infinity" → confirmed Daytona pattern
+```
+
+### Bootstrap pattern: `epsilon-daytona-start` + `setsid` detach
+
+Vì ENTRYPOINT bị bypass, API phải gọi bootstrap script SAU KHI sandbox được tạo.
+
+**1. Image phải bake bootstrap script** ([core/docker/Dockerfile:401](core/docker/Dockerfile#L401)):
+```dockerfile
+COPY core/daytona-start.sh /usr/local/bin/epsilon-daytona-start
+RUN chmod +x /usr/local/bin/epsilon-daytona-start
+```
+
+[`core/daytona-start.sh`](core/daytona-start.sh) chạy `/ephemeral/startup.sh` với `DAYTONA_BOOTSTRAP_ONLY=1` (skip s6 handoff), lặp init scripts, rồi exec `bun run /ephemeral/epsilon-master/src/index.ts` trên port 8000.
+
+**2. API phải trigger bootstrap với `setsid`** ([apps/api/src/platform/providers/daytona.ts:190](apps/api/src/platform/providers/daytona.ts#L190)):
+```typescript
+const launch =
+  "mkdir -p /tmp && setsid bash -c 'nohup /usr/local/bin/epsilon-daytona-start " +
+  "> /tmp/epsilon-daytona-start.log 2>&1 < /dev/null &'";
+await sandbox.process.executeCommand(launch, undefined, 10_000);
+```
+
+> **CRITICAL**: KHÔNG dùng pattern `nohup ... &` plain. Daytona toolbox `executeCommand` reap toàn bộ process tree khi shell call return — process bị kill TRƯỚC khi `epsilon-daytona-start` kịp fork bun. Phải dùng `setsid bash -c '... </dev/null &'` để tạo session mới detached khỏi controlling tty. Verified live 2026-05-15: bootstrap dừng ở `[fix-ownership] Done.`, không tới `starting epsilon-master on port 8000` nếu thiếu `setsid`.
+
+### Egress whitelist phải skip trong cloud mode
+
+[`core/init-scripts/95-egress-whitelist.sh`](core/init-scripts/95-egress-whitelist.sh) build deny-by-default iptables rules. Trong Docker Compose local, script resolve hostname `epsilon-api` qua Docker DNS embedded resolver. **Trong Daytona cloud, hostname `epsilon-api` không tồn tại** → script `exit 1` → toàn bộ init chain fail.
+
+Fix: early-exit khi `ENV_MODE=cloud`:
+```sh
+if [ "${ENV_MODE:-local}" = "cloud" ]; then
+  echo "[egress-whitelist] cloud mode — skipping iptables (Daytona handles isolation)" >&2
+  exit 0
+fi
+```
+
+`ENV_MODE=cloud` được inject từ `daytona.ts:60` khi tạo sandbox. Daytona Cloud có network isolation riêng → iptables thừa.
+
+### Health probe path
+
+[`waitForRuntimeReady`](apps/api/src/platform/providers/daytona.ts#L203) poll `GET ${previewUrl}/epsilon/health` (KHÔNG phải `/global/health`). Path này được phục vụ bởi epsilon-master ngay sau khi listen port 8000.
+
+Polling: 15s interval, 20 attempts → tổng 5 phút trước khi mark fail.
+
+### Provisioning retry loop
+
+[`apps/api/src/platform/services/sandbox-init-state.ts`](apps/api/src/platform/services/sandbox-init-state.ts): 3 attempts, 2s delay → tổng 15 phút worst case trước khi user thấy error.
+
+`metadata` JSONB trong `epsilon.sandboxes` table track:
+- `initStatus`: `pending` → `provisioning` → `ready` | `failed`
+- `initAttempts`: 1-3
+- `lastInitError`: error message từ attempt cuối
+- `provisioningError`: lỗi từ `Daytona.create()` hoặc `waitForRuntimeReady()`
+
+Schema KHÔNG có column `init_attempts` top-level — luôn truy vấn qua `metadata->>'initAttempts'`.
+
+### Cleanup stuck sandboxes
+
+Nếu sandbox row bị stuck ở `status='provisioning'` hoặc `status='error'` với `external_id=''`:
+```sql
+DELETE FROM epsilon.sandboxes WHERE status='error' AND external_id='';
+```
+An toàn vì không có Daytona resource cần cleanup. Nếu `external_id` non-empty, gọi `daytona.delete()` trước.
+
+### Debug technique: tạo sandbox sống để trace
+
+Khi `waitForRuntimeReady` timeout, sandbox bị `daytona.delete()` ngay → mất evidence. Để debug:
+
+```bash
+# 1. Tạo sandbox debug bằng REST API trực tiếp (không qua flow product)
+curl -X POST -H "Authorization: Bearer $DAYTONA_API_KEY" -H "Content-Type: application/json" \
+  "https://app.daytona.io/api/sandbox" \
+  -d '{
+    "buildInfo":{"dockerfileContent":"FROM epsilonaicrypto/computer:daytona-bootstrap"},
+    "target":"eu",
+    "autoStopInterval":30,
+    "autoArchiveInterval":60,
+    "env":{"ENV_MODE":"cloud","EPSILON_API_URL":"https://api.chainlens.net","INTERNAL_SERVICE_KEY":"debug","TUNNEL_API_URL":"https://api.chainlens.net","TUNNEL_TOKEN":"debug"}
+  }'
+
+# 2. Chờ state=started (~3-5 phút pull image 5GB)
+SBID=<id>; for i in $(seq 1 20); do
+  STATE=$(curl -s -H "Authorization: Bearer $DAYTONA_API_KEY" \
+    "https://app.daytona.io/api/sandbox/$SBID" | python3 -c "import json,sys;print(json.load(sys.stdin).get('state'))")
+  echo "$i: $STATE"; [ "$STATE" = "started" ] && break; sleep 15
+done
+
+# 3. Probe và run bootstrap thủ công qua toolbox proxy
+URL="https://proxy.app-eu.daytona.io/toolbox/$SBID/process/execute"
+curl -X POST -H "Authorization: Bearer $DAYTONA_API_KEY" -H "Content-Type: application/json" \
+  "$URL" -d '{"command":"setsid bash -c '"'"'nohup /usr/local/bin/epsilon-daytona-start > /tmp/eds.log 2>&1 < /dev/null &'"'"'","timeout":10}'
+
+# 4. Đọc log progressive
+curl -X POST -H "Authorization: Bearer $DAYTONA_API_KEY" -H "Content-Type: application/json" \
+  "$URL" -d '{"command":"tail -20 /tmp/eds.log; echo ---; ps aux | grep epsilon | grep -v grep","timeout":10}'
+
+# 5. Cleanup
+curl -X DELETE -H "Authorization: Bearer $DAYTONA_API_KEY" "https://app.daytona.io/api/sandbox/$SBID"
+```
+
+### Image tag strategy
+
+Tag mới mỗi lần fix (`daytona-bootstrap`, `daytona-fix-1`, …) thay vì overwrite — Daytona Cloud có cache image theo digest, tag mới buộc pull layer mới. KHÔNG dùng tag `latest` cho production.
+
+Bake fix vào image (`core/daytona-start.sh`, init scripts) HOẶC fix trong API code (`daytona.ts`). Nếu fix nằm hoàn toàn ở API code, KHÔNG cần rebuild image — chỉ redeploy API.
+
+### Verified working state (2026-05-15)
+
+Sau khi áp dụng đầy đủ:
+- `epsilonaicrypto/computer:daytona-bootstrap` — image với egress fix + daytona-start.sh
+- API commit `b1c05b935f` — `setsid bash -c` detach pattern
+
+End-to-end provisioning hoàn tất trong **1 attempt** (~30-40s):
+1. `POST /v1/agent/initiate` → DB row created, `status=provisioning`
+2. `Daytona.create()` → external_id assigned, container started (~10-15s)
+3. `startRuntime()` → `setsid` launch bootstrap (returns ngay)
+4. `waitForRuntimeReady()` poll `/epsilon/health` → 200 sau ~15-30s
+5. DB row update `status=active`, `metadata.initStatus=ready`
+6. UI redirect `/instances/<sandbox-id>/dashboard` → "Welcome to your Epsilon"
+
+---
+
 ## Troubleshooting
 
 ### API không start
@@ -468,22 +641,34 @@ docker logs api-djcsof.1.<task-id> 2>&1 | tail -50
 docker exec <api-container> env | grep -E "DATABASE_URL|SUPABASE|API_KEY_SECRET"
 ```
 
-### Sandbox 502 — port not ready
+### Sandbox 502 / "Workspace offline" / "runtime on port 8000 was not ready in time"
 
-Nguyên nhân phổ biến:
-1. **`DAYTONA_SNAPSHOT` sai** — đang trỏ vào image không có epsilon-master (vd `kortix/suna:*`)
-2. **`DAYTONA_TARGET=us`** — region us không available, phải dùng `eu`
-3. **Image chưa được build/push** — `vonicvn/computer` chưa tồn tại trên Docker Hub
+> Đọc section [Daytona sandbox lifecycle](#daytona-sandbox-lifecycle-production-critical) trước.
 
+Nguyên nhân (theo thứ tự likelihood):
+
+1. **`startRuntime()` thiếu `setsid`** — Daytona toolbox `executeCommand` reap process tree. Plain `nohup &` bị kill trước khi bun fork. Fix: `setsid bash -c '... </dev/null &'` ([daytona.ts:190](apps/api/src/platform/providers/daytona.ts#L190)).
+2. **Image thiếu `epsilon-daytona-start`** — Daytona bypass ENTRYPOINT, không có bootstrap script thì không có gì start. Verify: `docker run --rm --entrypoint /bin/sh <image> -c "ls /usr/local/bin/epsilon-daytona-start"`.
+3. **`95-egress-whitelist.sh` không skip cloud mode** — script `exit 1` khi không resolve được hostname `epsilon-api`. Verify: `head -20 /custom-cont-init.d/95-egress-whitelist` có check `ENV_MODE=cloud`.
+4. **`DAYTONA_SNAPSHOT` sai** — đang trỏ vào image không có epsilon-master (vd `kortix/suna:*`).
+5. **`DAYTONA_TARGET=us`** — region us không available, phải dùng `eu`.
+6. **Image chưa được build/push** — `epsilonaicrypto/computer:<tag>` chưa tồn tại trên Docker Hub.
+
+**Debug live**:
 ```bash
-# Kiểm tra env của API container
-docker inspect <api-container> | python3 -c "import json,sys; d=json.load(sys.stdin)[0]; [print(e) for e in d['Config']['Env'] if 'DAYTONA' in e]"
+# 1. Lấy sandbox đang fail từ DB
+PGPASSWORD=$DB_PASS psql "$DATABASE_URL" -c \
+  "SELECT sandbox_id, external_id, metadata->>'lastInitError' FROM epsilon.sandboxes WHERE status='error' ORDER BY updated_at DESC LIMIT 3;"
 
-# Kiểm tra Daytona sandbox state
-curl -s 'https://app.daytona.io/api/sandbox/<sandbox-id>' \
-  -H 'Authorization: Bearer <DAYTONA_API_KEY>' \
-  -H 'daytona-target: eu' | python3 -m json.tool
+# 2. Nếu sandbox đã bị delete, tạo debug sandbox theo quy trình ở section trên
+# 3. Trace qua toolbox proxy: tail /tmp/epsilon-daytona-start.log + ps aux
 ```
+
+**Reset failed sandbox để test lại**:
+```sql
+DELETE FROM epsilon.sandboxes WHERE status='error' AND external_id='';
+```
+Click "Get started" lại trên UI sẽ trigger provisioning mới.
 
 ### Vibe-Trading 403 từ epsilon-api
 

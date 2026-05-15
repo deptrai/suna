@@ -85,6 +85,18 @@ export class DaytonaProvider implements SandboxProvider {
     );
 
     const externalId = daytonaSandbox.id;
+
+    // Apply networkAllowList after creation — the create() call may not propagate it
+    // when using buildInfo (image param). updateNetworkSettings() is reliable regardless.
+    if (networkAllowList) {
+      try {
+        await daytonaSandbox.updateNetworkSettings({ networkAllowList });
+        console.log(`[DAYTONA] Applied networkAllowList=${networkAllowList} to sandbox ${externalId}`);
+      } catch (err) {
+        console.warn(`[DAYTONA] Failed to apply networkAllowList to ${externalId}:`, err);
+      }
+    }
+
     await this.startRuntime(daytonaSandbox);
     const preview = await this.resolvePreviewEndpoint(daytonaSandbox, serviceKey, 8000);
     const ready = await this.waitForRuntimeReady(preview.url, preview.headers);
