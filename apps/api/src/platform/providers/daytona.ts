@@ -74,6 +74,14 @@ export class DaytonaProvider implements SandboxProvider {
           REPLICATE_API_URL: `${routerBase}/replicate`,
           SERPER_API_URL: `${routerBase}/serper`,
           FIRECRAWL_API_URL: `${routerBase}/firecrawl`,
+          // Inject LLM API keys directly so opencode can call providers without going
+          // through the Epsilon router proxy. Daytona Tier 1/2 blocks outbound TLS to
+          // api.chainlens.net but allows api.anthropic.com, api.openai.com, etc.
+          ...(config.ANTHROPIC_API_KEY ? { ANTHROPIC_API_KEY: config.ANTHROPIC_API_KEY } : {}),
+          ...(config.OPENAI_API_KEY ? { OPENAI_API_KEY: config.OPENAI_API_KEY } : {}),
+          ...(config.OPENROUTER_API_KEY ? { OPENROUTER_API_KEY: config.OPENROUTER_API_KEY } : {}),
+          ...(config.GEMINI_API_KEY ? { GEMINI_API_KEY: config.GEMINI_API_KEY } : {}),
+          ...(config.XAI_API_KEY ? { XAI_API_KEY: config.XAI_API_KEY } : {}),
           ...opts.envVars,
         },
         autoStopInterval: 15,
