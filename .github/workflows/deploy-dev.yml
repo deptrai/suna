@@ -17,6 +17,12 @@ on:
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
   workflow_dispatch:
+    inputs:
+      patch_computer:
+        description: 'Build thin patch image for computer from epsilonaicrypto/computer:0.1.0'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: deploy-dev
@@ -27,6 +33,30 @@ permissions:
   packages: write
 
 jobs:
+  patch-computer-amd64:
+    name: Patch Computer (amd64)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && inputs.patch_computer == true
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: false }
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push thin patch image
+        run: |
+          cat > /tmp/Dockerfile.patch <<'EOF'
+          FROM epsilonaicrypto/computer:0.1.0
+          COPY core/init-scripts/95-egress-whitelist.sh /custom-cont-init.d/95-egress-whitelist
+          RUN chmod +x /custom-cont-init.d/95-egress-whitelist
+          EOF
+          docker build --platform linux/amd64 \
+            --file /tmp/Dockerfile.patch \
+            --tag ghcr.io/deptrai/computer:fix-egress-whitelist .
+          docker push ghcr.io/deptrai/computer:fix-egress-whitelist
+
   # ── Gate: skip on push if auto-deploy is off ─────────────────────────────
   gate:
     name: Check auto-deploy
