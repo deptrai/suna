@@ -59,8 +59,9 @@ jobs:
           EOF
           docker build --platform linux/amd64 \
             --file /tmp/Dockerfile.patch \
-            --tag ghcr.io/deptrai/computer:fix-egress-whitelist .
-          docker push ghcr.io/deptrai/computer:fix-egress-whitelist
+            --label org.opencontainers.image.source=https://github.com/deptrai/chainlens \
+            --tag ghcr.io/deptrai/computer-egress-patch:fix-egress-whitelist .
+          docker push ghcr.io/deptrai/computer-egress-patch:fix-egress-whitelist
 
   # ── Gate: skip on push if auto-deploy is off ─────────────────────────────
   gate:
