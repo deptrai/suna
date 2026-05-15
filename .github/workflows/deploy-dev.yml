@@ -225,7 +225,7 @@ jobs:
   build-computer-amd64:
     name: Computer (amd64)
     needs: detect-changes
-    if: needs.detect-changes.outputs.computer_changed == 'true'
+    if: needs.detect-changes.outputs.computer_changed == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -249,7 +249,7 @@ jobs:
   build-computer-arm64:
     name: Computer (arm64)
     needs: detect-changes
-    if: needs.detect-changes.outputs.computer_changed == 'true'
+    if: needs.detect-changes.outputs.computer_changed == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
