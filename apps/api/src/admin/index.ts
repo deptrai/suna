@@ -29,8 +29,8 @@ import {
   getSandboxMetadata,
 } from '../platform/services/sandbox-init-state';
 import {
-  reprovisionFailedJustAvpsSandbox,
-  shouldReprovisionFailedJustAvpsSandbox,
+  reprovisionFailedSandbox,
+  shouldReprovisionFailedSandbox,
 } from '../platform/services/sandbox-reinitialize';
 import { PROVIDER_REGISTRY, buildProviderKeySchema, LLM_PROVIDERS, TOOL_PROVIDERS } from '../providers/registry';
 import { supabaseAuth } from '../middleware/auth';
@@ -1210,8 +1210,8 @@ adminApp.post('/api/sandboxes/:id/repair', async (c) => {
       }
       case 'reinitialize': {
         const providerStatus = row.externalId ? await provider.getStatus(row.externalId) : null;
-        if (shouldReprovisionFailedJustAvpsSandbox(row.status, row.externalId, providerStatus)) {
-          const refreshed = await reprovisionFailedJustAvpsSandbox({
+        if (shouldReprovisionFailedSandbox(row.provider, row.status, row.externalId, providerStatus)) {
+          const refreshed = await reprovisionFailedSandbox({
             db,
             sandbox: row,
             provider,

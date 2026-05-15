@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { sandboxes, type Database } from '@epsilon/db';
 import { createApiKey } from '../../repositories/api-keys';
-import type { SandboxProvider, SandboxStatus } from '../providers';
+import type { ProviderName, SandboxProvider, SandboxStatus } from '../providers';
 import {
   buildSandboxInitAttemptMetadata,
   buildSandboxInitFailureMetadata,
@@ -10,17 +10,23 @@ import {
   retrySandboxProvisionCreate,
 } from './sandbox-init-state';
 
-export function shouldReprovisionFailedJustAvpsSandbox(
+export function shouldReprovisionFailedSandbox(
+  provider: ProviderName,
   status: string,
   externalId: string | null | undefined,
   providerStatus: SandboxStatus | null,
 ): boolean {
   if (status !== 'error') return false;
   if (!externalId) return true;
-  return providerStatus === 'removed';
+  // JustAVPS: if provider machine disappeared, re-provision.
+  if (provider === 'justavps') return providerStatus === 'removed';
+  // Daytona: "error" usually means preview container is gone/stale.
+  // Re-provision to mint a fresh externalId instead of retrying start forever.
+  if (provider === 'daytona') return true;
+  return false;
 }
 
-export async function reprovisionFailedJustAvpsSandbox(opts: {
+export async function reprovisionFailedSandbox(opts: {
   db: Database;
   sandbox: typeof sandboxes.$inferSelect;
   provider: SandboxProvider;

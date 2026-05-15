@@ -42,8 +42,8 @@ import {
   SANDBOX_INIT_MAX_ATTEMPTS,
 } from '../services/sandbox-init-state';
 import {
-  reprovisionFailedJustAvpsSandbox,
-  shouldReprovisionFailedJustAvpsSandbox,
+  reprovisionFailedSandbox,
+  shouldReprovisionFailedSandbox,
 } from '../services/sandbox-reinitialize';
 import {
   findAccessibleSandboxForUser,
@@ -912,12 +912,18 @@ export function createCloudSandboxRouter(
 
       const provider = getProvider(sandbox.provider);
 
-      if (sandbox.provider === 'justavps' && sandbox.status === 'error') {
-        const providerStatus = sandbox.externalId ? await provider.getStatus(sandbox.externalId) : null;
-        const shouldReprovision = shouldReprovisionFailedJustAvpsSandbox(sandbox.status, sandbox.externalId, providerStatus);
+      const providerStatus = sandbox.externalId ? await provider.getStatus(sandbox.externalId) : null;
+      const shouldForceDaytonaReprovision = sandbox.provider === 'daytona';
+      if (sandbox.status === 'error' || shouldForceDaytonaReprovision) {
+        const shouldReprovision = shouldReprovisionFailedSandbox(
+          sandbox.provider,
+          sandbox.status,
+          sandbox.externalId,
+          providerStatus,
+        ) || shouldForceDaytonaReprovision;
 
         if (shouldReprovision) {
-          const refreshed = await reprovisionFailedJustAvpsSandbox({ db, sandbox, provider, userId });
+          const refreshed = await reprovisionFailedSandbox({ db, sandbox, provider, userId });
 
           console.log(`[PLATFORM] Re-provisioned failed sandbox ${sandbox.sandboxId} via ${sandbox.provider}${providerStatus === 'removed' ? ' after provider machine disappeared' : ''}`);
 
