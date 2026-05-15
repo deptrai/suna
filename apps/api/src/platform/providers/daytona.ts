@@ -187,20 +187,23 @@ export class DaytonaProvider implements SandboxProvider {
   }
 
   private async waitForRuntimeReady(url: string, headers: Record<string, string>): Promise<boolean> {
-    const delaysMs = [2000, 3000, 5000, 8000, 10000, 12000];
-    for (let i = 0; i < delaysMs.length; i++) {
+    // Large images (5GB+) need time to pull before the container starts.
+    // Poll every 15s for up to 5 minutes.
+    const intervalMs = 15000;
+    const maxAttempts = 20; // 5 minutes total
+    for (let i = 0; i < maxAttempts; i++) {
+      await new Promise((resolve) => setTimeout(resolve, intervalMs));
       try {
         const res = await fetch(`${url}/global/health`, {
           method: 'GET',
           headers,
-          signal: AbortSignal.timeout(8000),
+          signal: AbortSignal.timeout(10000),
         });
         if (res.ok) return true;
-        console.warn(`[DAYTONA] Runtime not ready yet (${res.status}) at ${url}/global/health attempt ${i + 1}/${delaysMs.length}`);
+        console.warn(`[DAYTONA] Runtime not ready yet (${res.status}) at ${url}/global/health attempt ${i + 1}/${maxAttempts}`);
       } catch (err) {
-        console.warn(`[DAYTONA] Runtime probe failed at ${url}/global/health attempt ${i + 1}/${delaysMs.length}:`, err);
+        console.warn(`[DAYTONA] Runtime probe failed at ${url}/global/health attempt ${i + 1}/${maxAttempts}:`, err);
       }
-      await new Promise((resolve) => setTimeout(resolve, delaysMs[i]));
     }
     return false;
   }
