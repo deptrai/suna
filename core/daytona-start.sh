@@ -50,19 +50,12 @@ done
 chown -R abc:users /run/s6/container_environment /workspace "$EPSILON_PERSISTENT_ROOT" 2>/dev/null || true
 
 log "starting epsilon-master on port 8000"
-exec /command/s6-setuidgid abc \
-  env HOME=/workspace \
-      EPSILON_MASTER_PORT=8000 \
-      OPENCODE_HOST=localhost \
-      OPENCODE_PORT=4096 \
-      PATH="/opt/bun/bin:/usr/local/bin:/usr/bin:/bin" \
-      EPSILON_PERSISTENT_ROOT="$EPSILON_PERSISTENT_ROOT" \
-      OPENCODE_STORAGE_BASE="$OPENCODE_STORAGE_BASE" \
-      OPENCODE_SHADOW_STORAGE_BASE="$OPENCODE_SHADOW_STORAGE_BASE" \
-      EPSILON_OPENCODE_ARCHIVE_DIR="$EPSILON_OPENCODE_ARCHIVE_DIR" \
-      EPSILON_OPENCODE_CACHE_DIR="$EPSILON_OPENCODE_CACHE_DIR" \
-      SECRET_FILE_PATH="$SECRET_FILE_PATH" \
-      SALT_FILE_PATH="$SALT_FILE_PATH" \
-      ENCRYPTION_KEY_PATH="$ENCRYPTION_KEY_PATH" \
-      AUTH_JSON_PATH="$AUTH_JSON_PATH" \
-      /opt/bun/bin/bun run /ephemeral/epsilon-master/src/index.ts
+# Export runtime vars so s6-setuidgid inherits the full environment (including
+# EPSILON_API_URL, EPSILON_TOKEN, INTERNAL_SERVICE_KEY, TUNNEL_*, LLM API keys).
+# Using `exec env VAR=val ...` would create a clean env and silently drop them.
+export HOME=/workspace
+export EPSILON_MASTER_PORT=8000
+export OPENCODE_HOST=localhost
+export OPENCODE_PORT=4096
+export PATH="/opt/bun/bin:/usr/local/bin:/usr/bin:/bin"
+exec /command/s6-setuidgid abc /opt/bun/bin/bun run /ephemeral/epsilon-master/src/index.ts
