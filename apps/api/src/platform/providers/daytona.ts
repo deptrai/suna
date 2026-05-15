@@ -188,12 +188,14 @@ export class DaytonaProvider implements SandboxProvider {
   }
 
   private async startRuntime(sandbox: any): Promise<void> {
+    // Daytona's executeCommand kills child processes when its shell exits, so a plain
+    // `nohup ... &` does not survive. `setsid bash -c "nohup ... </dev/null &"` puts the
+    // bootstrap in a new session detached from any controlling tty.
+    const launch =
+      "mkdir -p /tmp && setsid bash -c 'nohup /usr/local/bin/epsilon-daytona-start " +
+      "> /tmp/epsilon-daytona-start.log 2>&1 < /dev/null &'";
     try {
-      await sandbox.process.executeCommand(
-        'mkdir -p /tmp && nohup /usr/local/bin/epsilon-daytona-start > /tmp/epsilon-daytona-start.log 2>&1 &',
-        undefined,
-        10_000,
-      );
+      await sandbox.process.executeCommand(launch, undefined, 10_000);
     } catch (err) {
       console.warn(`[DAYTONA] Failed to start sandbox runtime bootstrap for ${sandbox.id}:`, err);
       throw err;
