@@ -848,24 +848,7 @@ export default function DashboardLayoutContent({
 			return;
 		}
 
-		// Already pointing at the right instance? Skip entirely.
-		{
-			const state = useServerStore.getState();
-			const active = state.servers.find((s) => s.id === state.activeServerId);
-			if (active?.instanceId === routeInstanceId) {
-				setRouteSyncing(false);
-				return;
-			}
-		}
-
 		let cancelled = false;
-
-		// Try the store synchronously first — zero network cost.
-		const syncResult = switchToInstance(routeInstanceId);
-		if (syncResult) {
-			setRouteSyncing(false);
-			return;
-		}
 
 		setRouteSyncing(true);
 
@@ -891,7 +874,7 @@ export default function DashboardLayoutContent({
 		// store first before hitting the API.
 		const fallbackTimer = setTimeout(() => {
 			if (cancelled) return;
-			switchToInstanceAsync(routeInstanceId, { validate: false })
+			switchToInstanceAsync(routeInstanceId, { validate: true })
 				.then(async (result) => {
 					if (cancelled) return;
 					if (!result) {
@@ -901,7 +884,7 @@ export default function DashboardLayoutContent({
 						const { discoverLocalSandbox } = await import("@/lib/platform-client");
 						const local = await discoverLocalSandbox().catch(() => null);
 						if (!cancelled && local?.sandbox_id && local.sandbox_id !== routeInstanceId) {
-							const switched = await switchToInstanceAsync(local.sandbox_id, { validate: false });
+							const switched = await switchToInstanceAsync(local.sandbox_id, { validate: true });
 							if (!cancelled && switched) {
 								router.replace(buildInstancePath(local.sandbox_id, normalizeAppPathname(pathname)));
 								return;
