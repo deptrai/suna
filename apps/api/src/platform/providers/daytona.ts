@@ -10,6 +10,7 @@ import { sandboxes } from '@epsilon/db';
 import { getDaytona } from '../../shared/daytona';
 import { db } from '../../shared/db';
 import { config, SANDBOX_VERSION } from '../../config';
+import { promises as dns } from 'dns';
 import type {
   SandboxProvider,
   ProviderName,
@@ -54,6 +55,18 @@ export class DaytonaProvider implements SandboxProvider {
     const sandboxApiBase = config.EPSILON_URL.replace(/\/v1\/router\/?$/, '');
     const routerBase = `${sandboxApiBase}/v1/router`;
 
+    // Resolve the API hostname to an IP so Daytona's Envoy proxy allows outbound
+    // TLS connections from the sandbox back to our API server. Daytona blocks
+    // unknown HTTPS destinations by default; networkAllowList whitelists by CIDR.
+    let networkAllowList: string | undefined;
+    try {
+      const apiHostname = new URL(sandboxApiBase).hostname;
+      const { address } = await dns.lookup(apiHostname);
+      networkAllowList = `${address}/32`;
+    } catch {
+      // Non-fatal — sandbox will fall back to blocked network for API calls
+    }
+
     const daytonaSandbox = await daytona.create(
       {
         ...(snapshot.includes(':') || snapshot.includes('/') ? { image: snapshot } : { snapshot }),
@@ -74,6 +87,7 @@ export class DaytonaProvider implements SandboxProvider {
         autoStopInterval: 15,
         autoArchiveInterval: 30,
         public: false,
+        ...(networkAllowList ? { networkAllowList } : {}),
       },
       { timeout: 300 },
     );
