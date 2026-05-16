@@ -88,7 +88,9 @@ fi
 # OpenCode bundler resolves modules from /workspace/.cache/opencode (its runtime
 # package cache). Pre-seed tool deps there so external tool imports work offline.
 CACHE_DIR="${EPSILON_OPENCODE_CACHE_DIR:-/persistent/opencode-cache}"
-if [ -d /ephemeral/epsilon-master/node_modules ] && [ ! -d "$CACHE_DIR/node_modules/@mendable" ]; then
+if [ "${DAYTONA_BOOTSTRAP_ONLY:-0}" = "1" ]; then
+    echo "[Epsilon] DAYTONA_BOOTSTRAP_ONLY=1 — skipping tool deps pre-seed for faster readiness"
+elif [ -d /ephemeral/epsilon-master/node_modules ] && [ ! -d "$CACHE_DIR/node_modules/@mendable" ]; then
     mkdir -p "$CACHE_DIR"
     cp -r /ephemeral/epsilon-master/node_modules "$CACHE_DIR/" 2>/dev/null || true
     # Copy package.json so bun treats it as a valid project
