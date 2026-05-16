@@ -52,6 +52,7 @@ import { legacyApp } from './legacy';
 import { adminApp } from './admin';
 import { sandboxPoolAdminApp } from './platform/routes/sandbox-pool-admin';
 import { oauthApp } from './oauth';
+import { registerApiDocs } from './docs/api-docs';
 
 function shellQuote(value: string): string {
   return `'${value.replace(/'/g, `"'"'`)}'`;
@@ -93,6 +94,7 @@ PY`;
 // ─── App Setup ──────────────────────────────────────────────────────────────
 
 const app = new Hono();
+registerApiDocs(app);
 
 // === Global Middleware === 
 
