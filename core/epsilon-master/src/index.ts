@@ -284,6 +284,7 @@ app.use('*', async (c, next) => {
 let openCodeReady = false
 let openCodeLastCheck = 0
 const OPENCODE_CHECK_INTERVAL = 5_000 // recheck every 5s when not ready
+const OPENCODE_READY_TIMEOUT_MS = Number(process.env.EPSILON_OPENCODE_READY_TIMEOUT_MS || 15_000)
 
 function inspectOpencodeDb(path: string | null) {
   if (!path || !existsSync(path)) return { sessionCount: null, latestSessionUpdate: null }
@@ -342,7 +343,7 @@ async function checkOpenCodeReady(): Promise<boolean> {
 
   try {
     const res = await fetch(`http://${config.OPENCODE_HOST}:${config.OPENCODE_PORT}/session`, {
-      signal: AbortSignal.timeout(3_000),
+      signal: AbortSignal.timeout(OPENCODE_READY_TIMEOUT_MS),
     })
     if (res.ok) {
       if (!openCodeReady) {
