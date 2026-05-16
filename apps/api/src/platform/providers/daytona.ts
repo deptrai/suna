@@ -100,8 +100,8 @@ export class DaytonaProvider implements SandboxProvider {
 
     const daytonaSandbox = await this.withTimeout(
       daytona.create(createPayload, { timeout: 300 }),
-      180_000,
-      `daytona.create timed out after 180s (snapshot=${snapshot}, target=${config.DAYTONA_TARGET})`,
+      420_000,
+      `daytona.create timed out after 420s (snapshot=${snapshot}, target=${config.DAYTONA_TARGET})`,
     );
 
     const externalId = daytonaSandbox.id;
