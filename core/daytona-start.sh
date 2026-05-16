@@ -30,7 +30,8 @@ chmod 755 /run/s6/container_environment
 
 log "running startup preparation without s6 handoff"
 export EPSILON_SKIP_RECURSIVE_CHOWN=1
-DAYTONA_BOOTSTRAP_ONLY=1 /ephemeral/startup.sh
+export DAYTONA_BOOTSTRAP_ONLY=1
+/ephemeral/startup.sh
 
 log "running container init scripts"
 for script in /custom-cont-init.d/*; do
