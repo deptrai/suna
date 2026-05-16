@@ -138,6 +138,9 @@ const envSchema = z.object({
   DAYTONA_TARGET:              optStr,
   DAYTONA_SNAPSHOT:            optStr,
   DAYTONA_NETWORK_ALLOW_LIST:  optStr,
+  DAYTONA_RESOURCE_CPU:        optInt(2),
+  DAYTONA_RESOURCE_MEMORY:     optInt(4),
+  DAYTONA_RESOURCE_DISK:       optInt(20),
   DAYTONA_KEEP_FAILED_SANDBOX: optBoolFalse,
 
   // ── JustAVPS — Sandbox provisioning via JustAVPS API (conditional: required if justavps provider enabled) ──
@@ -485,6 +488,9 @@ export const config = {
   DAYTONA_TARGET: env.DAYTONA_TARGET,
   DAYTONA_SNAPSHOT: env.DAYTONA_SNAPSHOT || `epsilon-sandbox-v${SANDBOX_VERSION}`,
   DAYTONA_NETWORK_ALLOW_LIST: env.DAYTONA_NETWORK_ALLOW_LIST || undefined,
+  DAYTONA_RESOURCE_CPU: env.DAYTONA_RESOURCE_CPU,
+  DAYTONA_RESOURCE_MEMORY: env.DAYTONA_RESOURCE_MEMORY,
+  DAYTONA_RESOURCE_DISK: env.DAYTONA_RESOURCE_DISK,
   DAYTONA_KEEP_FAILED_SANDBOX: env.DAYTONA_KEEP_FAILED_SANDBOX,
 
   // ─── JustAVPS (VPS Sandbox provisioning via JustAVPS) ────────────────────

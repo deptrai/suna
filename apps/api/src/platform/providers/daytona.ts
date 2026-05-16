@@ -70,10 +70,16 @@ export class DaytonaProvider implements SandboxProvider {
     // connections from the sandbox back to our API. Set DAYTONA_NETWORK_ALLOW_LIST
     // to a comma-separated CIDR list (e.g. "167.172.66.16/32") in the API env.
     const networkAllowList = config.DAYTONA_NETWORK_ALLOW_LIST || undefined;
+    const resources = {
+      cpu: config.DAYTONA_RESOURCE_CPU,
+      memory: config.DAYTONA_RESOURCE_MEMORY,
+      disk: config.DAYTONA_RESOURCE_DISK,
+    };
 
     const usesImage = snapshot.includes(':') || snapshot.includes('/');
     const createPayload = {
       ...(usesImage ? { image: snapshot } : { snapshot }),
+      resources,
       envVars: {
         EPSILON_API_URL: sandboxApiBase,
         ENV_MODE: 'cloud',
@@ -104,7 +110,7 @@ export class DaytonaProvider implements SandboxProvider {
 
     const createStartedAt = Date.now();
     console.log(
-      `[DAYTONA] create start mode=${usesImage ? 'image' : 'snapshot'} target=${config.DAYTONA_TARGET ?? 'default'} sdkTimeout=900s ref=${snapshot}`,
+      `[DAYTONA] create start mode=${usesImage ? 'image' : 'snapshot'} target=${config.DAYTONA_TARGET ?? 'default'} resources=${resources.cpu}cpu/${resources.memory}GiB/${resources.disk}GiB sdkTimeout=900s ref=${snapshot}`,
     );
     const createOptions: any = {
       timeout: 900,
@@ -171,6 +177,7 @@ export class DaytonaProvider implements SandboxProvider {
         provisionedBy: opts.userId,
         daytonaSandboxId: externalId,
         snapshot,
+        resources,
         version: SANDBOX_VERSION,
       },
     };
