@@ -1,8 +1,8 @@
 ---
-stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8]
-lastStep: 8
+stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+lastStep: 10
 status: 'complete'
-completedAt: '2026-05-13'
+completedAt: '2026-05-17'
 inputDocuments:
   - _bmad-output/project-context.md
   - docs/project-overview.md
@@ -235,13 +235,15 @@ Layer 3 — Core Runtime (inside container)
 | Env | Frontend | API | Sandboxes |
 |---|---|---|---|
 | **Dev** | Vercel (main branch) | dev-api.epsilon.com (VPS) | JustaVPS dev org |
-| **Prod** | Vercel (production) | new-api.epsilon.com (VPS) | JustaVPS prod org |
+| **Prod (chainlens.net)** | Dokploy (`frontend-pyzi0j`) | Dokploy (`api-djcsof`, api.chainlens.net) | Daytona EU (primary), JustAVPS (legacy) |
 
 **Local dev:**
 - Frontend: localhost:3000 (`pnpm dev:frontend`)
 - API: localhost:8008 (`pnpm dev:api`)
-- Sandbox: Docker local (`pnpm dev:sandbox`)
+- Sandbox: Docker local (`pnpm dev:sandbox`) HOẶC Daytona cloud qua cloudflared tunnel — xem Step 10
 - DB: Supabase local (`supabase start`)
+
+> **Production deployment platform**: Chainlens production (167.172.66.16) chạy trên **Dokploy** (Docker Swarm) — không phải Vercel. autoDeploy=true theo branch `feat/rename-chainlens-epsilon`. Sandbox provider chuyển từ JustAVPS sang **Daytona** (EU region) trong 2026-05.
 
 ---
 
@@ -1478,3 +1480,229 @@ This is documented in each story's "Dev Notes" section. Sprint sequencing in `sp
 - Pro-only data (hacks, emissions) unlocks Story 2.7's risk-scoring use case, which is a differentiator vs competitors.
 
 This $300/mo investment supersedes the original "DeFiLlama Free only" recommendation in Section 3.1 for any deployment that ships Stories 2.4–2.7.
+
+---
+
+## Step 10: Production Sandbox Connectivity Architecture (Daytona + cloudflared bridge)
+
+**Added:** 2026-05-17 (Verified live on chainlens.net + Daytona EU)
+
+This section documents the production sandbox connectivity model after the migration from JustaVPS to **Daytona** as the primary sandbox provider, and the introduction of a **cloudflared bridge tunnel** to work around Daytona's network firewall.
+
+### 10.1. Why Daytona Replaces JustaVPS for Primary Workload
+
+| Aspect | JustaVPS | Daytona |
+|---|---|---|
+| Provisioning model | Full VM + Docker on host | Container-as-sandbox (managed) |
+| Cold-start | ~2 min (VM boot + docker pull) | ~5–7 min (image pull, persistent across stops) |
+| Cost per sandbox | ~$5/mo per VPS, always-on | Pay-per-use (auto-stop after 15 min idle, archive after 30 min) |
+| Network model | Full Linux network stack | Tier 1/2 firewall (whitelist AI providers) |
+| `executeCommand` SDK | n/a (SSH-based) | Native `sandbox.process.executeCommand` |
+| Lifecycle hooks | s6-services auto-start at boot | **PID 1 = `/usr/local/bin/daytona sleep infinity`** — bypasses ENTRYPOINT, s6 not auto-started |
+
+The `PID 1 = sleep infinity` behavior is the critical Daytona-specific quirk that drives §10.3.
+
+### 10.2. Daytona Tier Firewall — What Is Reachable from Sandbox
+
+Daytona Tier 1/2 implements an **outbound allow-list firewall** at Envoy level. From inside a sandbox, only known AI provider domains are reachable; all custom domains return TLS connection reset.
+
+| Domain | Reachability from Daytona sandbox |
+|---|---|
+| `api.anthropic.com` | ✅ allowed |
+| `api.openai.com` | ✅ allowed |
+| `openrouter.ai` | ✅ allowed |
+| `*.trycloudflare.com` (subdomain) | ✅ allowed |
+| `api.chainlens.net` | ❌ blocked (Connection reset by peer) |
+| `v98store.com` | ❌ blocked (Connection reset by peer) |
+| `cloudflare.com` (apex) | ❌ blocked |
+| `ngrok.io` | ❌ blocked |
+
+**Implication:** Sandbox cannot directly call back to `api.chainlens.net/v1/router` for LLM proxy or tool routing. Two solutions exist:
+
+1. **Direct LLM key injection** — sandbox calls AI provider directly with platform's key. Implemented in [`apps/api/src/platform/providers/daytona.ts:98-102`](apps/api/src/platform/providers/daytona.ts#L98) for Anthropic/OpenAI/OpenRouter/Gemini/XAI keys. Bypasses Epsilon billing/proxy entirely.
+2. **cloudflared bridge** — expose API container at `*.trycloudflare.com`, sandbox callbacks reach API normally. Required when LLM proxy uses non-AI domain (e.g. v98store) that Daytona blocks. See §10.4.
+
+**Anti-pattern:** Setting `DAYTONA_NETWORK_ALLOW_LIST` env explicitly. This switches Daytona Envoy from default whitelist to explicit allow-list and **breaks** access to AI providers entirely (silent TLS reset on `api.anthropic.com`). Code at [`daytona.ts:69-74`](apps/api/src/platform/providers/daytona.ts#L69) explicitly does NOT pass `networkAllowList` to `daytona.create()`.
+
+### 10.3. Sandbox Bootstrap Pattern (`epsilon-daytona-start` + `setsid`)
+
+Because Daytona overrides PID 1 to `sleep infinity`, the s6-overlay services defined in `epsilon/computer` image (`svc-epsilon-master`, `svc-opencode-serve`, etc.) do not auto-start. The provider must explicitly trigger bootstrap after `daytona.create()` returns.
+
+**Bootstrap sequence ([daytona.ts:147-153](apps/api/src/platform/providers/daytona.ts#L147)):**
+
+```typescript
+await this.startRuntime(daytonaSandbox);
+const preview = await this.resolvePreviewEndpoint(daytonaSandbox, serviceKey, 8000);
+const ready = await this.waitForRuntimeReady(daytonaSandbox, preview.url, preview.headers);
+```
+
+**`startRuntime()` ([daytona.ts:267-277](apps/api/src/platform/providers/daytona.ts#L267)):**
+
+```typescript
+const launch =
+  "mkdir -p /tmp && setsid bash -c 'nohup /usr/local/bin/epsilon-daytona-start " +
+  "> /tmp/epsilon-daytona-start.log 2>&1 < /dev/null &'";
+await sandbox.process.executeCommand(launch, undefined, 10_000);
+```
+
+**Why `setsid` is mandatory:** Daytona's `executeCommand` reaps the entire process tree when the shell call returns. Plain `nohup ... &` does not survive — child processes get killed before `epsilon-daytona-start` finishes forking the bun runtime. `setsid bash -c '... </dev/null &'` creates a new session detached from the controlling tty, allowing the bootstrap to outlive the SDK call. Verified failure mode 2026-05-15: bootstrap halts at `[fix-ownership] Done.`, never reaches `starting epsilon-master on port 8000` without `setsid`.
+
+**Readiness probe:** Poll `/epsilon/health` (lightweight, returns OK once epsilon-master listens on :8000) instead of `/global/health` (waits for full opencode warm-up, can be 5+ minutes). `waitForRuntimeReady` polls every 15s for up to 10 minutes. Cold start typically 5–7 minutes (image pull); subsequent starts ~30s (cached layers).
+
+### 10.4. cloudflared Bridge for Production LLM Proxy
+
+**Problem:** Production uses `OPENROUTER_API_URL=https://v98store.com/v1` to proxy LLM calls through a v98 reseller key. Sandbox cannot reach `v98store.com` directly (Daytona blocks), and cannot call back to `api.chainlens.net/v1/router/chat/completions` (also blocked) to use the API's existing v98 proxy logic.
+
+**Solution:** Run a **cloudflared quick tunnel** as a Docker container on the production server, exposing the API container via `*.trycloudflare.com` (Daytona allows this subdomain). Sandbox callbacks resolve through the tunnel; the API container has direct access to v98store.
+
+```
+┌──────────────────┐  HTTPS   ┌──────────────────────┐
+│  User browser    │─────────→│  chainlens.net (FE)  │
+└──────────────────┘          └──────────────────────┘
+                                         │
+                                         ↓ /v1/platform/init
+                                ┌─────────────────────┐
+                                │ api.chainlens.net   │ (Dokploy api-djcsof)
+                                └─────────────────────┘
+                                  │              │
+                          create  ↓              ↓ proxy LLM
+                         ┌────────────┐    ┌──────────────┐
+                         │ Daytona EU │    │ v98store.com │
+                         │  sandbox   │    │  (key v98)   │
+                         └────────────┘    └──────────────┘
+                                │                  ↑
+                       chat callback              │
+                                ↓                  │
+                  ┌──────────────────────────────┐ │
+                  │ <random>.trycloudflare.com   │ │ (cloudflared bridge)
+                  └──────────────────────────────┘ │
+                                ↓                  │
+                  api-djcsof:8008  (dokploy-network)
+                  /v1/router/chat/completions ────┘
+```
+
+**Setup** (chỉ chạy 1 lần trên prod server, persistent across restarts):
+
+```bash
+docker run -d --name cloudflared-api-bridge \
+  --restart unless-stopped \
+  --network dokploy-network \
+  cloudflare/cloudflared:latest \
+  tunnel --url http://api-djcsof:8008 --no-autoupdate
+```
+
+Capture tunnel URL via `docker logs cloudflared-api-bridge | grep trycloudflare\.com`, then set `EPSILON_URL=<tunnel>/v1/router` in Dokploy api env. The other URLs (`BASE_URL`, `API_URL`, `FRONTEND_URL`) remain `chainlens.net` since they're for user-facing flows, not sandbox callbacks.
+
+**Trade-offs of quick tunnel:**
+
+| Aspect | Quick tunnel (current) | Named tunnel (future) |
+|---|---|---|
+| Auth required | None | Cloudflare account |
+| URL | Random, changes on restart | Fixed (custom domain or `*.cfargotunnel.com`) |
+| TLS | Cloudflare-issued | Cloudflare-issued |
+| Stability | Best effort, no SLA | Production-grade |
+| Re-deploy ergonomics | Must update `EPSILON_URL` + re-init existing sandboxes | Stable across container restarts |
+
+**Migration path to named tunnel** (recommended when stabilizing):
+1. Create Cloudflare account, install `cloudflared` CLI on prod server.
+2. `cloudflared tunnel create chainlens-sandbox-bridge` → token + UUID.
+3. Map subdomain (e.g. `sandbox-bridge.chainlens.net`) to tunnel via DNS API.
+4. Replace quick tunnel container with `cloudflared tunnel run --token <TOKEN>`.
+5. Update `EPSILON_URL=https://sandbox-bridge.chainlens.net/v1/router` once.
+
+### 10.5. `INTERNAL_SERVICE_KEY` Drift After Redeploy (Production-only Bug)
+
+**Symptom:** Frontend reports "Cannot connect to API" or sandbox proxy returns 401 immediately after Dokploy redeploys the api service. Existing sandboxes that worked before now fail auth.
+
+**Root cause:** When `INTERNAL_SERVICE_KEY` is unset in env, [`config.ts:528`](apps/api/src/config.ts#L528) auto-generates a random 32-byte hex at startup. The generator attempts to persist to `.env` for stability — but in a Dokploy container, the working directory is read-only, so the key only lives in process memory. Each redeploy → new random key → existing sandboxes (provisioned with old key) fail mutual auth.
+
+**Fix:** Set a stable key explicitly in Dokploy env for **both** `api-djcsof` AND `frontend-pyzi0j`:
+
+```bash
+openssl rand -hex 32
+# Paste same value into INTERNAL_SERVICE_KEY of both services
+```
+
+After this fix, key persists across redeploys. Sandboxes provisioned before the fix still have the previous (in-memory) key — they must be re-init'd (delete + `/v1/platform/init`).
+
+**Why both services:** API uses the key for `Bearer <key>` outbound when proxying into sandbox. Frontend uses the same key for server-side webhook verification and admin API calls. They must match for the trust chain to close.
+
+### 10.6. Stale Sandbox Row Detection in DB
+
+When a Daytona sandbox is auto-archived (after 30 min idle) or deleted manually from the Daytona dashboard, the corresponding DB row in `epsilon.sandboxes` may remain `status='active'`. Subsequent `/v1/platform/init` calls hit `findExistingSandbox()` which returns the stale row → API tries to wake/proxy → `DaytonaNotFoundError` → automatic mark as `status='error'` after 4 retries (see [sandbox-proxy preview retry logic]).
+
+**Operational drift recovery:**
+
+```sql
+-- Audit (run periodically or after support tickets)
+SELECT s.sandbox_id, s.external_id, s.status, s.updated_at
+FROM epsilon.sandboxes s
+WHERE s.status IN ('active', 'provisioning')
+  AND s.provider = 'daytona'
+  AND s.updated_at < NOW() - INTERVAL '1 hour';
+
+-- Cleanup (mark stale rows so /init creates fresh sandbox on next request)
+UPDATE epsilon.sandboxes
+SET status = 'archived', updated_at = NOW()
+WHERE sandbox_id IN (...);
+```
+
+**Future hardening (backlog):** Cross-validate DB sandbox rows against Daytona EU `daytona.list()` on a 30-minute schedule; auto-archive any DB row whose `external_id` is missing from Daytona. Avoids manual SQL intervention on user reports.
+
+### 10.7. Production Verification Procedure
+
+Used during deploy of the connectivity fix on 2026-05-17:
+
+```typescript
+// 1. Login → create sandbox
+POST /v1/platform/init { provider: 'daytona' }
+// Expect: 201 created, status=active, external_id=<new>
+
+// 2. Wait sandbox health (5–7 min cold pull)
+GET /v1/p/<external_id>/8000/epsilon/health
+// Expect: 200 OK once epsilon-master ready
+
+// 3. Create session
+POST /v1/p/<external_id>/8000/session {}
+// Expect: 200 OK, returns session id
+
+// 4. Send chat message
+POST /v1/p/<external_id>/8000/session/<id>/message
+{
+  "parts": [{ "type": "text", "text": "Say \"production OK\" only." }],
+  "model": { "providerID": "epsilon", "modelID": "gpt-4o-mini" }
+}
+// Expect: 200 OK with assistant text "Production OK." within 30s
+```
+
+**Pass criteria:** Step 4 returns assistant text (not `(no text)`) within 30s. Cost should be < $0.01 for a single Haiku-size response.
+
+**Fail-mode signature & remedy table:**
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `/init` returns 500 with "Disk request 20GB exceeds maximum allowed" | Default `DAYTONA_RESOURCE_DISK=20` exceeds free-tier 10GB cap | Set `DAYTONA_RESOURCE_DISK=10` in Dokploy api env |
+| `/health` returns 503 "Sandbox is waking up" indefinitely | Daytona sandbox archived/deleted but DB row stale | §10.6 cleanup |
+| `/health` returns 200 but `/message` returns 504 "OpenCode timeout" | Sandbox cannot reach `EPSILON_API_URL` | §10.2 — verify domain reachable from sandbox via `executeCommand` curl test; if blocked, use cloudflared bridge §10.4 |
+| `/message` returns 401 from sandbox proxy | `INTERNAL_SERVICE_KEY` mismatch between api/frontend/sandbox | §10.5 — set stable key, re-init affected sandboxes |
+| Sandbox port 8000 not listening 5+ min after create | Bootstrap script not running (no `setsid`, or image missing `epsilon-daytona-start`) | §10.3 — verify code calls `setsid bash -c 'nohup ...'`, verify image has `/usr/local/bin/epsilon-daytona-start` |
+
+### 10.8. Cost Impact (incremental over Step 7 baseline)
+
+| Item | Monthly Cost |
+|---|---|
+| Daytona free tier (per sandbox 2 cpu / 4 gb / 10 gb disk) | $0 (15 min idle stop, 30 min archive) |
+| cloudflared quick tunnel | $0 (free, no auth) |
+| Cloudflare account (named tunnel migration, optional) | $0 (free tier sufficient) |
+| Existing v98store key passthrough | unchanged |
+| **Total incremental** | **$0** |
+
+The architecture intentionally uses free-tier services for the bridge layer because the v98store key already covers LLM costs at favorable rates. Production-grade upgrades (named tunnel, Daytona paid tier with persistent VMs) become relevant if (a) cold-start UX becomes a complaint, or (b) cloudflared quick-tunnel instability causes user-visible incidents.
+
+### 10.9. Known Operational Quirks
+
+- **`DAYTONA_SNAPSHOT` safety override**: code at [`daytona.ts:42-50`](apps/api/src/platform/providers/daytona.ts#L42) hard-pins to `epsilonaicrypto/computer:daytona-fix-9` when env value is `daytona-fix-2..8`. Prevents older sandbox images (which lack the lightweight readiness probe) from being used in production. The env can lag the code; the override ensures forward compatibility.
+- **Daytona's deprecated `DAYTONA_SERVER_URL`**: SDK warns to use `DAYTONA_API_URL`. Currently both are set; migrate when convenient.
+- **`autoStopInterval=15` + `autoArchiveInterval=30`**: aggressive defaults to minimize Daytona quota usage, but increases cold-start frequency for users who chat irregularly. Tunable per-deployment if user feedback demands.
+
+---
