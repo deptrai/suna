@@ -52,7 +52,7 @@ function recover(path: string): boolean {
 
 async function isOpenCodeHealthy(): Promise<boolean> {
   try {
-    const res = await fetch(`http://${config.OPENCODE_HOST}:${config.OPENCODE_PORT}/session`, {
+    const res = await fetch(`http://${config.OPENCODE_HOST}:${config.OPENCODE_PORT}/session/status`, {
       signal: AbortSignal.timeout(OPENCODE_HEALTH_TIMEOUT_MS),
     })
     await res.arrayBuffer().catch(() => {})

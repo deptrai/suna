@@ -342,7 +342,7 @@ async function checkOpenCodeReady(): Promise<boolean> {
   openCodeLastCheck = now
 
   try {
-    const res = await fetch(`http://${config.OPENCODE_HOST}:${config.OPENCODE_PORT}/session`, {
+    const res = await fetch(`http://${config.OPENCODE_HOST}:${config.OPENCODE_PORT}/session/status`, {
       signal: AbortSignal.timeout(OPENCODE_READY_TIMEOUT_MS),
     })
     if (res.ok) {
@@ -354,7 +354,22 @@ async function checkOpenCodeReady(): Promise<boolean> {
       return true
     }
     await res.arrayBuffer().catch(() => {})
-  } catch {}
+  } catch {
+    try {
+      const res = await fetch(`http://${config.OPENCODE_HOST}:${config.OPENCODE_PORT}/session`, {
+        signal: AbortSignal.timeout(OPENCODE_READY_TIMEOUT_MS),
+      })
+      if (res.ok) {
+        if (!openCodeReady) {
+          console.log('[Epsilon Master] OpenCode is ready')
+        }
+        openCodeReady = true
+        await res.arrayBuffer()
+        return true
+      }
+      await res.arrayBuffer().catch(() => {})
+    } catch {}
+  }
   if (openCodeReady) {
     console.warn('[Epsilon Master] OpenCode is no longer reachable')
   }
