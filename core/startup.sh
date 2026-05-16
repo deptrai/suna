@@ -203,10 +203,24 @@ rm -f /workspace/.browser-profile/SingletonLock \
 [ -d /workspace/ssl ] && [ -z "$(ls -A /workspace/ssl 2>/dev/null)" ] && rmdir /workspace/ssl 2>/dev/null || true
 
 # ── Fix ownership (critical after Docker image updates) ─────────────────────
-# When a container is recreated from a new image, the abc user UID may differ
-# from the previous image. Fix ALL workspace files to match the current abc user.
+# Daytona bootstrap runs this script while readiness timeout is ticking. A full
+# recursive chown over large mounted workspaces can take many minutes and block
+# epsilon-master startup. Allow a fast path in bootstrap mode.
 echo "[startup] Fixing workspace ownership..."
-chown -R "$WORKSPACE_UID:$WORKSPACE_GID" /workspace 2>/dev/null || true
+if [ "${EPSILON_SKIP_RECURSIVE_CHOWN:-0}" = "1" ]; then
+  echo "[startup] EPSILON_SKIP_RECURSIVE_CHOWN=1 -> using fast ownership fix"
+  chown "$WORKSPACE_UID:$WORKSPACE_GID" /workspace 2>/dev/null || true
+  chown -R "$WORKSPACE_UID:$WORKSPACE_GID" \
+    /workspace/.persistent-system \
+    /workspace/.opencode \
+    /workspace/.epsilon \
+    /workspace/.local \
+    /workspace/.cache \
+    /workspace/.config \
+    2>/dev/null || true
+else
+  chown -R "$WORKSPACE_UID:$WORKSPACE_GID" /workspace 2>/dev/null || true
+fi
 chmod 700 "$(dirname "$SECRET_FILE_PATH")" 2>/dev/null || true
 
 # Also fix /opt dirs — the Dockerfile chowns these to abc:abc at build time,

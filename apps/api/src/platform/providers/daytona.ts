@@ -36,10 +36,10 @@ export class DaytonaProvider implements SandboxProvider {
   }
 
   async create(opts: CreateSandboxOpts): Promise<ProvisionResult> {
-    // Safety override: if Dokploy env is still pinned to daytona-fix-2, force
-    // daytona-fix-3 image so opencode boots with anthropic default model.
-    const snapshot = config.DAYTONA_SNAPSHOT?.includes('daytona-fix-2')
-      ? 'epsilonaicrypto/computer:daytona-fix-3'
+    // Safety override: if Dokploy env is still pinned to older fix tags, force
+    // daytona-fix-4 (includes anthropic default model + fast bootstrap chown path).
+    const snapshot = (config.DAYTONA_SNAPSHOT?.includes('daytona-fix-2') || config.DAYTONA_SNAPSHOT?.includes('daytona-fix-3'))
+      ? 'epsilonaicrypto/computer:daytona-fix-4'
       : config.DAYTONA_SNAPSHOT;
     if (!snapshot) {
       throw new Error('DAYTONA_SNAPSHOT is not configured — set it to the snapshot name (e.g. epsilon-sandbox-v0.4.1)');
