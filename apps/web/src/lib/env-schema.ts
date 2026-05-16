@@ -6,8 +6,8 @@ const RuntimeEnvSchema = z.object({
   BACKEND_URL: z.string().url('BACKEND_URL must be a valid URL'),
   ENV_MODE: z.enum(['local', 'cloud']).default('local'),
   APP_URL: z.string().url('APP_URL must be a valid URL').default('http://localhost:3000'),
-  /** Default sandbox container name — used as fallback before the store hydrates */
-  SANDBOX_ID: z.string().optional().default('epsilon-sandbox'),
+  /** Sandbox id is optional. Local-mode fallback is resolved by caller logic. */
+  SANDBOX_ID: z.string().optional(),
   /**
    * Explicit billing toggle. When 'false', disables billing UI even in cloud mode.
    * Useful when Stripe is not configured. Defaults to undefined (falls back to ENV_MODE).
@@ -18,8 +18,12 @@ const RuntimeEnvSchema = z.object({
 export type RuntimeEnv = z.infer<typeof RuntimeEnvSchema>
 
 export function parseRuntimeEnv(raw: Partial<RuntimeEnv>): RuntimeEnv {
-  return RuntimeEnvSchema.parse({
+  const parsed = RuntimeEnvSchema.parse({
     ENV_MODE: 'local',
     ...raw,
   })
+  if (parsed.ENV_MODE === 'cloud') {
+    return { ...parsed, SANDBOX_ID: parsed.SANDBOX_ID || undefined }
+  }
+  return { ...parsed, SANDBOX_ID: parsed.SANDBOX_ID || 'epsilon-sandbox' }
 }

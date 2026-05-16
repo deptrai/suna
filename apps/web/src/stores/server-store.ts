@@ -135,7 +135,8 @@ function getBackendUrl(): string {
 }
 
 function getDefaultSandboxUrl(): string {
-  const sandboxId = getEnv().SANDBOX_ID || 'epsilon-sandbox';
+  const env = getEnv();
+  const sandboxId = env.SANDBOX_ID || (env.ENV_MODE === 'local' ? 'epsilon-sandbox' : 'pending-sandbox');
   return `${getBackendUrl()}/p/${sandboxId}/8000`;
 }
 
@@ -719,8 +720,10 @@ export function getInstanceSubdomainOpts(
     return fromUrl;
   }
 
+  const env = getEnv();
+  const fallbackSandboxId = env.ENV_MODE === 'local' ? 'epsilon-sandbox' : '';
   return {
-    sandboxId: getActiveSandboxId() ?? getEnv().SANDBOX_ID ?? 'epsilon-sandbox',
+    sandboxId: getActiveSandboxId() ?? env.SANDBOX_ID ?? fallbackSandboxId,
     backendPort,
     apiBaseUrl: getBackendUrl(),
   };
@@ -750,11 +753,10 @@ export function deriveSubdomainOpts(
     return fromUrl;
   }
 
-  // Fall back to the configured sandbox ID (from runtime env) or 'epsilon-sandbox'.
-  // This ensures proxy rewriting NEVER silently degrades to raw localhost URLs
-  // just because the store hasn't hydrated the sandboxId yet, or because the
-  // provider is marked as cloud (Daytona/JustAVPS use the same /p/ proxy).
-  const sandboxId = server?.sandboxId || getEnv().SANDBOX_ID || 'epsilon-sandbox';
+  // Fall back to configured sandbox ID; only use local container fallback in local mode.
+  // In cloud mode we intentionally keep sandboxId empty until real sandbox metadata hydrates.
+  const env = getEnv();
+  const sandboxId = server?.sandboxId || env.SANDBOX_ID || (env.ENV_MODE === 'local' ? 'epsilon-sandbox' : '');
   return {
     sandboxId,
     backendPort: getBackendPort(),
