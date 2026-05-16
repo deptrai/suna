@@ -5,6 +5,7 @@ export type SandboxHealthStatus = 'healthy' | 'degraded' | 'offline' | 'unknown'
 
 export const SANDBOX_INIT_MAX_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 2_000;
+const CREATE_TIMEOUT_MS = 180_000;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -174,7 +175,14 @@ export async function retrySandboxProvisionCreate(
   for (let attempt = 1; attempt <= SANDBOX_INIT_MAX_ATTEMPTS; attempt++) {
     await hooks.onAttemptStart?.(attempt);
     try {
-      const result = await provider.create(createOpts);
+      const result = await Promise.race<ProvisionResult>([
+        provider.create(createOpts),
+        new Promise<ProvisionResult>((_, reject) => {
+          setTimeout(() => {
+            reject(new Error(`Sandbox provider.create timed out after ${CREATE_TIMEOUT_MS}ms`));
+          }, CREATE_TIMEOUT_MS);
+        }),
+      ]);
       return { result, attempts: attempt };
     } catch (error) {
       lastError = error;
