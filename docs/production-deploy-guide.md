@@ -670,6 +670,49 @@ DELETE FROM epsilon.sandboxes WHERE status='error' AND external_id='';
 ```
 Click "Get started" lại trên UI sẽ trigger provisioning mới.
 
+### `INTERNAL_SERVICE_KEY` mismatch (auto-gen drift sau redeploy)
+
+**Triệu chứng:** Frontend báo "Cannot connect to API", hoặc các call vào sandbox proxy trả 401 sau khi redeploy API. Sandbox cũ vẫn hoạt động trước đó, đột nhiên ngưng.
+
+**Root cause:** Khi `INTERNAL_SERVICE_KEY` không có trong env Dokploy, [config.ts:528](apps/api/src/config.ts#L528) auto-generate ngẫu nhiên 32-byte hex tại startup. Container Dokploy không write được `.env` → key chỉ tồn tại trong process. Mỗi lần redeploy API → key mới → existing sandboxes vẫn dùng key cũ → auth chéo fail.
+
+**Fix dứt điểm:** Set stable key trong Dokploy env cho **cả** `api` và `frontend`:
+```bash
+openssl rand -hex 32
+# Paste cùng giá trị vào INTERNAL_SERVICE_KEY của 2 service
+```
+Sau khi set lần đầu, key cố định qua mọi redeploy. Sandboxes cũ provisioned với key cũ vẫn cần re-init (delete + recreate qua /v1/platform/init).
+
+**Lưu ý:** sandbox runtime có 3 nguồn key, đôi khi lệch nhau:
+1. `/run/s6/container_environment/INTERNAL_SERVICE_KEY` — value s6 init đã apply (canonical)
+2. `/workspace/.persistent-system/secrets/.bootstrap-env.json` — bootstrap snapshot
+3. Daytona env (passed at create time) — value api inject lúc create
+
+Luôn lấy theo (1) khi debug auth.
+
+### `DAYTONA_NETWORK_ALLOW_LIST` block AI providers
+
+**KHÔNG set** `DAYTONA_NETWORK_ALLOW_LIST` trừ khi bạn hiểu rõ Daytona Tier 1/2 firewall.
+
+Daytona free/paid tier mặc định whitelist các AI provider known (`api.anthropic.com`, `api.openai.com`, `openrouter.ai`, ...). Khi set `networkAllowList`, Daytona Envoy CHUYỂN sang allow-list explicit và **disable** whitelist mặc định → tất cả call ra AI provider bị TLS reset. Triệu chứng: chat trả 200 nhưng opencode không response (silent fail từ AI SDK).
+
+Provider code ([daytona.ts](apps/api/src/platform/providers/daytona.ts)) **không pass** `networkAllowList` vào `daytona.create()` — comment trong code giải thích lý do. Nếu bạn thấy env này còn trong Dokploy, REMOVE nó.
+
+### Hybrid local dev: tunnel sandbox cloud về backend local
+
+Khi cần test sandbox Daytona/JustAVPS từ machine local nhưng giữ stack local (Supabase local, Redis local), sandbox cloud cần public URL để callback `EPSILON_API_URL`. Cách đơn giản nhất:
+
+```bash
+brew install cloudflared
+cloudflared tunnel --url http://localhost:8008
+# Copy URL trycloudflare.com → set vào apps/api/.env:
+#   EPSILON_URL=https://<random>.trycloudflare.com/v1/router
+#   API_URL=https://<random>.trycloudflare.com
+#   BASE_URL=https://<random>.trycloudflare.com
+```
+
+Restart API local. POST `/v1/platform/init` với `provider: 'daytona'` sẽ tạo sandbox EU; sandbox call back qua tunnel → local API → LLM proxy. Verified 2026-05-16: cold start ~17 phút (image pull lần đầu), chat reply OK với `epsilon/gpt-4o-mini`.
+
 ### Vibe-Trading 403 từ epsilon-api
 
 Nguyên nhân: IP của epsilon-api container không nằm trong `ALLOWED_IPS`.
