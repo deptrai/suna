@@ -690,14 +690,6 @@ Sau khi set lần đầu, key cố định qua mọi redeploy. Sandboxes cũ pro
 
 Luôn lấy theo (1) khi debug auth.
 
-### `DAYTONA_NETWORK_ALLOW_LIST` block AI providers
-
-**KHÔNG set** `DAYTONA_NETWORK_ALLOW_LIST` trừ khi bạn hiểu rõ Daytona Tier 1/2 firewall.
-
-Daytona free/paid tier mặc định whitelist các AI provider known (`api.anthropic.com`, `api.openai.com`, `openrouter.ai`, ...). Khi set `networkAllowList`, Daytona Envoy CHUYỂN sang allow-list explicit và **disable** whitelist mặc định → tất cả call ra AI provider bị TLS reset. Triệu chứng: chat trả 200 nhưng opencode không response (silent fail từ AI SDK).
-
-Provider code ([daytona.ts](apps/api/src/platform/providers/daytona.ts)) **không pass** `networkAllowList` vào `daytona.create()` — comment trong code giải thích lý do. Nếu bạn thấy env này còn trong Dokploy, REMOVE nó.
-
 ### Hybrid local dev: tunnel sandbox cloud về backend local
 
 Khi cần test sandbox Daytona/JustAVPS từ machine local nhưng giữ stack local (Supabase local, Redis local), sandbox cloud cần public URL để callback `EPSILON_API_URL`. Cách đơn giản nhất:
@@ -712,6 +704,59 @@ cloudflared tunnel --url http://localhost:8008
 ```
 
 Restart API local. POST `/v1/platform/init` với `provider: 'daytona'` sẽ tạo sandbox EU; sandbox call back qua tunnel → local API → LLM proxy. Verified 2026-05-16: cold start ~17 phút (image pull lần đầu), chat reply OK với `epsilon/gpt-4o-mini`.
+
+### Production: cloudflared bridge cho LLM proxy via v98store
+
+**Bối cảnh:** Production dùng `OPENROUTER_API_URL=https://v98store.com/v1` để proxy LLM calls qua key v98. Nhưng Daytona Tier firewall **block cả `api.chainlens.net` và `v98store.com`** từ trong sandbox (Connection reset). Daytona allow `*.trycloudflare.com` subdomain.
+
+**Giải pháp:** Chạy `cloudflared` quick tunnel trên prod server expose api container, set `EPSILON_URL` về tunnel URL. Sandbox call back qua tunnel → API container (có direct access v98store) → response.
+
+**Setup (chạy 1 lần trên prod server):**
+
+```bash
+# 1. Start cloudflared as restart=always container, target api service trong dokploy-network
+docker run -d --name cloudflared-api-bridge \
+  --restart unless-stopped \
+  --network dokploy-network \
+  cloudflare/cloudflared:latest \
+  tunnel --url http://api-djcsof:8008 --no-autoupdate
+
+# 2. Capture tunnel URL từ logs
+docker logs cloudflared-api-bridge 2>&1 | grep -E 'trycloudflare\.com'
+# → https://<random>.trycloudflare.com
+
+# 3. Update Dokploy api env (giữ nguyên BASE_URL/API_URL/FRONTEND_URL chainlens.net để user-facing
+#    không đổi; chỉ EPSILON_URL chuyển sang tunnel — đây là URL sandbox dùng callback)
+EPSILON_URL=https://<random>.trycloudflare.com/v1/router
+
+# 4. Redeploy api → mọi sandbox mới sẽ được provision với EPSILON_API_URL=tunnel
+```
+
+**Lưu ý quan trọng:**
+
+- Quick tunnel URL **đổi mỗi lần restart cloudflared** — sau cập nhật phải đồng bộ Dokploy env
+- Sandbox đã provision trước đó **giữ EPSILON_API_URL cũ** trong env Daytona — phải delete + re-init các sandbox đó để load URL mới
+- Production-grade: dùng **named tunnel** với Cloudflare account + custom domain → URL persistent, không phụ thuộc cloudflared restart
+
+**Verify chain hoạt động:**
+
+```bash
+# Từ ngoài internet
+curl https://<tunnel-url>/v1/health  # → 200 ok
+
+# Bên trong sandbox (qua executeCommand SDK)
+curl -sS -m 8 https://<tunnel-url>/v1/health  # → 200
+```
+
+Verified 2026-05-17: chat response chat OK với `epsilon/gpt-4o-mini`, latency ~3s từ POST message tới response complete.
+
+### `DAYTONA_NETWORK_ALLOW_LIST` block AI providers
+
+**KHÔNG set** `DAYTONA_NETWORK_ALLOW_LIST` trừ khi bạn hiểu rõ Daytona Tier 1/2 firewall.
+
+Daytona free/paid tier mặc định whitelist các AI provider known (`api.anthropic.com`, `api.openai.com`, `openrouter.ai`, ...). Khi set `networkAllowList`, Daytona Envoy CHUYỂN sang allow-list explicit và **disable** whitelist mặc định → tất cả call ra AI provider bị TLS reset. Triệu chứng: chat trả 200 nhưng opencode không response (silent fail từ AI SDK).
+
+Provider code ([daytona.ts](apps/api/src/platform/providers/daytona.ts)) **không pass** `networkAllowList` vào `daytona.create()` — comment trong code giải thích lý do. Nếu bạn thấy env này còn trong Dokploy, REMOVE nó.
 
 ### Vibe-Trading 403 từ epsilon-api
 
