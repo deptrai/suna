@@ -68,37 +68,40 @@ export class DaytonaProvider implements SandboxProvider {
     // to a comma-separated CIDR list (e.g. "167.172.66.16/32") in the API env.
     const networkAllowList = config.DAYTONA_NETWORK_ALLOW_LIST || undefined;
 
-    const daytonaSandbox = await daytona.create(
-      {
-        ...(snapshot.includes(':') || snapshot.includes('/') ? { image: snapshot } : { snapshot }),
-        envVars: {
-          EPSILON_API_URL: sandboxApiBase,
-          ENV_MODE: 'cloud',
-          INTERNAL_SERVICE_KEY: serviceKey,
-          TUNNEL_API_URL: sandboxApiBase,
-          TUNNEL_TOKEN: serviceKey,
-          // Route tool SDK traffic through the Epsilon router proxy for billing/key injection.
-          // If not set, sandbox tools fall back to hitting the real upstream APIs directly.
-          TAVILY_API_URL: `${routerBase}/tavily`,
-          REPLICATE_API_URL: `${routerBase}/replicate`,
-          SERPER_API_URL: `${routerBase}/serper`,
-          FIRECRAWL_API_URL: `${routerBase}/firecrawl`,
-          // Inject LLM API keys directly so opencode can call providers without going
-          // through the Epsilon router proxy. Daytona Tier 1/2 blocks outbound TLS to
-          // api.chainlens.net but allows api.anthropic.com, api.openai.com, etc.
-          ...(config.ANTHROPIC_API_KEY ? { ANTHROPIC_API_KEY: config.ANTHROPIC_API_KEY } : {}),
-          ...(config.OPENAI_API_KEY ? { OPENAI_API_KEY: config.OPENAI_API_KEY } : {}),
-          ...(config.OPENROUTER_API_KEY ? { OPENROUTER_API_KEY: config.OPENROUTER_API_KEY } : {}),
-          ...(config.GEMINI_API_KEY ? { GEMINI_API_KEY: config.GEMINI_API_KEY } : {}),
-          ...(config.XAI_API_KEY ? { XAI_API_KEY: config.XAI_API_KEY } : {}),
-          ...opts.envVars,
-        },
-        autoStopInterval: 15,
-        autoArchiveInterval: 30,
-        public: false,
-        ...(networkAllowList ? { networkAllowList } : {}),
+    const createPayload = {
+      ...(snapshot.includes(':') || snapshot.includes('/') ? { image: snapshot } : { snapshot }),
+      envVars: {
+        EPSILON_API_URL: sandboxApiBase,
+        ENV_MODE: 'cloud',
+        INTERNAL_SERVICE_KEY: serviceKey,
+        TUNNEL_API_URL: sandboxApiBase,
+        TUNNEL_TOKEN: serviceKey,
+        // Route tool SDK traffic through the Epsilon router proxy for billing/key injection.
+        // If not set, sandbox tools fall back to hitting the real upstream APIs directly.
+        TAVILY_API_URL: `${routerBase}/tavily`,
+        REPLICATE_API_URL: `${routerBase}/replicate`,
+        SERPER_API_URL: `${routerBase}/serper`,
+        FIRECRAWL_API_URL: `${routerBase}/firecrawl`,
+        // Inject LLM API keys directly so opencode can call providers without going
+        // through the Epsilon router proxy. Daytona Tier 1/2 blocks outbound TLS to
+        // api.chainlens.net but allows api.anthropic.com, api.openai.com, etc.
+        ...(config.ANTHROPIC_API_KEY ? { ANTHROPIC_API_KEY: config.ANTHROPIC_API_KEY } : {}),
+        ...(config.OPENAI_API_KEY ? { OPENAI_API_KEY: config.OPENAI_API_KEY } : {}),
+        ...(config.OPENROUTER_API_KEY ? { OPENROUTER_API_KEY: config.OPENROUTER_API_KEY } : {}),
+        ...(config.GEMINI_API_KEY ? { GEMINI_API_KEY: config.GEMINI_API_KEY } : {}),
+        ...(config.XAI_API_KEY ? { XAI_API_KEY: config.XAI_API_KEY } : {}),
+        ...opts.envVars,
       },
-      { timeout: 300 },
+      autoStopInterval: 15,
+      autoArchiveInterval: 30,
+      public: false,
+      ...(networkAllowList ? { networkAllowList } : {}),
+    };
+
+    const daytonaSandbox = await this.withTimeout(
+      daytona.create(createPayload, { timeout: 300 }),
+      180_000,
+      `daytona.create timed out after 180s (snapshot=${snapshot}, target=${config.DAYTONA_TARGET})`,
     );
 
     const externalId = daytonaSandbox.id;
@@ -307,6 +310,20 @@ export class DaytonaProvider implements SandboxProvider {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       return `diagnostics_error=${message}`;
+    }
+  }
+
+  private async withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    try {
+      return await Promise.race([
+        promise,
+        new Promise<T>((_, reject) => {
+          timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+        }),
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
     }
   }
 }
