@@ -1,9 +1,10 @@
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
-import { eq, and, ne } from 'drizzle-orm';
-import { sandboxes } from '@epsilon/db';
+import { eq, and, ne, desc } from 'drizzle-orm';
+import { sandboxes, sandboxMembers } from '@epsilon/db';
 import { getDaytona } from '../../shared/daytona';
 import { db } from '../../shared/db';
+import { config } from '../../config';
 import {
   canAccessPreviewSandbox,
   resolvePreviewUserContext,
@@ -135,6 +136,45 @@ async function wakeSandbox(sandboxId: string): Promise<void> {
   } catch (e) {
     console.error(`[PREVIEW] Failed to wake sandbox ${sandboxId}:`, e);
   }
+}
+
+async function resolveProxySandboxId(
+  requestedSandboxId: string,
+  userId: string,
+): Promise<string> {
+  if (config.ENV_MODE !== 'cloud' || requestedSandboxId !== 'epsilon-sandbox' || !userId) {
+    return requestedSandboxId;
+  }
+
+  const rows = await db
+    .select({
+      sandboxId: sandboxes.sandboxId,
+      externalId: sandboxes.externalId,
+      status: sandboxes.status,
+    })
+    .from(sandboxes)
+    .innerJoin(
+      sandboxMembers,
+      and(
+        eq(sandboxMembers.sandboxId, sandboxes.sandboxId),
+        eq(sandboxMembers.userId, userId),
+      ),
+    )
+    .where(and(ne(sandboxes.status, 'archived'), ne(sandboxes.status, 'pooled')))
+    .orderBy(desc(sandboxes.updatedAt), desc(sandboxes.createdAt))
+    .limit(10);
+
+  const match = rows.find((row) => !!row.externalId && row.externalId.trim().length > 0);
+  if (match?.externalId) {
+    console.warn(
+      `[PREVIEW] remapped cloud sandbox id ${requestedSandboxId} -> ${match.externalId} for user=${userId} sandbox=${match.sandboxId}`,
+    );
+    return match.externalId;
+  }
+
+  throw new HTTPException(503, {
+    message: 'Sandbox is provisioning and has no provider id yet. Please retry in a few seconds.',
+  });
 }
 
 // === Core Daytona proxy function ================================================
@@ -364,7 +404,7 @@ export async function proxyToDaytona(
 // Thin wrapper around proxyToDaytona() — extracts params from Hono context.
 
 preview.all('/:sandboxId/:port/*', async (c) => {
-  const sandboxId = c.req.param('sandboxId');
+  const requestedSandboxId = c.req.param('sandboxId');
   const portStr = c.req.param('port');
   const port = parseInt(portStr, 10);
 
@@ -373,6 +413,7 @@ preview.all('/:sandboxId/:port/*', async (c) => {
   }
 
   const userId = c.get('userId') as string;
+  const sandboxId = await resolveProxySandboxId(requestedSandboxId, userId);
 
   // Read body once up front (needed across retries)
   const method = c.req.method;
