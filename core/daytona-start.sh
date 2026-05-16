@@ -59,5 +59,6 @@ export HOME=/workspace
 export EPSILON_MASTER_PORT=8000
 export OPENCODE_HOST=localhost
 export OPENCODE_PORT=4096
+export EPSILON_SERVICE_START_WAIT_MS="${EPSILON_SERVICE_START_WAIT_MS:-120000}"
 export PATH="/opt/bun/bin:/usr/local/bin:/usr/bin:/bin"
 exec /command/s6-setuidgid abc /opt/bun/bin/bun run /ephemeral/epsilon-master/src/index.ts

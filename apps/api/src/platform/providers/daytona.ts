@@ -25,7 +25,7 @@ export class DaytonaProvider implements SandboxProvider {
   readonly name: ProviderName = 'daytona';
 
   readonly provisioning: ProvisioningTraits = {
-    async: false,
+    async: true,
     stages: [
       { id: 'creating', progress: 50, message: 'Creating sandbox...' },
     ],
@@ -68,8 +68,9 @@ export class DaytonaProvider implements SandboxProvider {
     // to a comma-separated CIDR list (e.g. "167.172.66.16/32") in the API env.
     const networkAllowList = config.DAYTONA_NETWORK_ALLOW_LIST || undefined;
 
+    const usesImage = snapshot.includes(':') || snapshot.includes('/');
     const createPayload = {
-      ...(snapshot.includes(':') || snapshot.includes('/') ? { image: snapshot } : { snapshot }),
+      ...(usesImage ? { image: snapshot } : { snapshot }),
       envVars: {
         EPSILON_API_URL: sandboxApiBase,
         ENV_MODE: 'cloud',
@@ -98,10 +99,28 @@ export class DaytonaProvider implements SandboxProvider {
       ...(networkAllowList ? { networkAllowList } : {}),
     };
 
+    const createStartedAt = Date.now();
+    console.log(
+      `[DAYTONA] create start mode=${usesImage ? 'image' : 'snapshot'} target=${config.DAYTONA_TARGET ?? 'default'} sdkTimeout=900s ref=${snapshot}`,
+    );
+    const createOptions: any = {
+      timeout: 900,
+      ...(usesImage
+        ? {
+            onSnapshotCreateLogs: (chunk: string) => {
+              const line = String(chunk || '').trim();
+              if (line) console.log(`[DAYTONA] snapshot build: ${line.slice(0, 500)}`);
+            },
+          }
+        : {}),
+    };
     const daytonaSandbox = await this.withTimeout(
-      daytona.create(createPayload, { timeout: 300 }),
-      420_000,
-      `daytona.create timed out after 420s (snapshot=${snapshot}, target=${config.DAYTONA_TARGET})`,
+      daytona.create(createPayload, createOptions),
+      960_000,
+      `daytona.create timed out after 960s (snapshot=${snapshot}, target=${config.DAYTONA_TARGET})`,
+    );
+    console.log(
+      `[DAYTONA] create done sandbox=${daytonaSandbox.id} state=${String(daytonaSandbox.state ?? 'unknown')} durationMs=${Date.now() - createStartedAt}`,
     );
 
     const externalId = daytonaSandbox.id;
@@ -117,8 +136,11 @@ export class DaytonaProvider implements SandboxProvider {
       }
     }
 
+    console.log(`[DAYTONA] starting runtime bootstrap for sandbox ${externalId}`);
     await this.startRuntime(daytonaSandbox);
+    console.log(`[DAYTONA] runtime bootstrap launched for sandbox ${externalId}`);
     const preview = await this.resolvePreviewEndpoint(daytonaSandbox, serviceKey, 8000);
+    console.log(`[DAYTONA] waiting for runtime health at ${preview.url}/epsilon/health`);
     const ready = await this.waitForRuntimeReady(daytonaSandbox, preview.url, preview.headers);
     if (!ready) {
       const diagnostics = await this.captureRuntimeDiagnostics(daytonaSandbox);
@@ -265,7 +287,8 @@ export class DaytonaProvider implements SandboxProvider {
           signal: AbortSignal.timeout(10000),
         });
         if (res.ok) return true;
-        console.warn(`[DAYTONA] Runtime not ready yet (${res.status}) at ${url}/epsilon/health attempt ${i + 1}/${maxAttempts}`);
+        const body = await res.text().catch(() => '');
+        console.warn(`[DAYTONA] Runtime not ready yet (${res.status}) at ${url}/epsilon/health attempt ${i + 1}/${maxAttempts}: ${body.slice(0, 500)}`);
         if (i + 1 === 5 || i + 1 === 10 || i + 1 === 15 || i + 1 === maxAttempts) {
           const diagnostics = await this.captureRuntimeDiagnostics(sandbox);
           if (diagnostics) {
@@ -295,6 +318,12 @@ export class DaytonaProvider implements SandboxProvider {
       'tail -n 40 /tmp/epsilon-daytona-start.log 2>/dev/null || true',
       "echo '--- opencode-restart.log ---'",
       'tail -n 40 /tmp/opencode-restart.log 2>/dev/null || true',
+      "echo '--- health ---'",
+      'curl -sS -m 5 http://localhost:8000/epsilon/health 2>/dev/null || true',
+      "echo '--- opencode service ---'",
+      'curl -sS -m 5 -H "Authorization: Bearer ${INTERNAL_SERVICE_KEY:-}" http://localhost:8000/epsilon/services/opencode-serve 2>/dev/null || true',
+      "echo '--- opencode service logs ---'",
+      'curl -sS -m 5 -H "Authorization: Bearer ${INTERNAL_SERVICE_KEY:-}" http://localhost:8000/epsilon/services/opencode-serve/logs 2>/dev/null || true',
     ].join('; ');
 
     try {

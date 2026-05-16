@@ -488,9 +488,10 @@ export function createCloudSandboxRouter(
         },
       };
 
-      // Background provisioning mode (used by billing Add Instance flow)
-      // returns quickly and continues provisioning asynchronously.
-      if (backgroundProvisioning && isManagedVpsProvider(providerName)) {
+      // Background-capable providers return quickly and continue provisioning
+      // asynchronously so slow cloud image/snapshot startup does not hold the
+      // browser/API request open.
+      if (provider.provisioning.async || (backgroundProvisioning && isManagedVpsProvider(providerName))) {
         console.log(`[PLATFORM] Starting background provisioning for sandbox ${sandbox.sandboxId} (${providerName})`);
 
         void (async () => {

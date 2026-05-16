@@ -174,7 +174,9 @@ const LOG_DIR = join(SERVICE_STATE_DIR, "logs");
 
 const INSTALL_TIMEOUT_MS = 120_000;
 const BUILD_TIMEOUT_MS = 120_000;
-const START_WAIT_MS = 30_000; // Must cover run-opencode-serve.sh waits (~20s worst case) + startup
+const START_WAIT_MS = Number(
+  process.env.EPSILON_SERVICE_START_WAIT_MS || 30_000,
+); // Must cover run-opencode-serve.sh waits plus runtime startup on slow cloud hosts
 const WATCHDOG_INTERVAL_MS = Number(
   process.env.EPSILON_SERVICE_WATCHDOG_INTERVAL_MS || 5_000,
 );
