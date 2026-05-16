@@ -138,6 +138,7 @@ const envSchema = z.object({
   DAYTONA_TARGET:              optStr,
   DAYTONA_SNAPSHOT:            optStr,
   DAYTONA_NETWORK_ALLOW_LIST:  optStr,
+  DAYTONA_KEEP_FAILED_SANDBOX: optBoolFalse,
 
   // ── JustAVPS — Sandbox provisioning via JustAVPS API (conditional: required if justavps provider enabled) ──
   JUSTAVPS_API_URL:                   optStrDefault('http://localhost:3001'),
@@ -484,6 +485,7 @@ export const config = {
   DAYTONA_TARGET: env.DAYTONA_TARGET,
   DAYTONA_SNAPSHOT: env.DAYTONA_SNAPSHOT || `epsilon-sandbox-v${SANDBOX_VERSION}`,
   DAYTONA_NETWORK_ALLOW_LIST: env.DAYTONA_NETWORK_ALLOW_LIST || undefined,
+  DAYTONA_KEEP_FAILED_SANDBOX: env.DAYTONA_KEEP_FAILED_SANDBOX,
 
   // ─── JustAVPS (VPS Sandbox provisioning via JustAVPS) ────────────────────
   JUSTAVPS_API_URL: env.JUSTAVPS_API_URL,

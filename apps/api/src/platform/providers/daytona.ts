@@ -111,14 +111,21 @@ export class DaytonaProvider implements SandboxProvider {
 
     await this.startRuntime(daytonaSandbox);
     const preview = await this.resolvePreviewEndpoint(daytonaSandbox, serviceKey, 8000);
-    const ready = await this.waitForRuntimeReady(preview.url, preview.headers);
+    const ready = await this.waitForRuntimeReady(daytonaSandbox, preview.url, preview.headers);
     if (!ready) {
-      try {
-        await daytona.delete(daytonaSandbox);
-      } catch (cleanupErr) {
-        console.warn(`[DAYTONA] Failed to clean up unready sandbox ${externalId}:`, cleanupErr);
+      const diagnostics = await this.captureRuntimeDiagnostics(daytonaSandbox);
+      if (!config.DAYTONA_KEEP_FAILED_SANDBOX) {
+        try {
+          await daytona.delete(daytonaSandbox);
+        } catch (cleanupErr) {
+          console.warn(`[DAYTONA] Failed to clean up unready sandbox ${externalId}:`, cleanupErr);
+        }
+      } else {
+        console.warn(`[DAYTONA] Keeping failed sandbox ${externalId} for debugging (DAYTONA_KEEP_FAILED_SANDBOX=true)`);
       }
-      throw new Error(`Daytona sandbox ${externalId} runtime on port 8000 was not ready in time`);
+      throw new Error(
+        `Daytona sandbox ${externalId} runtime on port 8000 was not ready in time${diagnostics ? ` | ${diagnostics}` : ''}`,
+      );
     }
 
     const apiBase = config.EPSILON_URL.replace(/\/v1\/router\/?$/, '').replace(/\/v1\/?$/, '');
@@ -232,7 +239,11 @@ export class DaytonaProvider implements SandboxProvider {
     }
   }
 
-  private async waitForRuntimeReady(url: string, headers: Record<string, string>): Promise<boolean> {
+  private async waitForRuntimeReady(
+    sandbox: any,
+    url: string,
+    headers: Record<string, string>,
+  ): Promise<boolean> {
     // Large images (5GB+) need time to pull before the container starts.
     // Poll every 15s for up to 5 minutes.
     const intervalMs = 15000;
@@ -247,10 +258,50 @@ export class DaytonaProvider implements SandboxProvider {
         });
         if (res.ok) return true;
         console.warn(`[DAYTONA] Runtime not ready yet (${res.status}) at ${url}/epsilon/health attempt ${i + 1}/${maxAttempts}`);
+        if (i + 1 === 5 || i + 1 === 10 || i + 1 === 15 || i + 1 === maxAttempts) {
+          const diagnostics = await this.captureRuntimeDiagnostics(sandbox);
+          if (diagnostics) {
+            console.warn(`[DAYTONA] Runtime diagnostics attempt ${i + 1}/${maxAttempts}: ${diagnostics}`);
+          }
+        }
       } catch (err) {
         console.warn(`[DAYTONA] Runtime probe failed at ${url}/epsilon/health attempt ${i + 1}/${maxAttempts}:`, err);
+        if (i + 1 === 5 || i + 1 === 10 || i + 1 === 15 || i + 1 === maxAttempts) {
+          const diagnostics = await this.captureRuntimeDiagnostics(sandbox);
+          if (diagnostics) {
+            console.warn(`[DAYTONA] Runtime diagnostics attempt ${i + 1}/${maxAttempts}: ${diagnostics}`);
+          }
+        }
       }
     }
     return false;
+  }
+
+  private async captureRuntimeDiagnostics(sandbox: any): Promise<string> {
+    const command = [
+      "echo '--- ps ---'",
+      "ps aux | grep -E 'epsilon-master|opencode|daytona-start' | grep -v grep || true",
+      "echo '--- ports ---'",
+      "ss -lntp 2>/dev/null | grep -E ':8000|:4096' || true",
+      "echo '--- daytona-start.log ---'",
+      'tail -n 40 /tmp/epsilon-daytona-start.log 2>/dev/null || true',
+      "echo '--- opencode-restart.log ---'",
+      'tail -n 40 /tmp/opencode-restart.log 2>/dev/null || true',
+    ].join('; ');
+
+    try {
+      const result = await sandbox.process.executeCommand(command, undefined, 10_000);
+      const raw = String(
+        result?.result ??
+        result?.stdout ??
+        result?.output ??
+        result?.message ??
+        '',
+      ).trim();
+      return raw.replace(/\s+/g, ' ').slice(0, 1200);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return `diagnostics_error=${message}`;
+    }
   }
 }
