@@ -5,7 +5,10 @@ export type SandboxHealthStatus = 'healthy' | 'degraded' | 'offline' | 'unknown'
 
 export const SANDBOX_INIT_MAX_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 2_000;
-const CREATE_TIMEOUT_MS = 180_000;
+// Daytona provider.create() can legitimately take ~5 minutes because it waits
+// for /epsilon/health readiness (20 attempts * 15s) after sandbox creation.
+// Keep this timeout above that window so retries only trigger on real stalls.
+const CREATE_TIMEOUT_MS = 420_000;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
