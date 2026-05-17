@@ -387,6 +387,19 @@ claude-sonnet-4-6
 - [x] [Review][Dismiss] `session_id` forwarded without pre-validation in OpenCode tool — server validates and returns structured 400; redundant in tool
 - [x] [Review][Dismiss] Unknown `mode` value bypasses tool-side address validation block — server-side Zod enum validation rejects cleanly
 
+### Review Findings (Chunk D — Tests: 7 test files)
+
+- [x] [Review][Patch/P13] Integration + unit test wallet DB hit never assert `body.risk_level` — P8 regression (riskCategory→riskScoreToLevel) had no safety net. Fixed: added `expect(body.risk_level).toBe('low')` in both `entity-wallet.integration.test.ts:176` and `entity-wallet-route.test.ts:174` (walletRow.riskScore=20 → 'low')
+- [x] [Review][Patch/P14] `entity-wallet-route.test.ts:208–217` placeholder `expect(true).toBe(true)` — test always passed regardless of production code. Fixed: converted config mock to mutable ref, implemented real unconfigured test asserting `cache_status: 'unconfigured'` and `unconfigured: true`
+- [x] [Review][Patch/P15] Default Dune mock missing `analysisStatus` field — all Dune-path worker tests silently exercised wrong code path; P11 guard (`=== 'failed'`) could never fire in tests. Fixed: added `analysisStatus: 'empty'` to default and test-specific Dune mocks, added explicit comment distinguishing genuine-empty vs provider-failure
+- [x] [Review][Patch/P16] P11 skip-DB-write-on-failure had zero test coverage — deleting the guard would cause no test failure. Fixed: added two tests `[P11] skips DB write when Dune returns analysisStatus=failed` and `analysisStatus=timeout`, both asserting `capturedInserts.toHaveLength(0)`
+- [x] [Review][Patch/P17] `riskScoreToLevel()` had no direct unit tests — boundary values (9/10, 39/40, 79/80, 89/90) completely untested. Fixed: added `describe('riskScoreToLevel')` with 10 boundary-value test cases in `entity-wallet-service.test.ts`
+- [x] [Review][Defer] Dune-only mode: no spy to confirm `fetchArkhamBatchAddressIntelligence` NOT called — guard is correct, implicit protection via arkhamHeaders() throw; mock restructuring nặng
+- [x] [Review][Defer] P12 `analysisStatus` in `onConflictDoUpdate.set` not asserted — valid gap, verifying conflict-update behavior needs sequential-call mock support
+- [x] [Review][Defer] Batch enrich merge logic (address case-insensitive lookup, tag override) untested — needs new fixture infrastructure
+- [x] [Review][Dismiss] AC8 `success:false` vs `success:true` for unconfigured — implementation consistently returns `success:true` on all paths; spec ambiguity, not a bug
+- [x] [Review][Dismiss] `token_holders` validation 400s missing unit test — mirrors wallet mode logic, integration test covers; low risk
+
 ### Change Log
 
 - 2026-05-17: Story 2.1.2 implemented — entity & hacker wallet tracking system with Arkham service, BullMQ worker, API route, OpenCode tool, and 28 unit tests. Bun ESM live-binding contamination fixed by direct `_queue` access in `setupEntityWalletJobs`.

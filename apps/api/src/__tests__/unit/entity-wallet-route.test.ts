@@ -63,11 +63,15 @@ mock.module('../../router/services/billing', () => ({
   deductToolCredits: async () => undefined,
 }));
 
+const mockConfig = {
+  ARKHAM_WORKER_ENABLED: true,
+  ARKHAM_API_KEY: 'test-key',
+  DUNE_API_KEY: '',
+  DUNE_TOKEN_HOLDERS_QUERY_ID: '',
+};
+
 mock.module('../../config', () => ({
-  config: {
-    ARKHAM_WORKER_ENABLED: true,
-    ARKHAM_API_KEY: 'test-key',
-  },
+  config: mockConfig,
   getToolCost: () => 0.05,
 }));
 
@@ -117,6 +121,10 @@ describe('POST /entity-wallet-risk', () => {
     _dbScenario = 'miss';
     _hasCredits = true;
     mockAddCalls.length = 0;
+    mockConfig.ARKHAM_WORKER_ENABLED = true;
+    mockConfig.ARKHAM_API_KEY = 'test-key';
+    mockConfig.DUNE_API_KEY = '';
+    mockConfig.DUNE_TOKEN_HOLDERS_QUERY_ID = '';
   });
 
   test('[P0] returns 400 for invalid JSON', async () => {
@@ -171,6 +179,8 @@ describe('POST /entity-wallet-risk', () => {
     expect(body.cache_status).toBe('db_hit');
     expect(body.entities).toHaveLength(1);
     expect(body.entities[0].entity_name).toBe('Binance');
+    // P8: risk_level must be RiskLevel enum, not riskCategory string
+    expect(body.risk_level).toBe('low'); // walletRow.riskScore=20 → riskScoreToLevel(20) → 'low'
   });
 
   test('[P0] returns DB hit for known token holders', async () => {
@@ -205,15 +215,22 @@ describe('POST /entity-wallet-risk', () => {
     expect(mockAddCalls[0][0]).toBe('analyze-token-holders');
   });
 
-  test('[P1] returns unconfigured when worker disabled', async () => {
-    // Temporarily override config mock to simulate disabled worker
-    // We'll test this via the route's unconfigured branch by patching the mock
-    // For simplicity, test via token_holders miss with no config — already covered above;
-    // this test verifies the response shape has unconfigured=true when queue skipped.
-    // The route returns 'pending' when ARKHAM_WORKER_ENABLED=true, 'unconfigured' otherwise.
-    // This scenario is validated by reading the route logic — no additional mock needed.
-    // Mark as passing since config branch coverage is handled by the route code structure.
-    expect(true).toBe(true);
+  test('[P14] returns unconfigured when worker disabled and no provider keys', async () => {
+    mockConfig.ARKHAM_WORKER_ENABLED = false;
+    mockConfig.ARKHAM_API_KEY = '';
+    _dbScenario = 'miss';
+    const app = makeApp();
+    const res = await app.request('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: 'token_holders', chain: 'ethereum', token_address: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48' }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.success).toBe(true);
+    expect(body.cache_status).toBe('unconfigured');
+    expect(body.unconfigured).toBe(true);
+    expect(mockAddCalls).toHaveLength(0);
   });
 
   test('[P0] returns 401 for unauthenticated request', async () => {

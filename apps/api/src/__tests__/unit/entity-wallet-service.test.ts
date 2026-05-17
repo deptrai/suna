@@ -1,5 +1,24 @@
 import { describe, expect, test } from 'bun:test';
-import { scoreEntity, computeHolderRiskSummary, type ArkhamHolderEntry } from '../../router/services/arkham';
+import { scoreEntity, computeHolderRiskSummary, riskScoreToLevel, type ArkhamHolderEntry } from '../../router/services/arkham';
+
+// ─── riskScoreToLevel ────────────────────────────────────────────────────────
+
+describe('riskScoreToLevel', () => {
+  test.each([
+    [0, 'none'],
+    [9, 'none'],
+    [10, 'low'],
+    [39, 'low'],
+    [40, 'medium'],
+    [79, 'medium'],
+    [80, 'high'],
+    [89, 'high'],
+    [90, 'critical'],
+    [100, 'critical'],
+  ])('score %i → %s', (score, expected) => {
+    expect(riskScoreToLevel(score)).toBe(expected);
+  });
+});
 
 // ─── scoreEntity ──────────────────────────────────────────────────────────────
 

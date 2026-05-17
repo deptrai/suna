@@ -173,6 +173,8 @@ describe('POST /v1/router/entity-wallet-risk', () => {
     expect(body.cache_status).toBe('db_hit');
     expect(body.entities).toHaveLength(1);
     expect(body.entities[0].entity_name).toBe('Binance');
+    // P8: risk_level must be a RiskLevel enum value derived from riskScore, not riskCategory string
+    expect(body.risk_level).toBe('low'); // walletRow.riskScore=20 → riskScoreToLevel(20) → 'low'
     // AC: raw_response must not be exposed
     expect(body.raw_response).toBeUndefined();
     expect(deductCalls).toHaveLength(1);
@@ -210,13 +212,13 @@ describe('POST /v1/router/entity-wallet-risk', () => {
     expect((addCalls[0][1] as any).tokenAddress).toBe(TOKEN.toLowerCase());
   });
 
-  test('[P0] wallet miss — returns pending, does NOT enqueue job', async () => {
+  test('[P0] wallet miss — returns not_indexed, does NOT enqueue job', async () => {
     _scenario = 'miss';
     const app = makeApp();
     const res = await post(app, { mode: 'wallet', chain: 'ethereum', address: WALLET });
     expect(res.status).toBe(200);
     const body = await res.json() as any;
-    expect(body.cache_status).toBe('pending');
+    expect(body.cache_status).toBe('not_indexed');
     expect(addCalls).toHaveLength(0);
   });
 

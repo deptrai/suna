@@ -74,6 +74,7 @@ let mockFetchDuneTokenHolders: (chain: string, tokenAddress: string, opts?: any)
   totalHolders: null,
   chain: 'ethereum',
   tokenAddress: '0xtoken',
+  analysisStatus: 'empty', // explicit: not failed/timeout → DB write for observability
 });
 
 mock.module('bullmq', () => ({ Worker: FakeWorker, Queue: FakeQueue }));
@@ -234,6 +235,7 @@ describe('entity-wallet worker — Dune failover in processTokenHolders', () => 
       totalHolders: 1,
       chain: 'ethereum',
       tokenAddress: '0xtoken',
+      analysisStatus: 'complete',
     });
 
     await runTokenHoldersJob();
@@ -251,6 +253,7 @@ describe('entity-wallet worker — Dune failover in processTokenHolders', () => 
       totalHolders: 1,
       chain: 'ethereum',
       tokenAddress: '0xtoken',
+      analysisStatus: 'complete',
     });
 
     await runTokenHoldersJob();
@@ -274,13 +277,14 @@ describe('entity-wallet worker — Dune failover in processTokenHolders', () => 
     expect(capturedInserts.find((ci) => ci.values.source === 'dune')).toBeUndefined();
   });
 
-  test('[P1] returns inserted=0 and riskLevel=none when no holders from Dune', async () => {
+  test('[P1] returns inserted=0 and riskLevel=none when no holders from Dune (empty result)', async () => {
     mockConfig.ARKHAM_API_KEY = '';
     mockFetchDuneTokenHolders = async () => ({
       holders: [],
       totalHolders: null,
       chain: 'ethereum',
       tokenAddress: '0xtoken',
+      analysisStatus: 'empty', // genuine empty — DB write proceeds for observability
     });
 
     const result = await runTokenHoldersJob() as { inserted: number; riskLevel: string };
@@ -288,6 +292,38 @@ describe('entity-wallet worker — Dune failover in processTokenHolders', () => 
     expect(result.riskLevel).toBe('none');
     // Empty result still upserts token-holder risk status for observability.
     expect(capturedInserts).toHaveLength(1);
+  });
+
+  test('[P11] skips DB write when Dune returns analysisStatus=failed', async () => {
+    mockConfig.ARKHAM_API_KEY = '';
+    mockFetchDuneTokenHolders = async () => ({
+      holders: [],
+      totalHolders: null,
+      chain: 'ethereum',
+      tokenAddress: '0xtoken',
+      analysisStatus: 'failed',
+    });
+
+    const result = await runTokenHoldersJob() as { inserted: number; riskLevel: string };
+    expect(result.inserted).toBe(0);
+    expect(result.riskLevel).toBe('none');
+    expect(capturedInserts).toHaveLength(0); // P11: no DB write — provider failure must not mask as clean result
+  });
+
+  test('[P11] skips DB write when Dune returns analysisStatus=timeout', async () => {
+    mockConfig.ARKHAM_API_KEY = '';
+    mockFetchDuneTokenHolders = async () => ({
+      holders: [],
+      totalHolders: null,
+      chain: 'ethereum',
+      tokenAddress: '0xtoken',
+      analysisStatus: 'timeout',
+    });
+
+    const result = await runTokenHoldersJob() as { inserted: number; riskLevel: string };
+    expect(result.inserted).toBe(0);
+    expect(result.riskLevel).toBe('none');
+    expect(capturedInserts).toHaveLength(0); // P11: no DB write — timeout must not mask as clean result
   });
 
   test('[P1] no Dune fallback when Arkham throws but Dune not configured', async () => {
