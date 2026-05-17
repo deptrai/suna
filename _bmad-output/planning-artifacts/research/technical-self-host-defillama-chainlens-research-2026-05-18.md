@@ -1,8 +1,8 @@
 ---
-stepsCompleted: [1, 2, 3, 4]
+stepsCompleted: [1, 2, 3, 4, 5, 6]
 inputDocuments: []
 workflowType: 'research'
-lastStep: 2
+lastStep: 6
 research_type: 'technical'
 research_topic: 'Self-host DefiLlama làm Data Layer cho Chainlens'
 research_goals: 'Phân tích feasibility, architecture, cost, fork strategy, integration với Chainlens, và so sánh alternatives'
@@ -17,6 +17,62 @@ source_verification: true
 **Date:** 2026-05-18
 **Author:** Luisphan
 **Research Type:** Technical
+
+---
+
+## Executive Summary
+
+**Verdict: KHẢ THI — Nên triển khai theo hướng "Thin Selective Fork"**
+
+Self-hosting một phần DefiLlama làm data layer riêng cho Chainlens là **hoàn toàn khả thi về mặt kỹ thuật** và mang lại lợi thế kinh tế rõ ràng. Thay vì clone toàn bộ hệ sinh thái 6+ repos phức tạp, Chainlens chỉ cần fork **2 repos cốt lõi** (`DefiLlama-Adapters` + `dimension-adapters`), build một thin HTTP wrapper server, và deploy như một **standalone microservice** trên VPS riêng biệt — hoàn toàn tách biệt khỏi Chainlens monorepo.
+
+**3 điểm quyết định:**
+
+1. **Chi phí**: $6–12/tháng (VPS Hetzner) vs $300/tháng (DefiLlama Pro API) → tiết kiệm **96%**, ROI dương từ tháng đầu tiên.
+
+2. **Kỹ thuật**: DefiLlama adapters là plain TypeScript functions, không có central registry — có thể import chọn lọc chỉ 15–20 protocols cần thiết. Node.js incompatibility với Bun được giải quyết hoàn toàn bằng cách chạy service này như một Docker container riêng, Chainlens gọi qua HTTP.
+
+3. **Rủi ro thấp**: Triển khai song song với public API, Chainlens fallback tự động nếu self-hosted service có vấn đề. MIT license cho phép fork và modify không giới hạn.
+
+**Khuyến nghị thực thi:** Build MVP trong 2–3 tuần với 5 protocols đầu tiên (Uniswap v3, Aave v3, GMX, Curve, Lido), validate accuracy 7 ngày, sau đó mở rộng lên 15–20 protocols trong tháng 2.
+
+---
+
+## Table of Contents
+
+1. [Technical Research Scope Confirmation](#technical-research-scope-confirmation)
+2. [Technology Stack Analysis](#technology-stack-analysis)
+   - 2.1 [DefiLlama Repository Ecosystem](#1-defillama-repository-ecosystem)
+   - 2.2 [Technology Stack Chi Tiết](#2-technology-stack-chi-tiết)
+   - 2.3 [Bun vs Node.js Compatibility](#3-bun-vs-nodejs-compatibility-critical)
+   - 2.4 [Database & Storage Replacement Strategy](#4-database--storage-replacement-strategy)
+3. [Integration Patterns Analysis](#integration-patterns-analysis)
+   - 3.1 [DefiLlama Data Pipeline Architecture](#1-defillama-data-pipeline-architecture)
+   - 3.2 [Adapter Pattern Deep Dive](#2-adapter-pattern-deep-dive)
+   - 3.3 [RPC Node Requirements](#3-rpc-node-requirements)
+   - 3.4 [Fork Strategy Analysis](#4-fork-strategy-analysis)
+   - 3.5 [Alternatives Comparison](#5-alternatives-comparison)
+4. [Architectural Patterns and Implementation Blueprint](#architectural-patterns-and-implementation-blueprint)
+   - 4.1 [Recommended Architecture](#1-recommended-architecture-thin-selective-fork)
+   - 4.2 [Docker Compose Setup](#2-docker-compose-setup)
+   - 4.3 [Database Schema](#3-database-schema)
+   - 4.4 [Worker Implementation](#4-worker-implementation)
+   - 4.5 [API Server Implementation](#5-api-server-implementation)
+   - 4.6 [Chainlens Integration](#6-chainlens-integration)
+   - 4.7 [Cost Summary](#7-cost-summary)
+5. [Implementation Approaches and Technology Adoption](#implementation-approaches-and-technology-adoption)
+   - 5.1 [Technology Adoption Strategies](#technology-adoption-strategies)
+   - 5.2 [Development Workflows and Tooling](#development-workflows-and-tooling)
+   - 5.3 [Testing and Quality Assurance](#testing-and-quality-assurance)
+   - 5.4 [Deployment and Operations Practices](#deployment-and-operations-practices)
+   - 5.5 [Team Organization and Skills](#team-organization-and-skills)
+   - 5.6 [Cost Optimization and Resource Management](#cost-optimization-and-resource-management)
+   - 5.7 [Risk Assessment and Mitigation](#risk-assessment-and-mitigation)
+6. [Technical Research Recommendations](#technical-research-recommendations)
+   - 6.1 [Implementation Roadmap](#implementation-roadmap)
+   - 6.2 [Technology Stack Recommendations](#technology-stack-recommendations)
+   - 6.3 [Skill Development Requirements](#skill-development-requirements)
+   - 6.4 [Success Metrics and KPIs](#success-metrics-and-kpis)
 
 ---
 
@@ -858,3 +914,350 @@ curl -H "x-api-key: $KEY" http://localhost:4000/fees/uniswap
 | Data service down → Chainlens fallback | Trung bình | Chainlens giữ fallback về DefiLlama public API khi data service unavailable |
 
 _Source: [dimension-adapters testing docs](https://docs.llama.fi/list-your-project/other-dashboards/testing), [Docker Compose best practices 2025](https://www.freecodecamp.org/news/build-production-ready-web-apps-with-hono/)_
+
+## Implementation Approaches and Technology Adoption
+
+### Technology Adoption Strategies
+
+**Gradual adoption (recommended)** là chiến lược phù hợp nhất cho Chainlens. Thay vì "big bang" migration, triển khai theo 3 giai đoạn:
+
+**Phase 1 — Parallel run (tuần 1–2):** Self-hosted service chạy song song với DefiLlama public API. Chainlens vẫn dùng public API làm primary, self-hosted làm shadow. So sánh kết quả để validate accuracy.
+
+**Phase 2 — Selective cutover (tuần 3–4):** Chuyển các protocol có traffic cao nhất (Uniswap, Aave, GMX) sang self-hosted. Giữ public API làm fallback cho long-tail protocols.
+
+**Phase 3 — Full cutover (tháng 2):** Tắt dependency vào public API cho các protocol đã tracked. Giữ public API chỉ cho on-demand queries không có trong registry.
+
+Chiến lược này giảm risk: nếu self-hosted service có vấn đề, Chainlens tự động fallback về public API mà không có downtime.
+
+_Source: https://www.birjob.com/blog/vllm-tgi-ollama-self-hosting-llms_
+
+### Development Workflows and Tooling
+
+**Repository structure** cho self-hosted service nên là một repo riêng biệt (không trong Chainlens monorepo):
+
+```
+chainlens-data-service/
+├── worker/          # Node.js 20, cron jobs, adapter runner
+├── api/             # Hono HTTP server
+├── adapters/        # Forked/customized DefiLlama adapters
+├── db/              # PostgreSQL migrations (Drizzle hoặc raw SQL)
+├── ops/             # Docker Compose, nginx config
+└── .github/
+    └── workflows/
+        ├── ci.yml   # lint + typecheck + unit tests
+        └── cd.yml   # build image + deploy to VPS
+```
+
+**CI pipeline (GitHub Actions):**
+
+```yaml
+# .github/workflows/ci.yml
+name: CI
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_USER: test, POSTGRES_PASSWORD: test, POSTGRES_DB: test }
+        ports: ["5432:5432"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - run: npm ci
+      - run: npm run lint && npm run typecheck
+      - run: npm run test
+```
+
+**CD pipeline:** SSH deploy lên VPS khi merge vào `main`:
+
+```yaml
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy to VPS
+        run: |
+          ssh user@vps "cd /opt/chainlens-data && git pull && docker compose up -d --build"
+```
+
+_Source: https://github.com/DefiLlama/defillama-skills/actions_
+
+### Testing and Quality Assurance
+
+**3-layer testing strategy** cho adapter-based data service:
+
+**Layer 1 — Unit tests (mock RPC):**
+Test business logic của adapter runner mà không cần RPC thật. Mock `FetchOptions.api` để trả về fixture data.
+
+```typescript
+// worker/src/__tests__/adapter-runner.test.ts
+import { runAdapter } from '../adapters/runner';
+
+describe('runAdapter', () => {
+  it('returns TVL for uniswap-v3', async () => {
+    const mockApi = { call: jest.fn().mockResolvedValue('1000000000000000000') };
+    const result = await runAdapter('uniswap-v3', { api: mockApi } as any);
+    expect(result.tvl).toBeGreaterThan(0);
+  });
+});
+```
+
+**Layer 2 — Integration tests (fixed block):**
+Chạy adapter với RPC thật nhưng tại một block cố định để đảm bảo determinism. Lưu kết quả làm "golden snapshot".
+
+```bash
+# Chạy adapter tại block cụ thể, so sánh với snapshot
+npm run test:integration -- --protocol=uniswap-v3 --block=19000000
+```
+
+**Layer 3 — Cross-source validation:**
+Hàng giờ, so sánh TVL/fees từ self-hosted service với DefiLlama public API. Alert nếu divergence > 5%.
+
+```typescript
+// worker/src/jobs/validate.ts
+async function validateAgainstPublicApi(protocol: string) {
+  const [selfHosted, public_] = await Promise.all([
+    db.query.tvlSnapshots.findFirst({ where: eq(tvlSnapshots.protocol, protocol) }),
+    fetch(`https://api.llama.fi/tvl/${protocol}`).then(r => r.json())
+  ]);
+  const divergence = Math.abs(selfHosted.tvlUsd - public_.tvl) / public_.tvl;
+  if (divergence > 0.05) {
+    logger.warn({ protocol, divergence }, 'TVL divergence detected');
+  }
+}
+```
+
+_Source: https://www.montecarlodata.com/blog-data-quality-monitoring/_
+
+### Deployment and Operations Practices
+
+**Health check endpoints** — mỗi service phải expose:
+
+```typescript
+// api/src/index.ts — thêm vào Hono app
+app.get('/healthz', async (c) => {
+  const dbOk = await db.execute(sql`SELECT 1`).then(() => true).catch(() => false);
+  return c.json({ status: dbOk ? 'ok' : 'degraded', db: dbOk });
+});
+```
+
+**Docker healthcheck** trong `docker-compose.yml`:
+
+```yaml
+api:
+  healthcheck:
+    test: ["CMD", "curl", "-f", "http://localhost:3001/healthz"]
+    interval: 30s
+    timeout: 5s
+    retries: 3
+    start_period: 10s
+```
+
+**Monitoring stack (lightweight cho VPS $12–20/month):**
+
+Thay vì Prometheus + Grafana (tốn RAM), dùng:
+- **Uptime Kuma** (self-hosted, 50MB RAM) — monitor endpoint availability
+- **Logtail / BetterStack** (free tier 1GB/month) — centralized logs
+- **Sentry** (free tier) — error tracking cho Node.js worker
+
+**RPC fallback pattern:**
+
+```typescript
+// worker/src/lib/rpc.ts
+const RPC_PROVIDERS = {
+  ethereum: [process.env.ETHEREUM_RPC_PRIMARY, process.env.ETHEREUM_RPC_FALLBACK],
+  arbitrum: [process.env.ARBITRUM_RPC_PRIMARY, process.env.ARBITRUM_RPC_FALLBACK],
+};
+
+async function callWithFallback(chain: string, method: string, params: unknown[]) {
+  for (const rpc of RPC_PROVIDERS[chain]) {
+    try {
+      return await fetch(rpc, { method: 'POST', body: JSON.stringify({ jsonrpc: '2.0', method, params, id: 1 }) });
+    } catch {
+      continue;
+    }
+  }
+  throw new Error(`All RPC endpoints failed for ${chain}`);
+}
+```
+
+_Source: https://www.castordoc.com/data-strategy/data-pipeline-architecture-examples-best-practices-more-in-2024_
+
+### Team Organization and Skills
+
+**Skill requirements** để build và maintain self-hosted DefiLlama service:
+
+| Skill | Level | Notes |
+|-------|-------|-------|
+| TypeScript / Node.js | Senior | Adapter code, worker logic |
+| DeFi protocol knowledge | Mid | Hiểu TVL methodology, fee calculation |
+| PostgreSQL | Mid | Schema design, query optimization |
+| Docker / Linux ops | Mid | VPS deployment, container management |
+| Blockchain RPC | Mid | `eth_call`, `eth_getLogs`, block queries |
+
+**Team size:** 1 backend engineer có thể build MVP trong 2–3 tuần. Maintenance sau đó là ~2–4 giờ/tuần (thêm protocol mới, fix adapter khi protocol upgrade contract).
+
+**Onboarding mới protocol:** Quy trình chuẩn hóa:
+1. Fork adapter file từ `DefiLlama-Adapters` repo
+2. Test với fixed block
+3. Thêm vào `TRACKED_PROTOCOLS` registry
+4. Deploy và monitor 24h đầu
+
+### Cost Optimization and Resource Management
+
+**RPC cost optimization** — quan trọng nhất vì đây là chi phí biến đổi lớn nhất:
+
+| Strategy | Savings | Implementation |
+|----------|---------|----------------|
+| Batch `eth_call` multicall | 80–90% RPC calls | Dùng Multicall3 contract |
+| Cache block-level results | 70% duplicate calls | Redis với TTL = block time |
+| Alchemy free tier (300M CU/month) | $0 cho ~15 protocols | Đủ cho MVP |
+| Infura free tier (100K req/day) | $0 fallback | Dùng làm secondary |
+
+**Database cost optimization:**
+
+```sql
+-- Partition tvl_snapshots theo tháng để query nhanh hơn
+CREATE TABLE tvl_snapshots (
+  id BIGSERIAL,
+  protocol TEXT NOT NULL,
+  tvl_usd NUMERIC(20,2),
+  captured_at TIMESTAMPTZ NOT NULL
+) PARTITION BY RANGE (captured_at);
+
+-- Tự động tạo partition mới mỗi tháng
+CREATE TABLE tvl_snapshots_2026_05 PARTITION OF tvl_snapshots
+  FOR VALUES FROM ('2026-05-01') TO ('2026-06-01');
+```
+
+**Revised cost breakdown (production-ready):**
+
+| Component | Provider | Monthly Cost |
+|-----------|----------|-------------|
+| VPS (2 vCPU, 4GB RAM) | Hetzner CX22 | $6 |
+| PostgreSQL (included in VPS) | Self-hosted | $0 |
+| RPC — Ethereum | Alchemy free | $0 |
+| RPC — Arbitrum | Alchemy free | $0 |
+| RPC — Solana | Helius free (100K/day) | $0 |
+| Monitoring | Uptime Kuma + Sentry free | $0 |
+| Logs | BetterStack free (1GB) | $0 |
+| **Total** | | **~$6–12/month** |
+
+So sánh: DefiLlama Pro API = $300/month → **tiết kiệm 96%**.
+
+_Source: https://selfh.st/weekly/2025-05-30/_
+
+### Risk Assessment and Mitigation
+
+**Risk matrix cho self-hosted DefiLlama approach:**
+
+| Risk | Probability | Impact | Mitigation |
+|------|-------------|--------|------------|
+| Protocol upgrades contract → adapter breaks | High | Medium | Monitor DefiLlama upstream repo, weekly sync |
+| RPC provider outage | Medium | High | Multi-provider fallback, Chainlens fallback về public API |
+| VPS downtime | Low | High | Chainlens fallback về public API (graceful degradation) |
+| Data accuracy divergence | Medium | Medium | Cross-validation job hàng giờ vs public API |
+| DefiLlama license change | Very Low | High | MIT license, fork đã tồn tại — không thể revoke |
+| Maintenance burden tăng | Medium | Low | Chỉ track 15–20 protocols, không phải 7000+ |
+
+**Graceful degradation pattern** trong Chainlens:
+
+```typescript
+// apps/api/src/router/services/defillama.ts
+async function getTvl(protocol: string): Promise<TvlData> {
+  try {
+    // Try self-hosted first (faster, no rate limit)
+    return await selfHostedClient.getTvl(protocol);
+  } catch (err) {
+    logger.warn({ protocol, err }, 'Self-hosted failed, falling back to public API');
+    // Fallback to public DefiLlama API
+    return await publicApiClient.getTvl(protocol);
+  }
+}
+```
+
+**Upstream sync strategy:**
+- Subscribe to `DefiLlama-Adapters` GitHub releases
+- Weekly automated PR: `git fetch upstream && git merge upstream/main -- adapters/`
+- Review diff, chỉ merge các adapter trong `TRACKED_PROTOCOLS`
+
+## Technical Research Recommendations
+
+### Implementation Roadmap
+
+**Sprint 1 (tuần 1–2): Foundation**
+- [ ] Setup repo `chainlens-data-service` với Docker Compose
+- [ ] PostgreSQL schema + migrations
+- [ ] Fork 5 adapter files (Uniswap v3, Aave v3, GMX, Curve, Lido)
+- [ ] Worker cron job chạy mỗi 15 phút
+- [ ] Hono API server với `/tvl/:protocol`, `/fees/:protocol`
+- [ ] Deploy lên Hetzner CX22
+
+**Sprint 2 (tuần 3–4): Integration & Validation**
+- [ ] Thêm 10 protocol còn lại vào registry
+- [ ] Cross-validation job vs DefiLlama public API
+- [ ] Uptime Kuma + Sentry setup
+- [ ] Chainlens `defillama.ts` service update để call self-hosted first
+- [ ] Parallel run: so sánh kết quả 7 ngày
+
+**Sprint 3 (tháng 2): Production Hardening**
+- [ ] RPC fallback implementation
+- [ ] GitHub Actions CI/CD pipeline
+- [ ] Alerting rules (TVL divergence > 5%, RPC failure)
+- [ ] Full cutover từ public API
+- [ ] Documentation: cách thêm protocol mới
+
+### Technology Stack Recommendations
+
+**Self-hosted data service stack:**
+
+```
+Runtime:     Node.js 20 LTS (Alpine Docker image)
+Language:    TypeScript 5.x
+HTTP:        Hono (nhẹ, fast, tương thích với Chainlens pattern)
+Database:    PostgreSQL 16 (self-hosted trong Docker)
+Scheduler:   node-cron (đơn giản, không cần Redis/BullMQ cho MVP)
+RPC:         viem v2 (type-safe, tree-shakeable)
+Testing:     Vitest (nhanh hơn Jest, ESM native)
+Monitoring:  Uptime Kuma + Sentry free tier
+Deployment:  Docker Compose trên Hetzner CX22
+```
+
+**Không dùng:**
+- BullMQ/Redis — overkill cho 15–20 protocols, cron đủ
+- Kubernetes — overkill cho single VPS
+- ClickHouse/TimescaleDB — PostgreSQL đủ cho volume này
+- AWS DynamoDB/S3 — không cần, PostgreSQL thay thế hoàn toàn
+
+### Skill Development Requirements
+
+Chainlens team cần bổ sung kiến thức:
+
+1. **DefiLlama adapter pattern** — đọc 5–10 adapter files trong `DefiLlama-Adapters` repo để hiểu `FetchOptions` interface
+2. **viem v2** — nếu hiện tại dùng ethers.js, viem có API tốt hơn cho multicall
+3. **PostgreSQL partitioning** — cho time-series data optimization
+4. **DeFi protocol mechanics** — TVL methodology, fee calculation per protocol type (AMM vs lending vs perps)
+
+### Success Metrics and KPIs
+
+**Technical KPIs:**
+
+| Metric | Target | Measurement |
+|--------|--------|-------------|
+| Data freshness | < 20 phút lag | `MAX(captured_at) - NOW()` |
+| TVL accuracy vs public API | < 2% divergence | Cross-validation job |
+| API response time | < 100ms p99 | Uptime Kuma |
+| RPC error rate | < 1% | Worker logs |
+| Monthly cost | < $15 | VPS invoice |
+
+**Business KPIs:**
+
+| Metric | Target |
+|--------|--------|
+| API cost reduction | > 90% vs Pro subscription |
+| Protocol coverage | 15–20 protocols (covers 80% Chainlens use cases) |
+| Maintenance time | < 4 hours/week |
+| Time to add new protocol | < 2 hours |
