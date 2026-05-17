@@ -1261,3 +1261,158 @@ Chainlens team cần bổ sung kiến thức:
 | Protocol coverage | 15–20 protocols (covers 80% Chainlens use cases) |
 | Maintenance time | < 4 hours/week |
 | Time to add new protocol | < 2 hours |
+
+---
+
+## Phân Tích Bổ Sung: Có Thể Custom DefiLlama Để Thay Thế Nansen, Dune, Token Terminal Không?
+
+**Câu hỏi:** DefiLlama adapter architecture có thể được extend/customize để generate data tương đương các proprietary API (Nansen, Dune Analytics, Token Terminal) không?
+
+**Kết luận ngắn:** Một phần có, một phần không — và phần không thể thay thế thì tốn công hơn build từ đầu.
+
+---
+
+### Token Terminal (DAU, Dev Activity, P/E, P/S)
+
+| Metric | Có thể custom DefiLlama? | Effort | Verdict |
+|--------|--------------------------|--------|---------|
+| P/S ratio | ✅ Tính từ `mcap / annualized_revenue` — data đã có | Thấp (1–2 ngày) | **Làm ngay** |
+| P/F ratio | ✅ Tính từ `mcap / annualized_fees` — data đã có | Thấp (1–2 ngày) | **Làm ngay** |
+| P/E ratio | ✅ Tính từ `mcap / annualized_net_revenue` | Thấp (1–2 ngày) | **Làm ngay** |
+| Developer Activity (GitHub commits, stars) | ✅ GitHub API calls — không liên quan DefiLlama | Thấp (1 ngày) | **Tự build, không cần Token Terminal** |
+| DAU (Daily Active Users) | ⚠️ Cần đọc on-chain events, đếm unique addresses/day | Cao (2–3 tuần) | **Defer — cần indexer** |
+
+**Chi tiết P/S, P/F, P/E:**
+
+DefiLlama đã có `fees`, `revenue`, `mcap` data trong `dimension-adapters`. Chỉ cần thêm computation layer:
+
+```typescript
+// Trong self-hosted service
+function computeValuationMultiples(protocol: string) {
+  const { mcap, fees_30d, revenue_30d } = await db.query(...);
+  const annualizedFees = fees_30d * 12;
+  const annualizedRevenue = revenue_30d * 12;
+  return {
+    ps_ratio: mcap / annualizedRevenue,
+    pf_ratio: mcap / annualizedFees,
+    // P/E cần net_revenue (revenue - costs) — không phải protocol nào cũng có
+  };
+}
+```
+
+**Chi tiết DAU:**
+
+DAU yêu cầu đọc on-chain event logs (Transfer, Swap, Deposit...) và đếm unique `from` addresses per day. DefiLlama adapter pattern có thể làm điều này nếu có RPC access, nhưng đây là **heavy lifting**:
+- Cần archive node hoặc indexer (The Graph subgraph)
+- Volume data lớn: Uniswap v3 có ~500k transactions/ngày trên Ethereum
+- Không phải adapter đơn giản — cần dedicated indexing pipeline
+
+**Chi tiết Developer Activity:**
+
+Token Terminal lấy data từ GitHub API — không có gì đặc biệt. Bạn có thể tự build:
+
+```typescript
+// GitHub API adapter — không cần DefiLlama
+async function fetchDevActivity(org: string, repo: string) {
+  const res = await fetch(
+    `https://api.github.com/repos/${org}/${repo}/stats/commit_activity`,
+    { headers: { Authorization: `Bearer ${GITHUB_TOKEN}` } }
+  );
+  const weeks = await res.json();
+  return { commits_30d: weeks.slice(-4).reduce((s, w) => s + w.total, 0) };
+}
+```
+
+---
+
+### Nansen (Wallet Labels, Smart Money, Token God Mode)
+
+**Kết luận: Không thể replace bằng cách extend DefiLlama.**
+
+Nansen's moat là **data asset**, không phải code. Đây là lý do kỹ thuật:
+
+#### Wallet Labels — Vấn đề là dữ liệu, không phải thuật toán
+
+Để label một ví là "Alameda Research" hay "Jump Trading", cần biết ví đó thuộc về ai. Nansen làm điều này qua 3 cách:
+
+1. **On-chain attribution** — ENS names, Etherscan labels, exchange deposit addresses có pattern nhận diện được (Binance hot wallet gửi từ địa chỉ cố định).
+2. **Cross-referencing off-chain data** — Court documents (FTX bankruptcy filings có list ví), Twitter/X posts của traders tự doxx, KYC data từ exchange partnerships.
+3. **Behavioral clustering (ML)** — Wallets giao dịch cùng nhau theo pattern → có thể cùng entity. Nhưng clustering chỉ cho biết "nhóm này liên quan nhau", không cho biết tên.
+
+**Vấn đề cốt lõi:** Bước 1 và 2 là **data collection work** kéo dài nhiều năm, không phải engineering. Nansen có team chuyên research, verify, và maintain 250M+ labels. Không thể "code" ra cái này — phải **thu thập** nó.
+
+#### Smart Money — Phụ thuộc hoàn toàn vào Labels
+
+Smart Money trong Nansen = filter wallets by label:
+
+```sql
+SELECT wallet_address, pnl_30d
+FROM wallet_activity
+WHERE label IN ('hedge_fund', 'dex_trader_top', 'vc_fund')
+  AND pnl_30d > threshold
+ORDER BY pnl_30d DESC
+```
+
+Không có label database → không có filter → không có smart money.
+
+**Proxy metric khả thi (nhưng không phải Nansen):** Lấy top wallets by realized PnL từ on-chain DEX trades (Uniswap, GMX). Output là "top profitable wallets" — không biết đó là hedge fund hay lucky retail trader.
+
+#### Token God Mode (Who Bought/Sold)
+
+Về mặt kỹ thuật, có thể query on-chain Transfer events cho một token và aggregate by wallet. DefiLlama adapter có thể làm điều này nếu có RPC access. Nhưng không có wallet labels thì output chỉ là địa chỉ ví — không biết đó là "smart money" hay retail.
+
+#### Tại Sao Không Tự Build Label Database?
+
+Về mặt kỹ thuật hoàn toàn có thể. Nhưng:
+- Nansen bắt đầu từ 2020, mất **4–5 năm** để có 250M labels
+- Cần team research liên tục verify và update (ví bị compromise, entity đổi tên)
+- Nhiều labels đến từ **private partnerships** (exchange KYC data) — không thể replicate
+
+---
+
+### Dune Analytics (Custom SQL, On-chain Queries)
+
+**Kết luận: Không thể replace generic query capability. Specific queries có thể hardcode.**
+
+| Capability | Có thể custom DefiLlama? | Verdict |
+|------------|--------------------------|---------|
+| Custom SQL queries (arbitrary) | ❌ Cần full blockchain indexer + columnar DB | Không thể |
+| Specific hardcoded queries | ✅ Viết dedicated adapter cho từng query | Case by case |
+
+**Tại sao không thể replace Dune:**
+
+Dune là query engine trên top of indexed blockchain data. Để replace cần:
+- Full blockchain indexer (Ethereum, Arbitrum, etc.) — petabytes of data
+- Columnar database (ClickHouse/BigQuery) cho analytical queries
+- SQL interface với schema normalization
+
+Đây là **infrastructure product**, không phải adapter.
+
+**Khi nào hardcode được:**
+
+Nếu Chainlens chỉ cần 3–5 specific queries (vd: "top DEX traders last 7 days on Arbitrum"), có thể viết dedicated adapters gọi RPC + parse events. Không flexible như Dune nhưng đủ cho use case cụ thể.
+
+---
+
+### Tổng Kết: Cái Gì Nên Custom, Cái Gì Nên Giữ API
+
+| Data | Custom DefiLlama? | Effort | Verdict |
+|------|-------------------|--------|---------|
+| P/S, P/F, P/E ratio | ✅ Tính từ existing data | Thấp (1–2 ngày) | **Làm ngay — không cần Token Terminal** |
+| Dev activity (GitHub commits) | ✅ GitHub API adapter | Thấp (1 ngày) | **Tự build — không cần Token Terminal** |
+| DAU | ⚠️ Cần RPC + event indexing | Cao (2–3 tuần) | **Defer — cần indexer layer** |
+| Wallet labels | ❌ Data asset, không phải code | N/A | **Giữ Nansen** |
+| Smart money tracking | ❌ Phụ thuộc wallet labels | N/A | **Giữ Nansen** |
+| Token God Mode (who bought/sold) | ⚠️ Partial — địa chỉ ví, không có labels | Cao | **Giữ Nansen cho full feature** |
+| Custom SQL queries | ❌ Cần full indexer infrastructure | N/A | **Giữ Dune** |
+| Specific on-chain queries | ⚠️ Hardcode từng query | Trung bình | **Case by case** |
+
+**Implication cho Chainlens roadmap:**
+
+- **Có thể loại bỏ Token Terminal** cho P/S, P/F, P/E và dev activity — tự compute từ DefiLlama data + GitHub API. Tiết kiệm ~$200–500/tháng Token Terminal subscription.
+- **Nansen không thể replace** — wallet labels là proprietary data asset tích lũy nhiều năm. Giữ Nansen cho Smart Money features.
+- **Dune có thể giảm phụ thuộc** — identify specific queries đang dùng, hardcode những cái quan trọng nhất thành dedicated adapters. Giữ Dune cho ad-hoc analysis.
+
+---
+
+*Section này được bổ sung 2026-05-18 dựa trên phân tích follow-up về khả năng extend DefiLlama để thay thế các proprietary data APIs.*
