@@ -1921,3 +1921,179 @@ Rationale: 2s handles transient flaps; 15s handles Daytona API rate-limiting; 60
 | ensureRunning verifies runtime health | poll `/epsilon/health` after wake |
 
 ---
+
+## Section 12: Frontend Performance Architecture (Epic 11)
+
+_Added 2026-05-17. Source: `fe-performance-upgrade-plan.md`._
+
+### 12.1. Bối cảnh & Vấn đề
+
+`apps/web` hiện chạy **Next.js 15.5.14 / React 18**. Các vấn đề đã xác định:
+
+| Vấn đề | Chi tiết |
+|---|---|
+| Heavy libs chưa lazy-load | 10 thư viện lớn (tổng ~17MB+) import trực tiếp, blocking first paint |
+| `loading.tsx` coverage thấp | 97 routes nhưng chỉ 3 `loading.tsx` — blank screen khi navigate |
+| React Compiler chưa enable | React 18 không có auto-memoization |
+| Next.js 15 dev overhead | Next.js 16 mang ~400% faster dev startup + ~50% faster rendering |
+
+### 12.2. Upgrade Path: Next.js 16 + React 19
+
+**Versions target:**
+- Next.js: `15.5.14` → `16.2.6`
+- React: `^18.x` → `19.0.6`
+- `@types/react`: `^18` → `19`
+
+**Breaking changes cần xử lý:**
+
+| Thay đổi | Scope | Cách fix |
+|---|---|---|
+| `params` / `searchParams` → `Promise<>` | Tất cả `page.tsx` dùng dynamic params | Thêm `await params` hoặc `React.use(params)` |
+| `forwardRef` deprecated | Tìm tất cả `React.forwardRef(...)` | Chuyển sang function component nhận `ref` prop trực tiếp |
+| `Context.value` required | `<Context>` usage | Verify không có `<Context>` thiếu `value` |
+| `ReactDOM.render` removed | Scan codebase | Nếu còn → chuyển sang `createRoot` |
+
+**Verify commands sau upgrade:**
+```bash
+cd apps/web
+bun run build      # phải pass
+bun test src/...   # tất cả tests phải pass
+bunx next dev      # launch, check critical flows
+```
+
+### 12.3. Bundle Splitting Pattern
+
+**Rule:** Mọi component/library > 200KB chưa dùng trên first paint **phải** dùng `next/dynamic` với `ssr: false`.
+
+**Danh sách cần lazy-load (ưu tiên cao → thấp):**
+
+| Library | Ước tính | File | Pattern |
+|---|---|---|---|
+| `pdfjs-dist` | ~3MB | `PdfViewer.tsx` | `dynamic(() => import('./PdfViewerInner'), { ssr: false })` |
+| `@syncfusion/*` (6 packages) | ~3MB+ | `SpreadsheetApp.tsx`, `SpreadsheetViewer.tsx` | `dynamic(..., { ssr: false, loading: () => <SpreadsheetSkeleton /> })` |
+| `mermaid` | ~2.5MB | `mermaid-renderer.tsx` | `const loadMermaid = () => import('mermaid').then(m => m.default)` |
+| `@univerjs/preset-sheets-core` | ~2MB+ | Spreadsheet components | `dynamic(..., { ssr: false })` |
+| `sql.js` | ~1.5MB | SqlRunner | `dynamic(() => import('./SqlRunner'), { ssr: false })` |
+| `ag-grid-community` + `ag-grid-react` | ~1.5MB | Grid components | `dynamic(() => import('./AgGridTable'), { ssr: false, loading: () => <TableSkeleton /> })` |
+| `three` + `@react-three/*` | ~1.2MB | `ChainLensBoxScene.tsx` | `dynamic(() => import('./ChainLensBoxScene'), { ssr: false })` |
+| `@react-pdf/renderer` | ~800KB | PDF rendering | `dynamic(..., { ssr: false })` |
+| `konva` + `react-konva` | ~400KB | Canvas components | `dynamic(..., { ssr: false })` |
+| `gsap` | ~200KB | Animation | `optimizePackageImports` đủ |
+
+**Template pattern:**
+```tsx
+// apps/web/src/components/thread/tool-views/spreadsheet/SpreadsheetViewer.tsx
+import dynamic from 'next/dynamic';
+
+const SpreadsheetViewerInner = dynamic(
+  () => import('./SpreadsheetViewerInner'),
+  { ssr: false, loading: () => <SpreadsheetSkeleton /> }
+);
+```
+
+### 12.4. `optimizePackageImports` mở rộng
+
+`apps/web/next.config.ts` → `experimental.optimizePackageImports`:
+
+```ts
+optimizePackageImports: [
+  // Đã có:
+  'lucide-react', 'framer-motion', 'recharts',
+  // Thêm mới (Story 11.2):
+  '@radix-ui/react-icons',
+  'date-fns',
+  '@tanstack/react-query',
+  'react-icons',
+  '@tiptap/core',
+  '@tiptap/react',
+  'gsap',
+  'chart.js',
+  'lowlight',
+],
+```
+
+### 12.5. Loading States Pattern (`loading.tsx`)
+
+**Rule:** Mọi route group quan trọng PHẢI có `loading.tsx` để tránh blank screen.
+
+**Các file cần tạo mới:**
+```
+apps/web/src/app/(dashboard)/loading.tsx
+apps/web/src/app/(dashboard)/sessions/loading.tsx
+apps/web/src/app/(dashboard)/sessions/[sessionId]/loading.tsx
+apps/web/src/app/(dashboard)/settings/loading.tsx
+apps/web/src/app/(dashboard)/markets/loading.tsx
+apps/web/src/app/(home)/loading.tsx
+```
+
+**Standard skeleton pattern:**
+```tsx
+export default function Loading() {
+  return (
+    <div className="flex h-screen w-full animate-pulse">
+      <div className="w-64 bg-muted/50 h-full" />
+      <div className="flex-1 p-6 space-y-4">
+        <div className="h-8 bg-muted/50 rounded w-1/3" />
+        <div className="h-40 bg-muted/50 rounded" />
+        <div className="h-40 bg-muted/50 rounded" />
+      </div>
+    </div>
+  );
+}
+```
+
+### 12.6. React Compiler Configuration
+
+Chỉ enable **sau khi** React 19 upgrade hoàn tất và build pass.
+
+```ts
+// apps/web/next.config.ts
+experimental: {
+  reactCompiler: true,   // auto-memoization toàn bộ components
+  optimizePackageImports: [...],
+}
+```
+
+**Audit trước khi enable:** Kiểm tra hooks tự viết không có side-effects ngầm trong `useMemo`/`useCallback` callbacks. React Compiler sẽ re-order hoặc skip memoization nếu phát hiện impure functions.
+
+### 12.7. Risk Matrix
+
+| Rủi ro | Xác suất | Giảm thiểu |
+|---|---|---|
+| Syncfusion + React 19 peer dep conflict | Cao | Kiểm tra trước khi upgrade: `pnpm dlx @next/upgrade@latest check` |
+| `@univerjs` không support React 19 | Trung bình | Nếu không compat → wrap trong `lazy()` với error boundary |
+| `@sentry/nextjs` + Next.js 16 | Trung bình | Upgrade sentry cùng lúc với Next.js 16 |
+| `pdfjs-dist` worker path thay đổi | Thấp | Verify `GlobalWorkerOptions.workerSrc` sau upgrade |
+
+### 12.8. Performance Measurement Targets
+
+| Metric | Baseline (ước tính) | Target |
+|---|---|---|
+| First Contentful Paint | ~3–4s | **< 1.5s** |
+| Time to Interactive | ~6–8s | **< 3s** |
+| Initial JS bundle | ~2–4MB | **< 800KB** |
+| `next dev` startup | baseline | **−50%** (Next.js 16 Turbopack) |
+| HMR speed | baseline | **−50%** |
+
+**Measurement tools:**
+```bash
+# Bundle analysis
+ANALYZE=true bun run build   # requires @next/bundle-analyzer
+
+# Lighthouse
+bunx lighthouse http://localhost:3000 --output json
+```
+
+### 12.9. Summary: FE Performance Invariants (post Epic 11)
+
+| Invariant | Enforcement |
+|---|---|
+| No lib > 200KB on first paint | `next/dynamic({ ssr: false })` |
+| FCP < 1.5s | Lighthouse CI gate |
+| TTI < 3s | Lighthouse CI gate |
+| Initial bundle < 800KB | `@next/bundle-analyzer` in build |
+| All routes have loading state | `loading.tsx` coverage check |
+| React Compiler enabled | `experimental.reactCompiler: true` |
+| No regression after upgrade | `bun test` full suite pass |
+
+---

@@ -16,6 +16,7 @@ class FakeQueue {
   }
   async add(...args: any[]) { this.addCalls.push(args); return { id: 'job-1' }; }
   async upsertJobScheduler(...args: any[]) { this.schedulerCalls.push(args); }
+  async removeJobScheduler(..._args: any[]) {}
   async close() { this.closed = true; }
 }
 
@@ -123,6 +124,7 @@ class FakeFatalError extends Error {
 
 mock.module('../../router/services/nansen', () => ({
   canCallNansen: () => _nansenCallEnabled,
+  isChainSupported: () => true,
   NansenRateLimitError: FakeNansenError,
   NansenPaymentRequiredError: FakeFatalError,
   NansenForbiddenError: FakeFatalError,
@@ -234,19 +236,18 @@ describe('getNansenSmartMoneyQueue singleton', () => {
 // ─── Worker processor ─────────────────────────────────────────────────────────
 
 describe('worker processor — partial success', () => {
-  test('[P0] partial TGM failure still commits successful results', async () => {
+  test('[P0] partial TGM failure now fails job to avoid caching incomplete provider data', async () => {
     _buyersShouldFail = true;
     startNansenSmartMoneyWorker();
     const w = workerInstances[0]!;
     const processor = w.processor as Function;
 
-    await processor({
-      name: 'refresh-token-god-mode',
-      data: { chain: 'ethereum', tokenAddress: '0xtoken', tokenSymbol: 'TEST' },
-    });
-
-    // Insert should have been called (sellers/flows succeeded)
-    expect(capturedInserts.length).toBeGreaterThan(0);
+    await expect(
+      processor({
+        name: 'refresh-token-god-mode',
+        data: { chain: 'ethereum', tokenAddress: '0xtoken', tokenSymbol: 'TEST' },
+      }),
+    ).rejects.toBeDefined();
   });
 
   test('[P0] all TGM calls fail — still commits empty result with partial status', async () => {
@@ -259,7 +260,7 @@ describe('worker processor — partial success', () => {
     const w = workerInstances[0]!;
     const processor = w.processor as Function;
 
-    // Should not throw even if all calls fail — use direct await
+    // Should throw when provider is fully unavailable/rate-limited
     let caughtErr: unknown = null;
     try {
       await processor({
@@ -269,7 +270,7 @@ describe('worker processor — partial success', () => {
     } catch (e) {
       caughtErr = e;
     }
-    expect(caughtErr).toBeNull();
+    expect(caughtErr).not.toBeNull();
   });
 
   test('[P0] netflow job commits data to DB', async () => {
@@ -277,26 +278,38 @@ describe('worker processor — partial success', () => {
     const w = workerInstances[0]!;
     const processor = w.processor as Function;
 
-    await processor({
-      name: 'refresh-smart-money-netflow',
-      data: { chains: ['ethereum'] },
-    });
+      await processor({
+        name: 'refresh-smart-money-netflow',
+        data: { chain: 'ethereum', tokenAddress: '0xtoken', lookbackHours: 1 },
+      });
 
     // Netflow was called
     expect(_netflowCallCount).toBeGreaterThan(0);
     expect(capturedInserts.length).toBeGreaterThan(0);
   });
 
-  test('[P1] netflow job gracefully continues when one chain fails', async () => {
+  test('[P1] netflow job fails when provider fails for requested token', async () => {
     _netflowShouldFail = true;
     startNansenSmartMoneyWorker();
     const w = workerInstances[0]!;
     const processor = w.processor as Function;
 
+    await expect(
+      processor({
+        name: 'refresh-smart-money-netflow',
+        data: { chain: 'ethereum', tokenAddress: '0xtoken', lookbackHours: 1 },
+      }),
+    ).rejects.toBeDefined();
+  });
+
+  test('[P0] cleanup job executes delete paths without throw', async () => {
+    startNansenSmartMoneyWorker();
+    const w = workerInstances[0]!;
+    const processor = w.processor as Function;
     let caughtErr: unknown = null;
     try {
       await processor({
-        name: 'refresh-smart-money-netflow',
+        name: 'cleanup-expired-nansen-cache',
         data: {},
       });
     } catch (e) {

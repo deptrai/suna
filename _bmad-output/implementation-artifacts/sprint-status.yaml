@@ -120,6 +120,16 @@ development_status:
   8-5-production-grade-platform-reliability: ready-for-dev
   epic-8-retrospective: optional
 
+  # ─── Phase 1 Addendum — FE Performance ───
+
+  # Epic 11: Frontend Performance & Platform Upgrade
+  epic-11: backlog
+  11-1-nextjs-16-react-19-upgrade: backlog
+  11-2-bundle-splitting-heavy-libraries: backlog
+  11-3-loading-states-route-skeletons: backlog
+  11-4-react-compiler-performance-validation: backlog
+  epic-11-retrospective: optional
+
   # ─── Phase 3 — MMOMarket Integration ───
 
   # Epic 9: Agent Marketplace Integration & Provisioning

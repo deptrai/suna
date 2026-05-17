@@ -24,8 +24,8 @@ import {
   fetchTgmWhoBoughtSold,
   fetchTgmFlows,
   canCallNansen,
+  isChainSupported,
   NansenRateLimitError,
-  NansenUnsupportedChainError,
   NansenForbiddenError,
   NansenPaymentRequiredError,
 } from '../../../router/services/nansen';
@@ -67,7 +67,7 @@ export function getNansenSmartMoneyQueue(): Queue {
       defaultJobOptions: {
         removeOnComplete: { count: 20 },
         removeOnFail: { count: 50 },
-        attempts: 3,
+        attempts: 1,
         backoff: { type: 'exponential', delay: 10_000 },
       },
     });
@@ -101,49 +101,45 @@ function buildDateRange(lookbackHours: number): { from: string; to: string } {
 // ─── Job processors ───────────────────────────────────────────────────────────
 
 async function processRefreshNetflow(job: Job): Promise<void> {
-  const chains = getConfiguredChains();
-  logger.info('[nansen-worker] refresh-smart-money-netflow started', { chains });
+  const { chain, tokenAddress, lookbackHours } = job.data as {
+    chain: string;
+    tokenAddress: string;
+    lookbackHours?: number;
+  };
+  const normalizedChain = String(chain || '').trim().toLowerCase();
+  const normalizedToken = normalizedChain === 'solana' ? String(tokenAddress || '') : String(tokenAddress || '').toLowerCase();
+  const lb = lookbackHours ?? config.NANSEN_SMART_MONEY_LOOKBACK_HOURS;
+  const timeWindow = `${lb}h`;
+  if (!normalizedToken) return;
+  if (!isChainSupported(normalizedChain) || !canCallNansen(normalizedChain)) return;
 
-  const results = await Promise.allSettled(
-    chains.map(async (chain) => {
-      if (!canCallNansen(chain)) return;
-      const resp = await fetchSmartMoneyNetflow([chain], {}, { limit: config.NANSEN_SMART_MONEY_TOP_N });
-      const rows = resp.data ?? [];
-      const summary = summarizeNetflow(rows);
-      const cacheExpiresAt = nowPlusTtl();
-
-      // Upsert per-chain netflow row
-      await db
-        .insert(nansenSmartMoneyFlows)
-        .values({
-          chain,
-          tokenAddress: 'ALL', // aggregated across all tokens for this chain
-          metricType: 'netflow',
-          timeWindow: '1h',
-          netFlowUsd: String(summary.smart_money_net_flow_usd),
-          walletCount: summary.wallet_count,
-          flowBreakdown: { rows: normalizeFlowBreakdown([]) } as any,
-          cacheExpiresAt,
-        })
-        .onConflictDoUpdate({
-          target: [nansenSmartMoneyFlows.chain, nansenSmartMoneyFlows.tokenAddress, nansenSmartMoneyFlows.metricType, nansenSmartMoneyFlows.timeWindow, nansenSmartMoneyFlows.source],
-          set: {
-            netFlowUsd: String(summary.smart_money_net_flow_usd),
-            walletCount: summary.wallet_count,
-            cacheExpiresAt,
-            updatedAt: new Date(),
-          },
-        } as any);
-    }),
-  );
-
-  for (const r of results) {
-    if (r.status === 'rejected') {
-      const err = r.reason;
-      if (isFatal(err)) throw err; // fatal: re-throw to stop worker retries
-      logger.warn('[nansen-worker] netflow chain error (non-fatal)', { err: String(err) });
-    }
-  }
+  logger.info('[nansen-worker] refresh-smart-money-netflow started', { chain: normalizedChain, tokenAddress: normalizedToken });
+  const resp = await fetchSmartMoneyNetflow([normalizedChain], { tokenAddress: normalizedToken, timeWindow }, { limit: config.NANSEN_SMART_MONEY_TOP_N });
+  const rows = resp.data ?? [];
+  const summary = summarizeNetflow(rows);
+  const cacheExpiresAt = nowPlusTtl();
+  await db
+    .insert(nansenSmartMoneyFlows)
+    .values({
+      chain: normalizedChain,
+      tokenAddress: normalizedToken,
+      metricType: 'netflow',
+      timeWindow,
+      netFlowUsd: String(summary.smart_money_net_flow_usd),
+      walletCount: summary.wallet_count,
+      flowBreakdown: { rows } as any,
+      cacheExpiresAt,
+    })
+    .onConflictDoUpdate({
+      target: [nansenSmartMoneyFlows.chain, nansenSmartMoneyFlows.tokenAddress, nansenSmartMoneyFlows.metricType, nansenSmartMoneyFlows.timeWindow, nansenSmartMoneyFlows.source],
+      set: {
+        netFlowUsd: String(summary.smart_money_net_flow_usd),
+        walletCount: summary.wallet_count,
+        flowBreakdown: { rows } as any,
+        cacheExpiresAt,
+        updatedAt: new Date(),
+      },
+    } as any);
 }
 
 async function processRefreshTokenGodMode(job: Job): Promise<void> {
@@ -154,7 +150,9 @@ async function processRefreshTokenGodMode(job: Job): Promise<void> {
     lookbackHours?: number;
   };
 
-  if (!canCallNansen(chain)) {
+  const normalizedChain = chain.trim().toLowerCase();
+  const normalizedToken = normalizedChain === 'solana' ? tokenAddress : tokenAddress.toLowerCase();
+  if (!isChainSupported(normalizedChain) || !canCallNansen(normalizedChain)) {
     logger.warn('[nansen-worker] chain unsupported or no API key, skipping TGM', { chain });
     return;
   }
@@ -167,11 +165,18 @@ async function processRefreshTokenGodMode(job: Job): Promise<void> {
   logger.info('[nansen-worker] refresh-token-god-mode started', { chain, tokenAddress });
 
   const [buyersResult, sellersResult, smFlowsResult, exFlowsResult] = await Promise.allSettled([
-    fetchTgmWhoBoughtSold(chain, tokenAddress, 'buy', dateRange, { limit }),
-    fetchTgmWhoBoughtSold(chain, tokenAddress, 'sell', dateRange, { limit }),
-    fetchTgmFlows(chain, tokenAddress, 'smart_money', dateRange, { limit }),
-    fetchTgmFlows(chain, tokenAddress, 'exchange', dateRange, { limit }),
+    fetchTgmWhoBoughtSold(normalizedChain, normalizedToken, 'buy', dateRange, { limit }),
+    fetchTgmWhoBoughtSold(normalizedChain, normalizedToken, 'sell', dateRange, { limit }),
+    fetchTgmFlows(normalizedChain, normalizedToken, 'smart_money', dateRange, { limit }),
+    fetchTgmFlows(normalizedChain, normalizedToken, 'exchange', dateRange, { limit }),
   ]);
+  const rejected = [buyersResult, sellersResult, smFlowsResult, exFlowsResult]
+    .find((r) => r.status === 'rejected') as PromiseRejectedResult | undefined;
+  if (rejected) {
+    if (isFatal(rejected.reason) || isRateLimit(rejected.reason)) throw rejected.reason;
+    logger.warn('[nansen-worker] non-fatal TGM call failed', { err: String(rejected.reason) });
+    return;
+  }
 
   const topBuyers = buyersResult.status === 'fulfilled'
     ? normalizeTopBuyers(buyersResult.value.data ?? [], limit)
@@ -186,7 +191,7 @@ async function processRefreshTokenGodMode(job: Job): Promise<void> {
     ? normalizeFlowBreakdown(exFlowsResult.value.data ?? [])
     : [];
 
-  const isPartial = [buyersResult, sellersResult, smFlowsResult, exFlowsResult].some((r) => r.status === 'rejected');
+  const isPartial = false;
   const smNetFlow = smFlows.reduce((s, r) => s + r.netflow_usd, 0);
   const exNetFlow = exFlows.reduce((s, r) => s + r.netflow_usd, 0);
 
@@ -213,8 +218,8 @@ async function processRefreshTokenGodMode(job: Job): Promise<void> {
   await db
     .insert(nansenTokenGodModeCache)
     .values({
-      chain,
-      tokenAddress,
+      chain: normalizedChain,
+      tokenAddress: normalizedToken,
       tokenSymbol,
       summary: { ...summary, risk_level: riskLevel, risk_factors: factors } as any,
       topBuyers: topBuyers as any,
@@ -262,7 +267,7 @@ async function processRefreshHotTokenWatchlist(job: Job): Promise<void> {
       chain: row.chain,
       tokenAddress: row.tokenAddress,
       tokenSymbol: row.tokenSymbol,
-    });
+    }, { jobId: `tgm:${row.chain}:${row.tokenAddress}` });
   }
 }
 
@@ -272,6 +277,9 @@ async function processCleanup(job: Job): Promise<void> {
     db.delete(nansenSmartMoneyFlows).where(lt(nansenSmartMoneyFlows.cacheExpiresAt, expiredBefore)),
     db.delete(nansenTokenGodModeCache).where(lt(nansenTokenGodModeCache.cacheExpiresAt, expiredBefore)),
   ]);
+  if (flowsDel.status === 'rejected' || tgmDel.status === 'rejected') {
+    throw new Error('cleanup failed');
+  }
   logger.info('[nansen-worker] cleanup-expired-nansen-cache done', {
     flowsDeleted: flowsDel.status === 'fulfilled',
     tgmDeleted: tgmDel.status === 'fulfilled',
@@ -312,6 +320,9 @@ export function startNansenSmartMoneyWorker(): void {
   _worker.on('failed', (job, err) => {
     if (isRateLimit(err)) {
       logger.warn('[nansen-worker] job failed: rate limited', { jobId: job?.id, jobName: job?.name });
+      if (job) {
+        job.retry().catch(() => undefined);
+      }
     } else {
       logger.error('[nansen-worker] job failed', { jobId: job?.id, jobName: job?.name, err: String(err) });
     }
@@ -324,11 +335,7 @@ export async function setupNansenSmartMoneyJobs(): Promise<void> {
   if (!config.NANSEN_SMART_MONEY_WORKER_ENABLED || !config.NANSEN_API_KEY) return;
 
   const q = getNansenSmartMoneyQueue();
-  await q.upsertJobScheduler(
-    NETFLOW_SCHEDULER_ID,
-    { every: config.NANSEN_SMART_MONEY_SYNC_INTERVAL_MS },
-    { name: JOB_REFRESH_NETFLOW, data: {} },
-  );
+  await q.removeJobScheduler(NETFLOW_SCHEDULER_ID).catch(() => undefined);
   await q.upsertJobScheduler(
     CLEANUP_SCHEDULER_ID,
     { pattern: '37 2 * * *' },

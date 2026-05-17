@@ -1,4 +1,4 @@
-import { describe, test, expect, mock, beforeEach } from 'bun:test';
+import { describe, test, expect, mock, beforeEach, afterEach } from 'bun:test';
 import { Hono } from 'hono';
 import type { AppContext } from '../../types';
 
@@ -66,6 +66,7 @@ mock.module('drizzle-orm', () => ({
   eq: (col: unknown, val: unknown) => ({ col, val, op: 'eq' }),
   and: (...args: unknown[]) => ({ args, op: 'and' }),
   gt: (col: unknown, val: unknown) => ({ col, val, op: 'gt' }),
+  lte: (col: unknown, val: unknown) => ({ col, val, op: 'lte' }),
 }));
 
 mock.module('../../router/services/billing', () => ({
@@ -92,6 +93,7 @@ let _nansenCallCount = 0;
 
 mock.module('../../router/services/nansen', () => ({
   canCallNansen: () => _nansenEnabled,
+  isChainSupported: () => true,
   NansenRateLimitError: class NansenRateLimitError extends Error {
     constructor() { super('rate limited'); this.name = 'NansenRateLimitError'; }
   },
@@ -111,8 +113,13 @@ mock.module('../../router/services/nansen', () => ({
 
 mock.module('../../queue/bullmq/workers/nansen-smart-money-worker', () => ({
   getNansenSmartMoneyQueue: () => ({ add: async () => ({ id: 'job-1' }) }),
+  JOB_REFRESH_NETFLOW: 'refresh-netflow',
   JOB_REFRESH_TGM: 'refresh-tgm',
 }));
+
+afterEach(() => {
+  mock.restore();
+});
 
 import { smartMoneyFlow } from '../../router/routes/smart-money-flow';
 
@@ -197,6 +204,17 @@ describe('POST /smart-money-flow — cache hit', () => {
     const data = await res.json() as any;
     expect(data.cache_status).toBe('cache_fresh');
     expect(data.cost).toBe(0);
+  });
+
+  test('[P0] netflow mode allows missing token_address', async () => {
+    _dbScenario = 'netflow_hit';
+    const app = makeApp();
+    const res = await app.request('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chain: 'ethereum', mode: 'smart_money_netflow' }),
+    });
+    expect(res.status).toBe(200);
   });
 });
 
@@ -294,7 +312,7 @@ describe('POST /smart-money-flow — credits', () => {
     const res = await app.request('/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(validBody),
+      body: JSON.stringify({ ...validBody, force_refresh: true }),
     });
     expect(res.status).toBe(402);
   });

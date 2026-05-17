@@ -250,6 +250,23 @@ so that Agent có thể trả lời câu hỏi như "ví cá mập/smart money n
   - [x] 8.5 — Add OpenCode tool wrapper smoke test if project has pattern for tool tests.
   - [x] 8.6 — Run relevant tests and typecheck.
 
+### Review Findings
+
+- [x] [Review][Patch] Nansen wrapper request/response shapes do not match current Nansen API docs; bodies use camelCase/top-level fields while docs use `token_address`, `buy_or_sell`, `date`, `pagination`, and snake_case responses. [apps/api/src/router/services/nansen.ts:125]
+- [x] [Review][Patch] Configured `NANSEN_SMART_MONEY_CHAINS` allowlist is ignored; route/service use a hardcoded supported-chain set instead of the operator-configured chain scope. [apps/api/src/router/services/nansen.ts:18]
+- [x] [Review][Patch] Unsupported chains and missing provider config are collapsed into queued success, bypassing the intended `unsupported_chain` response and creating jobs that cannot succeed. [apps/api/src/router/routes/smart-money-flow.ts:144]
+- [x] [Review][Patch] Cache-miss queue path always enqueues `refresh-token-god-mode`, so `smart_money_netflow` misses do not enqueue a netflow refresh. [apps/api/src/router/routes/smart-money-flow.ts:146]
+- [x] [Review][Patch] Default live-call cap `3` silently skips the exchange-flow provider call even when `mode='exchange_flows'`, then marks the response as live/successful. [apps/api/src/router/routes/smart-money-flow.ts:188]
+- [x] [Review][Patch] Provider 429/402/403 handling is incomplete: TGM failures are swallowed into billed partial live responses, 403 has no stale fallback, and netflow fallback queries the TGM cache table. [apps/api/src/router/routes/smart-money-flow.ts:195]
+- [x] [Review][Patch] Cache keys ignore `lookback_hours`/`timeWindow`, so requests for different windows can receive a fresh cache row from the wrong window. [apps/api/src/router/routes/smart-money-flow.ts:103]
+- [x] [Review][Patch] Token address normalization lowercases all cache keys, which breaks case-sensitive Solana token addresses and can desync worker writes from route reads. [apps/api/src/router/routes/smart-money-flow.ts:76]
+- [x] [Review][Patch] `smart_money_netflow` incorrectly requires `token_address` even though the spec only requires it for TGM modes. [apps/api/src/router/routes/smart-money-flow.ts:43]
+- [x] [Review][Patch] Live billing gate checks only the default `$0.01` minimum and ignores `deductToolCredits` failure, so live Nansen data can be returned without successfully charging the configured tool cost. [apps/api/src/router/routes/smart-money-flow.ts:172]
+- [x] [Review][Patch] Scheduled netflow worker performs unscoped per-chain netflow calls and writes `tokenAddress='ALL'`, violating the watchlist/hot-token model and producing rows the API route does not read. [apps/api/src/queue/bullmq/workers/nansen-smart-money-worker.ts:103]
+- [x] [Review][Patch] Worker retry/error policy is inverted relative to spec: generic attempts retry fatal 402/403, while 429-style non-fatal errors are logged and may not retry as intended. [apps/api/src/queue/bullmq/workers/nansen-smart-money-worker.ts:63]
+- [x] [Review][Patch] TGM worker writes an empty `partial` cache row even when all provider calls fail, masking provider outage/quota/auth problems as usable cache. [apps/api/src/queue/bullmq/workers/nansen-smart-money-worker.ts:169]
+- [x] [Review][Patch] Required test coverage is missing for holdings request bodies, current Nansen request/response shapes, worker cleanup deletion, time-window cache selection, exchange-flow live cap, and netflow stale fallback. [apps/api/src/__tests__/unit/nansen-service.test.ts:51]
+
 ## Dev Notes
 
 ### Critical Brownfield Guardrails

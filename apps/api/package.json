@@ -9,7 +9,8 @@
     "start": "bun run src/index.ts",
     "typecheck": "tsc --noEmit",
     "test": "bun test src/__tests__/billing/credits.test.ts && bun test src/__tests__/billing/webhooks.test.ts src/__tests__/billing/subscriptions.test.ts src/__tests__/billing/yearly-rotation.test.ts src/__tests__/billing/account-deletion.test.ts && bun test src/__tests__/e2e-router.test.ts && bun test src/__tests__/e2e-billing-routes.test.ts && bun test src/__tests__/e2e-preview-proxy.test.ts && bun test src/__tests__/e2e-health.test.ts src/__tests__/e2e-version.test.ts src/__tests__/e2e-setup.test.ts src/__tests__/e2e-providers.test.ts src/__tests__/e2e-platform.test.ts src/__tests__/e2e-api-keys.test.ts src/__tests__/e2e-deployment.test.ts src/__tests__/e2e-deployments.test.ts src/__tests__/e2e-channels.test.ts src/__tests__/e2e-cron.test.ts src/__tests__/unit-*.test.ts",
-    "test:all": "bun run test"
+    "test:all": "bun run test",
+    "test:nansen-smart-money:isolation": "bun test src/__tests__/unit/smart-money-flow-route.test.ts && bun test src/__tests__/unit/nansen-service.test.ts && bun test src/__tests__/unit/nansen-worker.test.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.38",

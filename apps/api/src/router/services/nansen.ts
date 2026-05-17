@@ -120,6 +120,51 @@ export interface NansenFlowsResponse {
   nextCursor?: string;
 }
 
+function configuredChainsSet(): Set<string> {
+  return new Set(
+    String(config.NANSEN_SMART_MONEY_CHAINS || '')
+      .split(',')
+      .map((c) => c.trim().toLowerCase())
+      .filter(Boolean),
+  );
+}
+
+function mapNetflowRow(input: any): NansenNetflowRow {
+  return {
+    tokenAddress: input?.tokenAddress ?? input?.token_address,
+    tokenSymbol: input?.tokenSymbol ?? input?.token_symbol,
+    chain: input?.chain,
+    netflowUsd: input?.netflowUsd ?? input?.netflow_usd,
+    inflowUsd: input?.inflowUsd ?? input?.inflow_usd,
+    outflowUsd: input?.outflowUsd ?? input?.outflow_usd,
+    walletCount: input?.walletCount ?? input?.wallet_count,
+    timeWindow: input?.timeWindow ?? input?.time_window,
+  };
+}
+
+function mapWhoBoughtSoldRow(input: any): NansenWhoBoughtSoldRow {
+  return {
+    address: input?.address,
+    label: input?.label,
+    boughtVolumeUsd: input?.boughtVolumeUsd ?? input?.bought_volume_usd,
+    soldVolumeUsd: input?.soldVolumeUsd ?? input?.sold_volume_usd,
+    netVolumeUsd: input?.netVolumeUsd ?? input?.net_volume_usd,
+    txCount: input?.txCount ?? input?.tx_count,
+  };
+}
+
+function mapFlowRow(input: any): NansenFlowRow {
+  return {
+    label: input?.label,
+    inflowUsd: input?.inflowUsd ?? input?.inflow_usd,
+    outflowUsd: input?.outflowUsd ?? input?.outflow_usd,
+    netflowUsd: input?.netflowUsd ?? input?.netflow_usd,
+    walletCount: input?.walletCount ?? input?.wallet_count,
+    traderCount: input?.traderCount ?? input?.trader_count,
+    timeWindow: input?.timeWindow ?? input?.time_window,
+  };
+}
+
 // ─── Internal fetch helper ────────────────────────────────────────────────────
 
 async function nansenPost<T>(endpoint: string, body: unknown): Promise<T> {
@@ -136,7 +181,7 @@ async function nansenPost<T>(endpoint: string, body: unknown): Promise<T> {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'apikey': apiKey, // lowercase per Nansen authentication docs
+        'apiKey': apiKey,
       },
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(NANSEN_TIMEOUT_MS),
@@ -170,6 +215,9 @@ async function nansenPost<T>(endpoint: string, body: unknown): Promise<T> {
   if (typeof json !== 'object' || json === null) {
     throw new NansenProviderError(res.status, 'Unexpected response shape');
   }
+  if ('data' in (json as Record<string, unknown>) && !Array.isArray((json as any).data)) {
+    throw new NansenProviderError(res.status, 'Unexpected response shape');
+  }
 
   return json as T;
 }
@@ -185,17 +233,21 @@ export async function fetchSmartMoneyHoldings(
   filters?: { tokenAddress?: string; tokenSymbol?: string },
   pagination?: { limit?: number; cursor?: string },
 ): Promise<NansenHoldingsResponse> {
-  for (const chain of chains) {
-    if (!NANSEN_SUPPORTED_CHAINS.has(chain)) throw new NansenUnsupportedChainError(chain);
+  for (const chain of chains.map((c) => c.toLowerCase())) {
+    if (!isChainSupported(chain)) throw new NansenUnsupportedChainError(chain);
   }
-  const body: Record<string, unknown> = { chains };
-  if (filters?.tokenAddress) body.tokenAddress = filters.tokenAddress;
-  if (filters?.tokenSymbol) body.tokenSymbol = filters.tokenSymbol;
-  if (pagination?.limit) body.limit = pagination.limit;
-  if (pagination?.cursor) body.cursor = pagination.cursor;
+  const body: Record<string, unknown> = { chain: chains.map((c) => c.toLowerCase()) };
+  if (filters?.tokenAddress) body.token_address = filters.tokenAddress;
+  if (filters?.tokenSymbol) body.token_symbol = filters.tokenSymbol;
+  if (pagination?.limit || pagination?.cursor) {
+    body.pagination = {};
+    if (pagination?.limit) (body.pagination as any).limit = pagination.limit;
+    if (pagination?.cursor) (body.pagination as any).cursor = pagination.cursor;
+  }
 
   logger.info('[nansen] fetchSmartMoneyHoldings', { chains, hasToken: !!filters?.tokenAddress });
-  return nansenPost<NansenHoldingsResponse>('/smart-money/holdings', body);
+  const raw = await nansenPost<NansenHoldingsResponse>('/smart-money/holdings', body);
+  return raw;
 }
 
 /**
@@ -207,17 +259,21 @@ export async function fetchSmartMoneyNetflow(
   filters?: { tokenAddress?: string; timeWindow?: string },
   pagination?: { limit?: number; cursor?: string },
 ): Promise<NansenNetflowResponse> {
-  for (const chain of chains) {
-    if (!NANSEN_SUPPORTED_CHAINS.has(chain)) throw new NansenUnsupportedChainError(chain);
+  for (const chain of chains.map((c) => c.toLowerCase())) {
+    if (!isChainSupported(chain)) throw new NansenUnsupportedChainError(chain);
   }
-  const body: Record<string, unknown> = { chains };
-  if (filters?.tokenAddress) body.tokenAddress = filters.tokenAddress;
-  if (filters?.timeWindow) body.timeWindow = filters.timeWindow;
-  if (pagination?.limit) body.limit = pagination.limit;
-  if (pagination?.cursor) body.cursor = pagination.cursor;
+  const body: Record<string, unknown> = { chain: chains.map((c) => c.toLowerCase()) };
+  if (filters?.tokenAddress) body.token_address = filters.tokenAddress;
+  if (filters?.timeWindow) body.time_window = filters.timeWindow;
+  if (pagination?.limit || pagination?.cursor) {
+    body.pagination = {};
+    if (pagination?.limit) (body.pagination as any).limit = pagination.limit;
+    if (pagination?.cursor) (body.pagination as any).cursor = pagination.cursor;
+  }
 
   logger.info('[nansen] fetchSmartMoneyNetflow', { chains, hasToken: !!filters?.tokenAddress });
-  return nansenPost<NansenNetflowResponse>('/smart-money/netflow', body);
+  const raw = await nansenPost<NansenNetflowResponse>('/smart-money/netflow', body);
+  return { ...raw, data: Array.isArray(raw.data) ? raw.data.map(mapNetflowRow) : [] };
 }
 
 /**
@@ -232,20 +288,26 @@ export async function fetchTgmWhoBoughtSold(
   pagination?: { limit?: number; cursor?: string },
   filters?: { minVolumeUsd?: number },
 ): Promise<NansenWhoBoughtSoldResponse> {
-  if (!NANSEN_SUPPORTED_CHAINS.has(chain)) throw new NansenUnsupportedChainError(chain);
+  if (!isChainSupported(chain)) throw new NansenUnsupportedChainError(chain);
   const body: Record<string, unknown> = {
-    chain,
-    tokenAddress,
-    type: buyOrSell,
-    from: dateRange.from,
-    to: dateRange.to,
+    chain: chain.toLowerCase(),
+    token_address: tokenAddress,
+    buy_or_sell: buyOrSell,
+    date: {
+      from: dateRange.from,
+      to: dateRange.to,
+    },
   };
-  if (pagination?.limit) body.limit = pagination.limit;
-  if (pagination?.cursor) body.cursor = pagination.cursor;
-  if (filters?.minVolumeUsd) body.minVolumeUsd = filters.minVolumeUsd;
+  if (pagination?.limit || pagination?.cursor) {
+    body.pagination = {};
+    if (pagination?.limit) (body.pagination as any).limit = pagination.limit;
+    if (pagination?.cursor) (body.pagination as any).cursor = pagination.cursor;
+  }
+  if (filters?.minVolumeUsd) body.min_volume_usd = filters.minVolumeUsd;
 
   logger.info('[nansen] fetchTgmWhoBoughtSold', { chain, tokenAddress, buyOrSell });
-  return nansenPost<NansenWhoBoughtSoldResponse>('/tgm/who-bought-sold', body);
+  const raw = await nansenPost<NansenWhoBoughtSoldResponse>('/tgm/who-bought-sold', body);
+  return { ...raw, data: Array.isArray(raw.data) ? raw.data.map(mapWhoBoughtSoldRow) : [] };
 }
 
 /**
@@ -260,27 +322,40 @@ export async function fetchTgmFlows(
   pagination?: { limit?: number; cursor?: string },
   filters?: Record<string, unknown>,
 ): Promise<NansenFlowsResponse> {
-  if (!NANSEN_SUPPORTED_CHAINS.has(chain)) throw new NansenUnsupportedChainError(chain);
+  if (!isChainSupported(chain)) throw new NansenUnsupportedChainError(chain);
   const body: Record<string, unknown> = {
-    chain,
-    tokenAddress,
+    chain: chain.toLowerCase(),
+    token_address: tokenAddress,
     label,
-    from: dateRange.from,
-    to: dateRange.to,
+    date: {
+      from: dateRange.from,
+      to: dateRange.to,
+    },
     ...filters,
   };
-  if (pagination?.limit) body.limit = pagination.limit;
-  if (pagination?.cursor) body.cursor = pagination.cursor;
+  if (pagination?.limit || pagination?.cursor) {
+    body.pagination = {};
+    if (pagination?.limit) (body.pagination as any).limit = pagination.limit;
+    if (pagination?.cursor) (body.pagination as any).cursor = pagination.cursor;
+  }
 
   logger.info('[nansen] fetchTgmFlows', { chain, tokenAddress, label });
-  return nansenPost<NansenFlowsResponse>('/tgm/flows', body);
+  const raw = await nansenPost<NansenFlowsResponse>('/tgm/flows', body);
+  return { ...raw, data: Array.isArray(raw.data) ? raw.data.map(mapFlowRow) : [] };
 }
 
 /** Returns true only if a Nansen API key is configured and the chain is supported. */
 export function canCallNansen(chain?: string): boolean {
   if (!config.NANSEN_API_KEY) return false;
-  if (chain && !NANSEN_SUPPORTED_CHAINS.has(chain)) return false;
+  if (chain && !isChainSupported(chain)) return false;
   return true;
+}
+
+export function isChainSupported(chain: string): boolean {
+  const normalized = chain.trim().toLowerCase();
+  const configured = configuredChainsSet();
+  if (!configured.has(normalized)) return false;
+  return NANSEN_SUPPORTED_CHAINS.has(normalized);
 }
 
 export { NANSEN_SUPPORTED_CHAINS };

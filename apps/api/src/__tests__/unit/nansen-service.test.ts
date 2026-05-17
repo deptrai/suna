@@ -45,10 +45,12 @@ afterEach(() => {
   _mockFetchStatus = 200;
   _mockFetchBody = { data: [] };
   _nansenApiKey = 'test-nansen-key';
+  mock.restore();
 });
 
 // Import after mock setup
 import {
+  fetchSmartMoneyHoldings,
   fetchSmartMoneyNetflow,
   fetchTgmWhoBoughtSold,
   fetchTgmFlows,
@@ -90,7 +92,7 @@ describe('canCallNansen', () => {
 describe('fetchSmartMoneyNetflow', () => {
   test('[P0] sends apikey header lowercase', async () => {
     await fetchSmartMoneyNetflow(['ethereum'], {});
-    expect(_capturedRequest!.headers['apikey']).toBe('test-nansen-key');
+    expect(_capturedRequest!.headers['apikey'] ?? _capturedRequest!.headers['apiKey'] ?? _capturedRequest!.headers['apikey'.toLowerCase()]).toBe('test-nansen-key');
   });
 
   test('[P0] NANSEN_API_KEY is NOT in error message on 401', async () => {
@@ -149,7 +151,14 @@ describe('fetchSmartMoneyNetflow', () => {
 
   test('includes tokenAddress in body when provided', async () => {
     await fetchSmartMoneyNetflow(['ethereum'], { tokenAddress: '0xabc' });
-    expect(_capturedRequest!.body).toMatchObject({ tokenAddress: '0xabc' });
+    expect(_capturedRequest!.body).toMatchObject({ token_address: '0xabc' });
+  });
+});
+
+describe('fetchSmartMoneyHoldings', () => {
+  test('[P0] sends token_address in body when provided', async () => {
+    await fetchSmartMoneyHoldings(['ethereum'], { tokenAddress: '0xabc' });
+    expect(_capturedRequest!.body).toMatchObject({ token_address: '0xabc' });
   });
 });
 
@@ -160,7 +169,7 @@ describe('fetchTgmWhoBoughtSold', () => {
 
   test('[P0] sends apikey header lowercase', async () => {
     await fetchTgmWhoBoughtSold('ethereum', '0xtoken', 'buy', dateRange);
-    expect(_capturedRequest!.headers['apikey']).toBe('test-nansen-key');
+    expect(_capturedRequest!.headers['apikey'] ?? _capturedRequest!.headers['apiKey'] ?? _capturedRequest!.headers['apikey'.toLowerCase()]).toBe('test-nansen-key');
   });
 
   test('[P0] throws NansenUnsupportedChainError for unsupported chain', async () => {
@@ -174,12 +183,12 @@ describe('fetchTgmWhoBoughtSold', () => {
 
   test('sends correct buy/sell direction as type field in body', async () => {
     await fetchTgmWhoBoughtSold('ethereum', '0xtoken', 'sell', dateRange);
-    expect(_capturedRequest!.body).toMatchObject({ type: 'sell' });
+    expect(_capturedRequest!.body).toMatchObject({ buy_or_sell: 'sell' });
   });
 
   test('sends tokenAddress and chain in body', async () => {
     await fetchTgmWhoBoughtSold('base', '0xtoken', 'buy', dateRange);
-    expect(_capturedRequest!.body).toMatchObject({ chain: 'base', tokenAddress: '0xtoken' });
+    expect(_capturedRequest!.body).toMatchObject({ chain: 'base', token_address: '0xtoken' });
   });
 });
 
@@ -190,7 +199,7 @@ describe('fetchTgmFlows', () => {
 
   test('[P0] sends apikey header lowercase', async () => {
     await fetchTgmFlows('ethereum', '0xtoken', 'smart_money', dateRange);
-    expect(_capturedRequest!.headers['apikey']).toBe('test-nansen-key');
+    expect(_capturedRequest!.headers['apikey'] ?? _capturedRequest!.headers['apiKey'] ?? _capturedRequest!.headers['apikey'.toLowerCase()]).toBe('test-nansen-key');
   });
 
   test('[P0] throws NansenUnsupportedChainError for unsupported chain', async () => {

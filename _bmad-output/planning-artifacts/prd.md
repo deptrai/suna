@@ -185,7 +185,15 @@ Bởi vì Chainlens hoạt động trong không gian Crypto/Web3, hệ thống p
 - **Token-in-URL Prevention (NFR-S4):** JWT/auth tokens KHÔNG được xuất hiện trong WebSocket/SSE URL query string (nginx logs, browser history). Implementation: first-message authentication pattern — token trong WS frame đầu tiên, không trong URL. *→ Story 8.5 Sprint 2*
 - **Sandbox Isolation:** Code sinh ra chạy trong Sandbox (Tier 2) bị ngắt truy cập mạng bên ngoài (no outbound network), chỉ được kết nối đến Vibe Trading API nội bộ, nhằm chống lại mã độc (C2C).
 
-### 7.5. Observability & Operational (Vận hành & Quan sát)
+### 7.5. Frontend Performance (Hiệu suất Giao diện)
+
+- **First Contentful Paint (NFR-FE1):** FCP phải **< 1.5 giây** trên kết nối 4G trung bình. Hiện tại ước tính 3–4s do initial JS bundle quá lớn. *→ Epic 11*
+- **Time to Interactive (NFR-FE2):** TTI phải **< 3 giây**. Hiện tại ước tính 6–8s do blocking script execution. *→ Epic 11*
+- **Initial JS Bundle (NFR-FE3):** Bundle JS ban đầu KHÔNG được vượt quá **800KB** (compressed). Các library > 200KB chưa dùng trên first paint (mermaid, three.js, pdfjs, syncfusion, sql.js, ag-grid, v.v.) PHẢI được lazy-load bằng `next/dynamic` hoặc `React.lazy()`. *→ Story 11.2*
+- **Dev Server Startup (NFR-FE4):** `next dev` startup time phải giảm ≥ 50% so với baseline Next.js 15. *→ Story 11.1*
+- **Zero Regression (NFR-FE5):** Sau mọi thay đổi FE performance, toàn bộ test suite (`bun test`) PHẢI pass. Không có trang nào bị blank screen khi navigate (đảm bảo bởi `loading.tsx` coverage). *→ Story 11.3*
+
+### 7.6. Observability & Operational (Vận hành & Quan sát)
 - **Distributed Tracing & Metrics (NFR-O1):** API PHẢI export traces và metrics qua OpenTelemetry Protocol (OTLP). Key metrics: `sandbox.provision.duration_ms` (histogram, label: success/fail), `sandbox.provision.attempts_total` (counter), HTTP request duration (auto-instrumented). *→ Story 8.5 Sprint 3*
 - **Stable Tunnel URL (NFR-O2):** `EPSILON_URL` (cloudflared bridge sandbox→API) PHẢI trỏ vào permanent URL (named Cloudflare Tunnel), không phải quick-tunnel URL thay đổi khi restart. *→ Story 8.5 Sprint 3*
 - **Multi-Replica Safe Dedup (NFR-O3):** Sandbox provisioning deduplication PHẢI work khi API scale lên 2+ replicas. Implementation: Postgres advisory lock thay in-memory `Set<string>`. *→ Story 8.5 Sprint 3*
