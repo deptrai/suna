@@ -23,12 +23,19 @@ inputDocuments:
   - docs/development-release-guide.md
   - docs/project-overview.md
   - docs/admin-panel-handoff.md
+  - _bmad-output/planning-artifacts/architecture.md
+  - _bmad-output/planning-artifacts/research/technical-self-host-defillama-chainlens-research-2026-05-18.md
 documentCounts:
   briefCount: 0
   researchCount: 0
   brainstormingCount: 0
   projectDocsCount: 9
 workflowType: prd
+workflow: edit
+lastEdited: '2026-05-18'
+editHistory:
+  - date: '2026-05-18'
+    changes: 'Aligned DeFiLlama requirements with self-host provider boundary, hybrid fallback, and unchanged Epic 1/2 tool contracts.'
 ---
 
 # Product Requirements Document - chainlens
@@ -67,6 +74,7 @@ Chainlens (Chain = Blockchain + Lens = Soi dữ liệu) định vị là một n
 - **Độ chính xác dữ liệu (Accuracy):** Các báo cáo research và kết quả sử dụng tool phải đạt độ chính xác > 80%.
 - **Trải nghiệm mượt mà:** Tốc độ trả lời phải cực nhanh nhờ dữ liệu đã được crawl và xử lý sẵn bởi hệ thống worker 24/7 (khắc phục triệt để tình trạng "vỏ rỗng").
 - **Khả năng mở rộng (Extensibility):** Chất lượng sinh code và backtest được nâng cấp theo thời gian dựa trên các model LLM mới nhất. Cung cấp hệ thống tài liệu/training để người dùng tối ưu kỹ năng prompt.
+- **Độ tin cậy nguồn dữ liệu DeFi:** Các tool DeFi phải giữ nguyên response contract khi đổi nguồn dữ liệu phía sau. Nếu bật self-host DeFiLlama, hệ thống phải chạy shadow validation tối thiểu 7 ngày, TVL divergence < 2% cho core protocols, fees/revenue divergence < 5%, và tự fallback sang public/pro API khi self-host lỗi hoặc timeout.
 
 ## 4. Product Scope
 
@@ -80,14 +88,15 @@ Chainlens (Chain = Blockchain + Lens = Soi dữ liệu) định vị là một n
   - **DeFi & Market Dashboards (DeFiLlama/Nansen Data):** Bảng Yield / TVL đa cột có thể sort, kèm Sparklines. Đồ thị luân chuyển vốn (Smart Money Flow Visualizer).
   - **Advanced Charting:** Tích hợp TradingView cho biểu đồ nến (OHLCV), hỗ trợ vẽ overlay (Moving Averages, RSI).
   - **Backtest Sandbox Visualizer (Tier 2):** Trình soạn thảo Monaco Editor cho phép code/sửa chiến lược giao dịch. Các thẻ KPI (Sharpe Ratio, Max Drawdown) và Equity Curve Chart so sánh với Benchmark.
-- **Data Integrations:** Xây dựng các Agent chuyên biệt kết nối API Crypto (DeFiLlama, Nansen, Dune, Token Terminal) và Non-crypto (Perplexity AI).
+- **Data Integrations:** Xây dựng các Agent chuyên biệt kết nối dữ liệu Crypto (DeFiLlama, Nansen, Dune, Token Terminal) và Non-crypto (Perplexity AI) thông qua API nội bộ của Chainlens. Agent/OpenCode tool không gọi trực tiếp provider bên thứ ba hoặc self-host data service; backend chịu trách nhiệm chọn provider, chuẩn hóa response, cache, billing, fallback, và bảo vệ API keys.
+- **DeFiLlama Provider Boundary:** Toàn bộ dữ liệu DeFiLlama phải đi qua một lớp provider phía backend với 4 mode vận hành: `public`, `pro`, `selfhost`, `hybrid`. `selfhost` chỉ hợp lệ khi Chainlens tự chạy selected DefiLlama adapters, tự gọi RPC, và lưu metric snapshots riêng; không tạo service trung gian nếu service đó chỉ proxy `api.llama.fi` hoặc `pro-api.llama.fi`. Mode migration mặc định là `hybrid`: thử self-host trước cho protocol/category được hỗ trợ, fallback public/pro khi lỗi.
 - **Vibe Trading Platform Integration (Tier 2):** Tích hợp toàn bộ Vibe-Trading research toolkit — không chỉ backtest. Cung cấp cho Tier 2 agent truy cập:
   - **Backtesting Engine:** Kết nối Celery-backed backtest với Monaco Editor UI (Sharpe/Drawdown/Equity Curve visualization). Tích hợp qua HTTP + SSE streaming cho Backtest Sandbox Visualizer.
   - **Research Toolkit (21 MCP tools):** Market data (6 sources: yfinance/OKX/Tushare/AKShare/CCXT), options pricing (Black-Scholes + Greeks), chart pattern recognition, factor analysis (IC/IR), 72 finance skill methodologies.
   - **Shadow Account Loop (flagship):** Upload broker CSV (同花顺/东财/富途/generic) → agent tự động chạy 5-step analysis (journal profiling → strategy extraction → multi-market backtest → HTML/PDF report → today signals scan).
   - **Multi-Agent Swarm Teams:** 29 pre-built research teams (Investment Committee, Quant Strategy Desk, Crypto Trading Desk, Risk Committee, v.v.) chạy DAG-based collaborative LLM workflows. Sử dụng user's own LLM API key (BYOK pattern) — LLM tokens billed by provider directly; Chainlens chỉ charge orchestration fee.
   - **Integration architecture:** MCP Proxy pattern (Story 5.5) — epsilon-api intercepts MCP JSON-RPC tool calls cho atomic billing (NFR8), sandbox egress unchanged (NFR10 preserved). Zero per-tool boilerplate — tools auto-discovered via MCP `tools/list`.
-- **Background Data Workers:** Xây dựng hệ thống lưu trữ thông tin crypto project và các worker chạy 24/7 liên tục phân tích và tạo báo cáo sẵn. Với các luồng real-time như Mempool Sniffing & MEV Tracking, worker chạy nền qua provider WebSocket do platform/operator cấu hình (MVP: QuickNode WSS), lưu alert vào DB, sau đó Agent/OpenCode tool chỉ query dữ liệu đã index qua API nội bộ; tool không tự mở kết nối mempool theo từng lần gọi. Với các luồng on-chain verification như Fact Checking, QuickNode HTTP RPC là provider mặc định để đọc logs/balance/call theo chain được cấu hình; Etherscan/Blockscout/Moralis chỉ là fallback hoặc supplemental. Với Entity/Hacker Wallet Tracking, Arkham là provider chính cho entity labels, còn QuickNode chỉ là optional verification adapter. Với Financial Statement/Valuation, Token Terminal API là paid/custom provider; worker chạy daily/cache-first theo project/metric allowlist, lưu normalized fundamentals vào DB, và Agent/OpenCode chỉ gọi API/tool nội bộ chứ không nhận API key hoặc raw provider payload. Tất cả worker multi-chain hoặc multi-project theo env/config allowlist, không crawl toàn bộ blockchain mặc định.
+- **Background Data Workers:** Xây dựng hệ thống lưu trữ thông tin crypto project và các worker chạy 24/7 liên tục phân tích và tạo báo cáo sẵn. Với DeFiLlama, chỉ được chọn một ingestion owner làm primary tại một thời điểm: Chainlens BullMQ crawler crawl public/pro API vào DB Chainlens, hoặc `chainlens-data-service` tự chạy adapters/RPC và Chainlens đọc qua HTTP. Không chạy cả hai làm primary song song. Với các luồng real-time như Mempool Sniffing & MEV Tracking, worker chạy nền qua provider WebSocket do platform/operator cấu hình (MVP: QuickNode WSS), lưu alert vào DB, sau đó Agent/OpenCode tool chỉ query dữ liệu đã index qua API nội bộ; tool không tự mở kết nối mempool theo từng lần gọi. Với các luồng on-chain verification như Fact Checking, QuickNode HTTP RPC là provider mặc định để đọc logs/balance/call theo chain được cấu hình; Etherscan/Blockscout/Moralis chỉ là fallback hoặc supplemental. Với Entity/Hacker Wallet Tracking, Arkham là provider chính cho entity labels, còn QuickNode chỉ là optional verification adapter. Với Financial Statement/Valuation, Token Terminal API là paid/custom provider; worker chạy daily/cache-first theo project/metric allowlist, lưu normalized fundamentals vào DB, và Agent/OpenCode chỉ gọi API/tool nội bộ chứ không nhận API key hoặc raw provider payload. Tất cả worker multi-chain hoặc multi-project theo env/config allowlist, không crawl toàn bộ blockchain mặc định.
 
 ### 4.2. Growth Features (Post-MVP)
 - **Autonomous AI Agents (Manus.ai Clone Capabilities):** Tận dụng tối đa kiến trúc Sandbox, Triggers, và agent-browser để cung cấp các luồng tự động hóa sâu:
@@ -159,6 +168,12 @@ Bởi vì Chainlens hoạt động trong không gian Crypto/Web3, hệ thống p
 ### 6.4. Zero-Data-Leakage (Riêng tư tuyệt đối cho Enterprise)
 - **Inbound-Only RAG Sync:** Đối với bản On-premise (Tier 3), Local LLM chỉ được phép nhận dữ liệu RAG (Market Market Data) từ máy chủ trung tâm của Chainlens thông qua API. Hệ thống nội bộ của khách hàng bị ngắt hoàn toàn kết nối gửi dữ liệu chiều ra (outbound telemetry) về Chainlens để đảm bảo chiến lược giao dịch và code riêng tư không bị rò rỉ hay sử dụng để train model.
 
+### 6.5. Crypto Data Provider Boundary
+- **Stable Tool Contract:** Các tool Epic 1/2 (`jit_sync`, `price_lookup`, `yields_lookup`, `risk_lookup`) luôn gọi Chainlens API và giữ nguyên response shape khi backend đổi provider.
+- **Provider Ownership:** Chainlens backend sở hữu auth, billing, cache, fallback, logging, và response normalization. Provider bên dưới có thể là DeFiLlama public API, DeFiLlama Pro API, self-host adapter service, hoặc hybrid mode theo cấu hình vận hành.
+- **Self-Host Scope:** DeFiLlama self-host chỉ thay thế các metric mà service tự tính được từ selected adapters và RPC. Nó không tự động thay thế Nansen smart-money labels, Dune arbitrary analytics, Token Terminal DAU/developer activity, hoặc Pro-only risk data nếu service chưa implement tương đương.
+- **Data Isolation:** Nếu self-host service dùng chung PostgreSQL instance với Chainlens, nó phải dùng database/schema và DB user riêng. Chainlens ưu tiên đọc qua HTTP API thay vì query trực tiếp bảng nội bộ của self-host service.
+
 ## 7. Non-Functional Requirements (Yêu cầu Phi chức năng)
 
 ### 7.1. Performance & Latency (Hiệu suất & Độ trễ)
@@ -172,6 +187,7 @@ Bởi vì Chainlens hoạt động trong không gian Crypto/Web3, hệ thống p
 
 ### 7.3. Reliability & Fallback (Độ tin cậy & Chống đứt gãy)
 - **LLM Provider Fallback:** Không phụ thuộc hoàn toàn vào một nhà cung cấp LLM. Nếu API chính sự cố, hệ thống tự động chuyển sang (fallback) model dự phòng tương đương trong vòng < 1 giây.
+- **Crypto Data Provider Fallback:** Khi `DEFILLAMA_PROVIDER=hybrid`, Chainlens phải timeout self-host data calls trong 2-3 giây, fallback sang public/pro DeFiLlama provider khi có lỗi, và log provider name, latency, cache source, fallback reason. Provider errors không được leak API keys hoặc raw secrets.
 - **High Availability (HA):** Cam kết uptime 99.9% cho các dịch vụ Core (Tương tác AI và Quản lý Credits).
 - **Session Data Durability (NFR-R1):** OpenCode session history (chat turns, file state, onboarding) PHẢI survive sandbox delete + recreate. Implementation: Litestream WAL replication tới Supabase Storage S3 — near-zero RPO (<1s lag), RTO ~seconds. Mỗi user có isolated path trong storage. *→ Story 8.5 Sprint 1*
 - **Sandbox Wake Verification (NFR-R2):** Sau khi wake sandbox từ stopped/archived state, API PHẢI verify `/epsilon/health` respond OK trước khi trả endpoint về caller. Unverified wake = thước đo UX thất bại. *→ Story 8.5 Sprint 4*
@@ -215,7 +231,7 @@ Bởi vì Chainlens hoạt động trong không gian Crypto/Web3, hệ thống p
 *   **Mục tiêu:** Chứng minh năng lực tư vấn crypto của AI và đưa Data Workers vào hoạt động.
 *   **Tính năng chính:**
     *   Tái cấu trúc (Refactor) Chainlens Core để hỗ trợ Multi-Agent (Tier 1 & Tier 2).
-    *   Xây dựng hệ thống Background Workers để Crawl & Index dữ liệu từ DeFiLlama, Dune, Nansen.
+    *   Xây dựng crypto data provider boundary trước, sau đó triển khai Background Workers để crawl/index dữ liệu từ DeFiLlama, Dune, Nansen. Với DeFiLlama, MVP chạy public/pro API hoặc self-host adapter service theo `public|pro|selfhost|hybrid`; tool contract không đổi và fallback được xử lý ở Chainlens API.
     *   Tích hợp Vibe Trading API & Sandbox (MicroVM) cho Tier 2 backtest cơ bản.
 *   **Target:** Đạt 10.000 users miễn phí đầu tiên để đóng góp làm giàu RAG Data.
 
