@@ -4,7 +4,8 @@ import { useMemo, useState, type DragEvent } from 'react';
 import { Activity, Loader2, Upload } from 'lucide-react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
-import { TierGateBanner, isTier1 } from '@/components/tier-gate-banner';
+import { TierGateBanner } from '@/components/tier-gate-banner';
+import { isTier1 } from '@/components/tier-gate.utils';
 import { uploadFile } from '@/features/files/api/opencode-files';
 import { useCreateOpenCodeSession } from '@/hooks/opencode/use-opencode-sessions';
 import { useSubscriptionStore } from '@/stores/subscription-store';
@@ -31,6 +32,14 @@ export function ShadowAccountClient() {
   }, []);
 
   const handleFile = async (file: File) => {
+    if (!/\.(csv|xlsx|xls)$/i.test(file.name)) {
+      setError('Only CSV / XLS / XLSX files are supported.');
+      return;
+    }
+    if (file.size === 0) {
+      setError('File is empty.');
+      return;
+    }
     if (file.size > 10 * 1024 * 1024) {
       setError('File is too large. Maximum 10MB.');
       return;
@@ -39,7 +48,12 @@ export function ShadowAccountClient() {
     setUploading(true);
     try {
       const result = await uploadFile(file, '/workspace/uploads');
-      setUploadedPath(result.path);
+      const path = Array.isArray(result) ? result[0]?.path : undefined;
+      if (!path) {
+        setError('Upload succeeded but server returned no path.');
+        return;
+      }
+      setUploadedPath(path);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Upload failed');
     } finally {
@@ -49,8 +63,13 @@ export function ShadowAccountClient() {
 
   const onDrop = async (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-    const file = event.dataTransfer.files?.[0];
-    if (file) await handleFile(file);
+    const files = event.dataTransfer.files;
+    if (!files || files.length === 0) return;
+    if (files.length > 1) {
+      setError('Please drop one file at a time.');
+      return;
+    }
+    await handleFile(files[0]);
   };
 
   const onAnalyze = async () => {

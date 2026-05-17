@@ -2,6 +2,12 @@
 
 Items deferred from code reviews — pre-existing issues or hard policy calls that aren't actionable in the current change.
 
+## Deferred from: code review of 5-6-shadow-account-swarm-ui (2026-05-18)
+
+- `sessionStorage.setItem` calls in `shadow-account.utils.ts` + `swarm-teams.utils.ts` không có try/catch cho `QuotaExceededError`. Edge case rất hiếm; `session-chat.tsx` đã có retry loop hấp thụ một phần. Cần policy chung về client storage error handling.
+- Double-click guard cho "Analyze with AI" / "Run" button dựa trên React state (`isAnalyzing`, `running`) — async state update có thể fire 2 lần nếu user click siêu nhanh. Functional impact: 2 session orphan + 2 navigation race. Pattern fix: `useRef` lock đồng bộ — nhưng impact thực tế thấp.
+- Prompt injection qua user-controlled `vars` (Swarm Teams) và `uploadedPath` (Shadow Account) — input được embed trực tiếp vào LLM prompt. JSON.stringify giúp escape JSON syntax nhưng không ngăn được "ignore previous instructions" attacks. Class-of-attack rộng hơn 1 story; cần policy chung cho LLM input sanitization (OWASP LLM01).
+
 ## Deferred from: code review of 2-3-2-financial-statement-data-token-terminal (2026-05-18)
 
 - Module-level mutable `lastReqAt` throttle in `apps/api/src/router/services/token-terminal.ts:6-12` is TOCTOU under concurrent callers (route loop + worker simultaneously). Same pattern in other service throttles; partially mitigated once interval is raised to ~1100ms. Track for cross-service throttle harmonization.

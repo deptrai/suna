@@ -1464,3 +1464,16 @@ export const tokenTerminalValuationSnapshots = epsilonSchema.table(
     index('idx_token_terminal_valuation_snapshots_user_dau').on(table.userDau),
   ],
 );
+
+// Shadow Account Ownership (Story 5.6) — TOFU map: account_id ↔ shadow_id
+export const shadowAccountOwnership = epsilonSchema.table(
+  'shadow_account_ownership',
+  {
+    shadowId: varchar('shadow_id', { length: 32 }).primaryKey().notNull(),
+    accountId: uuid('account_id').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('idx_shadow_account_ownership_account').on(table.accountId),
+  ],
+);

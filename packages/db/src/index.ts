@@ -101,6 +101,8 @@ export {
   tokenTerminalMetrics,
   tokenTerminalProjectMetrics,
   tokenTerminalValuationSnapshots,
+  // Shadow Account Ownership (Story 5.6)
+  shadowAccountOwnership,
   // Pool
   poolResources,
   poolSandboxes,

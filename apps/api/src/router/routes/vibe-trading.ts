@@ -5,9 +5,13 @@ import { z } from 'zod';
 import {
   submitBacktestJob,
   getBacktestRun,
+  VibeTradingAuthError,
+  VibeTradingForbiddenError,
+  VibeTradingNotFoundError,
   VibeTradingDownstreamError,
 } from '../services/vibe-trading';
 import { checkCredits, deductToolCredits } from '../services/billing';
+import { claimOrAssertShadowOwnership, ShadowOwnershipError } from '../services/shadow-ownership';
 import { config, getToolCost } from '../../config';
 import type { AppContext } from '../../types';
 
@@ -144,6 +148,21 @@ vibeTrading.get('/shadow-reports/:shadowId', async (c) => {
     throw new HTTPException(400, { message: 'Invalid format: expected html or pdf' });
   }
 
+  if (!config.VIBE_TRADING_API_KEY) {
+    return c.json({ success: false, error: 'Vibe-Trading not configured' }, 503);
+  }
+
+  // TOFU ownership claim — first authenticated caller of this shadow_id wins.
+  // Mismatched callers receive 403. See packages/db/drizzle/0010_shadow_account_ownership.sql.
+  try {
+    await claimOrAssertShadowOwnership(accountId, shadowId);
+  } catch (err) {
+    if (err instanceof ShadowOwnershipError) {
+      throw new HTTPException(403, { message: 'Shadow report not owned by this account' });
+    }
+    throw err;
+  }
+
   const target = `${config.VIBE_TRADING_INTERNAL_URL.replace(/\/+$/, '')}/shadow-reports/${shadowId}?format=${format.data}`;
   let response: Response;
   try {
@@ -159,12 +178,15 @@ vibeTrading.get('/shadow-reports/:shadowId', async (c) => {
     return c.json({ success: false, error: message }, 503);
   }
 
-  if (response.status === 401) throw new HTTPException(401, { message: 'Unauthorized by Vibe-Trading' });
-  if (response.status === 403) throw new HTTPException(403, { message: 'Forbidden by Vibe-Trading' });
-  if (response.status === 404) throw new HTTPException(404, { message: `Shadow report ${shadowId} not found` });
+  if (response.status === 401) throw new HTTPException(401, { message: new VibeTradingAuthError().message });
+  if (response.status === 403) throw new HTTPException(403, { message: new VibeTradingForbiddenError().message });
+  if (response.status === 404) throw new HTTPException(404, { message: new VibeTradingNotFoundError(shadowId).message });
   if (!response.ok) {
     const body = await response.text().catch(() => '');
-    throw new VibeTradingDownstreamError(response.status, body);
+    return c.json(
+      { success: false, error: new VibeTradingDownstreamError(response.status, body).message },
+      503,
+    );
   }
 
   const contentType = response.headers.get('content-type') ?? (format.data === 'pdf' ? 'application/pdf' : 'text/html; charset=utf-8');
@@ -172,7 +194,7 @@ vibeTrading.get('/shadow-reports/:shadowId', async (c) => {
     status: 200,
     headers: {
       'Content-Type': contentType,
-      'Content-Disposition': `inline; filename=\"${shadowId}.${format.data}\"`,
+      'Content-Disposition': `inline; filename="${shadowId}.${format.data}"`,
     },
   });
 });

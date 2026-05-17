@@ -3,7 +3,8 @@
 import { useMemo, useState } from 'react';
 import { Users } from 'lucide-react';
 import { PageHeader } from '@/components/ui/page-header';
-import { TierGateBanner, isTier1 } from '@/components/tier-gate-banner';
+import { TierGateBanner } from '@/components/tier-gate-banner';
+import { isTier1 } from '@/components/tier-gate.utils';
 import { useSubscriptionStore } from '@/stores/subscription-store';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -26,6 +27,7 @@ export function SwarmTeamsClient() {
   const [selected, setSelected] = useState<SwarmPreset | null>(null);
   const [vars, setVars] = useState<Record<string, string>>({});
   const [running, setRunning] = useState(false);
+  const [error, setError] = useState<string>('');
 
   const allFilled = useMemo(() => {
     if (!selected) return false;
@@ -35,11 +37,14 @@ export function SwarmTeamsClient() {
   const runPreset = async () => {
     if (!selected || !allFilled) return;
     setRunning(true);
+    setError('');
     try {
       const prompt = buildSwarmPrompt(selected, vars);
       await dispatchSwarmPrompt(createSession.mutateAsync, prompt, openTabAndNavigate, activeServerId);
       setSelected(null);
       setVars({});
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to start swarm');
     } finally {
       setRunning(false);
     }
@@ -97,6 +102,7 @@ export function SwarmTeamsClient() {
                 />
               </div>
             ))}
+            {error && <p className="text-sm text-destructive">{error}</p>}
           </div>
 
           <DialogFooter>
