@@ -2,13 +2,23 @@ import { config } from '../../config';
 import { logger } from '../../lib/logger';
 
 const TIMEOUT_MS = 15_000;
-const MIN_REQUEST_INTERVAL_MS = 100; // throttle while keeping tests fast
+// Token Terminal API caps at 60 req/min. 1100ms enforces below 60/min while
+// allowing tests to short-circuit via TOKEN_TERMINAL_THROTTLE_MS_OVERRIDE_FOR_TESTS=1.
+function minRequestIntervalMs(): number {
+  const override = Number(process.env.TOKEN_TERMINAL_THROTTLE_MS_OVERRIDE_FOR_TESTS);
+  return Number.isFinite(override) && override >= 0 ? override : 1100;
+}
 let lastReqAt = 0;
+let throttleChain: Promise<void> = Promise.resolve();
 
 async function throttle() {
-  const wait = Math.max(0, MIN_REQUEST_INTERVAL_MS - (Date.now() - lastReqAt));
-  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
-  lastReqAt = Date.now();
+  const next = throttleChain.then(async () => {
+    const wait = Math.max(0, minRequestIntervalMs() - (Date.now() - lastReqAt));
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    lastReqAt = Date.now();
+  });
+  throttleChain = next.catch(() => undefined);
+  await next;
 }
 
 export class TokenTerminalUnconfiguredError extends Error { constructor() { super('Token Terminal API key not configured'); this.name = 'TokenTerminalUnconfiguredError'; } }
@@ -95,18 +105,22 @@ export async function fetchMetricData(metricId: string, opts: { projectIds?: str
   const raw = await ttGet(`/metrics/${encodeURIComponent(metricId)}`, q);
   const rows = Array.isArray(raw?.data) ? raw.data : Array.isArray(raw) ? raw : [];
 
-  return rows.map((r: any) => {
-    const val = r.value ?? r.metric_value ?? null;
-    return {
-      projectId: String(r.project_id ?? r.project ?? '').trim(),
-      projectName: r.project_name ?? null,
-      metricId,
-      metricName: r.metric_name ?? null,
-      timestamp: String(r.timestamp ?? r.date ?? new Date().toISOString()),
-      value: val === null || val === undefined ? null : Number(val),
-      rawValue: val === null || val === undefined ? null : String(val),
-    };
-  }).filter((r: any) => r.projectId);
+  return rows
+    .map((r: any) => {
+      const val = r.value ?? r.metric_value ?? null;
+      const ts = r.timestamp ?? r.date ?? null;
+      const num = val === null || val === undefined ? null : Number(val);
+      return {
+        projectId: String(r.project_id ?? r.project ?? '').trim(),
+        projectName: r.project_name ?? null,
+        metricId,
+        metricName: r.metric_name ?? null,
+        timestamp: ts ? String(ts) : '',
+        value: num !== null && Number.isFinite(num) ? num : null,
+        rawValue: val === null || val === undefined ? null : String(val),
+      };
+    })
+    .filter((r: any) => r.projectId && r.timestamp);
 }
 
 export function canCallTokenTerminal(): boolean {
@@ -114,9 +128,12 @@ export function canCallTokenTerminal(): boolean {
 }
 
 export function sanitizeTokenTerminalError(err: unknown): string {
-  const msg = err instanceof Error ? err.message : String(err ?? 'unknown error');
-  if (config.TOKEN_TERMINAL_API_KEY && msg.includes(config.TOKEN_TERMINAL_API_KEY)) {
-    return msg.split(config.TOKEN_TERMINAL_API_KEY).join('[REDACTED]');
+  let msg = err instanceof Error ? err.message : String(err ?? 'unknown error');
+  const key = config.TOKEN_TERMINAL_API_KEY;
+  if (key) {
+    if (msg.includes(key)) msg = msg.split(key).join('[REDACTED]');
+    const enc = encodeURIComponent(key);
+    if (enc !== key && msg.includes(enc)) msg = msg.split(enc).join('[REDACTED]');
   }
   return msg;
 }

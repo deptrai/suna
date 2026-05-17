@@ -66,6 +66,21 @@ services:
     mem_limit: 512M
     mem_reservation: 128M
 
+  vibe-trading-mcp:
+    image: chainlens-vibe-trading:latest
+    command: python agent/mcp_server.py --transport sse --port 8900
+    networks:
+      - ${SANDBOX_NETWORK:-sandbox-network}
+    environment:
+      - PYTHONPATH=/app/agent
+    depends_on:
+      vibe-trading:
+        condition: service_started
+    restart: unless-stopped
+    profiles: [backend, all]
+    cpus: 0.5
+    mem_limit: 512M
+
   vibe-trading-worker:
     # Reuse the image built by `vibe-trading` service to avoid duplicate Docker build.
     image: chainlens-vibe-trading:latest

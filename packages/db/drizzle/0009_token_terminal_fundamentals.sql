@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS "epsilon"."token_terminal_valuation_snapshots" (
   "risk_factors" jsonb NOT NULL DEFAULT '[]',
   "source" varchar(32) NOT NULL DEFAULT 'token_terminal',
   "period_start" timestamptz,
-  "period_end" timestamptz,
+  "period_end" timestamptz NOT NULL DEFAULT now(),
   "fetched_at" timestamptz NOT NULL DEFAULT now(),
   "created_at" timestamptz NOT NULL DEFAULT now(),
   "updated_at" timestamptz NOT NULL DEFAULT now()

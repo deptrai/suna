@@ -1,6 +1,6 @@
 # Story 2.3.2: Financial Statement Data via Token Terminal
 
-Status: ready-for-review
+Status: done
 
 Epic: 2 — Crypto Data Infrastructure
 Created: 2026-05-17
@@ -379,3 +379,65 @@ interface ProtocolValuationResponse {
 ### Completion Notes List
 
 ### File List
+
+### Review Findings
+
+_Code review 2026-05-18 — 3 layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor) on commit `6038fbaffa`._
+
+**Decisions resolved (2026-05-18):**
+- D1 → option (b) sector-percentile classification (also fixes `peerPercentiles {}`).
+- D2 → option (a) align code+migration with spec object shape.
+- D3 → option (a) detect period from API response (fallback 30d).
+
+**Patch (27) — fix unambiguous:**
+
+- [x] [Review][Patch] **`classifyValuation` use sector-percentile classification, not avg-of-3 thresholds** [token-terminal-normalize.ts:36-43](apps/api/src/router/services/token-terminal-normalize.ts#L36-L43) — D1 resolution. Compute per-project percentile within same-sector peers for P/S, P/F, P/E. Lower percentile = undervalued; cutoffs e.g. <33 undervalued / >67 overvalued / else fair / `insufficient_data` if no peer data. AC5.
+- [x] [Review][Patch] **`risk_factors` migrate `string[]` → `Array<{code, label, severity}>`** [epsilon.ts:1454](packages/db/src/schema/epsilon.ts), [token-terminal-normalize.ts:63-64](apps/api/src/router/services/token-terminal-normalize.ts#L63-L64), [protocol-valuation.ts:121,152](apps/api/src/router/routes/protocol-valuation.ts#L121) — D2 resolution. Update Drizzle `$type<>`, regenerate migration column comment (jsonb already, no DDL needed), update `buildSnapshot` to push objects, update tests. AC9.
+- [x] [Review][Patch] **`annualize()` detect period from API response, fallback 30d** [token-terminal-normalize.ts:18-22](apps/api/src/router/services/token-terminal-normalize.ts#L18-L22), [token-terminal-worker.ts:120-130](apps/api/src/queue/bullmq/workers/token-terminal-worker.ts#L120-L130) — D3 resolution. Pull last 2 timestamps for the same `(projectId, metricId)`, derive interval days; fallback 30 if <2 points. Pass `days` arg into `annualize()` from `processSnapshots`. AC5.
+
+
+
+- [x] [Review][Patch] **`metric_timeseries` mode completely unimplemented — always returns `points: []`** [protocol-valuation.ts:161-172](apps/api/src/router/routes/protocol-valuation.ts#L161-L172) — AC6/AC9 require returning actual timeseries from `tokenTerminalProjectMetrics`. CRITICAL.
+- [x] [Review][Patch] **`processSnapshots` `onConflictDoUpdate` does NOT update ratio/metric fields on conflict** [token-terminal-worker.ts:154-157](apps/api/src/queue/bullmq/workers/token-terminal-worker.ts#L154-L157) — only `valuationSignal`, `riskFactors`, `updatedAt`, `fetchedAt` updated. P/S, P/F, P/E, fees, revenue, market caps stay frozen at first-insert values forever. CRITICAL — daily worker effectively does nothing.
+- [x] [Review][Patch] **Throttle 100ms allows 600 req/min — Token Terminal API caps at 60 req/min** [token-terminal.ts:5](apps/api/src/router/services/token-terminal.ts#L5) — AC3 explicitly says "throttle below 60 req/min". Set `MIN_REQUEST_INTERVAL_MS` to ~1100ms (or use a token-bucket); keep test override via env. HIGH.
+- [x] [Review][Patch] **`peerPercentiles` always written as empty `{}` — peer percentile feature non-functional** [token-terminal-worker.ts:150](apps/api/src/queue/bullmq/workers/token-terminal-worker.ts#L150) — `percentile()` helper exists in normalize but never invoked. AC5 + AC9 require sector-peer percentile computation. HIGH.
+- [x] [Review][Patch] **`processSnapshots` no `ORDER BY timestamp DESC` — `latest` map captures arbitrary (often stale) value** [token-terminal-worker.ts:121-127](apps/api/src/queue/bullmq/workers/token-terminal-worker.ts#L121-L127) — Add `.orderBy(desc(tokenTerminalProjectMetrics.timestamp))` before the `latest` map iteration so first occurrence is the newest. HIGH.
+- [x] [Review][Patch] **`processFundamentals` no per-metric try/catch — first 429/error aborts loop, partial-success spec violated** [token-terminal-worker.ts:99-100](apps/api/src/queue/bullmq/workers/token-terminal-worker.ts#L99-L100) — Inner DB inserts use `Promise.allSettled` but the outer `await fetchMetricData` doesn't. Wrap each metric in try/catch. AC5/AC10. HIGH.
+- [x] [Review][Patch] **Live-refresh path fetches metrics, throws away results, queues async jobs, then re-reads same stale cache** [protocol-valuation.ts:81-93](apps/api/src/router/routes/protocol-valuation.ts#L81-L93) — `fetchMetricData` returns rows but they are never persisted; the immediate `safeSelectSnapshots(ids)` returns the same data that triggered the refresh. Burns API quota for nothing and labels stale data `cache_status: 'live'`. Either persist inline (sync mode) or skip the synchronous fetch and return `cache_status: 'queued'`. HIGH.
+- [x] [Review][Patch] **Live-refresh `fetchMetricData` provider error → unhandled 500** [protocol-valuation.ts:81-83](apps/api/src/router/routes/protocol-valuation.ts#L81-L83) — 429/402/5xx propagates as 500 with no actionable message. Wrap in try/catch and map to typed responses. HIGH.
+- [x] [Review][Patch] **Auto-live-refresh on first request charges credits without `force_refresh`** [protocol-valuation.ts:61](apps/api/src/router/routes/protocol-valuation.ts#L61) — `noData && WORKER_ENABLED` triggers live → user pays 0.20 credits even though they asked for cache. Either gate on `force_refresh` only, or return `cache_status: 'queued'` + cost 0 and let the worker fill cache async. AC6 cache-first violated. HIGH.
+- [x] [Review][Patch] **`token_terminal_valuation_snapshots.period_end` nullable in unique index — Postgres treats NULL ≠ NULL** [0009_token_terminal_fundamentals.sql:75,82](packages/db/drizzle/0009_token_terminal_fundamentals.sql#L75) — Unique index `(project_id, period_end, source)` does not deduplicate when `period_end IS NULL`. Make `period_end NOT NULL` (worker always sets it) or use a partial unique index. HIGH.
+- [x] [Review][Patch] **`tokenAddresses` null element crashes lookup with `null.toLowerCase()`** [protocol-valuation.ts:52](apps/api/src/router/routes/protocol-valuation.ts#L52) — Provider returns `["0xabc", null, ...]` → 500 for the entire query. Filter falsy: `(r.tokenAddresses || []).filter(Boolean).map(x => x.toLowerCase())`. HIGH.
+- [x] [Review][Patch] **`fetchMetricData` falls back to `new Date().toISOString()` for missing timestamp → unbounded row growth** [token-terminal.ts:105](apps/api/src/router/services/token-terminal.ts#L105) — Unique key `(project_id, metric_id, timestamp, source)` never collides → new row every sync. Either skip rows without timestamp or compute a deterministic synthetic key. HIGH.
+- [x] [Review][Patch] **NaN propagates through normalize → false `'fair'` signal** [token-terminal.ts:106](apps/api/src/router/services/token-terminal.ts#L106), [token-terminal-worker.ts:127](apps/api/src/queue/bullmq/workers/token-terminal-worker.ts#L127), [token-terminal-normalize.ts](apps/api/src/router/services/token-terminal-normalize.ts) — Provider string `"NaN"`/`"Infinity"`/`"-"` → `Number(val)` = NaN/Infinity → stored as text → `Number(m.value)` in `processSnapshots` returns NaN → bypasses `den <= 0` and `typeof === 'number'` filter → `classifyValuation` returns `'fair'`. Use `asNum()` (which already filters non-finite) at every numeric ingest point, especially [worker line 127] and route mapping. HIGH.
+- [x] [Review][Patch] **`safeRatio` rejects negative denominators → P/E with negative earnings silently dropped** [token-terminal-normalize.ts:24-27](apps/api/src/router/services/token-terminal-normalize.ts#L24-L27) — Loss-making protocol gets `pe = null` + `insufficient_data` instead of a meaningful negative-earnings flag. Allow negative numerator with a `risk_factors` entry, or only guard against zero denominator. MEDIUM.
+- [x] [Review][Patch] **`processSnapshots` ignores `projectAllowlist()`, snapshots all DB projects** [token-terminal-worker.ts:117](apps/api/src/queue/bullmq/workers/token-terminal-worker.ts#L117) — `processFundamentals` correctly filters but `processSnapshots` reads all `tokenTerminalProjects` rows. Off-allowlist projects get snapshots with stale/missing metrics. AC3. MEDIUM.
+- [x] [Review][Patch] **`project_snapshot` response missing `mode` field** [protocol-valuation.ts:106-129](apps/api/src/router/routes/protocol-valuation.ts#L106-L129) — Spec AC9 `ProtocolValuationResponse` declares `mode` as top-level field; `valuation_matrix` and `metric_timeseries` include it but `project_snapshot` does not. MEDIUM.
+- [x] [Review][Patch] **`valuation_matrix` response missing `fetched_at`** [protocol-valuation.ts:132-158](apps/api/src/router/routes/protocol-valuation.ts#L132-L158) — Spec AC9 lists `fetched_at` as top-level. LOW.
+- [x] [Review][Patch] **No retention/cleanup for `tokenTerminalValuationSnapshots`** [token-terminal-worker.ts:161-164](apps/api/src/queue/bullmq/workers/token-terminal-worker.ts#L161-L164) — `processCleanup` deletes only `tokenTerminalProjectMetrics`. Snapshots grow without bound; combined with `safeSelectSnapshots(.limit(300))` causes mixed-age results per project. Add cleanup for snapshots older than retention window. MEDIUM.
+- [x] [Review][Patch] **`setupTokenTerminalJobs` doesn't guard on `TOKEN_TERMINAL_WORKER_ENABLED`** [token-terminal-worker.ts:188-204](apps/api/src/queue/bullmq/workers/token-terminal-worker.ts#L188-L204) — Schedules jobs into Redis even when worker is disabled — jobs accumulate with no consumer. AC1. MEDIUM.
+- [x] [Review][Patch] **`setupTokenTerminalJobs` fallback uses `q.add` with fixed `jobId` — one-shot, not recurring** [token-terminal-worker.ts:199-203](apps/api/src/queue/bullmq/workers/token-terminal-worker.ts#L199-L203) — Spec AC5 mandates `upsertJobScheduler`. Fallback path silently degrades to non-recurring; remove fallback or use repeatable scheduler. MEDIUM.
+- [x] [Review][Patch] **Symbol/sector/token_address lookup hardcoded `.limit(200)` — projects beyond row 200 invisible** [protocol-valuation.ts:48](apps/api/src/router/routes/protocol-valuation.ts#L48) — Token Terminal lists hundreds of projects. Push filter to DB query (`WHERE LOWER(symbol)=...`, `marketSector`, jsonb operator for `tokenAddresses`) and add appropriate indexes. MEDIUM.
+- [x] [Review][Patch] **Worker test: "partial metric failure" dispatches `JOB_REFRESH_METADATA` not `JOB_REFRESH_FUNDAMENTALS`** [token-terminal-worker.test.ts:55-60](apps/api/src/__tests__/unit/token-terminal-worker.test.ts#L55-L60) — `_failMetric` flag is declared but never toggled in this test, and the actual `processFundamentals` partial-failure path has zero coverage. AC10. MEDIUM.
+- [x] [Review][Patch] **Worker test: `upsertJobScheduler` test has vacuous `else { expect(true).toBe(true) }` branch** [token-terminal-worker.test.ts:39-43](apps/api/src/__tests__/unit/token-terminal-worker.test.ts#L39-L43) — Test passes unconditionally if mock state mismatches. AC10. MEDIUM.
+- [x] [Review][Patch] **Service test: API key redaction not tested** [token-terminal-service.test.ts](apps/api/src/__tests__/unit/token-terminal-service.test.ts) — Spec AC10 explicit requirement. `sanitizeTokenTerminalError` exists but has zero coverage. MEDIUM.
+- [x] [Review][Patch] **Route test: "raw payload not returned" missing** [protocol-valuation-route.test.ts](apps/api/src/__tests__/unit/protocol-valuation-route.test.ts) — AC10 lists this explicitly; only 3 happy-path cases exist. MEDIUM.
+- [x] [Review][Patch] **`fetchTokenTerminalProjects` calls `/projects` endpoint not documented in spec references** [token-terminal.ts:75-87](apps/api/src/router/services/token-terminal.ts#L75-L87) — Spec lists `/v2/metrics`, `/v2/metrics/{id}`, `/v2/assets`. AC2 says "or equivalent project discovery endpoint confirmed by docs". Verify against current Token Terminal docs and either confirm `/projects` exists or switch to `/assets` for project discovery. MEDIUM.
+
+**Defer (4) — pre-existing pattern or low impact, tracked separately:**
+
+- [x] [Review][Defer] **Module-level mutable `lastReqAt` throttle is TOCTOU under concurrent callers** [token-terminal.ts:6-12](apps/api/src/router/services/token-terminal.ts#L6-L12) — Same pattern as other service throttles in repo; partially mitigated once `MIN_REQUEST_INTERVAL_MS` is raised to ~1100ms. Track for cross-service throttle harmonization.
+- [x] [Review][Defer] **`processSnapshots` SQL `inArray(metricId, [])` returns false when allowlist empty → all-null snapshots** [token-terminal-worker.ts:122](apps/api/src/queue/bullmq/workers/token-terminal-worker.ts#L122) — Config edge: only happens if operator clears `TOKEN_TERMINAL_METRICS`. Guard with early-return in `processSnapshots` when `metrics.length === 0`.
+- [x] [Review][Defer] **No FK constraint on `token_terminal_project_metrics.project_id`** [0009_token_terminal_fundamentals.sql](packages/db/drizzle/0009_token_terminal_fundamentals.sql) — Repo convention is mostly soft references (epsilon schema follows this); track for schema-hardening pass.
+- [x] [Review][Defer] **`processMetadata` serial inserts (N round-trips)** [token-terminal-worker.ts:55-92](apps/api/src/queue/bullmq/workers/token-terminal-worker.ts#L55-L92) — Performance not correctness; with daily cadence and ~200 projects this is acceptable. Batch with chunked `INSERT ... ON CONFLICT` later if cron window becomes tight.
+
+**Dismissed (8) — false positives or out of scope:**
+
+- ❌ "deductToolCredits called with 0 instead of cost" — `0` is `resultCount`, not `cost`. Pricing has `perResultCost: 0` so cost is `baseCost: 0.20`. Correct.
+- ❌ "opencode.jsonc not updated to register tool" — Tools are auto-discovered from `tools/` directory; permissions live in agent .md files. Other tools (smart_money_flow, jit_sync) also not listed in jsonc.
+- ❌ "Race condition: check-then-deduct billing non-atomic" — Same project-wide pattern; CLAUDE.md acknowledges; tracked at platform level.
+- ❌ "as any cast on onConflictDoUpdate" — Stylistic; same pattern in other workers in repo.
+- ❌ "sanitizeTokenTerminalError partial leakage (URL-encoded)" — Bearer token never appears in URL; theoretical.
+- ❌ "TOKEN_TERMINAL_PROJECTS empty default doc gap" — Behavior is correct; comment style.
+- ❌ "Worker singleton restart race" — `_queue` and `_worker` reset to null on stop; restart works.
+- ❌ "Token address case-insensitive comparison fragile" — Both sides lowercased before `.includes`, comparison is correct.

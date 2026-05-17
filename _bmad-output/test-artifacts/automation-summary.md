@@ -460,3 +460,64 @@ bunx vitest run \
 - `services/entity-wallet-rpc.ts` (RPC helpers — low priority, used by entity-wallet flow already covered)
 - `workers/discover-feed.ts`, `workers/onchain-index.ts` (deferred — same pattern as covered workers, low marginal value)
 - OpenCode tools using vendor SDKs directly: `web_search` (Tavily SDK), `image_search` (Serper SDK calls), `image_generate` (Replicate SDK), `scrape_webpage` (FirecrawlApp SDK), `show.ts` (UI helper), `jit_sync` (similar to other proxy tools, low marginal value)
+
+---
+
+## Frontend Coverage Expansion — 2026-05-17
+
+**Mode:** Standalone FE expansion. Triggered by user request to continue adding frontend automation coverage.
+
+### Step 1: Preflight & Context
+
+- `detected_stack`: `fullstack`
+- `test_framework`: `bun:test` + Playwright available
+- `playwright_utils`: enabled
+- `browser_automation`: `auto`
+- `coverage_target`: `critical-paths`
+- Loaded knowledge:
+  - `test-levels-framework.md`
+  - `test-priorities-matrix.md`
+  - `data-factories.md`
+  - `selective-testing.md`
+  - `ci-burn-in.md`
+  - `test-quality.md`
+  - `overview.md`
+  - `api-request.md`
+  - `network-recorder.md`
+  - `auth-session.md`
+  - `intercept-network-call.md`
+  - `recurse.md`
+  - `log.md`
+  - `file-utils.md`
+  - `burn-in.md`
+  - `network-error-monitor.md`
+  - `fixtures-composition.md`
+  - `playwright-cli.md`
+
+### Step 2: FE Targets Selected
+
+- `apps/web/src/components/changelog/version-history-panel.tsx`
+- `apps/web/src/components/update-dialog-provider.tsx`
+- Existing backtest regression helpers kept in scope:
+  - `apps/web/src/components/backtest/contextual-backtest-modal.tsx`
+  - `apps/web/src/components/backtest/contextual-backtest-trigger.tsx`
+
+### Tests Added
+
+- `apps/web/src/components/changelog/version-history-panel.utils.ts`
+- `apps/web/src/components/changelog/__tests__/version-history-panel.utils.test.ts`
+- `apps/web/src/components/update-dialog-provider.utils.ts`
+- `apps/web/src/components/__tests__/update-dialog-provider.utils.test.ts`
+- `apps/web/src/components/backtest/contextual-backtest-modal.utils.ts`
+- `apps/web/src/components/backtest/__tests__/contextual-backtest-modal.utils.test.ts`
+
+### Validation
+
+- `bun test src/components/__tests__/update-dialog-provider.utils.test.ts src/components/changelog/__tests__/version-history-panel.utils.test.ts src/components/backtest/__tests__/contextual-backtest-modal.utils.test.ts`
+- Result: `17 pass`, `0 fail`
+
+### Coverage Notes
+
+- `version-history-panel` now has deterministic coverage for version classification and release-note normalization.
+- `update-dialog-provider` now has deterministic coverage for dev-mode phase progression and dialog open/close gating.
+- Backtest modal coverage remains in place for editor remount and confirm-close behavior.

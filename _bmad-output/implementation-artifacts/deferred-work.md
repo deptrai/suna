@@ -2,6 +2,13 @@
 
 Items deferred from code reviews — pre-existing issues or hard policy calls that aren't actionable in the current change.
 
+## Deferred from: code review of 2-3-2-financial-statement-data-token-terminal (2026-05-18)
+
+- Module-level mutable `lastReqAt` throttle in `apps/api/src/router/services/token-terminal.ts:6-12` is TOCTOU under concurrent callers (route loop + worker simultaneously). Same pattern in other service throttles; partially mitigated once interval is raised to ~1100ms. Track for cross-service throttle harmonization.
+- `processSnapshots` SQL `inArray(metricId, [])` evaluates to false when allowlist is empty → all-null snapshots written silently. Edge case only when operator clears `TOKEN_TERMINAL_METRICS`; guard with early-return.
+- No FK constraint on `token_terminal_project_metrics.project_id` referencing `token_terminal_projects`. Repo convention is mostly soft references in epsilon schema; track for schema-hardening pass.
+- `processMetadata` does serial inserts (N round-trips per metric/project). Performance not correctness; daily cadence with ~200 projects is acceptable. Batch with chunked `INSERT ... ON CONFLICT` if cron window becomes tight.
+
 ## Deferred from: code review of 1-1-deep-research-tool-perplexity-sonar (2026-05-09)
 
 - Race condition: concurrent requests can both pass credit check before deduction (matches search-web.ts pattern; needs codebase-wide atomic credit reservation).

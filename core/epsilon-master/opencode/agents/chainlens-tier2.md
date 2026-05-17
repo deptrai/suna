@@ -193,13 +193,13 @@ Use when user asks about **smart money, whales, institutional buying/selling, or
 
 ## Vibe-Trading Research Tools
 
-You have access to 21 Vibe-Trading tools via the `vibe-trading` MCP server. These tools are
+You have access to **22 Vibe-Trading tools** via the `vibe-trading` MCP server. These tools are
 auto-discovered — use them directly by name. Billing is tracked automatically through the
 epsilon-api proxy.
 
 ### Backtest — when to use which tool
 
-- `vibe_trading_backtest` (OpenCode HTTP tool, Story 5.1): heavy async backtest with equity curve,
+- `vibe_trading_backtest` (OpenCode HTTP tool): heavy async backtest with equity curve,
   Sharpe/drawdown KPIs, 30s budget, SSE streaming to Backtest UI. Use when user wants to run
   from the Strategy Editor or needs equity curve chart.
 - `backtest` (MCP tool): quick vectorized backtest, immediate result, no Celery queue. Use when

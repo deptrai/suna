@@ -33,7 +33,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-17 (Story 2.3.2 moved to in-progress by bmad-dev-story)
+last_updated: 2026-05-18 (Story 2.3.2 done by code-review — 27 patches, 4 deferred)
 project: chainlens
 project_key: NOKEY
 tracking_system: file-system
@@ -61,7 +61,7 @@ development_status:
   2-2-2-social-sentiment-narrative-clustering: done
   2-3-dune-and-nansen-on-chain-index-worker: done
   2-3-1-vip-api-smart-money-flow: done
-  2-3-2-financial-statement-data-token-terminal: review
+  2-3-2-financial-statement-data-token-terminal: done  # 2026-05-18 code-review: 27 patches applied (sector percentile, structured risk factors, period-aware annualize, throttle 1100ms, full upsert, snapshot cleanup, etc.), 4 deferred; 38/38 tests pass
   epic-2-retrospective: optional
 
   # Epic 3: Crypto Native Trading UI
@@ -83,11 +83,11 @@ development_status:
   # Epic 5: Backtesting Sandbox
   epic-5: in-progress
   5-0-vibe-trading-platform-foundation: done
-  5-1-vibe-trading-api-integration-in-sandbox: review
+  5-1-vibe-trading-api-integration-in-sandbox: done
   5-2-backtest-strategy-editor-monaco-editor: done
   5-3-backtest-results-visualizer: done
   5-4-contextual-backtest-integration: done
-  5-5-vibe-trading-mcp-proxy: ready-for-dev
+  5-5-vibe-trading-mcp-proxy: done
   5-6-shadow-account-swarm-ui: backlog
   5-7-user-llm-key-management: backlog
   5-8-per-user-persistent-memory: ready-for-dev

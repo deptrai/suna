@@ -175,6 +175,14 @@
         "CONTEXT7_API_KEY": "{env:CONTEXT7_API_KEY}"
       },
       "enabled": true
+    },
+    "vibe-trading": {
+      "type": "remote",
+      "url": "{env:EPSILON_API_URL}/v1/router/vibe-trading-mcp/sse",
+      "headers": {
+        "Authorization": "Bearer {env:EPSILON_TOKEN}"
+      },
+      "enabled": true
     }
   }
 }

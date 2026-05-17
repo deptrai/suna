@@ -1,6 +1,6 @@
 # Story 5.5: Vibe-Trading MCP Proxy — Full 22-Tool Unlock
 
-Status: ready-for-dev
+Status: done
 
 **Depends on**: [Story 5.0](5-0-vibe-trading-platform-foundation.md) done (VT service deployed,
 sandbox egress whitelist active), [Story 5.0.1](5-0-1-shadow-account-volume-hotfix.md) done
@@ -347,53 +347,53 @@ vt_mcp_list_runs:                { baseCost: 0,    perResultCost: 0, markupMulti
 
 ### Task 1 — VT MCP service in docker-compose (AC1)
 
-- [ ] Add `vibe-trading-mcp` service to `scripts/compose/docker-compose.yml`
-- [ ] Reuse existing `vibe-trading` image (same Python runtime, same code)
-- [ ] Command: `python agent/mcp_server.py --transport sse --port 8900`
-- [ ] Same network, resource limits, depends_on
-- [ ] Verify: `docker compose up -d vibe-trading-mcp` → `curl http://localhost:8900/mcp` or internal DNS
+- [x] Add `vibe-trading-mcp` service to `scripts/compose/docker-compose.yml`
+- [x] Reuse existing `vibe-trading` image (same Python runtime, same code)
+- [x] Command: `python agent/mcp_server.py --transport sse --port 8900`
+- [x] Same network, resource limits, depends_on
+- [x] Verify: `docker compose up -d vibe-trading-mcp` → `curl http://localhost:8900/mcp` or internal DNS
 
 ### Task 2 — epsilon-api MCP proxy route (AC2)
 
-- [ ] Create `apps/api/src/router/routes/vibe-trading-mcp.ts` (~140 LOC per AC2 template)
-- [ ] Register in `apps/api/src/router/index.ts`: `router.use('/vibe-trading-mcp/*', combinedAuth)` + `router.route('/vibe-trading-mcp', vibeTradingMcp)` (parity existing `/vibe-trading/*` registration at [router/index.ts:41-62](apps/api/src/router/index.ts#L41))
-- [ ] Add `VIBE_TRADING_MCP_URL` to `apps/api/src/config.ts` envSchema (optional, default `http://vibe-trading-mcp:8900`) — envSchema defined at [config.ts:58](apps/api/src/config.ts#L58)
-- [ ] Add or reuse `resolveAccountTier(accountId): 'tier1'|'tier2'|'tier3'` helper for AC2 step 2 tier gate. Verify against existing tier-resolution pattern (search `services/billing.ts` first; if not present, document where to add)
+- [x] Create `apps/api/src/router/routes/vibe-trading-mcp.ts` (~140 LOC per AC2 template)
+- [x] Register in `apps/api/src/router/index.ts`: `router.use('/vibe-trading-mcp/*', combinedAuth)` + `router.route('/vibe-trading-mcp', vibeTradingMcp)` (parity existing `/vibe-trading/*` registration at [router/index.ts:41-62](apps/api/src/router/index.ts#L41))
+- [x] Add `VIBE_TRADING_MCP_URL` to `apps/api/src/config.ts` envSchema (optional, default `http://vibe-trading-mcp:8900`) — envSchema defined at [config.ts:58](apps/api/src/config.ts#L58)
+- [x] Add or reuse `resolveAccountTier(accountId): 'tier1'|'tier2'|'tier3'` helper for AC2 step 2 tier gate. Verify against existing tier-resolution pattern (search `services/billing.ts` first; if not present, document where to add)
 
 ### Task 3 — OpenCode MCP config (AC3)
 
-- [ ] Edit `core/epsilon-master/opencode/opencode.jsonc` — add `vibe-trading` MCP entry with URL path `/sse` (NOT `/mcp`)
+- [x] Edit `core/epsilon-master/opencode/opencode.jsonc` — add `vibe-trading` MCP entry with URL path `/sse` (NOT `/mcp`)
 
 ### Task 4 — Tier permissions (AC4) — NO OpenCode frontmatter changes
 
-- [ ] **NO change** to `chainlens-tier1.md` / `chainlens-tier2.md` `permission:` block
+- [x] **NO change** to `chainlens-tier1.md` / `chainlens-tier2.md` `permission:` block
   for MCP tools (OpenCode permission system does not cover MCP tools — verified).
   Tier gate is enforced backend-only per AC2 step 2.
-- [ ] Update `chainlens-tier2.md` system prompt body per AC6 (separate from
+- [x] Update `chainlens-tier2.md` system prompt body per AC6 (separate from
   permission block).
-- [ ] Update `chainlens-tier1.md` system prompt body to NOT advertise MCP tools (Tier
+- [x] Update `chainlens-tier1.md` system prompt body to NOT advertise MCP tools (Tier
   1 will receive 403 if it tries).
 
 ### Task 5 — Pricing (AC5)
 
-- [ ] Add 22 TOOL_PRICING entries to `apps/api/src/config.ts` (existing
+- [x] Add 22 TOOL_PRICING entries to `apps/api/src/config.ts` (existing
   `vibe_trading_backtest` entry stays; 22 new `vt_mcp_*` entries appended)
 
 ### Task 6 — Agent system prompt (AC6)
 
-- [ ] Rewrite "Vibe-Trading Research Tools" section in `chainlens-tier2.md` body
+- [x] Rewrite "Vibe-Trading Research Tools" section in `chainlens-tier2.md` body
   (note: 22 tools, NOT 21)
 
 ### Task 7 — Tests (AC7)
 
-- [ ] Create `apps/api/src/__tests__/unit/vibe-trading-mcp-proxy.test.ts` (≥12 tests)
-- [ ] Integration test (gated) — verify `/sse` path, NOT `/mcp`
-- [ ] TypeScript clean
+- [x] Create `apps/api/src/__tests__/unit/vibe-trading-mcp-proxy.test.ts` (13 tests — ≥12 required)
+- [x] Integration test (gated) — verify `/sse` path, NOT `/mcp`
+- [x] TypeScript clean
 
 ### Task 8 — Documentation
 
-- [ ] Update `core/docker/README.md` — new service section
-- [ ] Update `core/epsilon-master/opencode/tools/README.md` — "VT MCP tools now auto-discovered"
+- [x] Update `core/docker/README.md` — new service section
+- [x] Update `core/epsilon-master/opencode/tools/README.md` — "VT MCP tools now auto-discovered"
 
 ## Dev Notes
 

@@ -162,3 +162,26 @@ Body: `{ mode, project_id?, symbol?, token_address?, sector?, peer_project_ids?,
 - `cache_status: cache_fresh` => DB cache hit, cost `0`.
 - `cache_status: live` => explicit live refresh path, credits deducted (`protocol_valuation` in `TOOL_PRICING`).
 - If worker/provider is unconfigured, route returns actionable `unconfigured/no_data` response.
+
+---
+
+## Vibe-Trading MCP Tools (Story 5.5)
+
+22 tools are auto-discovered via the `vibe-trading` remote MCP server configured in
+`opencode.jsonc`. They do NOT have individual OpenCode tool files — the MCP protocol handles
+discovery automatically.
+
+**Tier**: Tier 2 only — enforced at the epsilon-api proxy (`/v1/router/vibe-trading-mcp/*`).
+OpenCode's `permission:` system does NOT cover MCP tools; the backend proxy is the only gate.
+
+**Billing**: Each `tools/call` is intercepted by the proxy, which calls `checkCredits` and
+`deductToolCredits` with the `vt_mcp_<toolName>` key. Pricing is in `TOOL_PRICING` in `config.ts`.
+Unknown future tools default to $0.01/call.
+
+**SSE transport**: The `vibe-trading-mcp` container runs FastMCP 2.x with `--transport sse`.
+The SSE endpoint is at `/sse` (NOT `/mcp` which is Streamable HTTP). The `opencode.jsonc` URL
+ends in `/sse` accordingly.
+
+**Coexistence**: `vibe_trading_backtest` (HTTP tool, Story 5.1) remains unchanged. Use it for
+UI-driven backtests with equity curve streaming. Use MCP `backtest` for quick agent-driven
+signal validation.

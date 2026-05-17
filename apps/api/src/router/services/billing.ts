@@ -1,3 +1,6 @@
+import { eq } from 'drizzle-orm';
+import { creditAccounts } from '@epsilon/db';
+import { db } from '../../shared/db';
 import { config, getToolCost } from '../../config';
 import {
   checkCredits as checkCreditsDb,
@@ -141,4 +144,41 @@ export async function deductLLMCredits(
     newBalance: result.newBalance || 0,
     transactionId: result.transactionId,
   };
+}
+
+export type AccountTier = 'tier1' | 'tier2' | 'tier3';
+
+// In-memory cache: accountId → { tier, expiresAt }
+const tierCache = new Map<string, { tier: AccountTier; expiresAt: number }>();
+const TIER_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Resolve account tier from credit_accounts.tier column.
+ * Tier values in DB: 'free' → tier1, 'pro' → tier2, 'enterprise' → tier3.
+ * Defaults to tier1 if account not found or DB unavailable.
+ */
+export async function resolveAccountTier(accountId: string): Promise<AccountTier> {
+  const cached = tierCache.get(accountId);
+  if (cached && Date.now() < cached.expiresAt) return cached.tier;
+
+  if (!config.DATABASE_URL) return 'tier1';
+
+  try {
+    const [row] = await db
+      .select({ tier: creditAccounts.tier })
+      .from(creditAccounts)
+      .where(eq(creditAccounts.accountId, accountId))
+      .limit(1);
+
+    const raw = row?.tier ?? 'free';
+    const tier: AccountTier =
+      raw === 'enterprise' ? 'tier3' :
+      raw === 'pro' ? 'tier2' :
+      'tier1';
+
+    tierCache.set(accountId, { tier, expiresAt: Date.now() + TIER_CACHE_TTL_MS });
+    return tier;
+  } catch {
+    return 'tier1';
+  }
 }

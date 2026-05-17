@@ -39,15 +39,21 @@ All other outbound is logged (`EGRESS-DENY:` kernel log prefix) and dropped.
 
 **Rollback:** Remove `95-egress-whitelist.sh` COPY line from `core/docker/Dockerfile` and remove `CapAdd: ['NET_ADMIN']` from `local-docker.ts`. Rebuild sandbox image.
 
-## Vibe-Trading Services (Story 5.0)
+## Vibe-Trading Services (Story 5.0 / 5.5)
 
-Three services are deployed alongside `epsilon-api` in `scripts/compose/docker-compose.yml`:
+Four services are deployed alongside `epsilon-api` in `scripts/compose/docker-compose.yml`:
 
 | Service | Port | Purpose |
 |---------|------|---------|
 | `vibe-trading` | internal (127.0.0.1:8899 local dev) | FastAPI backtesting API |
 | `vibe-trading-worker` | — | Celery worker (processes backtest jobs) |
+| `vibe-trading-mcp` | internal (port 8900) | FastMCP SSE server — 22 MCP tools for Epsilon agent |
 | `redis` | internal | Celery broker + result backend |
+
+`vibe-trading-mcp` reuses the `chainlens-vibe-trading:latest` image (no extra build). It runs
+`mcp_server.py --transport sse --port 8900` and exposes the SSE endpoint at `/sse`. The epsilon-api
+proxy at `/v1/router/vibe-trading-mcp/*` intercepts `tools/call` for billing and tier gating before
+forwarding to this service.
 
 ### API Key Setup
 

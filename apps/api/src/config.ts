@@ -175,6 +175,7 @@ const envSchema = z.object({
   // ── Vibe Trading (optional — backtesting sandbox service) ────────────────
   VIBE_TRADING_API_KEY:         optStr,
   VIBE_TRADING_INTERNAL_URL:    optUrl('http://vibe-trading:8899'),
+  VIBE_TRADING_MCP_URL:         optUrl('http://vibe-trading-mcp:8900'),
 
   // ── Internal Service Key (auto-generated if missing — never fails) ───────
   INTERNAL_SERVICE_KEY:        optStr,
@@ -601,6 +602,7 @@ export const config = {
   // Vibe-Trading internal service (Story 5.0)
   VIBE_TRADING_API_KEY: env.VIBE_TRADING_API_KEY,
   VIBE_TRADING_INTERNAL_URL: env.VIBE_TRADING_INTERNAL_URL,
+  VIBE_TRADING_MCP_URL: env.VIBE_TRADING_MCP_URL,
 
   /**
    * INTERNAL_SERVICE_KEY -- direction: epsilon-api -> sandbox.
@@ -975,6 +977,29 @@ export const TOOL_PRICING: Record<string, ToolPricing> = {
     perResultCost: 0,
     markupMultiplier: 1.0,
   },
+  // VT MCP tools — prefix vt_mcp_ to distinguish from OpenCode tools
+  vt_mcp_list_skills:             { baseCost: 0,    perResultCost: 0, markupMultiplier: 1.0 },
+  vt_mcp_load_skill:              { baseCost: 0,    perResultCost: 0, markupMultiplier: 1.0 },
+  vt_mcp_get_market_data:         { baseCost: 0.05, perResultCost: 0, markupMultiplier: 1.0 },
+  vt_mcp_analyze_options:         { baseCost: 0.02, perResultCost: 0, markupMultiplier: 1.0 },
+  vt_mcp_pattern_recognition:     { baseCost: 0.05, perResultCost: 0, markupMultiplier: 1.0 },
+  vt_mcp_factor_analysis:         { baseCost: 0.30, perResultCost: 0, markupMultiplier: 1.0 },
+  vt_mcp_backtest:                { baseCost: 0.50, perResultCost: 0, markupMultiplier: 1.0 },
+  vt_mcp_analyze_trade_journal:   { baseCost: 0.10, perResultCost: 0, markupMultiplier: 1.0 },
+  vt_mcp_extract_shadow_strategy: { baseCost: 0.15, perResultCost: 0, markupMultiplier: 1.0 },
+  vt_mcp_run_shadow_backtest:     { baseCost: 0.50, perResultCost: 0, markupMultiplier: 1.0 },
+  vt_mcp_render_shadow_report:    { baseCost: 0.10, perResultCost: 0, markupMultiplier: 1.0 },
+  vt_mcp_scan_shadow_signals:     { baseCost: 0.05, perResultCost: 0, markupMultiplier: 1.0 },
+  vt_mcp_web_search:              { baseCost: 0.01, perResultCost: 0, markupMultiplier: 1.0 },
+  vt_mcp_read_url:                { baseCost: 0.02, perResultCost: 0, markupMultiplier: 1.0 },
+  vt_mcp_read_document:           { baseCost: 0.10, perResultCost: 0, markupMultiplier: 1.0 },
+  vt_mcp_write_file:              { baseCost: 0,    perResultCost: 0, markupMultiplier: 1.0 },
+  vt_mcp_read_file:               { baseCost: 0,    perResultCost: 0, markupMultiplier: 1.0 },
+  vt_mcp_list_swarm_presets:      { baseCost: 0,    perResultCost: 0, markupMultiplier: 1.0 },
+  vt_mcp_run_swarm:               { baseCost: 0.25, perResultCost: 0, markupMultiplier: 1.0 },
+  vt_mcp_get_swarm_status:        { baseCost: 0,    perResultCost: 0, markupMultiplier: 1.0 },
+  vt_mcp_get_run_result:          { baseCost: 0,    perResultCost: 0, markupMultiplier: 1.0 },
+  vt_mcp_list_runs:               { baseCost: 0,    perResultCost: 0, markupMultiplier: 1.0 },
   // Live Nansen API call: 5 Nansen credits (Smart Money) or 1 credit (TGM) ≈ $0.05–$0.25 per call.
   // Conservative starting price — revisit after usage data.
   smart_money_flow: {
