@@ -250,6 +250,19 @@ const envSchema = z.object({
   ARBISCAN_API_KEY:            optStr,
   BASESCAN_API_KEY:            optStr,
   POLYGONSCAN_API_KEY:         optStr,
+  // ─── On-chain Fact Checking Worker (Story 2.2.1) ─────────────────────────
+  ONCHAIN_FACT_CHECK_WORKER_ENABLED:      optBoolFalse,
+  ONCHAIN_FACT_CHECK_INTERVAL_MS:         optInt(300_000),
+  ONCHAIN_FACT_CHECK_LOOKBACK_HOURS:      optInt(24),
+  ONCHAIN_FACT_CHECK_DUMP_THRESHOLD_PCT:  optFloat(5),
+  ONCHAIN_FACT_CHECK_MAX_WALLETS_PER_TOKEN: optInt(10),
+  ONCHAIN_FACT_CHECK_MAX_TRANSFERS_PER_WALLET: optInt(200),
+  ONCHAIN_FACT_CHECK_PROVIDER:             z.enum(['quicknode', 'etherscan', 'blockscout']).optional().default('quicknode'),
+  ONCHAIN_FACT_CHECK_CHAINS:               optStrDefault('ethereum'),
+  ONCHAIN_FACT_CHECK_RPC_URL_ETHEREUM:     optStr,
+  ONCHAIN_FACT_CHECK_RPC_URL_BASE:         optStr,
+  ONCHAIN_FACT_CHECK_RPC_URL_POLYGON:      optStr,
+  ONCHAIN_FACT_CHECK_RPC_URL_ARBITRUM:     optStr,
 
   // ─── Crypto Data Worker (BullMQ) ──────────────────────────────────────────
   CRYPTO_WORKER_ENABLED:       optBoolFalse,
@@ -676,6 +689,18 @@ export const config = {
   ARBISCAN_API_KEY: env.ARBISCAN_API_KEY,
   BASESCAN_API_KEY: env.BASESCAN_API_KEY,
   POLYGONSCAN_API_KEY: env.POLYGONSCAN_API_KEY,
+  ONCHAIN_FACT_CHECK_WORKER_ENABLED: env.ONCHAIN_FACT_CHECK_WORKER_ENABLED,
+  ONCHAIN_FACT_CHECK_INTERVAL_MS: env.ONCHAIN_FACT_CHECK_INTERVAL_MS,
+  ONCHAIN_FACT_CHECK_LOOKBACK_HOURS: env.ONCHAIN_FACT_CHECK_LOOKBACK_HOURS,
+  ONCHAIN_FACT_CHECK_DUMP_THRESHOLD_PCT: env.ONCHAIN_FACT_CHECK_DUMP_THRESHOLD_PCT,
+  ONCHAIN_FACT_CHECK_MAX_WALLETS_PER_TOKEN: env.ONCHAIN_FACT_CHECK_MAX_WALLETS_PER_TOKEN,
+  ONCHAIN_FACT_CHECK_MAX_TRANSFERS_PER_WALLET: env.ONCHAIN_FACT_CHECK_MAX_TRANSFERS_PER_WALLET,
+  ONCHAIN_FACT_CHECK_PROVIDER: env.ONCHAIN_FACT_CHECK_PROVIDER,
+  ONCHAIN_FACT_CHECK_CHAINS: env.ONCHAIN_FACT_CHECK_CHAINS,
+  ONCHAIN_FACT_CHECK_RPC_URL_ETHEREUM: env.ONCHAIN_FACT_CHECK_RPC_URL_ETHEREUM,
+  ONCHAIN_FACT_CHECK_RPC_URL_BASE: env.ONCHAIN_FACT_CHECK_RPC_URL_BASE,
+  ONCHAIN_FACT_CHECK_RPC_URL_POLYGON: env.ONCHAIN_FACT_CHECK_RPC_URL_POLYGON,
+  ONCHAIN_FACT_CHECK_RPC_URL_ARBITRUM: env.ONCHAIN_FACT_CHECK_RPC_URL_ARBITRUM,
   // Removed duplicates
 
   // ─── Crypto Data Worker (BullMQ) ──────────────────────────────────────────
@@ -893,6 +918,11 @@ export const TOOL_PRICING: Record<string, ToolPricing> = {
   },
   token_ohlcv: {
     baseCost: 0,
+    perResultCost: 0,
+    markupMultiplier: 1.0,
+  },
+  onchain_fact_check: {
+    baseCost: 0.10,
     perResultCost: 0,
     markupMultiplier: 1.0,
   },

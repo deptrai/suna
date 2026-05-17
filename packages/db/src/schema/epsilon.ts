@@ -1243,3 +1243,61 @@ export const entityWalletWatchlist = epsilonSchema.table(
     index('idx_entity_wallet_watchlist_address').on(table.address),
   ],
 );
+
+// ─── Project Wallet Watchlist (Story 2.2.1) ─────────────────────────────────
+
+export const projectWalletWatchlist = epsilonSchema.table(
+  'project_wallet_watchlist',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    chain: varchar('chain', { length: 32 }).notNull(),
+    tokenAddress: varchar('token_address', { length: 128 }).notNull(),
+    tokenSymbol: varchar('token_symbol', { length: 32 }),
+    projectSlug: varchar('project_slug', { length: 128 }),
+    walletAddress: varchar('wallet_address', { length: 128 }).notNull(),
+    walletRole: varchar('wallet_role', { length: 32 }).notNull().default('unknown'),
+    label: text('label'),
+    source: varchar('source', { length: 64 }).notNull().default('manual'),
+    confidence: numeric('confidence', { precision: 5, scale: 4 }),
+    active: boolean('active').notNull().default(true),
+    metadata: jsonb('metadata').notNull().default({}).$type<Record<string, unknown>>(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('uq_project_wallet_watchlist_chain_token_wallet').on(table.chain, table.tokenAddress, table.walletAddress),
+    index('idx_project_wallet_watchlist_chain_token_active').on(table.chain, table.tokenAddress, table.active),
+    index('idx_project_wallet_watchlist_wallet_address').on(table.walletAddress),
+  ],
+);
+
+// ─── On-chain Fact Checks (Story 2.2.1) ─────────────────────────────────────
+
+export const onchainFactChecks = epsilonSchema.table(
+  'onchain_fact_checks',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    discoverFeedId: uuid('discover_feed_id'),
+    chain: varchar('chain', { length: 32 }).notNull(),
+    tokenAddress: varchar('token_address', { length: 128 }).notNull(),
+    tokenSymbol: varchar('token_symbol', { length: 32 }),
+    articleTitle: text('article_title'),
+    articleSentiment: varchar('article_sentiment', { length: 32 }).notNull().default('unknown'),
+    status: varchar('status', { length: 32 }).notNull().default('skipped'),
+    walletsChecked: integer('wallets_checked').notNull().default(0),
+    netOutflowPct: numeric('net_outflow_pct', { precision: 10, scale: 4 }),
+    largestWalletOutflowPct: numeric('largest_wallet_outflow_pct', { precision: 10, scale: 4 }),
+    transferCount: integer('transfer_count').notNull().default(0),
+    riskLevel: warningLevelEnum('risk_level').notNull().default('none'),
+    riskFactors: jsonb('risk_factors').notNull().default([]).$type<Record<string, unknown>[]>(),
+    evidence: jsonb('evidence').notNull().default({}).$type<Record<string, unknown>>(),
+    checkedAt: timestamp('checked_at', { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('idx_onchain_fact_checks_chain_token_checked').on(table.chain, table.tokenAddress, table.checkedAt),
+    index('idx_onchain_fact_checks_status_checked').on(table.status, table.checkedAt),
+    index('idx_onchain_fact_checks_risk_checked').on(table.riskLevel, table.checkedAt),
+  ],
+);

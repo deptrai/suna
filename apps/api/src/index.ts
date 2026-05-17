@@ -32,7 +32,7 @@ import { setupApp } from './setup';
 import { providersApp } from './providers/routes';
 import { secretsApp } from './secrets/routes';
 import { integrationsApp } from './integrations';
-import { queueApp, startDrainer, stopDrainer, startDiscoverFeedWorker, setupDiscoverFeedJobs, stopDiscoverFeedWorker, startOnChainIndexWorker, setupOnChainIndexJobs, stopOnChainIndexWorker, startCryptoWorker, setupCryptoWorkerJobs, stopCryptoWorker, startSocialSentimentWorker, setupSocialSentimentJobs, stopSocialSentimentWorker, startMempoolWorker, setupMempoolJobs, stopMempoolWorker, startEntityWalletWorker, setupEntityWalletJobs, stopEntityWalletWorker } from './queue';
+import { queueApp, startDrainer, stopDrainer, startDiscoverFeedWorker, setupDiscoverFeedJobs, stopDiscoverFeedWorker, startOnChainIndexWorker, setupOnChainIndexJobs, stopOnChainIndexWorker, startCryptoWorker, setupCryptoWorkerJobs, stopCryptoWorker, startSocialSentimentWorker, setupSocialSentimentJobs, stopSocialSentimentWorker, startMempoolWorker, setupMempoolJobs, stopMempoolWorker, startEntityWalletWorker, setupEntityWalletJobs, stopEntityWalletWorker, startOnchainFactCheckWorker, setupOnchainFactCheckJobs, stopOnchainFactCheckWorker } from './queue';
 import { serversApp } from './servers';
 // WoA is now mounted under the router at /v1/router/woa (see router/index.ts)
 import { supabaseAuth, combinedAuth, apiKeyAuth } from './middleware/auth';
@@ -1078,6 +1078,8 @@ function startBackgroundServices() {
   setupMempoolJobs().catch((e) => appLogger.error('[mempool-worker] setup failed', { error: String(e) }));
   startEntityWalletWorker();
   setupEntityWalletJobs().catch((e) => appLogger.error('[entity-wallet] setup failed', { error: String(e) }));
+  startOnchainFactCheckWorker();
+  setupOnchainFactCheckJobs().catch((e) => appLogger.error('[onchain-fact-check] setup failed', { error: String(e) }));
   startTunnelService();
   startAutoReplenish();
   startInviteCleanup(appDb);
@@ -1156,6 +1158,9 @@ async function shutdown(signal: string) {
   );
   await stopEntityWalletWorker().catch((e) =>
     appLogger.error('[entity-wallet] shutdown failed', { error: String(e) }),
+  );
+  await stopOnchainFactCheckWorker().catch((e) =>
+    appLogger.error('[onchain-fact-check] shutdown failed', { error: String(e) }),
   );
   // Flush observability data before exit
   await Promise.allSettled([appLogger.flush(), flushSentry()]);

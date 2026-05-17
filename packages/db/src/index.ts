@@ -92,6 +92,8 @@ export {
   entityWalletLabels,
   tokenHolderEntityRisks,
   entityWalletWatchlist,
+  projectWalletWatchlist,
+  onchainFactChecks,
   // Pool
   poolResources,
   poolSandboxes,

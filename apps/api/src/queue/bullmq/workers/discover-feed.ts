@@ -3,13 +3,15 @@ import { createHash } from 'node:crypto';
 import { lt, eq, desc, and } from 'drizzle-orm';
 import { redisConnection } from '../connection';
 import { db } from '../../../shared/db';
-import { discoverFeeds, tokenSocialSignals } from '@epsilon/db';
+import { discoverFeeds, onchainFactChecks, tokenSocialSignals } from '@epsilon/db';
 import { config } from '../../../config';
 import { logger } from '../../../lib/logger';
 import { scrubPii, WARNING_LEVELS, type WarningLevel } from '@epsilon/shared/utils';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { generateObject } from 'ai';
 import { z } from 'zod';
+import { enqueueDiscoverFactCheck } from './onchain-fact-check-worker';
+import { extractReliableTokenAddress, isPromotionalArticle } from '../../../router/services/onchain-fact-check';
 
 export const QUEUE_NAME = 'discover-feed-summarization';
 const SUMMARIZE_SCHEDULER_ID = 'discover-feed-hourly';
@@ -19,6 +21,7 @@ const CLEANUP_CRON = '13 3 * * *';
 const TITLE_MAX = 500;
 const SUMMARIZE_JOB = 'summarize';
 const CLEANUP_JOB = 'cleanup';
+const FACT_CHECK_TIMEOUT_MS = 8_000;
 
 let _queue: Queue | null = null;
 let _worker: Worker | null = null;
@@ -186,6 +189,8 @@ Data: ${dataString}`,
       const safeTitle = scrubPii(item.title).slice(0, TITLE_MAX);
       const safeSummary = scrubPii(item.summary);
       const id = deterministicId(safeTitle, safeSummary);
+      const tokenAddress = extractReliableTokenAddress(`${safeTitle} ${safeSummary}`);
+      const shouldFactCheck = isPromotionalArticle(`${safeTitle} ${safeSummary}`) && Boolean(tokenAddress);
 
       const result = await tx
         .insert(discoverFeeds)
@@ -202,6 +207,44 @@ Data: ${dataString}`,
 
       if (result.length > 0) inserted += 1;
       else skipped += 1;
+
+      if (result.length > 0 && shouldFactCheck && tokenAddress) {
+        try {
+          await Promise.race([
+            enqueueDiscoverFactCheck({
+              discoverFeedId: id,
+              chain: 'ethereum',
+              tokenAddress,
+              articleTitle: safeTitle,
+              articleSentiment: 'positive',
+            }),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('fact-check enqueue timeout')), FACT_CHECK_TIMEOUT_MS)),
+          ]);
+        } catch (err) {
+          logger.warn('[discover-feed] fact-check enqueue failed (non-fatal)', {
+            jobId,
+            discoverFeedId: id,
+            tokenAddress,
+            error: err instanceof Error ? err.message : String(err),
+          });
+          await tx.insert(onchainFactChecks).values({
+            discoverFeedId: id,
+            chain: 'ethereum',
+            tokenAddress,
+            tokenSymbol: null,
+            articleTitle: safeTitle,
+            articleSentiment: 'positive',
+            status: 'provider_unavailable',
+            walletsChecked: 0,
+            transferCount: 0,
+            riskLevel: 'low',
+            riskFactors: [{ code: 'provider_rate_limited', label: 'Fact-check enqueue timeout/failure', severity: 'medium' }],
+            evidence: { reason: 'enqueue_timeout_or_failure' },
+            checkedAt: new Date(),
+            updatedAt: new Date(),
+          });
+        }
+      }
     }
   });
 
