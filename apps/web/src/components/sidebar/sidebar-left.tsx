@@ -29,6 +29,8 @@ import {
   ShieldAlert,
   Compass,
   LineChart,
+  Activity,
+  Users,
 } from 'lucide-react';
 import posthog from 'posthog-js';
 
@@ -1627,6 +1629,36 @@ export function SidebarLeft({ ...props }: React.ComponentProps<typeof Sidebar>) 
             >
               <LineChart className="h-4 w-4 flex-shrink-0 text-sidebar-foreground" />
               <span className="flex-1 text-left">Markets</span>
+            </Button>
+            <Button
+              onClick={() => {
+                openTabAndNavigate({
+                  id: 'page:/dashboard/shadow-account',
+                  title: 'Shadow Account',
+                  type: 'page',
+                  href: '/dashboard/shadow-account',
+                });
+              }}
+              variant="sidebar"
+              className="rounded-lg"
+            >
+              <Activity className="h-4 w-4 flex-shrink-0 text-sidebar-foreground" />
+              <span className="flex-1 text-left">Shadow Account</span>
+            </Button>
+            <Button
+              onClick={() => {
+                openTabAndNavigate({
+                  id: 'page:/dashboard/swarm-teams',
+                  title: 'Swarm Teams',
+                  type: 'page',
+                  href: '/dashboard/swarm-teams',
+                });
+              }}
+              variant="sidebar"
+              className="rounded-lg"
+            >
+              <Users className="h-4 w-4 flex-shrink-0 text-sidebar-foreground" />
+              <span className="flex-1 text-left">Swarm Teams</span>
             </Button>
 
             {/* Board lives in the right sidebar (menu-registry entry

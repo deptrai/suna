@@ -1,5 +1,5 @@
 # generated: 2026-05-09
-# last_updated: 2026-05-17 (Story 2.3.2 moved to review by bmad-dev-story)
+# last_updated: 2026-05-18 (Story 5.6 moved to in-progress by bmad-dev-story)
 # project: chainlensnlens
 # project_key: NOKEY
 # tracking_system: file-system
@@ -33,7 +33,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-18 (Story 2.3.2 done by code-review — 27 patches, 4 deferred)
+last_updated: 2026-05-18 (Story 5.8 v2.1 re-verified by create-story)
 project: chainlens
 project_key: NOKEY
 tracking_system: file-system
@@ -88,9 +88,9 @@ development_status:
   5-3-backtest-results-visualizer: done
   5-4-contextual-backtest-integration: done
   5-5-vibe-trading-mcp-proxy: done
-  5-6-shadow-account-swarm-ui: backlog
+  5-6-shadow-account-swarm-ui: in-progress  # 2026-05-18 created from epics; 2 dashboard pages + 1 passthrough route + sidebar nav
   5-7-user-llm-key-management: backlog
-  5-8-per-user-persistent-memory: ready-for-dev
+  5-8-per-user-persistent-memory: ready-for-dev  # 2026-05-18 v2.1 re-verified — OpenRouter pattern, migration 0010, all code references confirmed
   epic-5-retrospective: optional
 
   # Epic 6: Browser Intelligence Extension

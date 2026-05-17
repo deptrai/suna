@@ -7,7 +7,25 @@ Status: ready-for-dev
 
 <!-- v1 (2026-05-12): Winston architect review phát hiện 5 critical issues.
      v2 (2026-05-12): Rewrite — accountId scoping, session.idle event, Layer 1-only v1,
-     loại bỏ OpenAI key conflict với Story 5.7, đơn giản hóa conflict resolution. -->
+     loại bỏ OpenAI key conflict với Story 5.7, đơn giản hóa conflict resolution.
+     v2.1 (2026-05-18): Re-verified tất cả code references vs current main; align với
+     OpenRouter Anthropic proxy pattern (codebase KHÔNG dùng ANTHROPIC_API_KEY trực tiếp);
+     bumped migration sequence to 0010+ (0009 đã consume bởi Story 2.3.2). -->
+
+## Verified code references (2026-05-18)
+
+Tất cả symbol/file path dưới đây đã verify tồn tại trong current `main`:
+
+- [session-ownership.ts:33-44](../../core/epsilon-master/src/services/session-ownership.ts#L33) — `session_owners` table + `stampSessionOwner` (SQLite local)
+- [sessions.ts:30,40-48,49-82](../../core/epsilon-master/opencode/plugin/epsilon-system/sessions.ts#L30) — plugin: `currentSessionId`, `event` hook (chỉ handle `session.created` hiện tại — story này thêm `session.idle` + `session.deleted` branches), `experimental.chat.messages.transform` hook (story này extend với Layer 1 inject)
+- [paths.ts](../../core/epsilon-master/opencode/plugin/epsilon-system/lib/paths.ts) — `renderMergedMemoryContext`, `resolveEpsilonDir` helpers
+- [env-injector.ts:32-33](../../apps/api/src/pool/env-injector.ts#L32) — `EPSILON_TOKEN` (= `INTERNAL_SERVICE_KEY`) đã được inject vào sandbox env
+- [epsilon.ts:92-107](../../packages/db/src/schema/epsilon.ts#L92) — `accountMembers` Drizzle table, schema `epsilon`, columns `userId`, `accountId`, `accountRole`, unique `(userId, accountId)`
+- [middleware/auth.ts:45-71](../../apps/api/src/middleware/auth.ts#L45) — `apiKeyAuth` middleware validates `epsilon_*` Bearer tokens; `combinedAuth` chains JWT + apiKey
+- [router/services/anthropic.ts:23-49](../../apps/api/src/router/services/anthropic.ts#L23) — `proxyToAnthropic(body, isStreaming)` — codebase convention: Anthropic Messages API qua **OpenRouter** với `OPENROUTER_API_KEY`, **KHÔNG** trực tiếp `ANTHROPIC_API_KEY`. Story này phải reuse pattern.
+- [router/services/billing.ts:160](../../apps/api/src/router/services/billing.ts#L160) — `resolveAccountTier(accountId)` — pattern parallel to Story 5.5 tier gate
+- [router/config/claude-fallback.ts:12-13](../../apps/api/src/router/config/claude-fallback.ts#L12) — `claude-haiku-4-5-20251001` đã được whitelist
+- Latest migration in tree: `packages/db/drizzle/0009_token_terminal_fundamentals.sql` (Story 2.3.2). Next available sequence: **`0010_account_memories.sql`**.
 
 ## Context
 
@@ -96,28 +114,28 @@ so that I don't need to re-explain my context every time I start a new conversat
 
 ```ts
 // packages/db/src/schema/account-memories.ts
-export const accountMemories = pgTable('account_memories', {
+import { epsilonSchema, accounts } from './epsilon';
+import { uuid, varchar, text, real, timestamp, index, unique } from 'drizzle-orm/pg-core';
+
+export const accountMemories = epsilonSchema.table('account_memories', {
   id: uuid('id').primaryKey().defaultRandom(),
   accountId: uuid('account_id').notNull()
     .references(() => accounts.accountId, { onDelete: 'cascade' }),
   createdByUserId: uuid('created_by_user_id'),  // audit: ai đóng góp memory này
   category: varchar('category', { length: 32 }).notNull(),
-  // whitelist: 'preference' | 'trading_style' | 'risk_profile' | 'fact' | 'tool_usage'
+  // whitelist enforced at API layer: 'preference' | 'trading_style' | 'risk_profile' | 'fact' | 'tool_usage'
   content: text('content').notNull(),            // max 200 chars enforced at API layer
   confidence: real('confidence').default(1.0),
   sourceSessionId: varchar('source_session_id', { length: 128 }),
-  invalidatedAt: timestamp('invalidated_at'),    // soft delete, never hard delete (audit)
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
-}, (t) => ({
-  accountActiveIdx: index('account_memories_account_active_idx')
-    .on(t.accountId, t.invalidatedAt),
-  accountCategoryIdx: index('account_memories_account_category_idx')
-    .on(t.accountId, t.category),
+  invalidatedAt: timestamp('invalidated_at', { withTimezone: true }),    // soft delete, never hard delete (audit)
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index('account_memories_account_active_idx').on(t.accountId, t.invalidatedAt),
+  index('account_memories_account_category_idx').on(t.accountId, t.category),
   // Dedupe: 1 account không được có 2 memory identical trong cùng category
-  accountContentUnique: unique('account_memories_unique')
-    .on(t.accountId, t.category, t.content),
-}));
+  unique('account_memories_unique').on(t.accountId, t.category, t.content),
+]);
 ```
 
 **And** rollback: `DROP TABLE account_memories;`
@@ -171,9 +189,9 @@ DELETE /v1/memory         → User-facing Clear All
 **Response**: `{ extracted: number, deduped: number }` — async-ish, OK return sau khi Haiku finish
 
 **Server-side extraction**:
-1. Verify `EPSILON_TOKEN`
-2. Resolve `accountId` from `userId`
-3. Call Claude Haiku với system prompt (AC3 below)
+1. Verify `EPSILON_TOKEN` Bearer (reuse [`apiKeyAuth`](../../apps/api/src/middleware/auth.ts#L45) middleware on the route)
+2. Resolve `accountId` from `userId` via `epsilon.account_members WHERE user_id = $userId AND account_role = 'owner'`
+3. Call Claude Haiku via existing **OpenRouter pattern** — reuse [`proxyToAnthropic`](../../apps/api/src/router/services/anthropic.ts#L23) (uses `OPENROUTER_API_KEY`, NOT `ANTHROPIC_API_KEY`). Model: `claude-haiku-4-5-20251001` (already whitelisted in [claude-fallback.ts:13](../../apps/api/src/router/config/claude-fallback.ts#L13)).
 4. For mỗi fact extracted → conflict check → INSERT or UPDATE
 5. Idempotency key: `sourceSessionId` — nếu đã extract session này trong < 1h, skip
 
@@ -371,11 +389,11 @@ async function scheduleExtraction(sessionId: string) {
 ## Tasks / Subtasks
 
 - [ ] **Task 1 — DB schema** (AC: #1)
-  - [ ] Create `packages/db/src/schema/account-memories.ts` với Drizzle schema (xem AC1 snippet)
+  - [ ] Create `packages/db/src/schema/account-memories.ts` với Drizzle schema (xem AC1 snippet) — wrap trong `epsilonSchema.table(...)` (chứ không phải `pgTable(...)`) per [epsilon.ts:18 `epsilonSchema = pgSchema('epsilon')`](../../packages/db/src/schema/epsilon.ts#L18)
   - [ ] Export `accountMemories` từ `packages/db/src/schema/index.ts`
-  - [ ] Run `pnpm db:generate` → verify migration file tại `packages/db/drizzle/XXXX_account_memories.sql`
+  - [ ] Run `pnpm db:generate` → verify migration file tại `packages/db/drizzle/0010_account_memories.sql` (sequence 0010 — verified 2026-05-18, 0009 consumed by Story 2.3.2). If 5.7/2.0.1 ship migration first, bump to next available.
   - [ ] Manual review migration: đảm bảo indexes + unique constraint đúng, FK `account_id → accounts(account_id) ON DELETE CASCADE`
-  - [ ] Test rollback: `DROP TABLE account_memories;` works cleanly
+  - [ ] Test rollback: `DROP TABLE epsilon.account_memories;` works cleanly
 
 - [ ] **Task 2 — Memory API routes (apps/api)** (AC: #2, #3)
   - [ ] `apps/api/src/router/services/memory-account-resolver.ts` — `resolveAccountIdFromUserId(userId)` — query `epsilon.account_members WHERE user_id = $1 AND account_role = 'owner'` → return `account_id`
@@ -438,7 +456,7 @@ async function scheduleExtraction(sessionId: string) {
   - [ ] UI: `apps/web/src/components/memory/__tests__/memory-list.test.tsx` (3 tests: list grouped, delete single, clear all)
 
 - [ ] **Task 6 — Docs + env**
-  - [ ] Verify `apps/api/.env.example` có `ANTHROPIC_API_KEY` (nếu chưa) — dùng cho Haiku extraction
+  - [ ] Verify `apps/api/.env.example` đã có `OPENROUTER_API_KEY` (Story 5.8 reuses for Haiku extraction; KHÔNG cần `ANTHROPIC_API_KEY`)
   - [ ] Update `core/epsilon-master/opencode/agents/chainlens-tier1.md` và `chainlens-tier2.md` — thêm 1 dòng mô tả: "Persistent memory auto-learns your preferences across sessions. View/manage in Settings → Memory."
   - [ ] Update `apps/web/src/app/(dashboard)/settings/layout.tsx` (hoặc nav component) — thêm link Memory
 
@@ -446,10 +464,11 @@ async function scheduleExtraction(sessionId: string) {
 
 ### Cost estimate
 
-Haiku extraction: ~$0.001/session × 50 sessions/month × 1000 active accounts = **$50/month**.
-Acceptable. Nếu scale lên 10k accounts = $500/month — vẫn OK.
+Haiku extraction qua OpenRouter (markup applied per [EPSILON_MARKUP](../../apps/api/src/config.ts)): ~$0.001/session × 50 sessions/month × 1000 active accounts = **~$50/month** before markup. Acceptable. 10k accounts = $500/month — vẫn OK.
 
 Layer 1 only → **no embedding cost** v1.
+
+**No new API key required** — story reuses existing `OPENROUTER_API_KEY` (đã set per Story 1.1+ for deep_research / anthropic proxy).
 
 ### Context budget
 
@@ -485,7 +504,7 @@ không network. Nếu gọi API để lookup userId → 2 HTTP calls mỗi sessi
 
 **NEW:**
 - `packages/db/src/schema/account-memories.ts`
-- `packages/db/drizzle/XXXX_account_memories.sql`
+- `packages/db/drizzle/0010_account_memories.sql`
 - `apps/api/src/router/services/memory-extraction.ts`
 - `apps/api/src/router/services/memory-render.ts`
 - `apps/api/src/router/services/memory-account-resolver.ts`
@@ -501,7 +520,7 @@ không network. Nếu gọi API để lookup userId → 2 HTTP calls mỗi sessi
 - `core/epsilon-master/opencode/plugin/epsilon-system/sessions.ts` — Layer 1 inject + debounce extraction scheduler
 - `apps/api/src/router/index.ts` — register `/memory/*`
 - `packages/db/src/schema/index.ts` — export `accountMemories`
-- `apps/api/.env.example` — document `ANTHROPIC_API_KEY` requirement
+- `apps/api/.env.example` — confirm `OPENROUTER_API_KEY` requirement (no new var needed)
 
 ### References
 
@@ -514,6 +533,12 @@ không network. Nếu gọi API để lookup userId → 2 HTTP calls mỗi sessi
 - mem0 extraction pattern: https://docs.mem0.ai/core-concepts/memory-operations
 
 ### Changelog
+
+**v2.1 (2026-05-18)** — Re-verification pass (no behavior change):
+- Replace `ANTHROPIC_API_KEY` references → `OPENROUTER_API_KEY` (codebase convention: Anthropic always proxied via OpenRouter — verified [anthropic.ts:20](../../apps/api/src/router/services/anthropic.ts#L20))
+- Bump migration sequence to `0010_account_memories.sql` (0009 consumed by Story 2.3.2)
+- Add explicit references to existing helpers (`apiKeyAuth`, `proxyToAnthropic`, `resolveAccountTier`) so dev reuses, not reinvents
+- Confirm `claude-haiku-4-5-20251001` whitelisted in [claude-fallback.ts:13](../../apps/api/src/router/config/claude-fallback.ts#L13)
 
 **v2 (2026-05-12)** — Winston architect review fixes:
 - FIX: `accountId` scoping thay vì `userId` (consistent với billing/credits model)
@@ -540,8 +565,9 @@ không network. Nếu gọi API để lookup userId → 2 HTTP calls mỗi sessi
 ### Conflicts / variances
 
 - **No conflict với existing code**. Tất cả artifacts mới — chỉ modify `sessions.ts` (additive inside hook, non-fatal guarantees preserve existing behavior).
-- **No conflict với Story 5.7 (BYOK)**: Story 5.8 dùng `ANTHROPIC_API_KEY` server-side cho extraction (Chainlens-paid infra cost), không conflict với user's `OPENAI_API_KEY` (user-paid LLM).
-- **Schema naming**: Chọn `epsilon.account_memories` (schema prefix theo convention existing `epsilon.accounts`, `epsilon.account_members`). Verify với Drizzle config — nếu project root schema không prefix `epsilon.` thì follow convention đó.
+- **No conflict với Story 5.7 (BYOK)**: Story 5.8 dùng existing `OPENROUTER_API_KEY` (Chainlens-paid infra cost) qua [`proxyToAnthropic`](../../apps/api/src/router/services/anthropic.ts), không conflict với user's `OPENAI_API_KEY` (user-paid, Story 5.7 BYOK scope).
+- **Schema naming**: Use `epsilon.account_memories` (matches existing `epsilon.accounts`, `epsilon.account_members` pattern via [`epsilonSchema = pgSchema('epsilon')`](../../packages/db/src/schema/epsilon.ts#L18)).
+- **Migration sequence**: NEXT available is `0010_account_memories.sql` (0009 already consumed by Story 2.3.2 token-terminal). Coordinate with Story 5.7 + Story 2.0.1 if they ship migration before this — increment sequence accordingly.
 
 ### MCP Trio verification (per CLAUDE.md)
 

@@ -2,9 +2,13 @@ import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { streamSSE } from 'hono/streaming';
 import { z } from 'zod';
-import { submitBacktestJob, getBacktestRun, VibeTradingDownstreamError } from '../services/vibe-trading';
+import {
+  submitBacktestJob,
+  getBacktestRun,
+  VibeTradingDownstreamError,
+} from '../services/vibe-trading';
 import { checkCredits, deductToolCredits } from '../services/billing';
-import { getToolCost } from '../../config';
+import { config, getToolCost } from '../../config';
 import type { AppContext } from '../../types';
 
 const TOOL = 'vibe_trading_backtest';
@@ -56,6 +60,7 @@ const VibeTradingJobSchema = z
   );
 
 export const vibeTrading = new Hono<{ Variables: AppContext }>();
+const SHADOW_ID_RE = /^shadow_[0-9a-f]{8}$/;
 
 vibeTrading.post('/jobs', async (c) => {
   const accountId = c.get('accountId');
@@ -122,6 +127,54 @@ vibeTrading.get('/runs/:jobId', async (c) => {
     }
     return c.json({ success: false, error: err instanceof Error ? err.message : 'Run query failed' }, 503);
   }
+});
+
+vibeTrading.get('/shadow-reports/:shadowId', async (c) => {
+  const accountId = c.get('accountId');
+  if (!accountId) throw new HTTPException(401, { message: 'Unauthorized' });
+
+  const shadowId = c.req.param('shadowId');
+  if (!SHADOW_ID_RE.test(shadowId)) {
+    throw new HTTPException(400, { message: 'Invalid shadow_id format' });
+  }
+
+  const formatParam = c.req.query('format') ?? 'html';
+  const format = z.enum(['html', 'pdf']).safeParse(formatParam);
+  if (!format.success) {
+    throw new HTTPException(400, { message: 'Invalid format: expected html or pdf' });
+  }
+
+  const target = `${config.VIBE_TRADING_INTERNAL_URL.replace(/\/+$/, '')}/shadow-reports/${shadowId}?format=${format.data}`;
+  let response: Response;
+  try {
+    response = await fetch(target, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${config.VIBE_TRADING_API_KEY}`,
+      },
+      signal: AbortSignal.timeout(28_000),
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Vibe-Trading unavailable';
+    return c.json({ success: false, error: message }, 503);
+  }
+
+  if (response.status === 401) throw new HTTPException(401, { message: 'Unauthorized by Vibe-Trading' });
+  if (response.status === 403) throw new HTTPException(403, { message: 'Forbidden by Vibe-Trading' });
+  if (response.status === 404) throw new HTTPException(404, { message: `Shadow report ${shadowId} not found` });
+  if (!response.ok) {
+    const body = await response.text().catch(() => '');
+    throw new VibeTradingDownstreamError(response.status, body);
+  }
+
+  const contentType = response.headers.get('content-type') ?? (format.data === 'pdf' ? 'application/pdf' : 'text/html; charset=utf-8');
+  return new Response(response.body, {
+    status: 200,
+    headers: {
+      'Content-Type': contentType,
+      'Content-Disposition': `inline; filename=\"${shadowId}.${format.data}\"`,
+    },
+  });
 });
 
 // ─── SSE stream: GET /runs/:jobId/stream ──
