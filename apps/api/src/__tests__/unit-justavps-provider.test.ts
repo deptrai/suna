@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, mock, test } from 'bun:test';
 import { config } from '../config';
-import {
+const {
   buildCustomerCloudInitScript,
   buildJustAVPSHostRecoveryCommand,
   JustAVPSProvider,
-} from '../platform/providers/justavps';
+} = await import('../platform/providers/justavps.ts?unit-justavps-provider');
 
 const originalFetch = globalThis.fetch;
 

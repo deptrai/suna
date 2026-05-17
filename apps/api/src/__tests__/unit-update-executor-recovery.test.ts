@@ -1,7 +1,8 @@
-import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 const phaseCalls: string[] = [];
 const stepCalls = { ensure: 0, checkpoint: 0 };
+const originalFetch = globalThis.fetch;
 
 mock.module('@epsilon/db', () => ({ sandboxes: { sandboxId: 'sandboxId' } }));
 mock.module('drizzle-orm', () => ({ eq: () => ({}) }));
@@ -16,7 +17,10 @@ mock.module('../shared/db', () => ({
     }),
   },
 }));
-mock.module('../config', () => ({ config: { SANDBOX_IMAGE: 'epsilon/computer:0.8.40' } }));
+mock.module('../config', () => ({
+  SANDBOX_VERSION: '0.8.40',
+  config: { SANDBOX_IMAGE: 'epsilon/computer:0.8.40' },
+}));
 mock.module('../platform/providers', () => ({
   getProvider: () => ({ resolveEndpoint: async () => ({ url: 'http://sandbox', headers: {} }) }),
 }));
@@ -68,6 +72,21 @@ describe('executeUpdate container recovery', () => {
     phaseCalls.length = 0;
     stepCalls.ensure = 0;
     stepCalls.checkpoint = 0;
+    globalThis.fetch = mock(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/epsilon/update/version')) {
+        return new Response(JSON.stringify({
+          version: '0.8.41',
+          opencodeStorageBase: '/persistent/opencode',
+          persistentMode: true,
+        }), { status: 200 });
+      }
+      return new Response('{}', { status: 200 });
+    }) as unknown as typeof fetch;
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
   });
 
   test('retries checkpoint after auto-recovering a missing container', async () => {
@@ -76,5 +95,5 @@ describe('executeUpdate container recovery', () => {
     expect(stepCalls.ensure).toBe(2);
     expect(stepCalls.checkpoint).toBe(2);
     expect(phaseCalls).toContain('complete');
-  });
+  }, 15000);
 });

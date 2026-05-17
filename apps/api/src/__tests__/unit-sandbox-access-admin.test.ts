@@ -29,6 +29,12 @@ function matchesClause(row: Record<string, any>, clause: any): boolean {
       return clause.values.includes(row[clause.column]);
     case 'and':
       return clause.clauses.every((child: any) => matchesClause(row, child));
+    case 'or':
+      return clause.clauses.some((child: any) => matchesClause(row, child));
+    case 'gt':
+      return row[clause.column] > clause.value;
+    case 'isNull':
+      return row[clause.column] == null;
     default:
       return true;
   }
@@ -71,16 +77,40 @@ mock.module('@epsilon/db', () => ({
     status: 'status',
     createdAt: 'createdAt',
   },
+  sandboxMembers: {
+    sandboxId: 'sandboxId',
+    userId: 'userId',
+  },
+  sandboxMemberScopes: {
+    sandboxId: 'sandboxId',
+    userId: 'userId',
+    scope: 'scope',
+  },
+  sandboxInvites: {
+    inviteId: 'inviteId',
+    sandboxId: 'sandboxId',
+    invitedUserId: 'invitedUserId',
+    email: 'email',
+    status: 'status',
+    expiresAt: 'expiresAt',
+  },
 }));
 
-mock.module('drizzle-orm', () => ({
-  and: (...clauses: any[]) => ({ type: 'and', clauses }),
-  desc: (column: string) => ({ type: 'desc', column }),
-  eq: (column: string, value: unknown) => ({ type: 'eq', column, value }),
-  inArray: (column: string, values: unknown[]) => ({ type: 'inArray', column, values }),
-  ne: (column: string, value: unknown) => ({ type: 'ne', column, value }),
-  sql: (strings: TemplateStringsArray, ...values: unknown[]) => ({ strings, values }),
-}));
+mock.module('drizzle-orm', () => {
+  const sqlTag = ((strings: TemplateStringsArray, ...values: unknown[]) => ({ strings, values })) as any;
+  sqlTag.join = (items: unknown[]) => ({ type: 'sql_join', items });
+  return {
+    and: (...clauses: any[]) => ({ type: 'and', clauses }),
+    or: (...clauses: any[]) => ({ type: 'or', clauses }),
+    gt: (column: string, value: unknown) => ({ type: 'gt', column, value }),
+    isNull: (column: string) => ({ type: 'isNull', column }),
+    desc: (column: string) => ({ type: 'desc', column }),
+    eq: (column: string, value: unknown) => ({ type: 'eq', column, value }),
+    inArray: (column: string, values: unknown[]) => ({ type: 'inArray', column, values }),
+    ne: (column: string, value: unknown) => ({ type: 'ne', column, value }),
+    sql: sqlTag,
+  };
+});
 
 mock.module('../shared/db', () => ({ db: fakeDb }));
 mock.module('../middleware/auth', () => ({
@@ -93,21 +123,42 @@ mock.module('../shared/platform-roles', () => ({
   isPlatformAdmin: async (accountId: string) => accountId === 'admin-account',
 }));
 mock.module('../config', () => ({
+  SANDBOX_VERSION: '0.8.41',
   config: {
+    SANDBOX_IMAGE: 'epsilon/computer:0.8.41',
     JUSTAVPS_DEFAULT_LOCATION: 'ash',
     JUSTAVPS_DEFAULT_SERVER_TYPE: 'starter',
     EPSILON_BILLING_INTERNAL_ENABLED: false,
     isJustAVPSEnabled: () => true,
   },
 }));
+mock.module('../teams/repositories/accounts', () => ({
+  listUserMemberships: async (_db: any, userId: string) => {
+    if (userId === 'admin-user') return [{ accountId: 'admin-account', role: 'owner' }];
+    if (userId === 'owner-user') return [{ accountId: 'owner-account', role: 'owner' }];
+    return [{ accountId: 'viewer-account', role: 'member' }];
+  },
+  getAccountRole: async (_db: any, userId: string, accountId: string) => {
+    if (userId === 'admin-user' && accountId === 'owner-account') return 'owner';
+    if (userId === 'owner-user' && accountId === 'owner-account') return 'owner';
+    if (userId === 'viewer-user' && accountId === 'owner-account') return null;
+    return null;
+  },
+  ensureAccountMember: async () => undefined,
+  listAccountMembers: async () => [],
+  updateAccountRole: async () => 0,
+  removeAccountMember: async () => undefined,
+}));
 mock.module('../repositories/api-keys', () => ({
   createApiKey: async () => ({ secretKey: 'epsilon_sb_test' }),
+  validateSecretKey: async () => ({ isValid: false, error: 'not mocked' }),
 }));
 mock.module('../pool', () => ({}));
 mock.module('../platform/providers/justavps', () => ({
   JustAVPSProvider: class JustAVPSProvider {},
   justavpsFetch: async () => ({}),
   listServerTypes: async () => [],
+  buildJustAVPSHostRecoveryCommand: () => 'echo ok',
 }));
 mock.module('../platform/providers', () => ({
   getProvider: () => ({

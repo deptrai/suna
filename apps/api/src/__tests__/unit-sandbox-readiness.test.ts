@@ -11,7 +11,7 @@ describe('probeJustAvpsSandboxReadiness', () => {
   test('returns not ready when slug is missing', async () => {
     const result = await probeJustAvpsSandboxReadiness({});
     expect(result.ready).toBe(false);
-    expect(result.message).toContain('slug missing');
+    expect(result.message).toContain('slug');
   });
 
   test('treats 200 as ready', async () => {

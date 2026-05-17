@@ -119,7 +119,7 @@ mock.module('../shared/stripe', () => ({
   }),
 }));
 
-const { resolveAccountId } = await import('../shared/resolve-account');
+const { resolveAccountId } = await import('../shared/resolve-account.ts?unit-resolve-account');
 
 beforeEach(() => {
   state.membership = null;

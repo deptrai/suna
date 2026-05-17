@@ -15,7 +15,7 @@ mock.module('../shared/db', () => ({
   },
 }));
 
-const { getPlatformRole, isPlatformAdmin } = await import('../shared/platform-roles');
+const { getPlatformRole, isPlatformAdmin } = await import('../shared/platform-roles.ts?unit-platform-roles');
 
 describe('platform roles', () => {
   beforeEach(() => {

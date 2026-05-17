@@ -17,6 +17,7 @@ mock.module('../shared/preview-ownership', () => ({
     return false;
   },
   clearPreviewOwnershipCache: () => {},
+  invalidatePreviewCacheForUser: () => {},
 }));
 
 mock.module('../shared/resolve-account', () => ({
@@ -25,9 +26,11 @@ mock.module('../shared/resolve-account', () => ({
 
 mock.module('../shared/platform-roles', () => ({
   isPlatformAdmin: async (accountId: string) => mockAdminAccounts.has(accountId),
+  getPlatformRole: async (accountId: string) => (mockAdminAccounts.has(accountId) ? 'admin' : 'user'),
 }));
 
 mock.module('../repositories/api-keys', () => ({
+  createApiKey: async () => ({ secretKey: 'epsilon_sb_test' }),
   validateSecretKey: async (token: string) => {
     if (token === 'epsilon_owner') {
       return { isValid: true, accountId: 'acct-owner' };
@@ -37,10 +40,6 @@ mock.module('../repositories/api-keys', () => ({
     }
     return { isValid: false, error: 'Invalid Epsilon token' };
   },
-}));
-
-mock.module('../shared/crypto', () => ({
-  isEpsilonToken: (token: string) => token.startsWith('epsilon_'),
 }));
 
 mock.module('../shared/jwt-verify', () => ({
@@ -67,6 +66,7 @@ mock.module('../shared/supabase', () => ({
 }));
 
 mock.module('../config', () => ({
+  SANDBOX_VERSION: 'test',
   config: {
     isLocalDockerEnabled: () => true,
     SANDBOX_CONTAINER_NAME: 'epsilon-sandbox',

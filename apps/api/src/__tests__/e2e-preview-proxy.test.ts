@@ -118,6 +118,7 @@ mock.module('../shared/daytona', () => ({
 }));
 
 mock.module('../config', () => ({
+  SANDBOX_VERSION: 'test',
   config: {
     isDaytonaEnabled: () => true,
     isLocalDockerEnabled: () => false,

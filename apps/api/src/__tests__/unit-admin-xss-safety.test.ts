@@ -8,7 +8,7 @@ describe('admin panel XSS safety', () => {
 
     expect(source).toContain('function escapeHtml(value)');
     expect(source).toContain('escapeHtml(group.title)');
-    expect(source).toContain('escapeHtml(inst.name || inst.sandbox_id.slice(0, 8))');
+    expect(source).toContain('escapeHtml(inst.name || (inst.sandboxId || \'\').slice(0, 8))');
     expect(source).toContain('rel="noopener noreferrer"');
   });
 });

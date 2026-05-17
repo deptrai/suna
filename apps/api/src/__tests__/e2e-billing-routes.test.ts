@@ -155,6 +155,7 @@ mock.module('../shared/stripe', () => ({
 }));
 
 mock.module('../config', () => ({
+  SANDBOX_VERSION: 'test',
   config: {
     STRIPE_WEBHOOK_SECRET: 'whsec_test',
     ENV_MODE: 'cloud',

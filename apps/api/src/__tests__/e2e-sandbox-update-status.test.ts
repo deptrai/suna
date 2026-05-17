@@ -46,6 +46,7 @@ mock.module('../shared/resolve-account', () => ({
 }));
 
 mock.module('../config', () => ({
+  SANDBOX_VERSION: '0.8.41',
   config: {
     SANDBOX_IMAGE: 'epsilon/computer:0.8.41',
   },
