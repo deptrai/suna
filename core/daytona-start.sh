@@ -51,7 +51,7 @@ env | while IFS='=' read -r key value; do
 done
 chown -R abc:users /run/s6/container_environment /workspace "$EPSILON_PERSISTENT_ROOT" 2>/dev/null || true
 
-log "starting epsilon-master on port 8000"
+log "starting epsilon-master on port 8000 (with auto-restart on crash)"
 # Export runtime vars so s6-setuidgid inherits the full environment (including
 # EPSILON_API_URL, EPSILON_TOKEN, INTERNAL_SERVICE_KEY, TUNNEL_*, LLM API keys).
 # Using `exec env VAR=val ...` would create a clean env and silently drop them.
@@ -62,4 +62,11 @@ export OPENCODE_PORT=4096
 export EPSILON_SERVICE_START_WAIT_MS="${EPSILON_SERVICE_START_WAIT_MS:-120000}"
 export EPSILON_OPENCODE_READY_TIMEOUT_MS="${EPSILON_OPENCODE_READY_TIMEOUT_MS:-15000}"
 export PATH="/opt/bun/bin:/usr/local/bin:/usr/bin:/bin"
-exec /command/s6-setuidgid abc /opt/bun/bin/bun run /ephemeral/epsilon-master/src/index.ts
+# Do NOT use exec — we need the while loop to survive Bun segfaults.
+# Bun v1.3.x has known segfault bug after extended runtime; the restart loop
+# recovers automatically without requiring sandbox reprovisioning.
+while true; do
+  /command/s6-setuidgid abc /opt/bun/bin/bun run /ephemeral/epsilon-master/src/index.ts || true
+  log "epsilon-master exited — restarting in 3s..."
+  sleep 3
+done

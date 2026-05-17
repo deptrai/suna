@@ -299,6 +299,7 @@ function validateEnv(): z.infer<typeof envSchema> {
     if (!raw.DAYTONA_API_KEY)    issues.push({ var: 'DAYTONA_API_KEY',    message: 'Required when ALLOWED_SANDBOX_PROVIDERS includes "daytona"', level: 'error' });
     if (!raw.DAYTONA_SERVER_URL) issues.push({ var: 'DAYTONA_SERVER_URL', message: 'Required when ALLOWED_SANDBOX_PROVIDERS includes "daytona"', level: 'error' });
     if (!raw.DAYTONA_TARGET)     issues.push({ var: 'DAYTONA_TARGET',     message: 'Required when ALLOWED_SANDBOX_PROVIDERS includes "daytona"', level: 'error' });
+    if (!raw.DAYTONA_SNAPSHOT)   issues.push({ var: 'DAYTONA_SNAPSHOT',   message: 'Required when ALLOWED_SANDBOX_PROVIDERS includes "daytona" — set to Docker image (e.g. epsilonaicrypto/computer:stable-1)', level: 'error' });
   }
 
   // ── Conditional: local_docker → need DOCKER_HOST ───────────────────────
