@@ -108,4 +108,81 @@ describe('onchain-fact-check route', () => {
     });
     expect(res.status).toBe(402);
   });
+
+  test('[P0] missing token_address => 400', async () => {
+    const app = makeApp();
+    const res = await app.request('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chain: 'ethereum' }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  test('[P0] invalid token_address format (not 0x hex40) => 400', async () => {
+    const app = makeApp();
+    const res = await app.request('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chain: 'ethereum', token_address: 'not-an-address' }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  test('[P0] malformed JSON body => 400', async () => {
+    const app = makeApp();
+    const res = await app.request('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{invalid-json',
+    });
+    expect(res.status).toBe(400);
+  });
+
+  test('[P1] valid body with all optional fields => 200', async () => {
+    const app = makeApp();
+    const res = await app.request('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chain: 'base',
+        token_address: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+        token_symbol: 'USDC',
+        discover_feed_id: '00000000-0000-0000-0000-000000000001',
+        article_title: 'Partnership announced',
+        article_sentiment: 'positive',
+        force_refresh: false,
+        session_id: 'sess-abc123',
+      }),
+    });
+    expect(res.status).toBe(200);
+  });
+
+  test('[P1] invalid article_sentiment enum value => 400', async () => {
+    const app = makeApp();
+    const res = await app.request('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chain: 'ethereum',
+        token_address: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+        article_sentiment: 'bullish', // invalid enum
+      }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  test('[P2] session_id with invalid characters => 400', async () => {
+    const app = makeApp();
+    const res = await app.request('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chain: 'ethereum',
+        token_address: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+        session_id: 'invalid session id!',
+      }),
+    });
+    expect(res.status).toBe(400);
+  });
 });

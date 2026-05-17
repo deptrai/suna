@@ -33,7 +33,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-17 (Story 2.2.1 moved to review after implementation; Story 2.1.2 code-review complete: 17 patches P1-P17 applied across 4 chunks, 58/58 tests pass; Story 2.1.1 moved to review after implementation; Story 3.4 code-review applied 34/36 patches)
+last_updated: 2026-05-17 (Story 2.0.1 created: shared multi-provider RPC client + circuit breaker + Telegram alerts + health endpoint; Story 2.2.1 moved to review; Story 2.1.2 code-review: 17 patches, 58/58 tests pass)
 project: chainlens
 project_key: NOKEY
 tracking_system: file-system
@@ -52,6 +52,7 @@ development_status:
 
   # Epic 2: Crypto Data Infrastructure
   epic-2: in-progress
+  2-0-1-shared-multi-provider-rpc-client: ready-for-dev  # 2026-05-17: infrastructure story — shared JSON-RPC client, circuit breaker, Telegram admin alerts, health endpoint
   2-1-crypto-data-worker-with-bullmq: done
   2-1-1-mempool-sniffing-mev-tracking: done  # 2026-05-17 code-review: 32 patches applied (all CRITICAL+HIGH+MED), 5 deferred
   2-1-2-entity-hacker-wallet-tracking: done  # 2026-05-17: code-review done, 17 patches (P1-P17), 58/58 tests pass; Arkham service, BullMQ worker, API route, OpenCode tool

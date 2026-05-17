@@ -68,12 +68,18 @@ export interface OnchainFactCheckInput {
 const TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
 const ROLE_SET = new Set<WalletRole>(['dev', 'treasury', 'team', 'foundation', 'market_maker', 'exchange', 'unknown']);
 const FACT_CHECK_CACHE_MS = Math.max(config.ONCHAIN_FACT_CHECK_LOOKBACK_HOURS, 1) * 60 * 60 * 1000;
-const ETHERSCAN_CHAIN_MAP: Record<string, { baseUrl: string; apiKey: string }> = {
-  ethereum: { baseUrl: 'https://api.etherscan.io', apiKey: config.ETHERSCAN_API_KEY || '' },
-  base: { baseUrl: 'https://api.basescan.org', apiKey: config.BASESCAN_API_KEY || config.ETHERSCAN_API_KEY || '' },
-  arbitrum: { baseUrl: 'https://api.arbiscan.io', apiKey: config.ARBISCAN_API_KEY || config.ETHERSCAN_API_KEY || '' },
-  polygon: { baseUrl: 'https://api.polygonscan.com', apiKey: config.POLYGONSCAN_API_KEY || config.ETHERSCAN_API_KEY || '' },
+const ETHERSCAN_BASE_URLS: Record<string, string> = {
+  ethereum: 'https://api.etherscan.io',
+  base: 'https://api.basescan.org',
+  arbitrum: 'https://api.arbiscan.io',
+  polygon: 'https://api.polygonscan.com',
 };
+function getEtherscanApiKey(chain: string): string {
+  if (chain === 'base') return config.BASESCAN_API_KEY || config.ETHERSCAN_API_KEY || '';
+  if (chain === 'arbitrum') return config.ARBISCAN_API_KEY || config.ETHERSCAN_API_KEY || '';
+  if (chain === 'polygon') return config.POLYGONSCAN_API_KEY || config.ETHERSCAN_API_KEY || '';
+  return config.ETHERSCAN_API_KEY || '';
+}
 const BLOCKSCOUT_CHAIN_MAP: Record<string, string> = {
   ethereum: 'https://eth.blockscout.com',
   base: 'https://base.blockscout.com',
@@ -238,10 +244,11 @@ async function getEtherscanMetrics(
   wallet: WatchWallet,
   lookbackHours: number,
 ): Promise<WalletTransferMetrics> {
-  const conf = ETHERSCAN_CHAIN_MAP[chain];
-  if (!conf || !conf.apiKey) throw new Error(`Etherscan key missing for chain ${chain}`);
+  const baseUrl = ETHERSCAN_BASE_URLS[chain];
+  const apiKey = getEtherscanApiKey(chain);
+  if (!baseUrl || !apiKey) throw new Error(`Etherscan key missing for chain ${chain}`);
   const lookbackFrom = Date.now() - lookbackHours * 3600 * 1000;
-  const url = `${conf.baseUrl}/api?module=account&action=tokentx&contractaddress=${encodeURIComponent(tokenAddress)}&address=${encodeURIComponent(wallet.walletAddress)}&page=1&offset=${Math.max(config.ONCHAIN_FACT_CHECK_MAX_TRANSFERS_PER_WALLET, 1)}&sort=desc&apikey=${encodeURIComponent(conf.apiKey)}`;
+  const url = `${baseUrl}/api?module=account&action=tokentx&contractaddress=${encodeURIComponent(tokenAddress)}&address=${encodeURIComponent(wallet.walletAddress)}&page=1&offset=${Math.max(config.ONCHAIN_FACT_CHECK_MAX_TRANSFERS_PER_WALLET, 1)}&sort=desc&apikey=${encodeURIComponent(apiKey)}`;
   const res = await fetch(url, { signal: AbortSignal.timeout(8_000) });
   if (!res.ok) throw new Error(`Etherscan HTTP ${res.status}`);
   const body = await res.json() as { status?: string; result?: Array<Record<string, string>>; message?: string };
@@ -444,7 +451,8 @@ export async function runOnchainFactCheck(input: OnchainFactCheckInput): Promise
   }
 
   let walletMetrics: WalletTransferMetrics[] = [];
-  let source: OnchainFactCheckResult['source'] = 'quicknode';
+  const _cfgProvider = config.ONCHAIN_FACT_CHECK_PROVIDER;
+  let source: OnchainFactCheckResult['source'] = _cfgProvider === 'etherscan' ? 'etherscan' : _cfgProvider === 'blockscout' ? 'blockscout' : 'quicknode';
   let lastErr: string | null = null;
   for (const wallet of watched) {
     try {
