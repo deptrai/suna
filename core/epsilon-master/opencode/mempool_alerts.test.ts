@@ -44,4 +44,28 @@ describe('mempool_alerts tool', () => {
     expect(calledUrl).toContain('limit=100');
     expect(calledUrl).toContain('since_minutes=1440');
   });
+
+  test('surfaces upstream HTTP errors with bounded body text', async () => {
+    (global.fetch as any).mockResolvedValue({
+      ok: false,
+      status: 503,
+      text: async () => 'service unavailable'.repeat(50),
+    });
+
+    const result = await mempoolAlertsTool.execute({ chain: 'base' }, {} as any);
+    const parsed = JSON.parse(result as string);
+    expect(parsed.success).toBe(false);
+    expect(parsed.error).toContain('Proxy error 503:');
+    expect(parsed.error.length).toBeLessThan(700);
+  });
+
+  test('surfaces network failures as Network error', async () => {
+    (global.fetch as any).mockRejectedValueOnce(new Error('socket hang up'));
+
+    const result = await mempoolAlertsTool.execute({ chain: 'ethereum' }, {} as any);
+    const parsed = JSON.parse(result as string);
+    expect(parsed.success).toBe(false);
+    expect(parsed.error).toContain('Network error:');
+    expect(parsed.error).toContain('socket hang up');
+  });
 });

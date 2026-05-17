@@ -1,42 +1,93 @@
 ---
-stepsCompleted: ['step-01-preflight-and-context', 'step-02-identify-targets']
-lastStep: 'step-02-identify-targets'
-lastSaved: '2026-05-10T00:00:00Z'
-inputDocuments: ['_bmad-output/implementation-artifacts/3-3-generative-ai-chat-widgets.md']
+stepsCompleted: ['step-01-preflight-and-context', 'step-02-identify-targets', 'step-03-generate-tests']
+lastStep: 'step-03-generate-tests'
+lastSaved: '2026-05-17T07:00:00Z'
+inputDocuments:
+  - /Users/luisphan/Documents/suna/_bmad-output/implementation-artifacts/2-1-1-mempool-sniffing-mev-tracking.md
+  - /Users/luisphan/Documents/suna/_bmad-output/planning-artifacts/prd.md
+  - /Users/luisphan/Documents/suna/_bmad-output/planning-artifacts/architecture.md
 ---
 
 ## Step 1: Preflight & Context Loading Summary
 
-- **Execution Mode**: Standalone (Auto-discover for `apps/api/src/integrations`)
-- **Detected Stack**: backend
-- **Framework Status**: Validated (`bun:test` found)
-- **Loaded Knowledge Fragments**: 
-  - Core fragments
-  - API Testing Patterns
+- `BMad-Integrated` mode
+- `fullstack` stack detected
+- Framework validated via `tests/playwright.config.ts`
+- `playwright-cli` not installed, so browser exploration skipped
+- Loaded knowledge:
+  - `test-levels-framework.md`
+  - `test-priorities-matrix.md`
+  - `data-factories.md`
+  - `selective-testing.md`
+  - `ci-burn-in.md`
+  - `test-quality.md`
+  - `api-testing-patterns.md`
+  - `fixture-architecture.md`
+  - `overview.md`
 
 ## Step 2: Automation Targets & Coverage Plan
 
-### 1. Targets by Test Level
+### Targets
 
-**API Tests (`tests/unit/integrations/routes.test.ts`)**
-- `POST /connections/save`: Insert integration and auto-link to active sandboxes.
-- `POST /connections/sync`: Sync missing integrations from provider.
-- `GET /connections`: List connections.
-- `POST /webhook`: Webhook validation (HMAC sig check) and saving integration.
-- `POST /connections/proxy`: Proxy requests to the integration provider.
+Primary target: Story 2.1.1 mempool sniffing and MEV tracking worker.
 
-**Sandbox API Tests (`tests/unit/integrations/sandbox-routes.test.ts`)**
-- `POST /token`: Retrieve connection tokens using a valid sandboxId.
-- `POST /proxy`: Execute proxy via sandbox link, validating link ownership.
-- `GET /list`: List connected integrations for sandbox.
-- `POST /run-action`: Test executing remote provider action.
-- Trigger Routes (`/triggers/available`, `/triggers/deploy`, `/triggers/deployed`, `/triggers/deployed/:id`): Check trigger lifecycle and active status updates.
+### Test Levels
 
-### 2. Priority Assignments
+- `Unit`
+- `Integration / API`
 
-- **P0**: Core flow & auth: `POST /connections/save`, `POST /webhook` (Security/HMAC validation), `POST /token`, `POST /connections/proxy`.
-- **P1**: Operational endpoints: `/list`, `/sync`, `/run-action`, Trigger management.
-- **P2**: Search & Labeling: `/apps`, `/search-apps`, `PATCH /connections/:integrationId/label`.
+### Priority
 
-### 3. Justification for Coverage Scope
-Integration routes map directly to external data (Pipedream), user sandbox authorization, and webhooks. Testing these guarantees that our API keys are secure, sandboxes only execute against authorized providers, and webhooks properly validate their signatures before mutating state.
+- `P0`: parser/classifier correctness, route contract, auth/billing guardrails
+- `P1`: worker lifecycle, queue/job registration, websocket normalization
+- `P2`: OpenCode wrapper ergonomics and sanitized error handling
+
+### Coverage Plan
+
+- `apps/api/src/router/services/mempool.ts`
+- `apps/api/src/queue/bullmq/workers/mempool-worker.ts`
+- `apps/api/src/router/routes/mempool-alerts.ts`
+- `apps/api/src/router/index.ts` auth mounting for `/v1/router/mempool-alerts`
+- `core/epsilon-master/opencode/tools/mempool_alerts.ts`
+
+### Existing Coverage Found
+
+- Parser coverage already exists for large swap, malformed input, and non-router tx.
+- Route coverage already exists for shape and limit clamping.
+- Tool wrapper coverage already exists for env handling and URL clamping.
+
+### Gaps To Fill
+
+- Missing auth + billing integration coverage for the mempool alerts route.
+- Missing worker lifecycle coverage for disabled startup, missing WSS config, and scheduler setup.
+- Missing negative-path coverage for OpenCode tool upstream errors.
+
+### Strategy
+
+- Keep logic-heavy checks at unit level.
+- Use integration/API tests for auth, billing, and route contract.
+- Avoid E2E/browser tests because this feature has no new UI journey.
+
+## Step 3: Generated Test Coverage
+
+- Execution mode resolved to `sequential` because subagent dispatch was not used in this run.
+- Added integration coverage for `/v1/router/mempool-alerts` auth + billing + route wiring.
+- Added worker lifecycle coverage for disabled startup, missing WSS config, scheduler registration, and shutdown cleanup.
+- Expanded OpenCode tool coverage for upstream HTTP failures and network exceptions.
+
+### Files Written
+
+- `apps/api/src/__tests__/integrations/mempool-alerts.integration.test.ts`
+- `apps/api/src/__tests__/unit/mempool-worker.test.ts`
+- `core/epsilon-master/opencode/mempool_alerts.test.ts`
+
+### Validation
+
+- `bun test apps/api/src/__tests__/unit/mempool-service.test.ts apps/api/src/__tests__/unit/mempool-alerts-route.test.ts apps/api/src/__tests__/integrations/mempool-alerts.integration.test.ts apps/api/src/__tests__/unit/mempool-worker.test.ts`
+- `bun test apps/api/src/__tests__/integrations/mempool-alerts.integration.test.ts`
+- `bun test apps/api/src/__tests__/unit/mempool-worker.test.ts`
+- `bunx vitest run core/epsilon-master/opencode/mempool_alerts.test.ts`
+
+### Fixture Needs
+
+- None beyond the existing local `bun:test` and `vitest` mocks.
