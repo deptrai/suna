@@ -94,3 +94,4 @@ _bmad/
 .serena/
 .symdex/
 
+apps/api/.env.cloud-test
