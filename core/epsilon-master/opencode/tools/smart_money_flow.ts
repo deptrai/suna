@@ -19,7 +19,7 @@ const SUPPORTED_CHAINS = new Set(['ethereum', 'base', 'arbitrum', 'polygon', 'so
 
 export default tool({
   description:
-    "Analyze smart money and whale activity for a token using Nansen data (Tier 2 only). " +
+    "Analyze smart money and whale activity for a token using Nansen data. " +
     "Modes: 'token_god_mode' (full TGM analysis), 'smart_money_netflow' (net buy/sell flows), " +
     "'top_buyers' (top wallets buying), 'top_sellers' (top wallets selling), 'exchange_flows' (CEX in/outflows). " +
     "Returns risk_level, smart money signal, top buyers/sellers, exchange flows, and cache status. " +
@@ -62,6 +62,7 @@ export default tool({
     if (!epsilonToken) return JSON.stringify({ success: false, error: "EPSILON_TOKEN not set." }, null, 2);
     if (!epsilonApiUrl) return JSON.stringify({ success: false, error: "EPSILON_API_URL not set." }, null, 2);
 
+    const baseUrl = epsilonApiUrl.replace(/\/+$/, "");
     const chain = (args.chain?.trim().toLowerCase()) ?? 'ethereum';
     const token_address = args.token_address?.trim();
     const mode = (args.mode?.trim() ?? 'token_god_mode') as string;
@@ -101,7 +102,7 @@ export default tool({
     if (args.session_id) body.session_id = args.session_id.slice(0, 128);
 
     try {
-      const res = await fetch(`${epsilonApiUrl}/router/smart-money-flow`, {
+      const res = await fetch(`${baseUrl}/v1/router/smart-money-flow`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

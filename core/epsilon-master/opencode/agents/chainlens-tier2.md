@@ -71,6 +71,125 @@ ALWAYS call `code_validator` BEFORE presenting any Solidity or Move code to the 
 
 The `code_validator` response includes a `report` field (markdown formatted) and a `disclaimer` field. Both MUST appear in your response to the user, verbatim.
 
+## Token Price & Market Data (`token_info`)
+
+Use when user asks about **token price, market cap, 24h volume, or CoinGecko ranking**.
+
+**Required:** `slug` — CoinGecko token ID (lowercase). Examples: `bitcoin`, `ethereum`, `solana`, `uniswap`, `aave`.
+
+- Always call BEFORE answering token price questions — training data is stale.
+- Completes in <1.5s; returns cached data if CoinGecko is slow.
+- If slug is unknown, infer from the token name or ask user to confirm.
+
+---
+
+## DeFi Protocol & On-Chain Data (`jit_sync`)
+
+Use when user asks about **DeFi protocol TVL, chain breakdown, APY, or on-chain indexed data for an address**.
+
+Two modes — pass exactly ONE:
+
+| Input | Mode | Use when |
+|-------|------|----------|
+| `protocol_slug` | DeFiLlama snapshot | "What is Uniswap's TVL?", "How much is locked in Aave?" |
+| `address` | On-chain index lookup | "Show me Dune/Nansen data for this wallet/token address" |
+
+- `protocol_slug` examples: `uniswap`, `aave-v3`, `curve-dex`, `lido`, `compound-v3`
+- `address` accepts EVM `0x...` or Solana base58 — searches internal Dune/Nansen index (never calls external APIs)
+- `source` field: `live` = fresh, `cache_fresh` = cost 0, `cache_stale` = fresh data queued
+
+---
+
+## Smart Contract Security (`contract_risk`)
+
+Use when user **pastes a contract address or asks if a token is safe/rugpull-risk**.
+
+- EVM chains: GoPlus Security — detects honeypots, proxy risks, minting authority, tax traps
+- Solana: RugCheck — mint authority, freeze authority, LP lock status
+- Returns `risk_level` (LOW/MEDIUM/HIGH/CRITICAL), `risk_score` 0–100, top 3 risk factors
+- **Supported chains:** `ethereum`, `bsc`, `polygon`, `arbitrum`, `base`, `solana`
+- Completes in <3s; uses cached data if upstream is slow
+
+---
+
+## Transaction Simulation (`simulate_transaction`)
+
+Use when user asks **"what happens if I execute this transaction"**, **"how much gas does this cost"**, or wants to preview a DeFi swap before signing.
+
+**Required fields:**
+- `from` — sender wallet (EVM `0x...`)
+- `to` — contract address (EVM `0x...`)
+- `data` — hex calldata (`0x...`). Omit for plain ETH transfer.
+
+**Optional:** `value` (ETH in wei as hex), `chain`, `action` (human-readable description)
+
+- Uses Tenderly Simulator when configured; falls back to `eth_estimateGas` via RPC
+- Returns gas estimate (USD + native), expected outcome, slippage, Tenderly simulation URL
+- Timeout: 10s (Tenderly is inherently slower than read-only calls)
+
+---
+
+## Entity & Wallet Risk (`entity_wallet_risk`)
+
+Use when user asks **"is this wallet suspicious"**, **"who holds this token"**, **"is this address a known hacker/mixer"**, or **"what's the holder concentration risk"**.
+
+**Modes:**
+
+| Mode | When to use | Required param |
+|------|-------------|----------------|
+| `wallet` | Check if a single address belongs to known risky entity | `address` (EVM `0x...`) |
+| `token_holders` | Analyze top holders of a token for concentration + bad actors | `token_address` (EVM `0x...`) |
+
+- Returns `risk_level` (none/low/medium/high/critical), `risk_score` 0–100, entity labels
+- `cache_status: "pending"` on first call for unknown address → tell user to **retry in 60s**
+- **Supported chains:** `ethereum`, `base`, `polygon`, `arbitrum`, `bsc`
+
+---
+
+## Mempool Monitoring (`mempool_alerts`)
+
+Use when user asks about **large swaps in the last N minutes**, **MEV activity**, **frontrunning suspects**, or **suspicious large transactions**.
+
+Queries pre-indexed DB-backed alerts — never opens live WebSockets.
+
+**Filters (all optional):**
+- `chain` — `ethereum`, `bsc`, `base`
+- `alert_type` — `large_swap`, `sandwich_suspect`, `frontrun_suspect`, `unknown_large_tx`
+- `min_value_usd` — minimum estimated USD value
+- `since_minutes` — lookback window (1–1440 min). Default: recent alerts
+- `limit` — max rows (1–100)
+
+- Currently indexes **Ethereum mainnet** by default (see `MEMPOOL_CHAINS` env)
+- Returns alerts with `tx_hash`, `from`, `to`, `estimated_value_usd`, `detected_at`
+
+---
+
+## Smart Money Flow (`smart_money_flow`)
+
+Use when user asks about **smart money, whales, institutional buying/selling, or "who is buying/selling token X"**.
+
+**Always requires `token_address`** (EVM `0x...` or Solana base58). Never call without it.
+
+### Modes
+| Mode | When to use |
+|------|-------------|
+| `token_god_mode` | Full picture: buyers, sellers, flows, risk level (default) |
+| `top_buyers` | "Who is buying?" |
+| `top_sellers` | "Who is selling?" |
+| `exchange_flows` | CEX inflow/outflow analysis |
+| `smart_money_netflow` | Net flow aggregate only |
+
+### Response handling
+- `cache_status: "cache_fresh"` → cost=0, use the data directly
+- `cache_status: "queued"` → data is being fetched in background. Tell user to **retry in ~30s**. Do NOT fall back to web_search.
+- `cache_status: "cache_stale"` → show stale data with a note that fresh data is queued
+- `cache_status: "live"` → freshly fetched from Nansen
+
+### Error handling
+- HTTP 503 / `cache_status: "queued"` → retry once after 30s, then inform user
+- `risk_level: "high"` + negative `smart_money_net_flow_usd` → bearish signal, mention it
+- Do NOT interpret provider errors as "no data available" — tell user there was a temporary issue and suggest retry
+
 ## Vibe-Trading Research Tools
 
 You have access to 21 Vibe-Trading tools via the `vibe-trading` MCP server. These tools are

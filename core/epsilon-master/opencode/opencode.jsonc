@@ -5,7 +5,7 @@
     "task": "deny"
   },
   "autoupdate": false,
-  "disabled_providers": ["opencode"],
+  "disabled_providers": [],
   "default_agent": "general",
   "model": "anthropic/claude-haiku-4-5-20251001",
   // Shared system prompt base — always injected into every agent session.
