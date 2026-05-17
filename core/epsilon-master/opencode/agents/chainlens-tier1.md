@@ -13,6 +13,7 @@ permission:
   vibe_trading_backtest: deny
   entity_wallet_risk: deny
   mempool_alerts: deny
+  smart_money_flow: deny
   bash: deny
   read: deny
   edit: deny

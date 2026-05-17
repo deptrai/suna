@@ -13,6 +13,7 @@ permission:
   vibe_trading_backtest: allow
   entity_wallet_risk: allow
   mempool_alerts: allow
+  smart_money_flow: allow
   code_validator: allow
   bash: allow
   read: allow

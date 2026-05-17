@@ -243,6 +243,19 @@ const envSchema = z.object({
   DUNE_TOKEN_HOLDERS_QUERY_ID: optStr,
   DUNE_POLL_TIMEOUT_MS:        optInt(120_000),
   NANSEN_API_KEY:              optStr,
+  NANSEN_API_BASE_URL:         optUrl('https://api.nansen.ai/api/v1'),
+  // Nansen Smart Money / Token God Mode Worker (Story 2.3.1)
+  // Rate limits: 20 req/sec, 300 req/min per API key.
+  // Credit costs (Pro plan): Smart Money endpoints = 5 credits/call; TGM endpoints = 1 credit/call.
+  // Free plan consumes 10x credits for these endpoint classes.
+  NANSEN_SMART_MONEY_WORKER_ENABLED:            optBoolFalse,
+  NANSEN_SMART_MONEY_CHAINS:                    optStrDefault('ethereum,base,arbitrum,polygon,solana'),
+  NANSEN_SMART_MONEY_SYNC_INTERVAL_MS:          optInt(300_000),
+  NANSEN_SMART_MONEY_CACHE_TTL_MS:              optInt(300_000),
+  NANSEN_SMART_MONEY_CONCURRENCY:               optInt(1),
+  NANSEN_SMART_MONEY_TOP_N:                     optInt(20),
+  NANSEN_SMART_MONEY_LOOKBACK_HOURS:            optInt(1),
+  NANSEN_SMART_MONEY_MAX_LIVE_CALLS_PER_REQUEST: optInt(3),
   ONCHAIN_WORKER_ENABLED:      optBoolFalse,
   ONCHAIN_RETENTION_DAYS:      optInt(30),
   MORALIS_API_KEY:             optStr,
@@ -682,6 +695,15 @@ export const config = {
   DUNE_TOKEN_HOLDERS_QUERY_ID: env.DUNE_TOKEN_HOLDERS_QUERY_ID,
   DUNE_POLL_TIMEOUT_MS: env.DUNE_POLL_TIMEOUT_MS,
   NANSEN_API_KEY: env.NANSEN_API_KEY,
+  NANSEN_API_BASE_URL: env.NANSEN_API_BASE_URL,
+  NANSEN_SMART_MONEY_WORKER_ENABLED: env.NANSEN_SMART_MONEY_WORKER_ENABLED,
+  NANSEN_SMART_MONEY_CHAINS: env.NANSEN_SMART_MONEY_CHAINS,
+  NANSEN_SMART_MONEY_SYNC_INTERVAL_MS: env.NANSEN_SMART_MONEY_SYNC_INTERVAL_MS,
+  NANSEN_SMART_MONEY_CACHE_TTL_MS: env.NANSEN_SMART_MONEY_CACHE_TTL_MS,
+  NANSEN_SMART_MONEY_CONCURRENCY: env.NANSEN_SMART_MONEY_CONCURRENCY,
+  NANSEN_SMART_MONEY_TOP_N: env.NANSEN_SMART_MONEY_TOP_N,
+  NANSEN_SMART_MONEY_LOOKBACK_HOURS: env.NANSEN_SMART_MONEY_LOOKBACK_HOURS,
+  NANSEN_SMART_MONEY_MAX_LIVE_CALLS_PER_REQUEST: env.NANSEN_SMART_MONEY_MAX_LIVE_CALLS_PER_REQUEST,
 
   // ─── Story 3.4 — Token Detail Page API keys ───────────────────────────────
   MORALIS_API_KEY: env.MORALIS_API_KEY,
@@ -928,6 +950,13 @@ export const TOOL_PRICING: Record<string, ToolPricing> = {
   },
   vibe_trading_backtest: {
     baseCost: 1.00,
+    perResultCost: 0,
+    markupMultiplier: 1.0,
+  },
+  // Live Nansen API call: 5 Nansen credits (Smart Money) or 1 credit (TGM) ≈ $0.05–$0.25 per call.
+  // Conservative starting price — revisit after usage data.
+  smart_money_flow: {
+    baseCost: 0.20,
     perResultCost: 0,
     markupMultiplier: 1.0,
   },

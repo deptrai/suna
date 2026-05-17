@@ -13,3 +13,9 @@ export {
   getOnchainFactCheckQueue,
   enqueueDiscoverFactCheck,
 } from './bullmq/workers/onchain-fact-check-worker';
+export {
+  startNansenSmartMoneyWorker,
+  setupNansenSmartMoneyJobs,
+  stopNansenSmartMoneyWorker,
+  getNansenSmartMoneyQueue,
+} from './bullmq/workers/nansen-smart-money-worker';

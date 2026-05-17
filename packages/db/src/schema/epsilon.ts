@@ -1301,3 +1301,69 @@ export const onchainFactChecks = epsilonSchema.table(
     index('idx_onchain_fact_checks_risk_checked').on(table.riskLevel, table.checkedAt),
   ],
 );
+
+// ─── Nansen Smart Money Flows (Story 2.3.1) ──────────────────────────────────
+
+export const nansenSmartMoneyFlows = epsilonSchema.table(
+  'nansen_smart_money_flows',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    chain: varchar('chain', { length: 32 }).notNull(),
+    tokenAddress: varchar('token_address', { length: 128 }).notNull(),
+    tokenSymbol: varchar('token_symbol', { length: 64 }),
+    // metric_type: holdings | netflow | tgm_who_bought | tgm_who_sold | tgm_flow_smart_money | tgm_flow_exchange
+    metricType: varchar('metric_type', { length: 64 }).notNull(),
+    // time_window: 1h | 24h | 7d
+    timeWindow: varchar('time_window', { length: 32 }).notNull(),
+    // direction: inflow | outflow | buy | sell | neutral
+    direction: varchar('direction', { length: 32 }),
+    amountUsd: numeric('amount_usd', { precision: 24, scale: 4 }),
+    netFlowUsd: numeric('net_flow_usd', { precision: 24, scale: 4 }),
+    walletCount: integer('wallet_count'),
+    traderCount: integer('trader_count'),
+    topWallets: jsonb('top_wallets').notNull().default([]).$type<Record<string, unknown>[]>(),
+    flowBreakdown: jsonb('flow_breakdown').notNull().default({}).$type<Record<string, unknown>>(),
+    riskFactors: jsonb('risk_factors').notNull().default([]).$type<Record<string, unknown>[]>(),
+    source: varchar('source', { length: 32 }).notNull().default('nansen'),
+    providerCreditCost: integer('provider_credit_cost'),
+    cacheExpiresAt: timestamp('cache_expires_at', { withTimezone: true }).notNull(),
+    fetchedAt: timestamp('fetched_at', { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('idx_nansen_flows_token_time').on(table.chain, table.tokenAddress, table.metricType, table.fetchedAt),
+    index('idx_nansen_flows_expires').on(table.cacheExpiresAt),
+    uniqueIndex('uq_nansen_flows_chain_token_metric_window_source').on(table.chain, table.tokenAddress, table.metricType, table.timeWindow, table.source),
+  ],
+);
+
+// ─── Nansen Token God Mode Cache (Story 2.3.1) ───────────────────────────────
+
+export const nansenTokenGodModeCache = epsilonSchema.table(
+  'nansen_token_god_mode_cache',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    chain: varchar('chain', { length: 32 }).notNull(),
+    tokenAddress: varchar('token_address', { length: 128 }).notNull(),
+    tokenSymbol: varchar('token_symbol', { length: 64 }),
+    summary: jsonb('summary').notNull().default({}).$type<Record<string, unknown>>(),
+    topBuyers: jsonb('top_buyers').notNull().default([]).$type<Record<string, unknown>[]>(),
+    topSellers: jsonb('top_sellers').notNull().default([]).$type<Record<string, unknown>[]>(),
+    smartMoneyFlows: jsonb('smart_money_flows').notNull().default({}).$type<Record<string, unknown>>(),
+    exchangeFlows: jsonb('exchange_flows').notNull().default({}).$type<Record<string, unknown>>(),
+    // status: queued | complete | partial | provider_unavailable | rate_limited | forbidden
+    status: varchar('status', { length: 32 }).notNull().default('complete'),
+    source: varchar('source', { length: 32 }).notNull().default('nansen'),
+    providerCreditCost: integer('provider_credit_cost'),
+    cacheExpiresAt: timestamp('cache_expires_at', { withTimezone: true }).notNull(),
+    fetchedAt: timestamp('fetched_at', { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('idx_nansen_tgm_token').on(table.chain, table.tokenAddress),
+    index('idx_nansen_tgm_expires').on(table.cacheExpiresAt),
+    uniqueIndex('uq_nansen_tgm_chain_token_source').on(table.chain, table.tokenAddress, table.source),
+  ],
+);

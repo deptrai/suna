@@ -18,6 +18,7 @@ import { vibeTrading } from './routes/vibe-trading';
 import { mempoolAlertsRoute } from './routes/mempool-alerts';
 import { entityWalletRisk } from './routes/entity-wallet-risk';
 import { onchainFactCheck } from './routes/onchain-fact-check';
+import { smartMoneyFlow } from './routes/smart-money-flow';
 import { llm } from './routes/llm';
 import { proxy } from './routes/proxy';
 import { anthropic } from './routes/anthropic';
@@ -52,6 +53,7 @@ router.use('/vibe-trading/*', combinedAuth);
 router.use('/mempool-alerts/*', combinedAuth);
 router.use('/entity-wallet-risk/*', combinedAuth);
 router.use('/onchain-fact-check/*', combinedAuth);
+router.use('/smart-money-flow/*', combinedAuth);
 router.route('/web-search', webSearch);
 router.route('/image-search', imageSearch);
 router.route('/deep-research', deepResearch);
@@ -68,6 +70,7 @@ router.route('/vibe-trading', vibeTrading);
 router.route('/mempool-alerts', mempoolAlertsRoute);
 router.route('/entity-wallet-risk', entityWalletRisk);
 router.route('/onchain-fact-check', onchainFactCheck);
+router.route('/smart-money-flow', smartMoneyFlow);
 
 // Public routes (no auth — FR5: discover feed public for all tiers)
 router.route('/narratives', narratives);

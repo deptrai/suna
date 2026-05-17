@@ -90,3 +90,47 @@ Body: `{ mode, chain, address?, token_address?, session_id? }`
 - `raw_response` column is never included in tool responses (provider ToS risk).
 - First call for an unknown token address triggers a BullMQ job (`analyze-token-holders`) and returns `cache_status: 'pending'`. Retry after 60s.
 - Worker only runs if `ARKHAM_WORKER_ENABLED=true` and `ARKHAM_API_KEY` is set.
+
+---
+
+## smart_money_flow
+
+**File**: `smart_money_flow.ts`
+
+**Tier**: Tier 2 only (`chainlens-tier2.md` — `smart_money_flow: allow`, Tier 1 denied)
+
+**Purpose**: Analyze smart money and whale activity for a token using Nansen data. Modes: `token_god_mode` (full TGM analysis), `smart_money_netflow` (net buy/sell flows), `top_buyers`, `top_sellers`, `exchange_flows`.
+
+### Cache behavior
+
+| `cache_status` | Meaning | Cost |
+|---|---|---|
+| `cache_fresh` | Returned from DB cache within TTL | 0 |
+| `cache_stale` | Returned from expired cache (provider rate-limited) | 0 |
+| `live` | Freshly fetched from Nansen | credits deducted |
+| `queued` | No cache; background job enqueued — retry in 30s | 0 |
+
+### Provider boundary
+
+- Tool calls epsilon-api only (`EPSILON_API_URL/v1/router/smart-money-flow`). **Never uses `NANSEN_API_KEY` directly.**
+- `NANSEN_API_KEY` stays strictly backend-only (`apps/api/src/router/services/nansen.ts`). Never forwarded to OpenCode, frontend, or error responses.
+
+### Backend route
+
+`POST /v1/router/smart-money-flow`
+
+Body: `{ chain, token_address, mode, lookback_hours?, limit?, force_refresh?, session_id? }`
+
+### Supported chains
+
+`ethereum`, `base`, `arbitrum`, `polygon`, `solana`, `bsc`, `avalanche`, `optimism`
+
+### Billing
+
+0.20 credit per live provider fetch (`smart_money_flow` in `TOOL_PRICING`). Cache hits cost 0.
+
+### Key constraints
+
+- Worker only runs if `NANSEN_SMART_MONEY_WORKER_ENABLED=true` and `NANSEN_API_KEY` is set.
+- Worker uses `Promise.allSettled` — partial TGM data (some calls fail) is committed with `status: 'partial'`.
+- `attribution: 'Powered by Nansen API'` must be shown to users per provider ToS.

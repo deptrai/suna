@@ -1,6 +1,6 @@
 # Story 2.3.1: VIP API Smart Money Flow & Token God Mode
 
-Status: ready-for-dev
+Status: review
 
 Epic: 2 — Crypto Data Infrastructure
 Created: 2026-05-17
@@ -185,70 +185,70 @@ so that Agent có thể trả lời câu hỏi như "ví cá mập/smart money n
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0: Config and provider boundary (AC1, AC2, AC3)**
-  - [ ] 0.1 — Add Nansen smart-money config vars to `apps/api/src/config.ts`.
-  - [ ] 0.2 — Update `apps/api/.env.example` with a `Nansen Smart Money / Token God Mode` section.
-  - [ ] 0.3 — Ensure `NANSEN_API_KEY` is never exposed to OpenCode, frontend, logs, or error responses.
-  - [ ] 0.4 — Add comments for Nansen credits/rate limits near service calls or config.
+- [x] **Task 0: Config and provider boundary (AC1, AC2, AC3)**
+  - [x] 0.1 — Add Nansen smart-money config vars to `apps/api/src/config.ts`.
+  - [x] 0.2 — Update `apps/api/.env.example` with a `Nansen Smart Money / Token God Mode` section.
+  - [x] 0.3 — Ensure `NANSEN_API_KEY` is never exposed to OpenCode, frontend, logs, or error responses.
+  - [x] 0.4 — Add comments for Nansen credits/rate limits near service calls or config.
 
-- [ ] **Task 1: DB schema and migration (AC4, AC10)**
-  - [ ] 1.1 — Add `nansenSmartMoneyFlows` and `nansenTokenGodModeCache` tables to `packages/db/src/schema/epsilon.ts`.
-  - [ ] 1.2 — Export tables from `packages/db/src/index.ts`.
-  - [ ] 1.3 — Create next migration without colliding with Stories 2.1.1/2.1.2/2.2.1.
-  - [ ] 1.4 — Add indexes and unique keys exactly as specified.
-  - [ ] 1.5 — Optional compatibility write contract for `onChainDataIndex` if needed by existing market UI.
+- [x] **Task 1: DB schema and migration (AC4, AC10)**
+  - [x] 1.1 — Add `nansenSmartMoneyFlows` and `nansenTokenGodModeCache` tables to `packages/db/src/schema/epsilon.ts`.
+  - [x] 1.2 — Export tables from `packages/db/src/index.ts`.
+  - [x] 1.3 — Create next migration without colliding with Stories 2.1.1/2.1.2/2.2.1.
+  - [x] 1.4 — Add indexes and unique keys exactly as specified.
+  - [x] 1.5 — Optional compatibility write contract for `onChainDataIndex` if needed by existing market UI.
 
-- [ ] **Task 2: Nansen service wrapper (AC2, AC3, AC9, AC11)**
-  - [ ] 2.1 — Create `apps/api/src/router/services/nansen.ts`.
-  - [ ] 2.2 — Implement `fetchSmartMoneyHoldings(chains, filters, pagination)`.
-  - [ ] 2.3 — Implement `fetchSmartMoneyNetflow(chains, filters, pagination)`.
-  - [ ] 2.4 — Implement `fetchTgmWhoBoughtSold(chain, tokenAddress, buyOrSell, dateRange, pagination, filters)`.
-  - [ ] 2.5 — Implement `fetchTgmFlows(chain, tokenAddress, label, dateRange, pagination, filters)`.
-  - [ ] 2.6 — Add timeout, response shape guards, typed provider errors, and redacted logging.
+- [x] **Task 2: Nansen service wrapper (AC2, AC3, AC9, AC11)**
+  - [x] 2.1 — Create `apps/api/src/router/services/nansen.ts`.
+  - [x] 2.2 — Implement `fetchSmartMoneyHoldings(chains, filters, pagination)`.
+  - [x] 2.3 — Implement `fetchSmartMoneyNetflow(chains, filters, pagination)`.
+  - [x] 2.4 — Implement `fetchTgmWhoBoughtSold(chain, tokenAddress, buyOrSell, dateRange, pagination, filters)`.
+  - [x] 2.5 — Implement `fetchTgmFlows(chain, tokenAddress, label, dateRange, pagination, filters)`.
+  - [x] 2.6 — Add timeout, response shape guards, typed provider errors, and redacted logging.
 
-- [ ] **Task 3: Normalization and signal scoring (AC4, AC9, AC10, AC11)**
-  - [ ] 3.1 — Create pure normalization helpers for top buyers, top sellers, smart money flows, and exchange flows.
-  - [ ] 3.2 — Compute risk/signal factors: `smart_money_accumulation`, `smart_money_distribution`, `exchange_inflow_sell_pressure`, `exchange_outflow_accumulation`, `high_buyer_concentration`, `provider_partial_data`.
-  - [ ] 3.3 — Ensure numeric conversion handles strings, nulls, NaN, and large values safely.
-  - [ ] 3.4 — Add unit tests for signal scoring and sorting.
+- [x] **Task 3: Normalization and signal scoring (AC4, AC9, AC10, AC11)**
+  - [x] 3.1 — Create pure normalization helpers for top buyers, top sellers, smart money flows, and exchange flows.
+  - [x] 3.2 — Compute risk/signal factors: `smart_money_accumulation`, `smart_money_distribution`, `exchange_inflow_sell_pressure`, `exchange_outflow_accumulation`, `high_buyer_concentration`, `provider_partial_data`.
+  - [x] 3.3 — Ensure numeric conversion handles strings, nulls, NaN, and large values safely.
+  - [x] 3.4 — Add unit tests for signal scoring and sorting.
 
-- [ ] **Task 4: Worker implementation (AC5, AC6, AC11)**
-  - [ ] 4.1 — Create `apps/api/src/queue/bullmq/workers/nansen-smart-money-worker.ts`.
-  - [ ] 4.2 — Implement queue singleton pattern (`_queue`, `_worker`) and lifecycle exports.
-  - [ ] 4.3 — Implement `refresh-smart-money-netflow` job for configured chain batches.
-  - [ ] 4.4 — Implement `refresh-token-god-mode` job for hot token requests.
-  - [ ] 4.5 — Implement cleanup job for expired cache.
-  - [ ] 4.6 — Use `Promise.allSettled`/per-endpoint transactions so partial success commits.
-  - [ ] 4.7 — Add worker `error` and `failed` handlers.
+- [x] **Task 4: Worker implementation (AC5, AC6, AC11)**
+  - [x] 4.1 — Create `apps/api/src/queue/bullmq/workers/nansen-smart-money-worker.ts`.
+  - [x] 4.2 — Implement queue singleton pattern (`_queue`, `_worker`) and lifecycle exports.
+  - [x] 4.3 — Implement `refresh-smart-money-netflow` job for configured chain batches.
+  - [x] 4.4 — Implement `refresh-token-god-mode` job for hot token requests.
+  - [x] 4.5 — Implement cleanup job for expired cache.
+  - [x] 4.6 — Use `Promise.allSettled`/per-endpoint transactions so partial success commits.
+  - [x] 4.7 — Add worker `error` and `failed` handlers.
 
-- [ ] **Task 5: Queue lifecycle wiring (AC5)**
-  - [ ] 5.1 — Export `startNansenSmartMoneyWorker`, `setupNansenSmartMoneyJobs`, `stopNansenSmartMoneyWorker`, `getNansenSmartMoneyQueue` from `apps/api/src/queue/index.ts`.
-  - [ ] 5.2 — Start/setup in `startBackgroundServices()` in `apps/api/src/index.ts`.
-  - [ ] 5.3 — Stop in shutdown handler alongside existing workers.
-  - [ ] 5.4 — Keep disabled worker silent except for one clear startup skip log.
+- [x] **Task 5: Queue lifecycle wiring (AC5)**
+  - [x] 5.1 — Export `startNansenSmartMoneyWorker`, `setupNansenSmartMoneyJobs`, `stopNansenSmartMoneyWorker`, `getNansenSmartMoneyQueue` from `apps/api/src/queue/index.ts`.
+  - [x] 5.2 — Start/setup in `startBackgroundServices()` in `apps/api/src/index.ts`.
+  - [x] 5.3 — Stop in shutdown handler alongside existing workers.
+  - [x] 5.4 — Keep disabled worker silent except for one clear startup skip log.
 
-- [ ] **Task 6: API route (AC7, AC8, AC9)**
-  - [ ] 6.1 — Create `apps/api/src/router/routes/smart-money-flow.ts`.
-  - [ ] 6.2 — Mount route with `combinedAuth` in `apps/api/src/router/index.ts`.
-  - [ ] 6.3 — Implement cache-first lookup and stale fallback.
-  - [ ] 6.4 — Implement live refresh guard with `checkCredits` and `NANSEN_SMART_MONEY_MAX_LIVE_CALLS_PER_REQUEST`.
-  - [ ] 6.5 — Deduct with tool key `smart_money_flow` only when live provider work is performed.
-  - [ ] 6.6 — Add `smart_money_flow` pricing to `TOOL_PRICING` with product-approved value; if unsure, start conservative and document.
+- [x] **Task 6: API route (AC7, AC8, AC9)**
+  - [x] 6.1 — Create `apps/api/src/router/routes/smart-money-flow.ts`.
+  - [x] 6.2 — Mount route with `combinedAuth` in `apps/api/src/router/index.ts`.
+  - [x] 6.3 — Implement cache-first lookup and stale fallback.
+  - [x] 6.4 — Implement live refresh guard with `checkCredits` and `NANSEN_SMART_MONEY_MAX_LIVE_CALLS_PER_REQUEST`.
+  - [x] 6.5 — Deduct with tool key `smart_money_flow` only when live provider work is performed.
+  - [x] 6.6 — Add `smart_money_flow` pricing to `TOOL_PRICING` with product-approved value; if unsure, start conservative and document.
 
-- [ ] **Task 7: OpenCode tool and permissions (AC8, AC9)**
-  - [ ] 7.1 — Create `core/epsilon-master/opencode/tools/smart_money_flow.ts`.
-  - [ ] 7.2 — Validate args locally: chain allowlist, token address max length, lookback max, limit max.
-  - [ ] 7.3 — Call only Chainlens internal API with `EPSILON_TOKEN`.
-  - [ ] 7.4 — Add Tier 2 permission and deny/omit Tier 1.
-  - [ ] 7.5 — Update tools README.
+- [x] **Task 7: OpenCode tool and permissions (AC8, AC9)**
+  - [x] 7.1 — Create `core/epsilon-master/opencode/tools/smart_money_flow.ts`.
+  - [x] 7.2 — Validate args locally: chain allowlist, token address max length, lookback max, limit max.
+  - [x] 7.3 — Call only Chainlens internal API with `EPSILON_TOKEN`.
+  - [x] 7.4 — Add Tier 2 permission and deny/omit Tier 1.
+  - [x] 7.5 — Update tools README.
 
-- [ ] **Task 8: Tests and typecheck (AC11)**
-  - [ ] 8.1 — Add service tests with mocked `fetch`.
-  - [ ] 8.2 — Add normalization/scoring tests.
-  - [ ] 8.3 — Add route cache/live/billing tests.
-  - [ ] 8.4 — Add worker lifecycle/job tests.
-  - [ ] 8.5 — Add OpenCode tool wrapper smoke test if project has pattern for tool tests.
-  - [ ] 8.6 — Run relevant tests and typecheck.
+- [x] **Task 8: Tests and typecheck (AC11)**
+  - [x] 8.1 — Add service tests with mocked `fetch`.
+  - [x] 8.2 — Add normalization/scoring tests.
+  - [x] 8.3 — Add route cache/live/billing tests.
+  - [x] 8.4 — Add worker lifecycle/job tests.
+  - [x] 8.5 — Add OpenCode tool wrapper smoke test if project has pattern for tool tests.
+  - [x] 8.6 — Run relevant tests and typecheck.
 
 ## Dev Notes
 
@@ -373,10 +373,57 @@ interface SmartMoneyFlowResponse {
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+claude-sonnet-4-6
 
 ### Debug Log References
 
+- Bun `.resolves.not.toThrow()` does not work correctly — use try/catch pattern instead (verified against Bun v1.3.12).
+- `mock.module` paths resolve relative to the TEST FILE, not the module under test.
+- `isolation = true` in bunfig.toml only isolates files discovered by glob, not files passed explicitly on CLI — run test files separately to avoid mock bleeding.
+- When all error classes map to the same mock class, `instanceof` checks in `isFatal()` misidentify non-fatal errors as fatal — use two distinct error classes: `FakeNansenError` (non-fatal) and `FakeFatalError` (fatal).
+- Nansen API rows use camelCase field names (`boughtVolumeUsd`, `soldVolumeUsd`, `address`), not snake_case. Normalized output is snake_case.
+- `exchange_outflow_accumulation` signal requires BOTH `exNet < 0` AND `smNet > 0`.
+- Project logger signature is `logger.info(message: string, context?)`, not pino-style `logger.info({...}, message)`.
+
 ### Completion Notes List
 
+- All 10 Nansen config vars added to `apps/api/src/config.ts`; worker is default-off (`NANSEN_SMART_MONEY_WORKER_ENABLED=false`).
+- `NANSEN_API_KEY` is never exposed in error messages, logs, or API responses — enforced by `nansenPost()` helper sanitizing all error outputs.
+- DB schema: `nansenSmartMoneyFlows` and `nansenTokenGodModeCache` added additively; migration `0009_nansen_smart_money.sql` created.
+- Nansen service (`nansen.ts`): 5 typed fetch functions with distinct error classes for 401/402/403/429/5xx; `canCallNansen()` guards chain support.
+- Normalization service (`nansen-normalize.ts`): pure functions for buyers/sellers/flows, 6 signal factors, `deriveRiskLevel`, `buildSignalSummary`.
+- Worker (`nansen-smart-money-worker.ts`): BullMQ singleton, 4 job types, `Promise.allSettled` for partial TGM success, exponential backoff on 429/5xx only.
+- Route (`smart-money-flow.ts`): `POST /v1/router/smart-money-flow`, cache-first (TGM + netflow tables), `checkCredits` before live call, `deductToolCredits` only on success, `attribution: 'Powered by Nansen API'` in all responses.
+- OpenCode tool (`smart_money_flow.ts`): Tier 2 only, calls only `EPSILON_API_URL/v1/router/smart-money-flow`, never `NANSEN_API_KEY`.
+- Tests: 88 tests total across 4 files — 40 normalization, 24 service, 14 route, 10 worker — all passing. No new typecheck errors in story files.
+- Pre-existing typecheck errors in `dune-labels.ts`, `sandbox-cloud.ts`, `sandbox-provision-poller.ts`, and various `__tests__` files are unrelated to this story and were present before implementation.
+
 ### File List
+
+**New files:**
+- `apps/api/src/router/services/nansen.ts`
+- `apps/api/src/router/services/nansen-normalize.ts`
+- `apps/api/src/queue/bullmq/workers/nansen-smart-money-worker.ts`
+- `apps/api/src/router/routes/smart-money-flow.ts`
+- `core/epsilon-master/opencode/tools/smart_money_flow.ts`
+- `packages/db/migrations/0009_nansen_smart_money.sql`
+- `apps/api/src/__tests__/unit/nansen-normalize.test.ts`
+- `apps/api/src/__tests__/unit/nansen-service.test.ts`
+- `apps/api/src/__tests__/unit/smart-money-flow-route.test.ts`
+- `apps/api/src/__tests__/unit/nansen-worker.test.ts`
+
+**Modified files:**
+- `apps/api/src/config.ts`
+- `apps/api/.env.example`
+- `apps/api/src/index.ts`
+- `apps/api/src/queue/index.ts`
+- `apps/api/src/router/index.ts`
+- `packages/db/src/schema/epsilon.ts`
+- `packages/db/src/index.ts`
+- `core/epsilon-master/opencode/agents/chainlens-tier2.md`
+- `core/epsilon-master/opencode/agents/chainlens-tier1.md`
+- `core/epsilon-master/opencode/tools/README.md`
+
+## Change Log
+
+- 2026-05-17: Story implemented — Nansen Smart Money Flow & Token God Mode full stack (config, schema, service, normalization, worker, route, OpenCode tool, tests). All 88 new unit tests pass. No new typecheck errors introduced.

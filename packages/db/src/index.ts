@@ -94,6 +94,9 @@ export {
   entityWalletWatchlist,
   projectWalletWatchlist,
   onchainFactChecks,
+  // Nansen Smart Money (Story 2.3.1)
+  nansenSmartMoneyFlows,
+  nansenTokenGodModeCache,
   // Pool
   poolResources,
   poolSandboxes,
