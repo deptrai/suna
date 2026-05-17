@@ -11,6 +11,7 @@ permission:
   contract_risk: allow
   simulate_transaction: deny
   vibe_trading_backtest: deny
+  mempool_alerts: deny
   bash: deny
   read: deny
   edit: deny

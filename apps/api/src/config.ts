@@ -256,6 +256,22 @@ const envSchema = z.object({
   SANTIMENT_API_KEY:                optStr,
   SOCIAL_SENTIMENT_WORKER_ENABLED:  optBoolFalse,
   SOCIAL_SENTIMENT_INTERVAL_MS:     optInt(1_800_000),
+
+  // ─── Mempool Worker (Story 2.1.1) ────────────────────────────────────────
+  MEMPOOL_WORKER_ENABLED:           optBoolFalse,
+  MEMPOOL_PROVIDER:                 z.enum(['quicknode', 'self_hosted', 'blocknative']).optional().default('quicknode'),
+  MEMPOOL_CHAINS:                   optStrDefault('ethereum'),
+  MEMPOOL_WS_URL_ETHEREUM:          optStr,
+  MEMPOOL_WS_URL_BSC:               optStr,
+  MEMPOOL_WS_URL_BASE:              optStr,
+  MEMPOOL_MIN_VALUE_USD:            optFloat(500000),
+  MEMPOOL_WORKER_CONCURRENCY:       optInt(1),
+  MEMPOOL_RECONNECT_DELAY_MS:       optInt(5000),
+  // Native-token USD overrides (per chain). Approximate floor; operator can pin via env.
+  // Live price feed deferred post-MVP.
+  MEMPOOL_NATIVE_USD_ETHEREUM:      optFloat(3000),
+  MEMPOOL_NATIVE_USD_BASE:          optFloat(3000),
+  MEMPOOL_NATIVE_USD_BSC:           optFloat(600),
   });
 
 // ─── Validation + Conditional Checks ────────────────────────────────────────
@@ -645,6 +661,22 @@ export const config = {
   SOCIAL_SENTIMENT_WORKER_ENABLED: env.SOCIAL_SENTIMENT_WORKER_ENABLED,
   SOCIAL_SENTIMENT_INTERVAL_MS: env.SOCIAL_SENTIMENT_INTERVAL_MS,
 
+  // ─── Mempool Worker (Story 2.1.1) ────────────────────────────────────────
+  MEMPOOL_WORKER_ENABLED: env.MEMPOOL_WORKER_ENABLED,
+  MEMPOOL_PROVIDER: env.MEMPOOL_PROVIDER,
+  MEMPOOL_CHAINS: env.MEMPOOL_CHAINS,
+  MEMPOOL_WS_URL_ETHEREUM: env.MEMPOOL_WS_URL_ETHEREUM,
+  MEMPOOL_WS_URL_BSC: env.MEMPOOL_WS_URL_BSC,
+  MEMPOOL_WS_URL_BASE: env.MEMPOOL_WS_URL_BASE,
+  // Guard against optFloat returning NaN (malformed env) — fall back to safe default.
+  MEMPOOL_MIN_VALUE_USD: Number.isFinite(env.MEMPOOL_MIN_VALUE_USD) ? env.MEMPOOL_MIN_VALUE_USD : 500000,
+  MEMPOOL_WORKER_CONCURRENCY: env.MEMPOOL_WORKER_CONCURRENCY,
+  // Enforce minimum 1 s on reconnect delay — 0 ms would hot-loop reconnect attempts.
+  MEMPOOL_RECONNECT_DELAY_MS: Math.max(env.MEMPOOL_RECONNECT_DELAY_MS, 1000),
+  MEMPOOL_NATIVE_USD_ETHEREUM: Number.isFinite(env.MEMPOOL_NATIVE_USD_ETHEREUM) ? env.MEMPOOL_NATIVE_USD_ETHEREUM : 3000,
+  MEMPOOL_NATIVE_USD_BASE: Number.isFinite(env.MEMPOOL_NATIVE_USD_BASE) ? env.MEMPOOL_NATIVE_USD_BASE : 3000,
+  MEMPOOL_NATIVE_USD_BSC: Number.isFinite(env.MEMPOOL_NATIVE_USD_BSC) ? env.MEMPOOL_NATIVE_USD_BSC : 600,
+
   // ─── Helper Methods ────────────────────────────────────────────────────────
 
   isLocal(): boolean {
@@ -702,6 +734,11 @@ export interface ToolPricing {
 }
 
 export const TOOL_PRICING: Record<string, ToolPricing> = {
+  mempool_alerts: {
+    baseCost: 0.05,
+    perResultCost: 0,
+    markupMultiplier: 1.0,
+  },
   web_search_basic: {
     baseCost: 0.005,
     perResultCost: 0,

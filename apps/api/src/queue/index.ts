@@ -4,3 +4,4 @@ export { startDiscoverFeedWorker, setupDiscoverFeedJobs, stopDiscoverFeedWorker 
 export { startOnChainIndexWorker, setupOnChainIndexJobs, stopOnChainIndexWorker } from './bullmq/workers/onchain-index';
 export { startCryptoWorker, setupCryptoWorkerJobs, stopCryptoWorker } from './bullmq/workers/crypto-worker';
 export { startSocialSentimentWorker, setupSocialSentimentJobs, stopSocialSentimentWorker } from './bullmq/workers/social-sentiment-worker';
+export { startMempoolWorker, setupMempoolJobs, stopMempoolWorker, getMempoolQueue } from './bullmq/workers/mempool-worker';

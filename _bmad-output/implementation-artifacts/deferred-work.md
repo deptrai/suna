@@ -183,3 +183,11 @@ Items deferred from code reviews — pre-existing issues or hard policy calls th
 - Task 1 — `normalizeAddress` not adopted inside `services/contract-risk.ts`; inline `.toLowerCase()` semantically equivalent for EVM.
 - Dual canonical-URL env vars (`CHAINLENS_BASE_URL` extension vs `NEXT_PUBLIC_APP_URL` web) — defer until extension+web env unified post-MVP.
 - Shadow DOM `.matches(':hover')` reliability for extension tooltip — defer to Story 6.x cross-browser E2E.
+
+## Deferred from: code review of 2-1-1-mempool-sniffing-mev-tracking (2026-05-17)
+
+- WebSocket exponential backoff with jitter cap — fix in Story 8.5 production-grade reliability scope.
+- Provider failover (multiple WSS URLs) — defer to Epic 2.x infra story.
+- `unknown_large_tx` design noise (wallet-to-wallet large native transfers flooding feed at typical thresholds) — tune post-MVP.
+- `tx.value='0x'` empty-hex edge — current fail-closed behavior correct; not real-world provider output.
+- `TOOL_TIMEOUT_MS = 5000` deviation from CLAUDE.md 1.5s typical — document rationale (mempool query may need 5s on cold cache).

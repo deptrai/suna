@@ -35,3 +35,29 @@ Job continues in background after the 30-second budget. The tool returns `{ succ
 `POST /v1/router/vibe-trading/jobs` → `GET /v1/router/vibe-trading/runs/:jobId`
 
 Billing: 1.00 credit per job submission (`vibe_trading_backtest` in `TOOL_PRICING`).
+
+## mempool_alerts
+
+**Tier**: Tier 2 only (`chainlens-tier2.md` — `mempool_alerts: allow`, Tier 1 denied)
+
+Reads pre-indexed mempool alert data from the internal route.
+
+### Backend route
+
+`GET /v1/router/mempool-alerts`
+
+Query parameters: `chain` (string), `alert_type` (enum: `large_swap`/`sandwich_suspect`/`frontrun_suspect`/`unknown_large_tx`), `min_value_usd` (number, finite), `limit` (1–100, default 50), `since_minutes` (1–1440, default 60).
+
+### Billing
+
+0.05 credit baseline per query (`mempool_alerts` in `TOOL_PRICING`). Billing is `combinedAuth` + atomic `checkCredits` → `deductToolCredits` (NFR8 parity with `token-info`/`token-holders`).
+
+### Default behaviour
+
+If the tool omits `since_minutes`, the route default of 60 minutes applies. The tool currently only forwards `since_minutes` when the LLM provides a numeric value — adjust both ends if defaults are ever tightened.
+
+### Key constraints
+
+- Tool only queries epsilon-api/DB cache (no upstream WebSocket).
+- Tool does not connect to QuickNode/Blocknative or open any mempool WebSocket.
+- Continuous sniffing is handled by the background worker (`mempool-worker`) only.

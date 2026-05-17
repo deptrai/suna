@@ -1726,3 +1726,198 @@ The architecture intentionally uses free-tier services for the bridge layer beca
 - **`autoStopInterval=15` + `autoArchiveInterval=30`**: aggressive defaults to minimize Daytona quota usage, but increases cold-start frequency for users who chat irregularly. Tunable per-deployment if user feedback demands.
 
 ---
+
+## Step 11: Production-Grade Reliability & Security Architecture (Story 8.5)
+
+**Added:** 2026-05-17 (Post Perplexity AI deep research + codebase audit)
+
+This section documents architectural decisions for the 12 production-grade issues identified in Story 8.5. Each decision includes rationale and trade-offs.
+
+### 11.1. Session Data Durability — Litestream + Supabase Storage S3
+
+**Problem:** Daytona container filesystem is ephemeral. SQLite at `/persistent/opencode/storage.sqlite` survives container stop/archive (data persists in Daytona's volume) but is lost on sandbox **delete**. Each sandbox recreate wipes session history.
+
+**Decision: Litestream as SQLite WAL replication sidecar**
+
+```
+Sandbox container
+├── epsilon-master (Bun :8000)
+├── opencode (Node :4096)
+└── litestream (sidecar, replicate WAL → S3)
+    └── /persistent/opencode/storage.sqlite
+                   ↕ WAL frames (sync-interval: 1s)
+    Supabase Storage S3 (user-{id}/opencode/)
+```
+
+**Why Litestream over alternatives:**
+- **Zero app code change** — Litestream intercepts WAL at filesystem level, not in SQLite connection
+- **Near-zero RPO** (<1s lag) vs. periodic backup (minutes RPO)
+- **S3-compatible** — Supabase Storage already in stack at `/storage/v1/s3`, no new infra
+- **Tenant isolation** — path `user-{EPSILON_USER_ID}/opencode` per user in same bucket
+
+**Startup sequence in `daytona-start.sh`:**
+```bash
+# Only runs if env vars present (backward compat)
+if [ -n "${SUPABASE_S3_ENDPOINT:-}" ]; then
+  litestream restore -if-replica-exists /persistent/opencode/storage.sqlite
+  litestream replicate &   # sidecar, runs alongside epsilon-master
+fi
+```
+
+**New Dokploy env vars:** `SUPABASE_S3_ENDPOINT`, `SUPABASE_S3_ACCESS_KEY`, `SUPABASE_S3_SECRET_KEY`
+
+**Image change:** `core/docker/Dockerfile` installs Litestream binary → new image tag required (`stable-2`)
+
+### 11.2. Billing Atomicity — PostgreSQL `atomic_use_credits`
+
+**Decision (verified, no change needed):** `repositories/credits.ts` already calls `atomic_use_credits()` PostgreSQL function — a single statement that checks balance AND deducts atomically. TOCTOU between `checkCredits()` (UX guard) and `deductCredits()` is intentional: the fast pre-check prevents unnecessary DB round-trips; the real enforcement is in the atomic function.
+
+**Required audit (Story 8.5 Sprint 1):** Verify all `router/routes/` call `await deductToolCredits()` (not fire-and-forget). Any `.catch(console.error)` wrapping billing calls = critical bug.
+
+### 11.3. Multi-Replica Provisioning Dedup — Postgres Advisory Lock
+
+**Problem:** `provisioningSubscriptions: Set<string>` in `sandbox-provisioner.ts` is process-local. Docker Swarm replicas (2+) each have their own Set → concurrent provision requests for same `subscriptionId` on different replicas both proceed.
+
+**Decision: `pg_try_advisory_xact_lock()`**
+
+```typescript
+// Inside db.transaction():
+await tx.execute(sql`SELECT pg_try_advisory_xact_lock(${lockKey}::bigint)`);
+// Lock held for transaction duration; auto-released on commit/rollback
+// pg_try_advisory_xact_lock returns false (no wait) if lock held by another connection
+```
+
+**Why advisory lock over Redis SETNX:**
+- No new infra (Postgres already the source of truth)
+- Automatic release on transaction end (no cleanup code, no TTL management)
+- `pg_try_advisory_xact_lock` (non-blocking) vs. `pg_advisory_lock` (blocking) — prefer non-blocking to fail-fast duplicate requests
+
+**`lockKey` derivation:** FNV-1a hash of `subscriptionId` string → `Int64` (Postgres advisory lock key is `int8`)
+
+### 11.4. serviceKey Encryption at Rest — pgcrypto
+
+**Problem:** `sandboxes.config` JSONB contains `{ serviceKey: "epsilon_..." }` in plaintext. Any DB read access (Supabase dashboard, SQL query, log export) exposes all sandbox auth tokens.
+
+**Decision: pgcrypto symmetric encryption with dedicated column**
+
+```sql
+ALTER TABLE epsilon.sandboxes ADD COLUMN service_key_encrypted BYTEA;
+-- Encrypt: pgp_sym_encrypt(serviceKey, DB_ENCRYPTION_KEY)
+-- Decrypt: pgp_sym_decrypt(service_key_encrypted::bytea, DB_ENCRYPTION_KEY)
+```
+
+**Why pgcrypto over application-layer AES:**
+- Key never travels from Postgres to application for the encrypt/decrypt operation (server-side)
+- pgcrypto uses OpenPGP symmetric encryption (AES-256 by default)
+- Single `DB_ENCRYPTION_KEY` env var — rotate with a migration
+
+**Migration safety:** Add column first (non-blocking), encrypt rows in batches manually, NULL old JSONB field. Do NOT auto-encrypt in migration — requires `DB_ENCRYPTION_KEY` set, better to script separately.
+
+### 11.5. WebSocket Auth — First-Message Pattern
+
+**Problem:** WebSocket/SSE URLs with `?token=<jwt>` are logged by nginx access logs, cloudflared, and browser history. Token exposure = persistent auth risk.
+
+**Decision: First-message authentication**
+
+```
+Client                Server
+  |  ws.onopen         |
+  |─── ws connect ────→|  (no auth in URL)
+  |                    |  start 5s auth timeout
+  |─ {type:"auth"} ──→|  first WS message = token
+  |                    |  verify → clear timeout
+  |─── normal msgs ──→|
+```
+
+**Server enforcement:** Close with code `4001` if no auth message within 5s. Token validated same as `combinedAuth` middleware (Supabase JWT or epsilon_* key).
+
+### 11.6. Rate Limiting — `hono-rate-limiter`
+
+**Decision:** Use `hono-rate-limiter` (Hono-native, no Redis required for MVP) with in-memory Map store.
+
+| Route group | Limit | Window | Key |
+|---|---|---|---|
+| `/v1/platform/sandbox` | 3 req | 1 hour | `accountId` |
+| `/v1/router/*` | 100 req | 1 minute | `accountId` |
+
+**Single-replica limitation:** In-memory store is not shared across replicas. For multi-replica, upgrade to `@hono-rate-limiter/redis` store. Defer until actual multi-replica scale.
+
+**Graceful degradation:** If store unavailable, rate limiter fails open (does not block requests) — prevents accidental service disruption.
+
+### 11.7. Observability — OpenTelemetry + SigNoz
+
+**Decision: Self-hosted SigNoz on prod server (167.172.66.16)**
+
+SigNoz chosen over Grafana LGTM stack because:
+- Single-binary deployment (ClickHouse backend, all-in-one)
+- OTLP-native (traces + metrics + logs in one pipeline)
+- Lower operational overhead for small team vs. managing Prometheus + Loki + Tempo separately
+
+**API instrumentation:** `apps/api/src/telemetry.ts` (imported FIRST in `index.ts`) initializes `@opentelemetry/sdk-node` with OTLP HTTP exporter. Auto-instrumentation covers HTTP routes, fetch calls, Postgres queries.
+
+**Key custom metrics:**
+```typescript
+provisionDuration = meter.createHistogram('sandbox.provision.duration_ms', { unit: 'ms' });
+provisionAttempts = meter.createCounter('sandbox.provision.attempts_total');
+```
+
+**No-op mode:** If `OTEL_EXPORTER_OTLP_ENDPOINT` not set, SDK starts in no-op mode — zero performance impact, zero crashes. Safe to ship before SigNoz is deployed.
+
+### 11.8. Named Cloudflare Tunnel (replaces quick tunnel)
+
+**Problem:** Quick tunnel `xxx.trycloudflare.com` URL regenerates on container restart → `EPSILON_URL` must be manually updated → brief outage window + re-init existing sandboxes.
+
+**Decision: Named tunnel with stable subdomain**
+
+```
+docker run cloudflare/cloudflared:latest tunnel run \
+  --url http://api-djcsof:8008 \
+  --token <CLOUDFLARE_TUNNEL_TOKEN>
+```
+
+Tunnel maps to `api-bridge.chainlens.net` (CNAME → `<tunnel-id>.cfargotunnel.com`). URL never changes across restarts.
+
+**Cost:** $0 — Cloudflare named tunnels are free with any Cloudflare account. Domain `chainlens.net` already on Cloudflare.
+
+**Migration:** One-time setup. Update `EPSILON_URL` once, never again.
+
+### 11.9. Sandbox Lifecycle Resilience
+
+**`ensureRunning()` post-wake health check:**
+```
+ensureRunning(externalId)
+    ├── getStatus() → running?
+    │   └── yes → quickHealthCheck() (1 attempt, 5s timeout)
+    │       └── warn if unreachable (non-blocking)
+    └── no → start() → waitForRuntimeReadyShort() (8×15s = 2min max)
+                       └── throw if not ready
+```
+
+**Why 2-minute timeout (not 10 min):** On wake (not cold-start), image layers cached — epsilon-master should start in ~30s. 2 min = 4× safety margin.
+
+**Exponential backoff (`sandbox-init-state.ts`):**
+
+| Attempt | Delay |
+|---|---|
+| 0 | 2s |
+| 1 | 15s |
+| 2 | 60s |
+
+Rationale: 2s handles transient flaps; 15s handles Daytona API rate-limiting; 60s handles region-wide issues. Total max wait: ~90s (much better than naive 3×2s = 6s which often retries mid-issue).
+
+### 11.10. Summary: New Architectural Invariants (post Story 8.5)
+
+| Invariant | Enforcement |
+|---|---|
+| Session data survives sandbox delete | Litestream → Supabase S3 |
+| Billing calls never fire-and-forget | `await` enforcement + code audit |
+| Provisioning dedup works multi-replica | Postgres advisory lock |
+| serviceKey never in plaintext DB | pgcrypto + dedicated column |
+| Auth token never in WS/SSE URL | First-message auth |
+| API has request-level rate limits | hono-rate-limiter |
+| Sandbox URL stable across restarts | Named Cloudflare Tunnel |
+| Provisioning metrics exported | OTel OTLP → SigNoz |
+| Retry delays are exponential | `[2s, 15s, 60s]` |
+| ensureRunning verifies runtime health | poll `/epsilon/health` after wake |
+
+---

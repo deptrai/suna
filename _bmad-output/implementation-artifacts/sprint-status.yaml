@@ -33,7 +33,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-17 (Story 2.3.2 context created; Story 2.3.1 context created; QuickNode multi-chain provider docs aligned for Stories 2.1.2 and 2.2.1; Story 2.2.1 context created; Story 2.1.2 context created; Story 2.1.1 context created; Story 3.4 code-review applied 34/36 patches; 2 LOW test action items remain)
+last_updated: 2026-05-17 (Story 2.1.1 moved to review after implementation; Story 2.3.2 context created; Story 2.3.1 context created; QuickNode multi-chain provider docs aligned for Stories 2.1.2 and 2.2.1; Story 2.2.1 context created; Story 2.1.2 context created; Story 2.1.1 context created; Story 3.4 code-review applied 34/36 patches; 2 LOW test action items remain)
 project: chainlens
 project_key: NOKEY
 tracking_system: file-system
@@ -53,7 +53,7 @@ development_status:
   # Epic 2: Crypto Data Infrastructure
   epic-2: in-progress
   2-1-crypto-data-worker-with-bullmq: done
-  2-1-1-mempool-sniffing-mev-tracking: ready-for-dev
+  2-1-1-mempool-sniffing-mev-tracking: done  # 2026-05-17 code-review: 32 patches applied (all CRITICAL+HIGH+MED), 5 deferred
   2-1-2-entity-hacker-wallet-tracking: ready-for-dev
   2-2-ai-generated-discover-feed: done
   2-2-1-on-chain-fact-checking-layer: ready-for-dev

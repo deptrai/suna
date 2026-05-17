@@ -87,6 +87,7 @@ export {
   // Social Sentiment (Story 2.2.2)
   narrativeCategoryEnum,
   tokenSocialSignals,
+  mempoolAlerts,
   // Pool
   poolResources,
   poolSandboxes,

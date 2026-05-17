@@ -1240,11 +1240,19 @@ So that tôi được incentivize để contribute vào ecosystem.
 
 ## Epic 8: Enterprise & Privacy
 
-On-premise packaging Tier 3, BYOK, Local LLM (Ollama), LLM Proxy MaaS, và Zero-Data-Leakage enforcement.
+On-premise packaging Tier 3, BYOK, Local LLM (Ollama), LLM Proxy MaaS, Zero-Data-Leakage enforcement, **và production-grade platform reliability & security (Story 8.5)**.
 
 **FRs:** FR15, FR16, FR17, FR18, FR22
-**NFRs:** NFR10, NFR12
+**NFRs:** NFR7, NFR8, NFR9, NFR10, NFR12
 **ARs:** AR1, AR2, AR8
+
+**Stories:**
+- 8.1: BYOK — Bring Your Own API Key (backlog)
+- 8.2: Ollama Local LLM Integration (backlog)
+- 8.3: LLM Proxy & MaaS (backlog)
+- 8.3.1: LLM Proxy Bidirectional Fallback (ready-for-dev)
+- 8.4: Zero-Data-Leakage Enforcement Tier 3 (backlog)
+- **8.5: Production-Grade Platform Reliability & Security** (ready-for-dev — 2026-05-17)
 
 ### Story 8.1: BYOK — Bring Your Own API Key
 
@@ -1322,6 +1330,65 @@ So that deployment tuân thủ compliance yêu cầu của tổ chức.
 **When** sync được trigger
 **Then** chỉ inbound connection từ Chainlens cloud được cho phép — on-premise không initiate bất kỳ outbound sync nào
 **And** sync data được verify integrity bằng checksum trước khi import
+
+### Story 8.5: Production-Grade Platform Reliability & Security
+
+As a platform engineer vận hành chainlens.net,
+I want hệ thống sandbox provisioning, billing, và API infrastructure đạt production-grade,
+so that users không mất session data khi sandbox recreate, billing không có race condition, serviceKey được encrypt, có rate limiting, observability, và retry resilience — sẵn sàng multi-replica.
+
+**Acceptance Criteria:**
+
+**Given** OpenCode session SQLite tại `/persistent/opencode/storage.sqlite` trong Daytona ephemeral container
+**When** sandbox bị delete và recreate
+**Then** Litestream sidecar replicates WAL frames liên tục lên Supabase Storage S3 endpoint
+**And** `daytona-start.sh` restore session trước khi start epsilon-master (near-zero RPO)
+**And** backward compat: nếu `SUPABASE_S3_ENDPOINT` chưa set, skip silently
+
+**Given** `repositories/credits.ts` dùng `atomic_use_credits` PostgreSQL function
+**When** audit billing flow trong tất cả router routes
+**Then** xác nhận không có fire-and-forget `deductToolCredits` pattern; tất cả billing là `await`
+
+**Given** `provisioningSubscriptions: Set<string>` (volatile in-memory) trong `sandbox-provisioner.ts`
+**When** API scale lên 2+ replicas
+**Then** Postgres advisory lock `pg_try_advisory_xact_lock()` thay Set in-memory — multi-replica safe
+
+**Given** `sandboxes.config` JSONB chứa `{ serviceKey: "..." }` plaintext
+**When** implement column encryption
+**Then** `serviceKeyEncrypted BYTEA` column dùng `pgp_sym_encrypt` / `DB_ENCRYPTION_KEY`
+**And** JSONB `serviceKey` bị NULL-ed sau migration
+
+**Given** WebSocket/SSE endpoints dùng `?token=<jwt>` trong URL (logged by nginx/cloudflared)
+**When** implement first-message auth
+**Then** token không xuất hiện trong URL; client gửi auth JSON frame đầu tiên sau `ws.onopen`
+
+**Given** không có rate limiting trên provisioning và LLM proxy routes
+**When** implement `hono-rate-limiter`
+**Then** sandbox provisioning max 3/hour/user; LLM proxy max 100/min/user; return 429 khi exceed
+
+**Given** không có distributed tracing hay metrics
+**When** instrument với OpenTelemetry SDK
+**Then** `sandbox.provision.duration_ms` histogram và `sandbox.provision.attempts_total` counter export qua OTLP
+
+**Given** cloudflared quick tunnel URL thay đổi mỗi restart
+**When** setup named Cloudflare Tunnel
+**Then** `EPSILON_URL` trỏ vào permanent subdomain (e.g. `api-bridge.chainlens.net`)
+
+**Given** `RETRY_DELAY_MS = 2_000` cố định trong `sandbox-init-state.ts`
+**When** implement exponential backoff
+**Then** retry delays `[2s, 15s, 60s]` indexed by attempt number
+
+**Given** `ensureRunning()` gọi `start()` rồi return ngay (không verify runtime ready)
+**When** sandbox wake từ stopped state
+**Then** poll `/epsilon/health` tối đa 2 phút sau `start()`; throw nếu runtime không up
+
+**Sprint breakdown:** S1 (Litestream + billing audit + status verify), S2 (serviceKey encryption + WS token), S3 (rate limiting + advisory lock + OTel + named tunnel), S4 (polling backoff + retry + ensureRunning)
+
+**Story file:** `_bmad-output/implementation-artifacts/8-5-production-grade-platform-reliability.md`
+
+**Status:** ready-for-dev (2026-05-17)
+
+---
 
 ## Epic 9: Agent Marketplace Integration & Provisioning
 

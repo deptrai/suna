@@ -1131,3 +1131,41 @@ export const tokenSocialSignals = epsilonSchema.table(
   ]
 );
 
+// ─── Mempool Alerts (Story 2.1.1) ───────────────────────────────────────────
+
+export const mempoolAlerts = epsilonSchema.table(
+  'mempool_alerts',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    chain: varchar('chain', { length: 32 }).notNull(),
+    provider: varchar('provider', { length: 50 }).notNull(),
+    txHash: varchar('tx_hash', { length: 100 }).notNull(),
+    fromAddress: varchar('from_address', { length: 100 }),
+    toAddress: varchar('to_address', { length: 100 }),
+    routerAddress: varchar('router_address', { length: 100 }),
+    methodSelector: varchar('method_selector', { length: 10 }),
+    alertType: varchar('alert_type', { length: 50 }).notNull(),
+    estimatedValueUsd: numeric('estimated_value_usd', { precision: 20, scale: 4 }),
+    nativeValueWei: text('native_value_wei'),
+    tokenIn: varchar('token_in', { length: 100 }),
+    tokenOut: varchar('token_out', { length: 100 }),
+    // AC4: persist gas limit + chainId alongside fee fields. Stored as string to
+    // preserve full BigInt precision (hex/dec form from the provider).
+    gasLimit: varchar('gas_limit', { length: 100 }),
+    chainIdHex: varchar('chain_id', { length: 20 }),
+    gasPriceWei: text('gas_price_wei'),
+    rawTx: jsonb('raw_tx').notNull().default({}).$type<Record<string, unknown>>(),
+    status: varchar('status', { length: 32 }).notNull().default('pending'),
+    detectedAt: timestamp('detected_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    // Composite (chain, txHash) — a hash is only unique per chain. Prevents cross-chain
+    // collisions from silently overwriting one another via onConflictDoUpdate.
+    uniqueIndex('uq_mempool_alerts_chain_tx_hash').on(table.chain, table.txHash),
+    index('idx_mempool_alerts_detected_at').on(table.detectedAt),
+    index('idx_mempool_alerts_chain_detected').on(table.chain, table.detectedAt),
+    index('idx_mempool_alerts_alert_type').on(table.alertType),
+    index('idx_mempool_alerts_pending').on(table.status).where(sql`${table.status} = 'pending'`),
+  ],
+);
