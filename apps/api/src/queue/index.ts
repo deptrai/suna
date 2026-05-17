@@ -19,3 +19,9 @@ export {
   stopNansenSmartMoneyWorker,
   getNansenSmartMoneyQueue,
 } from './bullmq/workers/nansen-smart-money-worker';
+export {
+  startTokenTerminalWorker,
+  setupTokenTerminalJobs,
+  stopTokenTerminalWorker,
+  getTokenTerminalQueue,
+} from './bullmq/workers/token-terminal-worker';

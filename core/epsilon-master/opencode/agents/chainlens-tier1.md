@@ -14,6 +14,7 @@ permission:
   entity_wallet_risk: deny
   mempool_alerts: deny
   smart_money_flow: deny
+  protocol_valuation: deny
   bash: deny
   read: deny
   edit: deny

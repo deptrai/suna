@@ -97,6 +97,10 @@ export {
   // Nansen Smart Money (Story 2.3.1)
   nansenSmartMoneyFlows,
   nansenTokenGodModeCache,
+  tokenTerminalProjects,
+  tokenTerminalMetrics,
+  tokenTerminalProjectMetrics,
+  tokenTerminalValuationSnapshots,
   // Pool
   poolResources,
   poolSandboxes,

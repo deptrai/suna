@@ -32,7 +32,7 @@ export async function resolveCoinIdFromAddress(
   chain: string | undefined,
   options: { signal?: AbortSignal } = {},
 ): Promise<string> {
-  const baseUrl = config.COINGECKO_API_URL.replace(/\/+$/, '');
+  const baseUrl = (config.COINGECKO_API_URL || 'https://api.coingecko.com/api/v3').replace(/\/+$/, '');
   const headers = buildCoinGeckoHeaders();
   const normalizedChain = (chain ?? 'ethereum').toLowerCase();
   const platform = COINGECKO_PLATFORM_MAP[normalizedChain];

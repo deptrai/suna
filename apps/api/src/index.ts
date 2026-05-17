@@ -32,7 +32,7 @@ import { setupApp } from './setup';
 import { providersApp } from './providers/routes';
 import { secretsApp } from './secrets/routes';
 import { integrationsApp } from './integrations';
-import { queueApp, startDrainer, stopDrainer, startDiscoverFeedWorker, setupDiscoverFeedJobs, stopDiscoverFeedWorker, startOnChainIndexWorker, setupOnChainIndexJobs, stopOnChainIndexWorker, startCryptoWorker, setupCryptoWorkerJobs, stopCryptoWorker, startSocialSentimentWorker, setupSocialSentimentJobs, stopSocialSentimentWorker, startMempoolWorker, setupMempoolJobs, stopMempoolWorker, startEntityWalletWorker, setupEntityWalletJobs, stopEntityWalletWorker, startOnchainFactCheckWorker, setupOnchainFactCheckJobs, stopOnchainFactCheckWorker, startNansenSmartMoneyWorker, setupNansenSmartMoneyJobs, stopNansenSmartMoneyWorker } from './queue';
+import { queueApp, startDrainer, stopDrainer, startDiscoverFeedWorker, setupDiscoverFeedJobs, stopDiscoverFeedWorker, startOnChainIndexWorker, setupOnChainIndexJobs, stopOnChainIndexWorker, startCryptoWorker, setupCryptoWorkerJobs, stopCryptoWorker, startSocialSentimentWorker, setupSocialSentimentJobs, stopSocialSentimentWorker, startMempoolWorker, setupMempoolJobs, stopMempoolWorker, startEntityWalletWorker, setupEntityWalletJobs, stopEntityWalletWorker, startOnchainFactCheckWorker, setupOnchainFactCheckJobs, stopOnchainFactCheckWorker, startNansenSmartMoneyWorker, setupNansenSmartMoneyJobs, stopNansenSmartMoneyWorker, startTokenTerminalWorker, setupTokenTerminalJobs, stopTokenTerminalWorker } from './queue';
 import { serversApp } from './servers';
 // WoA is now mounted under the router at /v1/router/woa (see router/index.ts)
 import { supabaseAuth, combinedAuth, apiKeyAuth } from './middleware/auth';
@@ -1082,6 +1082,8 @@ function startBackgroundServices() {
   setupOnchainFactCheckJobs().catch((e) => appLogger.error('[onchain-fact-check] setup failed', { error: String(e) }));
   startNansenSmartMoneyWorker();
   setupNansenSmartMoneyJobs().catch((e) => appLogger.error('[nansen-smart-money] setup failed', { error: String(e) }));
+  startTokenTerminalWorker();
+  setupTokenTerminalJobs().catch((e) => appLogger.error('[token-terminal] setup failed', { error: String(e) }));
   startTunnelService();
   startAutoReplenish();
   startInviteCleanup(appDb);
@@ -1166,6 +1168,9 @@ async function shutdown(signal: string) {
   );
   await stopNansenSmartMoneyWorker().catch((e) =>
     appLogger.error('[nansen-smart-money] shutdown failed', { error: String(e) }),
+  );
+  await stopTokenTerminalWorker().catch((e) =>
+    appLogger.error('[token-terminal] shutdown failed', { error: String(e) }),
   );
   // Flush observability data before exit
   await Promise.allSettled([appLogger.flush(), flushSentry()]);

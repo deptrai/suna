@@ -38,7 +38,7 @@ export async function fetchTokenOhlcv(
   options: FetchTokenOhlcvOptions = {},
 ): Promise<OhlcvSnapshot> {
   const { slug, address, chain, days = 30 } = args;
-  const baseUrl = config.COINGECKO_API_URL.replace(/\/+$/, '');
+  const baseUrl = (config.COINGECKO_API_URL || 'https://api.coingecko.com/api/v3').replace(/\/+$/, '');
   const headers = buildCoinGeckoHeaders();
   const signal = options.signal ?? AbortSignal.timeout(TOKEN_OHLCV_TIMEOUT_MS);
 

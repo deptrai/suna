@@ -14,6 +14,7 @@ permission:
   entity_wallet_risk: allow
   mempool_alerts: allow
   smart_money_flow: allow
+  protocol_valuation: allow
   code_validator: allow
   bash: allow
   read: allow

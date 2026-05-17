@@ -64,7 +64,8 @@ export function reconcileRecoveredUpdateStatus(status: UpdateStatus): UpdateStat
 
   const targetVersion = normalizeVersion(status.targetVersion);
   const runtimeVersion = normalizeVersion(process.env.SANDBOX_VERSION ?? null);
-  const imageVersion = normalizeVersion(config.SANDBOX_IMAGE.split(':').pop() ?? null);
+  const imageTag = typeof config.SANDBOX_IMAGE === 'string' ? config.SANDBOX_IMAGE.split(':').pop() : null;
+  const imageVersion = normalizeVersion(imageTag ?? null);
   const effectiveVersion = runtimeVersion ?? imageVersion;
 
   if (!targetVersion || !effectiveVersion || targetVersion !== effectiveVersion) {

@@ -256,6 +256,19 @@ const envSchema = z.object({
   NANSEN_SMART_MONEY_TOP_N:                     optInt(20),
   NANSEN_SMART_MONEY_LOOKBACK_HOURS:            optInt(1),
   NANSEN_SMART_MONEY_MAX_LIVE_CALLS_PER_REQUEST: optInt(3),
+  // ─── Token Terminal Fundamentals Worker (Story 2.3.2) ───────────────────
+  // Token Terminal API requires dedicated API plan/custom contract.
+  // Pro web/CSV subscriptions are not sufficient for API access.
+  // Rate limit reference: 60 req/min — keep worker concurrency low.
+  TOKEN_TERMINAL_WORKER_ENABLED:               optBoolFalse,
+  TOKEN_TERMINAL_API_BASE_URL:                 optUrl('https://api.tokenterminal.com/v2'),
+  TOKEN_TERMINAL_API_KEY:                      optStr,
+  TOKEN_TERMINAL_SYNC_INTERVAL_MS:             optInt(86_400_000),
+  TOKEN_TERMINAL_CACHE_TTL_MS:                 optInt(86_400_000),
+  TOKEN_TERMINAL_PROJECTS:                     optStrDefault(''),
+  TOKEN_TERMINAL_METRICS:                      optStrDefault('fees,revenue,earnings,user_dau,active_developers,code_commits,market_cap_fully_diluted,market_cap_circulating,ps_ratio_fully_diluted,ps_ratio_circulating,pf_ratio_fully_diluted,pf_ratio_circulating'),
+  TOKEN_TERMINAL_WORKER_CONCURRENCY:           optInt(1),
+  TOKEN_TERMINAL_MAX_PROJECTS_PER_RUN:         optInt(100),
   ONCHAIN_WORKER_ENABLED:      optBoolFalse,
   ONCHAIN_RETENTION_DAYS:      optInt(30),
   MORALIS_API_KEY:             optStr,
@@ -704,6 +717,15 @@ export const config = {
   NANSEN_SMART_MONEY_TOP_N: env.NANSEN_SMART_MONEY_TOP_N,
   NANSEN_SMART_MONEY_LOOKBACK_HOURS: env.NANSEN_SMART_MONEY_LOOKBACK_HOURS,
   NANSEN_SMART_MONEY_MAX_LIVE_CALLS_PER_REQUEST: env.NANSEN_SMART_MONEY_MAX_LIVE_CALLS_PER_REQUEST,
+  TOKEN_TERMINAL_WORKER_ENABLED: env.TOKEN_TERMINAL_WORKER_ENABLED,
+  TOKEN_TERMINAL_API_BASE_URL: env.TOKEN_TERMINAL_API_BASE_URL,
+  TOKEN_TERMINAL_API_KEY: env.TOKEN_TERMINAL_API_KEY,
+  TOKEN_TERMINAL_SYNC_INTERVAL_MS: env.TOKEN_TERMINAL_SYNC_INTERVAL_MS,
+  TOKEN_TERMINAL_CACHE_TTL_MS: env.TOKEN_TERMINAL_CACHE_TTL_MS,
+  TOKEN_TERMINAL_PROJECTS: env.TOKEN_TERMINAL_PROJECTS,
+  TOKEN_TERMINAL_METRICS: env.TOKEN_TERMINAL_METRICS,
+  TOKEN_TERMINAL_WORKER_CONCURRENCY: env.TOKEN_TERMINAL_WORKER_CONCURRENCY,
+  TOKEN_TERMINAL_MAX_PROJECTS_PER_RUN: env.TOKEN_TERMINAL_MAX_PROJECTS_PER_RUN,
 
   // ─── Story 3.4 — Token Detail Page API keys ───────────────────────────────
   MORALIS_API_KEY: env.MORALIS_API_KEY,
@@ -956,6 +978,11 @@ export const TOOL_PRICING: Record<string, ToolPricing> = {
   // Live Nansen API call: 5 Nansen credits (Smart Money) or 1 credit (TGM) ≈ $0.05–$0.25 per call.
   // Conservative starting price — revisit after usage data.
   smart_money_flow: {
+    baseCost: 0.20,
+    perResultCost: 0,
+    markupMultiplier: 1.0,
+  },
+  protocol_valuation: {
     baseCost: 0.20,
     perResultCost: 0,
     markupMultiplier: 1.0,

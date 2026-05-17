@@ -1367,3 +1367,100 @@ export const nansenTokenGodModeCache = epsilonSchema.table(
     uniqueIndex('uq_nansen_tgm_chain_token_source').on(table.chain, table.tokenAddress, table.source),
   ],
 );
+
+// ─── Token Terminal Fundamentals (Story 2.3.2) ─────────────────────────────
+
+export const tokenTerminalProjects = epsilonSchema.table(
+  'token_terminal_projects',
+  {
+    projectId: varchar('project_id', { length: 128 }).primaryKey(),
+    projectName: varchar('project_name', { length: 255 }).notNull(),
+    symbol: varchar('symbol', { length: 64 }),
+    marketSector: varchar('market_sector', { length: 128 }),
+    websiteUrl: text('website_url'),
+    tokenAddresses: jsonb('token_addresses').notNull().default([]).$type<string[]>(),
+    metadata: jsonb('metadata').notNull().default({}).$type<Record<string, unknown>>(),
+    source: varchar('source', { length: 32 }).notNull().default('token_terminal'),
+    fetchedAt: timestamp('fetched_at', { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+);
+
+export const tokenTerminalMetrics = epsilonSchema.table(
+  'token_terminal_metrics',
+  {
+    metricId: varchar('metric_id', { length: 128 }).primaryKey(),
+    metricName: varchar('metric_name', { length: 255 }).notNull(),
+    description: text('description'),
+    url: text('url'),
+    metadata: jsonb('metadata').notNull().default({}).$type<Record<string, unknown>>(),
+    source: varchar('source', { length: 32 }).notNull().default('token_terminal'),
+    fetchedAt: timestamp('fetched_at', { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+);
+
+export const tokenTerminalProjectMetrics = epsilonSchema.table(
+  'token_terminal_project_metrics',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    projectId: varchar('project_id', { length: 128 }).notNull(),
+    projectName: varchar('project_name', { length: 255 }),
+    metricId: varchar('metric_id', { length: 128 }).notNull(),
+    metricName: varchar('metric_name', { length: 255 }),
+    timestamp: timestamp('timestamp', { withTimezone: true }).notNull(),
+    value: numeric('value', { precision: 30, scale: 8 }),
+    rawValue: text('raw_value'),
+    source: varchar('source', { length: 32 }).notNull().default('token_terminal'),
+    fetchedAt: timestamp('fetched_at', { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('uq_token_terminal_project_metrics_p_m_t_s').on(table.projectId, table.metricId, table.timestamp, table.source),
+    index('idx_token_terminal_project_metrics_pm_ts').on(table.projectId, table.metricId, table.timestamp),
+    index('idx_token_terminal_project_metrics_m_ts').on(table.metricId, table.timestamp),
+  ],
+);
+
+export const tokenTerminalValuationSnapshots = epsilonSchema.table(
+  'token_terminal_valuation_snapshots',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    projectId: varchar('project_id', { length: 128 }).notNull(),
+    projectName: varchar('project_name', { length: 255 }),
+    symbol: varchar('symbol', { length: 64 }),
+    sector: varchar('sector', { length: 128 }),
+    feesAnnualizedUsd: numeric('fees_annualized_usd', { precision: 30, scale: 4 }),
+    revenueAnnualizedUsd: numeric('revenue_annualized_usd', { precision: 30, scale: 4 }),
+    earningsAnnualizedUsd: numeric('earnings_annualized_usd', { precision: 30, scale: 4 }),
+    marketCapFullyDilutedUsd: numeric('market_cap_fully_diluted_usd', { precision: 30, scale: 4 }),
+    marketCapCirculatingUsd: numeric('market_cap_circulating_usd', { precision: 30, scale: 4 }),
+    psRatioFullyDiluted: numeric('ps_ratio_fully_diluted', { precision: 20, scale: 6 }),
+    psRatioCirculating: numeric('ps_ratio_circulating', { precision: 20, scale: 6 }),
+    pfRatioFullyDiluted: numeric('pf_ratio_fully_diluted', { precision: 20, scale: 6 }),
+    pfRatioCirculating: numeric('pf_ratio_circulating', { precision: 20, scale: 6 }),
+    peRatio: numeric('pe_ratio', { precision: 20, scale: 6 }),
+    userDau: integer('user_dau'),
+    activeDevelopers: integer('active_developers'),
+    codeCommits: integer('code_commits'),
+    valuationSignal: varchar('valuation_signal', { length: 32 }).notNull().default('unknown'),
+    peerPercentiles: jsonb('peer_percentiles').notNull().default({}).$type<Record<string, unknown>>(),
+    riskFactors: jsonb('risk_factors').notNull().default([]).$type<string[]>(),
+    source: varchar('source', { length: 32 }).notNull().default('token_terminal'),
+    periodStart: timestamp('period_start', { withTimezone: true }),
+    periodEnd: timestamp('period_end', { withTimezone: true }),
+    fetchedAt: timestamp('fetched_at', { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('uq_token_terminal_valuation_snapshots_p_pe_s').on(table.projectId, table.periodEnd, table.source),
+    index('idx_token_terminal_valuation_snapshots_sector_period').on(table.sector, table.periodEnd),
+    index('idx_token_terminal_valuation_snapshots_signal_period').on(table.valuationSignal, table.periodEnd),
+    index('idx_token_terminal_valuation_snapshots_ps_fd').on(table.psRatioFullyDiluted),
+    index('idx_token_terminal_valuation_snapshots_user_dau').on(table.userDau),
+  ],
+);

@@ -101,7 +101,7 @@ export async function justavpsFetch<T = any>(
   path: string,
   options: { method?: string; body?: unknown; timeoutMs?: number } = {},
 ): Promise<T> {
-  const baseUrl = config.JUSTAVPS_API_URL.replace(/\/$/, '');
+  const baseUrl = (config.JUSTAVPS_API_URL || 'http://localhost:3001').replace(/\/$/, '');
   const headers: Record<string, string> = {
     'Authorization': `Bearer ${config.JUSTAVPS_API_KEY}`,
   };
@@ -448,7 +448,10 @@ function shellEscape(value: string): string {
 }
 
 function resolveReachableEpsilonApiUrl(): string {
-  const directBase = config.EPSILON_URL.replace(/\/v1\/router\/?$/, '');
+  const rawEpsilonUrl = typeof config.EPSILON_URL === 'string' && config.EPSILON_URL.length > 0
+    ? config.EPSILON_URL
+    : 'http://localhost:8008/v1/router';
+  const directBase = rawEpsilonUrl.replace(/\/v1\/router\/?$/, '');
 
   try {
     const parsed = new URL(directBase);

@@ -134,3 +134,31 @@ Body: `{ chain, token_address, mode, lookback_hours?, limit?, force_refresh?, se
 - Worker only runs if `NANSEN_SMART_MONEY_WORKER_ENABLED=true` and `NANSEN_API_KEY` is set.
 - Worker uses `Promise.allSettled` — partial TGM data (some calls fail) is committed with `status: 'partial'`.
 - `attribution: 'Powered by Nansen API'` must be shown to users per provider ToS.
+
+---
+
+## protocol_valuation
+
+**File**: `protocol_valuation.ts`
+
+**Tier**: Tier 2 only (`chainlens-tier2.md` — `protocol_valuation: allow`, Tier 1 denied)
+
+**Purpose**: Cache-first protocol fundamentals and valuation matrix (fees/revenue/earnings/users/devs + P/S/P/F/P/E) sourced from Token Terminal data cached by backend worker.
+
+### Backend route
+
+`POST /v1/router/protocol-valuation`
+
+Body: `{ mode, project_id?, symbol?, token_address?, sector?, peer_project_ids?, metrics?, force_refresh?, session_id? }`
+
+### Provider boundary
+
+- Tool calls epsilon-api only (`EPSILON_API_URL/v1/router/protocol-valuation`).
+- Tool never sees or uses `TOKEN_TERMINAL_API_KEY`.
+- `TOKEN_TERMINAL_API_KEY` remains strictly backend-only.
+
+### Cache and billing behavior
+
+- `cache_status: cache_fresh` => DB cache hit, cost `0`.
+- `cache_status: live` => explicit live refresh path, credits deducted (`protocol_valuation` in `TOOL_PRICING`).
+- If worker/provider is unconfigured, route returns actionable `unconfigured/no_data` response.

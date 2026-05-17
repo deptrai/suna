@@ -1,6 +1,6 @@
 # Story 2.3.2: Financial Statement Data via Token Terminal
 
-Status: ready-for-dev
+Status: ready-for-review
 
 Epic: 2 — Crypto Data Infrastructure
 Created: 2026-05-17
@@ -194,67 +194,67 @@ so that tôi biết token/protocol có đang overvalued hay undervalued dựa tr
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0: Config and provider boundary (AC1, AC2, AC3)**
-  - [ ] 0.1 — Add Token Terminal config vars to `apps/api/src/config.ts`.
-  - [ ] 0.2 — Update `apps/api/.env.example` with a `Token Terminal Fundamentals Worker` section.
-  - [ ] 0.3 — Ensure provider key is backend-only and redacted in logs/errors.
-  - [ ] 0.4 — Add comments documenting API plan requirement and 60 req/min rate limit.
+- [x] **Task 0: Config and provider boundary (AC1, AC2, AC3)**
+  - [x] 0.1 — Add Token Terminal config vars to `apps/api/src/config.ts`.
+  - [x] 0.2 — Update `apps/api/.env.example` with a `Token Terminal Fundamentals Worker` section.
+  - [x] 0.3 — Ensure provider key is backend-only and redacted in logs/errors.
+  - [x] 0.4 — Add comments documenting API plan requirement and 60 req/min rate limit.
 
-- [ ] **Task 1: DB schema and migration (AC4)**
-  - [ ] 1.1 — Add `tokenTerminalProjects`, `tokenTerminalMetrics`, `tokenTerminalProjectMetrics`, `tokenTerminalValuationSnapshots` to `packages/db/src/schema/epsilon.ts`.
-  - [ ] 1.2 — Export new tables from `packages/db/src/index.ts`.
-  - [ ] 1.3 — Create next migration without collision with other ready-for-dev Epic 2 stories.
-  - [ ] 1.4 — Add indexes/unique constraints exactly as specified.
+- [x] **Task 1: DB schema and migration (AC4)**
+  - [x] 1.1 — Add `tokenTerminalProjects`, `tokenTerminalMetrics`, `tokenTerminalProjectMetrics`, `tokenTerminalValuationSnapshots` to `packages/db/src/schema/epsilon.ts`.
+  - [x] 1.2 — Export new tables from `packages/db/src/index.ts`.
+  - [x] 1.3 — Create next migration without collision with other ready-for-dev Epic 2 stories.
+  - [x] 1.4 — Add indexes/unique constraints exactly as specified.
 
-- [ ] **Task 2: Token Terminal service wrapper (AC2, AC3, AC10)**
-  - [ ] 2.1 — Create `apps/api/src/router/services/token-terminal.ts`.
-  - [ ] 2.2 — Implement `fetchTokenTerminalMetrics()`.
-  - [ ] 2.3 — Implement `fetchTokenTerminalProjects()` or equivalent project discovery endpoint confirmed by docs.
-  - [ ] 2.4 — Implement `fetchMetricData(metricId, { projectIds, start, end })` for `/metrics/{metric_id}`.
-  - [ ] 2.5 — Add typed provider errors and redacted logging.
-  - [ ] 2.6 — Add throttling below 60 req/min.
+- [x] **Task 2: Token Terminal service wrapper (AC2, AC3, AC10)**
+  - [x] 2.1 — Create `apps/api/src/router/services/token-terminal.ts`.
+  - [x] 2.2 — Implement `fetchTokenTerminalMetrics()`.
+  - [x] 2.3 — Implement `fetchTokenTerminalProjects()` or equivalent project discovery endpoint confirmed by docs.
+  - [x] 2.4 — Implement `fetchMetricData(metricId, { projectIds, start, end })` for `/metrics/{metric_id}`.
+  - [x] 2.5 — Add typed provider errors and redacted logging.
+  - [x] 2.6 — Add throttling below 60 req/min.
 
-- [ ] **Task 3: Normalization and valuation logic (AC5, AC9, AC10)**
-  - [ ] 3.1 — Create pure helpers for numeric parsing, annualization, ratio calculation, and peer percentiles.
-  - [ ] 3.2 — Map configured Token Terminal metric IDs into normalized fields.
-  - [ ] 3.3 — Implement valuation signal classification.
-  - [ ] 3.4 — Add unit tests for missing/zero denominators and peer comparisons.
+- [x] **Task 3: Normalization and valuation logic (AC5, AC9, AC10)**
+  - [x] 3.1 — Create pure helpers for numeric parsing, annualization, ratio calculation, and peer percentiles.
+  - [x] 3.2 — Map configured Token Terminal metric IDs into normalized fields.
+  - [x] 3.3 — Implement valuation signal classification.
+  - [x] 3.4 — Add unit tests for missing/zero denominators and peer comparisons.
 
-- [ ] **Task 4: Worker implementation (AC5, AC10)**
-  - [ ] 4.1 — Create `apps/api/src/queue/bullmq/workers/token-terminal-worker.ts`.
-  - [ ] 4.2 — Implement queue singleton pattern and lifecycle exports.
-  - [ ] 4.3 — Implement metadata refresh job.
-  - [ ] 4.4 — Implement protocol fundamentals refresh job.
-  - [ ] 4.5 — Implement valuation snapshot compute job.
-  - [ ] 4.6 — Implement cleanup/retention job if snapshots should expire.
-  - [ ] 4.7 — Use `Promise.allSettled` or per-metric transactions for partial success.
+- [x] **Task 4: Worker implementation (AC5, AC10)**
+  - [x] 4.1 — Create `apps/api/src/queue/bullmq/workers/token-terminal-worker.ts`.
+  - [x] 4.2 — Implement queue singleton pattern and lifecycle exports.
+  - [x] 4.3 — Implement metadata refresh job.
+  - [x] 4.4 — Implement protocol fundamentals refresh job.
+  - [x] 4.5 — Implement valuation snapshot compute job.
+  - [x] 4.6 — Implement cleanup/retention job if snapshots should expire.
+  - [x] 4.7 — Use `Promise.allSettled` or per-metric transactions for partial success.
 
-- [ ] **Task 5: Queue lifecycle wiring (AC5)**
-  - [ ] 5.1 — Export `startTokenTerminalWorker`, `setupTokenTerminalJobs`, `stopTokenTerminalWorker`, `getTokenTerminalQueue` from `apps/api/src/queue/index.ts`.
-  - [ ] 5.2 — Start/setup in `startBackgroundServices()` in `apps/api/src/index.ts`.
-  - [ ] 5.3 — Stop in shutdown handler alongside existing workers.
+- [x] **Task 5: Queue lifecycle wiring (AC5)**
+  - [x] 5.1 — Export `startTokenTerminalWorker`, `setupTokenTerminalJobs`, `stopTokenTerminalWorker`, `getTokenTerminalQueue` from `apps/api/src/queue/index.ts`.
+  - [x] 5.2 — Start/setup in `startBackgroundServices()` in `apps/api/src/index.ts`.
+  - [x] 5.3 — Stop in shutdown handler alongside existing workers.
 
-- [ ] **Task 6: API route (AC6, AC8, AC9)**
-  - [ ] 6.1 — Create `apps/api/src/router/routes/protocol-valuation.ts`.
-  - [ ] 6.2 — Mount with `combinedAuth` in `apps/api/src/router/index.ts`.
-  - [ ] 6.3 — Implement cache-first `project_snapshot`, `valuation_matrix`, and `metric_timeseries` modes.
-  - [ ] 6.4 — Implement live refresh guard with `checkCredits` and bounded request count.
-  - [ ] 6.5 — Add `protocol_valuation` pricing to `TOOL_PRICING` with product-approved value.
+- [x] **Task 6: API route (AC6, AC8, AC9)**
+  - [x] 6.1 — Create `apps/api/src/router/routes/protocol-valuation.ts`.
+  - [x] 6.2 — Mount with `combinedAuth` in `apps/api/src/router/index.ts`.
+  - [x] 6.3 — Implement cache-first `project_snapshot`, `valuation_matrix`, and `metric_timeseries` modes.
+  - [x] 6.4 — Implement live refresh guard with `checkCredits` and bounded request count.
+  - [x] 6.5 — Add `protocol_valuation` pricing to `TOOL_PRICING` with product-approved value.
 
-- [ ] **Task 7: OpenCode tool and permissions (AC7, AC9)**
-  - [ ] 7.1 — Create `core/epsilon-master/opencode/tools/protocol_valuation.ts`.
-  - [ ] 7.2 — Validate args locally.
-  - [ ] 7.3 — Call only Chainlens internal API with `EPSILON_TOKEN`.
-  - [ ] 7.4 — Add Tier 2 permission and deny/omit Tier 1.
-  - [ ] 7.5 — Update tools README.
+- [x] **Task 7: OpenCode tool and permissions (AC7, AC9)**
+  - [x] 7.1 — Create `core/epsilon-master/opencode/tools/protocol_valuation.ts`.
+  - [x] 7.2 — Validate args locally.
+  - [x] 7.3 — Call only Chainlens internal API with `EPSILON_TOKEN`.
+  - [x] 7.4 — Add Tier 2 permission and deny/omit Tier 1.
+  - [x] 7.5 — Update tools README.
 
-- [ ] **Task 8: Tests and typecheck (AC10)**
-  - [ ] 8.1 — Add service tests with mocked `fetch`.
-  - [ ] 8.2 — Add valuation helper tests.
-  - [ ] 8.3 — Add route cache/live/billing tests.
-  - [ ] 8.4 — Add worker lifecycle/job tests.
-  - [ ] 8.5 — Add OpenCode tool smoke test if tool tests exist.
-  - [ ] 8.6 — Run relevant tests and typecheck.
+- [x] **Task 8: Tests and typecheck (AC10)**
+  - [x] 8.1 — Add service tests with mocked `fetch`.
+  - [x] 8.2 — Add valuation helper tests.
+  - [x] 8.3 — Add route cache/live/billing tests.
+  - [x] 8.4 — Add worker lifecycle/job tests.
+  - [x] 8.5 — Add OpenCode tool smoke test if tool tests exist.
+  - [x] 8.6 — Run relevant tests and typecheck.
 
 ## Dev Notes
 
