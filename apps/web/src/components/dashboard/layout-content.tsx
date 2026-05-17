@@ -247,7 +247,9 @@ function SessionTabsContainer({ children }: { children: React.ReactNode }) {
 		return t === "settings" || t === "page" || t === "project" || t === "dashboard";
 	});
 	const activeTab = activeTabId ? tabs[activeTabId] : null;
-	// Route-based pages (e.g. /token/*) bypass the tab system entirely
+	// Route-based pages bypass the tab system entirely. Currently scoped strictly to
+	// `/dashboard/token/` (Story 3.4). If a future top-level route like `/dashboard/tokenomics/`
+	// is added, ensure the trailing slash here prevents false-positive matches.
 	const normalizedPathname = normalizeAppPathname(pathname);
 	const isRoutePage = normalizedPathname.startsWith('/dashboard/token/');
 	const showingMountedTab = !!activeTab && !isRoutePage;

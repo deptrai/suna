@@ -1,6 +1,6 @@
 # Story 3.4: Token Detail Page — Canonical `/dashboard/token/[address]`
 
-Status: done
+Status: in-progress  # 2026-05-17 code-review: 34/36 patches applied, 2 LOW test items remain
 
 <!-- Spec'd 2026-05-10. Verified against actual codebase via MCP trio (Serena + SymDex + CRG)
      and validated by independent reviewer 2026-05-10. All 7 CRITICAL findings from validator
@@ -82,7 +82,7 @@ so that tôi có view toàn diện về token tại 1 URL ổn định mà exten
    - **When** validation trong page.tsx fail (regex không match cả EVM lẫn Solana).
    - **Then** page.tsx render TokenNotFound UI inline (cùng component file hoặc `_components/TokenNotFound.tsx`) thay vì call `notFound()`:
      - Header: "Token not found"
-     - Body: nếu raw param có thể là search term (length 1-30, alphanumeric), gọi `/v1/router/token-search?q={raw}` SERVER-SIDE (page.tsx async function có sẵn) → render top 5 suggestions với `<Link href="/dashboard/token/${result.id}">` và avatar image
+     - Body: nếu raw param có thể là search term (length 1-30, **alphanumeric + dash/underscore** per 2026-05-17 Decision D3), gọi `/v1/router/token-search?q={raw}` SERVER-SIDE (page.tsx async function có sẵn) → render top 5 suggestions với `<Link href="/dashboard/token/${result.id}">` và avatar image
      - Empty fallback: hiển thị link tới `/dashboard/markets` ("Browse all tokens")
      - Suggestions fetched server-side với 1s timeout — render trong same page response, KHÔNG flash empty
    - **And** Page metadata cho TokenNotFound case: `<title>Token not found — Chainlens</title>` + `<meta name="robots" content="noindex">` (SEO hygiene). Achieved qua conditional `generateMetadata` returning different metadata khi address invalid.
@@ -291,6 +291,99 @@ so that tôi có view toàn diện về token tại 1 URL ổn định mà exten
   - Add empty values (KHÔNG commit real keys)
 - [x] Update Story 3.3 `_bmad-output/implementation-artifacts/3-3-generative-ai-chat-widgets.md`:
   - Note tại Change Log: "RiskBadgeCard extraction in Story 3.4 enables standalone use beyond chat thread; routes switched to combinedAuth for SSR consumption."
+
+### Review Findings (2026-05-17 — bmad-code-review, full-file scope)
+
+**Sources:** Blind Hunter (29) + Edge Case Hunter (24) + Acceptance Auditor (18). Deduped → 5 decisions / 34 patches / 6 defers / 14 dismissed.
+
+**Scope:** Full review of all 39 files in Story 3.4 file list (not just diff vs main). Diff size ~6,129 lines split into 4 chunks: backend (15), page (11), widgets (4), tests+infra (9).
+
+#### Decision-needed (5) — RESOLVED 2026-05-17
+
+- [x] [Review][Decision] **AC2 — Keep ChartSection + fix empty-state.** User chose "best practices" = retain feature, fix bug rather than revert. Resolution: spec File List + AC2 wording will be updated to reflect `ChartSection.tsx` (with OHLCV fetch) + `token-ohlcv` route as the canonical impl. Empty-state + `/dashboard` prefix patches retained below.
+- [x] [Review][Decision] **AC4 — Switch invalid chain to inline TokenNotFound.** Resolution: convert `redirect('/dashboard/markets')` path → render `<TokenNotFound rawQuery={raw} suggestions={[]} message="Unsupported chain: {chainParam}" />`. Added as Patch.
+- [x] [Review][Decision] **AC5 — Keep `[A-Za-z0-9_-]{1,30}`.** Resolution: update AC5 wording in spec to "alphanumeric + dash/underscore, 1–30 chars" to cover `BTC-USD`, `my_token`. No code change.
+- [x] [Review][Decision] **token-search GET kept.** Idempotent + cacheable upstream. Document in spec backend convention as carve-out. No code change.
+- [x] [Review][Decision] **Extension strip `$` prefix.** Resolution: `dataset.token = match[1] ?? match[0].replace(/^\$/, '')`; advisory API + deep-link URL receive bare ticker. Added as Patch.
+
+#### Patch (36 — incl. 2 from resolved decisions)
+
+**From resolved Decisions:**
+
+- [x] [Review][Patch] **AC4 invalid chain → inline TokenNotFound** (resolved from D2). Replace `redirect('/dashboard/markets')` branch in `page.tsx` invalid-chain validation với `return <TokenNotFound rawQuery={raw} suggestions={[]} message={\`Unsupported chain: ${chainParam}\`} />`. Update `TokenNotFound` props to accept optional `message`. [page.tsx invalid-chain branch, TokenNotFound.tsx props]
+- [x] [Review][Patch] **Extension strip `$` prefix** (resolved from D5). `apps/extension/src/content/index.ts`: change `span.dataset.token = match[0]` → `span.dataset.token = match[1] ?? match[0].replace(/^\$/, '')`. Advisory fetch + deep-link URL nhận bare ticker. [extension/src/content/index.ts:~705]
+
+**CRITICAL — block merge:**
+
+- [x] [Review][Patch] **🔴 Real API keys leaked in `apps/api/.env.example` lines 244-245** — `NANSEN_API_KEY=nsn_46519bdc028738090a2b243f72e9b17f` + `DUNE_API_KEY=L94z9nw9PaxzMo5vmYXvwKKfzg7KszpA` committed (blame: 04633eeb519, 2026-05-09 by Vonic, pre-Story 3.4 but uncovered now). **Rotate keys immediately**, replace với empty placeholders. [apps/api/.env.example:244-245]
+- [x] [Review][Patch] **AC3 violation — `HoldersSection` hardcodes `decimals=18`** for `formatBalance(holder.balance, 18)`. USDC (6 decimals) / WBTC (8) display 10^12× too large. Fetch token decimals from token-info response và forward to component. [HoldersSection.tsx:143]
+- [x] [Review][Patch] **`config.ts:624` `ONCHAIN_WORKER_ENABLED: true` hardcoded** — ignores `env.ONCHAIN_WORKER_ENABLED` parsed via `optBoolFalse`. Operator can't disable on-chain Dune/Nansen worker. Fix: `ONCHAIN_WORKER_ENABLED: env.ONCHAIN_WORKER_ENABLED ?? false`. [config.ts:624]
+- [x] [Review][Patch] **`config.ts:625` `ONCHAIN_RETENTION_DAYS: 30` hardcoded** — ignores env. Same fix pattern. [config.ts:625]
+- [x] [Review][Patch] **Credits deducted on cache hits** — `checkCredits` + `deductToolCredits` fire unconditionally even when `cache_status='cache_fresh'`. Free reads billed full price. Apply across `token-holders`, `token-transactions`, `token-search` routes. [routes/token-holders.ts, token-transactions.ts, token-search.ts]
+
+**HIGH — fix this PR:**
+
+- [x] [Review][Patch] `contract-risk.ts` — `buyTax` parsed but never scored — only `sellTax` used in `if (sellTax > 0.5)`. High buy-tax honeypots silently get clean score. Add buyTax scoring or remove dead parse. [services/contract-risk.ts:~100]
+- [x] [Review][Patch] `contract-risk` service ignores caller's `options.signal` — creates new `AbortSignal.timeout` per upstream call, outer timeout can't cancel concurrent GoPlus/RugCheck fetches. [services/contract-risk.ts:1924-1925]
+- [x] [Review][Patch] `token-transactions` BSC/Avalanche/Optimism gap — `ETHERSCAN_CHAIN_MAP` has 7 chains but no Blockscout fallback for BSC/Avalanche; keyless requests always return NOTOK. Add Blockscout entries or narrow Zod enum. [services/token-transactions.ts:202-210]
+- [x] [Review][Patch] `token-transactions` Blockscout empty-result message mismatch — guard checks only `'No transactions found'` (Etherscan), Blockscout returns `'No results'`. Every empty Blockscout response throws error instead of returning empty list. [services/token-transactions.ts:228]
+- [x] [Review][Patch] `token-transactions` negative `tokenDecimal` triggers `10n ** BigInt(-1)` RangeError in `formatTxValue` — falls back to raw 18-digit string. Guard `Number(...) < 0 ? 18 : ...`. [services/token-transactions.ts:115, TxsSection.tsx formatTxValue]
+- [x] [Review][Patch] `token-holders` 24h cache TTL for `unconfigured: true` snapshot — 24-hour feature blackout after operator adds Moralis key. Skip cache when `unconfigured` or use short TTL. [routes/token-holders.ts:57, services/token-holders.ts unconfigured branch]
+- [x] [Review][Patch] `token-search` no max length on `q` — attacker can send 10KB+ query polluting billing description `Token search: ${query}`. Add `.max(100)` validation. [routes/token-search.ts:20-29]
+- [x] [Review][Patch] `token-search` cache key uses `query.trim().toLowerCase()` but `searchTokens(query)` called with raw casing — minor cache-key/service-call inconsistency. Pass normalized. [routes/token-search.ts:1515,1528]
+- [x] [Review][Patch] `token-holders` route accepts Zod `'solana'` enum, then service throws + `deductToolCredits` fires on doomed request. Short-circuit Solana before `checkCredits`. [routes/token-holders.ts schema vs service]
+- [x] [Review][Patch] `tx-simulator.ts` `[TIER-BYPASS-SUSPECT]` log fires unconditionally on every request — log spam. Gate on actual condition or remove. [routes/tx-simulator.ts:~1699]
+- [x] [Review][Patch] `HoldersSection.tsx` hardcodes `https://etherscan.io/address/${addr}` for all chains — arbitrum/polygon/bsc holders link to wrong explorer. Reuse `getAddressExplorerUrl` helper from `TxsSection.tsx`. [HoldersSection.tsx:133]
+- [x] [Review][Patch] `ChartSection.tsx` "Try again →" link href `/token/${address}` missing `/dashboard` prefix → 404. [ChartSection.tsx:239]
+- [x] [Review][Patch] `ChartSection.tsx` empty `data.items=[]` → `TradingViewChart` sets `loading=true` permanently (no empty-state). Add explicit empty-state when `items.length === 0`. [ChartSection.tsx:109]
+- [x] [Review][Patch] `page.tsx` `generateMetadata` drops `chain` param when calling `fetchTokenInfoServer(address)` — non-Ethereum tokens get wrong/empty metadata. Forward `chain`. [page.tsx:~1146]
+- [x] [Review][Patch] `HeaderSection.fetchTokenInfoServer` drops `chain` argument — non-Ethereum tokens always fall to "Listing pending" fallback. Pass `chain` like RiskSection/HoldersSection. [HeaderSection.tsx:fetchTokenInfoServer signature]
+- [x] [Review][Patch] `page.tsx` `ALLOWED_CHAINS_SET.has(chainCandidate)` case-sensitive — `?chain=Ethereum` silently downgrades to `'ethereum'` default. Lowercase chainParam before lookup. [page.tsx:1082]
+- [x] [Review][Patch] Extension `canonical.ts` returns raw `process.env.CHAINLENS_BASE_URL` — trailing-slash not stripped → `https://app.chainlens.com//api/v1/...` (double slash). Mirror `page.tsx` `.replace(/\/$/, '')`. [extension/src/lib/canonical.ts]
+
+**MEDIUM — fix this PR or next:**
+
+- [x] [Review][Patch] `HeaderSection.tsx` `change_24h_pct / 100` then `percentFormatter` (`style:'percent'` also ×100) — unit double-dipped if upstream returns raw percent (5.0 = 5%) → displays 0.05%. Verify upstream contract (token-info `Partial<>` type has no unit doc). [HeaderSection.tsx:128]
+- [x] [Review][Patch] `HeaderSection.tsx` `JSON.parse(text) as TokenInfoResponse` — unchecked cast; partial response with missing `name`/`symbol` renders empty/`?` avatar. Add runtime guard for required fields. [HeaderSection.tsx:305]
+- [x] [Review][Patch] `HoldersSection.tsx:499` `(data as any).unconfigured` — type union already has `unconfigured?: boolean`, remove `as any`. [HoldersSection.tsx:499]
+- [x] [Review][Patch] `HoldersSection.tsx:487` Solana check `chain === 'solana' || chain === 'sol'` case-sensitive — misses `'SOLANA'`. Normalize with `.toLowerCase()` parity với `ChartSection`. [HoldersSection.tsx:487]
+- [x] [Review][Patch] `TxsSection.tsx:911` row key `${tx.hash}-${tx.block_number}-${idx}` — idx tail makes duplicates always unique-keyed, masking dupe-hash bugs from API. Drop idx. [TxsSection.tsx:911]
+- [x] [Review][Patch] `getServerAuthHeader.ts` swallows all Supabase errors → empty header → silent 401 from backend. Log warning at minimum so SSR auth failures are observable. [getServerAuthHeader.ts:963-965]
+- [x] [Review][Patch] `OcContractRiskToolView.tsx:41` `isError = !parsed?.success || toolResult?.success === false` — when `parsed=null` (non-JSON rawOutput), `parsed?.error` is undefined → `errorMessage='Risk check unavailable'`. Real error string from `toolResult` lost. Surface raw excerpt. [OcContractRiskToolView.tsx:41]
+- [x] [Review][Patch] `RiskBadgeCard.tsx:132` `isError = !data?.success || !!errorMessage` — error UI overshadows valid `data.success=true` when caller also passes `errorMessage`. Refine guard semantics. [RiskBadgeCard.tsx:132]
+- [x] [Review][Patch] Extension TOKEN_REGEX module-level `g` flag with `lastIndex` mutation — fragile under re-entrant calls (mutation observer mid-walk). Reset before each use or use non-global regex. [extension/src/content/index.ts:~505]
+
+**LOW — tests/observability:**
+
+- [ ] [Review][Patch] `token-holders-route.test.ts` only mocks `cacheGet: () => null` — cache-hit billing path + stale-fallback path zero coverage. Add 2 tests covering the new "skip deduct on cache hit" branch. _(left as open action item: requires non-trivial mock refactor; pairs with the new billing-skip code path)_ [__tests__/unit/token-holders-route.test.ts:24]
+- [ ] [Review][Patch] `ChartSection.test.tsx` uses `await import()` per test — Bun module cache fragility. Switch to `mock.module` reset between tests or `jest.isolateModules`-style. _(left as open action item: low impact, tests currently pass)_ [__tests__/ChartSection.test.tsx]
+- [x] [Review][Patch] `layout-content.tsx:1171` hardcoded `/dashboard/token/` prefix bypass — fragile (future `/dashboard/tokenomics/` would match). Document rationale or refactor to route-segment metadata. [components/dashboard/layout-content.tsx:1171]
+
+#### Defer (6) — pre-existing or post-MVP
+
+- [x] [Review][Defer] AC1 path drift — files at `apps/web/src/app/(dashboard)/dashboard/token/[address]/` vs spec File List `apps/web/src/app/(dashboard)/token/[address]/`. URL `/dashboard/token/[address]` correct at runtime (markets/chart routes follow same nested pattern). Spec File List needs doc update only — deferred to spec maintenance pass.
+- [x] [Review][Defer] `streaming.test.tsx` missing — spec acknowledged Bun cannot reliably render Next.js Suspense streams; deferred to Story 3.4.5 Playwright scope (per existing Change Log 2026-05-17 entry).
+- [x] [Review][Defer] PATCH-33 (Story 3.3 regression run) unverifiable from diff — process claim with no test-run log artifact. Re-run `bun test apps/web/src/components/thread/tool-views/opencode/__tests__/OcContractRiskToolView.test.ts` as gate before merging this review's patches.
+- [x] [Review][Defer] Task 1 — `normalizeAddress` not adopted inside `services/contract-risk.ts` (inline `.toLowerCase()` remains). Service file uses shared regex but address normalization gap. Low-impact (semantically equivalent for EVM). Address as cross-cutting cleanup.
+- [x] [Review][Defer] Token-search uses single dedicated env var `CHAINLENS_BASE_URL` (extension) vs `NEXT_PUBLIC_APP_URL` (web). Two-canonical-URL drift documented in spec Decisions — keep dual env vars until extension+web env unified post-MVP.
+- [x] [Review][Defer] Shadow DOM `.matches(':hover')` reliability for extension tooltip — needs cross-browser real-world test (Chrome/Brave/Edge); not a diff-verifiable bug. Address with Story 6.x extension E2E suite.
+
+#### Dismissed (14) — false positive / handled / out-of-scope
+
+- `apps/web/src/lib/__tests__/address.test.ts` claimed missing by Auditor — **FILE EXISTS** (36 lines), verified via `ls`.
+- Story 3.4 keys (`MORALIS_API_KEY`, `ETHERSCAN_API_KEY`, etc.) at `.env.example:262-269` — correctly empty placeholders per spec.
+- `INTERNAL_SERVICE_KEY` getter sync FS I/O — only fires once when `process.env.INTERNAL_SERVICE_KEY` missing, memoized via `process.env` mutation (line 542). Not hot-path.
+- `TokenNotFound` rawQuery XSS — React auto-escapes text children.
+- `relativeTimeFrom` future timestamps — returns `'just now'` (guarded).
+- SOL_ADDRESS regex 45+ char hypothetical — Solana addresses ≤44 chars per network spec.
+- `TxsSection` empty `from`/`to` (mint/burn) — guarded by `renderAddrCell` `!addr` check.
+- `TxsSection.transactions` undefined in Partial<> response — falls to empty-state, no crash.
+- `shortAddr('')` returns `''` — cosmetic only.
+- `contract-risk` RugCheck negative score — handled by `Math.max(combinedScore, rugCheck.score)`.
+- `formatBalance` `decimals=0` edge case — not reached due to hardcoded 18 (covered by Patch #16).
+- `HeaderSection` `raw.slice(0, 10)` empty string — guarded by upstream `detectChain('') === 'unknown'`.
+- `TokenNotFound` non-CoinGecko image hostname — `next.config.ts` patterns currently sufficient; speculative.
+- `RiskBadgeCard` `AlertTriangle` + `⚠️` emoji visual redundancy — cosmetic.
 
 ### Review Findings (2026-05-10 — bmad-code-review)
 
@@ -729,7 +822,9 @@ Story 3.3 review surfaced these patterns — apply preventively:
 - `apps/web/src/app/(dashboard)/token/[address]/page.tsx`
 - `apps/web/src/app/(dashboard)/token/[address]/loading.tsx`
 - `apps/web/src/app/(dashboard)/token/[address]/_components/HeaderSection.tsx`
-- `apps/web/src/app/(dashboard)/token/[address]/_components/ChartPlaceholderCard.tsx`
+- `apps/web/src/app/(dashboard)/token/[address]/_components/ChartSection.tsx` _(replaces deferred `ChartPlaceholderCard` per 2026-05-17 Decision D1: server-fetch OHLCV via new `/router/token-ohlcv` route with empty-state guard)_
+- `apps/api/src/router/services/token-ohlcv.ts` _(added 2026-05-17 D1: OHLCV provider for ChartSection)_
+- `apps/api/src/router/routes/token-ohlcv.ts` _(added 2026-05-17 D1)_
 - `apps/web/src/app/(dashboard)/token/[address]/_components/RiskSection.tsx`
 - `apps/web/src/app/(dashboard)/token/[address]/_components/HoldersSection.tsx`
 - `apps/web/src/app/(dashboard)/token/[address]/_components/TxsSection.tsx`

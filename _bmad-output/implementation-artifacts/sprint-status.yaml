@@ -1,5 +1,5 @@
 # generated: 2026-05-09
-# last_updated: 2026-05-15 (Story 5.5 VS validated — 15 fixes applied, ready-for-dev confirmed)
+# last_updated: 2026-05-17 (Story 3.4 code-review applied 34/36 patches; 2 LOW test action items remain)
 # project: chainlensnlens
 # project_key: NOKEY
 # tracking_system: file-system
@@ -33,7 +33,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-15 (Story 5.5 VS validated — 15 fixes applied, ready-for-dev confirmed)
+last_updated: 2026-05-17 (Story 3.4 code-review applied 34/36 patches; 2 LOW test action items remain)
 project: chainlens
 project_key: NOKEY
 tracking_system: file-system
@@ -68,7 +68,7 @@ development_status:
   3-1-defi-and-market-dashboard-page: done
   3-2-tradingview-advanced-charting: done
   3-3-generative-ai-chat-widgets: done
-  3-4-token-detail-page: done
+  3-4-token-detail-page: in-progress  # 2026-05-17 code-review: 34/36 patches applied, 2 LOW test items remain
   3-5-real-ohlcv-chart: done
   epic-3-retrospective: optional
 

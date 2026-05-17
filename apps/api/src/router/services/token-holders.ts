@@ -16,6 +16,8 @@ const MORALIS_CHAIN_MAP: Record<EvmChain, string> = {
 export interface HolderEntry {
   address: string;
   balance: string;
+  /** Human-readable decimal-aware balance from Moralis (e.g. "1234.5678"). */
+  balance_formatted: string;
   percentage: number;
   rank: number;
 }
@@ -81,6 +83,7 @@ export async function fetchTokenHolders(
     .map((entry, idx) => ({
       address: entry.owner_address,
       balance: String(entry.balance ?? '0'),
+      balance_formatted: String(entry.balance_formatted ?? entry.balance ?? '0'),
       percentage: Number(entry.percentage_relative_to_total_supply ?? 0) || 0,
       rank: idx + 1,
     }));

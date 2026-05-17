@@ -33,7 +33,10 @@ export interface TokenInfoSnapshot {
 
 export interface HolderEntry {
   address: string;
+  /** Raw on-chain balance as a base-10 string (no decimal applied). */
   balance: string;
+  /** Human-readable balance with token decimals applied (Moralis `balance_formatted`). */
+  balance_formatted?: string;
   percentage: number;
   rank: number;
 }

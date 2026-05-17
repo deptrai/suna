@@ -12,15 +12,21 @@ export interface SearchResult {
 interface TokenNotFoundProps {
   rawQuery: string;
   suggestions: SearchResult[];
+  /** Optional reason override (e.g. "Unsupported chain: foo"). Falls back to default phrasing. */
+  message?: string;
 }
 
-export function TokenNotFound({ rawQuery, suggestions }: TokenNotFoundProps) {
+export function TokenNotFound({ rawQuery, suggestions, message }: TokenNotFoundProps) {
   return (
     <div className="container max-w-4xl py-12 flex flex-col items-center justify-center min-h-[50vh] text-center space-y-8 animate-in fade-in zoom-in duration-500">
       <div className="space-y-4">
         <h1 className="text-3xl font-bold tracking-tight">Token Not Found</h1>
         <p className="text-muted-foreground text-lg max-w-xl mx-auto">
-          We couldn&apos;t find an exact match for <span className="font-mono text-primary bg-primary/10 px-2 py-1 rounded">"{rawQuery}"</span>.
+          {message ? (
+            <>{message}</>
+          ) : (
+            <>We couldn&apos;t find an exact match for <span className="font-mono text-primary bg-primary/10 px-2 py-1 rounded">&quot;{rawQuery}&quot;</span>.</>
+          )}
         </p>
       </div>
 

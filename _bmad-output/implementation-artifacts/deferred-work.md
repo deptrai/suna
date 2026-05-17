@@ -174,3 +174,12 @@ Items deferred from code reviews — pre-existing issues or hard policy calls th
 - AC1 Redis service not added to `core/docker/docker-compose.dev.yml` (production `scripts/compose/docker-compose.yml` already has it) — document gap.
 - `_journal.json` missing trailing newline [packages/db/drizzle/meta/_journal.json:275] — cosmetic.
 - `updatedAt: new Date()` set explicitly instead of relying on DB `defaultNow()` trigger [crypto-worker.ts:69] — theoretical clock skew issue between app and DB host.
+
+## Deferred from: code review of 3-4-token-detail-page (2026-05-17)
+
+- AC1 path drift — files at `apps/web/src/app/(dashboard)/dashboard/token/[address]/` vs spec File List `apps/web/src/app/(dashboard)/token/[address]/`; URL correct at runtime, doc-only mismatch.
+- `streaming.test.tsx` missing — Bun cannot reliably render Suspense streams; deferred to Story 3.4.5 Playwright scope.
+- PATCH-33 (Story 3.3 regression run) — process claim with no artifact; re-run `bun test apps/web/src/components/thread/tool-views/opencode/__tests__/OcContractRiskToolView.test.ts` before merge.
+- Task 1 — `normalizeAddress` not adopted inside `services/contract-risk.ts`; inline `.toLowerCase()` semantically equivalent for EVM.
+- Dual canonical-URL env vars (`CHAINLENS_BASE_URL` extension vs `NEXT_PUBLIC_APP_URL` web) — defer until extension+web env unified post-MVP.
+- Shadow DOM `.matches(':hover')` reliability for extension tooltip — defer to Story 6.x cross-browser E2E.

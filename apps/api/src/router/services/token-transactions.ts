@@ -22,7 +22,11 @@ const BLOCKSCOUT_CHAIN_MAP: Partial<Record<EvmChain, string>> = {
   base: 'https://base.blockscout.com',
   arbitrum: 'https://arbitrum.blockscout.com',
   polygon: 'https://polygon.blockscout.com',
+  optimism: 'https://optimism.blockscout.com',
 };
+
+// Etherscan/Blockscout messages indicating "no transactions" (legitimate empty state).
+const EMPTY_RESULT_MESSAGES = new Set(['no transactions found', 'no results', 'no transactions']);
 
 export interface TransactionEntry {
   hash: string;
@@ -83,7 +87,8 @@ export async function fetchTokenTransactions(
   // `result` may also be a string error message (e.g. "Max rate limit reached").
   const resultIsArr = Array.isArray(body.result);
   const resultStr = !resultIsArr ? String(body.result ?? '') : '';
-  if (body.status === '0' && body.message !== 'No transactions found') {
+  const messageNorm = (body.message ?? '').toLowerCase();
+  if (body.status === '0' && !EMPTY_RESULT_MESSAGES.has(messageNorm)) {
     const msgRaw = body.message || resultStr;
     const msg = String(msgRaw);
     if (msg.includes('Invalid API Key') || msg.includes('Missing/Invalid')) {
@@ -96,6 +101,10 @@ export async function fetchTokenTransactions(
       throw new Error(`${sourceName} API key required — add ETHERSCAN_API_KEY to .env (free at etherscan.io)`);
     }
     throw new Error(`${sourceName} API error: ${msg || 'unknown'}`);
+  }
+  // Legitimate empty-result (status="0" + known empty-message) → empty transactions list.
+  if (body.status === '0' && EMPTY_RESULT_MESSAGES.has(messageNorm)) {
+    return { transactions: [], chain, address, checked_at: new Date().toISOString(), source: sourceName };
   }
   // Defensive: if result is unexpectedly a non-array non-error shape, throw rather than silently empty
   if (!resultIsArr) {
@@ -112,7 +121,11 @@ export async function fetchTokenTransactions(
         from: String(tx.from ?? ''),
         to: String(tx.to ?? ''),
         value: String(tx.value ?? '0'),
-        value_decimal: tx.tokenDecimal != null && tx.tokenDecimal !== '' ? Number(tx.tokenDecimal) : 18,
+        value_decimal: (() => {
+          if (tx.tokenDecimal == null || tx.tokenDecimal === '') return 18;
+          const d = Number(tx.tokenDecimal);
+          return Number.isFinite(d) && d >= 0 && d <= 36 ? d : 18;
+        })(),
         timestamp: new Date(ts * 1000).toISOString(),
         block_number: String(tx.blockNumber ?? ''),
         gas_used: String(tx.gasUsed ?? ''),

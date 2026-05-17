@@ -32,14 +32,14 @@ tokenHolders.post('/', async (c) => {
 
   const { address, chain, limit, session_id } = parseResult.data;
   const isSolana = chain === 'solana';
-  if (!isSolana && !EVM_ADDRESS.test(address)) {
+  if (isSolana) {
+    return c.json({ success: false, stale: false, error: 'Solana token holders require paid tier (planned post-MVP)', cost: 0 }, 400);
+  }
+  if (!EVM_ADDRESS.test(address)) {
     throw new HTTPException(400, { message: 'Invalid EVM address format' });
   }
-  if (isSolana && !SOL_ADDRESS.test(address)) {
-    throw new HTTPException(400, { message: 'Invalid Solana address format' });
-  }
 
-  const cacheAddr = isSolana ? address : address.toLowerCase();
+  const cacheAddr = address.toLowerCase();
   const key = widgetCacheKey(TOOL, cacheAddr, chain, String(limit));
   const creditCheck = await checkCredits(accountId);
   if (!creditCheck.hasCredits) throw new HTTPException(402, { message: 'Insufficient credits' });
@@ -54,7 +54,8 @@ tokenHolders.post('/', async (c) => {
       cache_status = 'cache_fresh';
     } else {
       data = await fetchTokenHolders(address, chain, { limit });
-      cacheSet(key, data, TTL_MS);
+      // Short TTL when unconfigured so feature unblocks within minutes after operator adds MORALIS_API_KEY.
+      cacheSet(key, data, data.unconfigured ? 60_000 : TTL_MS);
       cache_status = 'live';
     }
   } catch (err) {
@@ -73,13 +74,17 @@ tokenHolders.post('/', async (c) => {
     }
   }
 
-  const cost = getToolCost(TOOL, 0);
+  // Skip billing on cache hits (fresh or stale): users only pay for live upstream calls.
+  const billable = cache_status === 'live' && !data.unconfigured;
+  const cost = billable ? getToolCost(TOOL, 0) : 0;
   c.header('X-Cache-Status', cache_status === 'live' ? 'fresh' : cache_status === 'cache_fresh' ? 'hit' : 'stale-fallback');
 
-  try {
-    await deductToolCredits(accountId, TOOL, 0, `Token holders: ${address} on ${chain}`, session_id);
-  } catch (e) {
-    console.warn(`[EPSILON][billing-failure] tool=${TOOL} account=${accountId} err=${e instanceof Error ? e.message : String(e)}`);
+  if (billable) {
+    try {
+      await deductToolCredits(accountId, TOOL, 0, `Token holders: ${address} on ${chain}`, session_id);
+    } catch (e) {
+      console.warn(`[EPSILON][billing-failure] tool=${TOOL} account=${accountId} err=${e instanceof Error ? e.message : String(e)}`);
+    }
   }
 
   return c.json({ success: true, stale, cache_status, cost, ...data });

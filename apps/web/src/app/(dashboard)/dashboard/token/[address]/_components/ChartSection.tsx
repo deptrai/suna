@@ -90,11 +90,20 @@ export async function ChartSection({ address, chain }: ChartSectionProps) {
         <h2 className="text-xl font-semibold">Chart unavailable</h2>
         <p className="text-muted-foreground max-w-md text-sm">{data.error}</p>
         <Link
-          href={`/token/${address}?chain=${encodeURIComponent(chain)}`}
+          href={`/dashboard/token/${address}?chain=${encodeURIComponent(chain)}`}
           className="mt-2 inline-flex items-center text-sm font-medium text-primary hover:underline"
         >
           Try again →
         </Link>
+      </div>
+    );
+  }
+
+  if (!data.items || data.items.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-2 h-64 p-6 rounded-xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-2xl text-center">
+        <h2 className="text-xl font-semibold">No chart data</h2>
+        <p className="text-muted-foreground max-w-md text-sm">No OHLCV history available for this token yet.</p>
       </div>
     );
   }

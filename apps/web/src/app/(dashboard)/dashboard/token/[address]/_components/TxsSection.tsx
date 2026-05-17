@@ -175,8 +175,8 @@ export async function TxsSection({ address, chain }: TxsSectionProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {data.transactions.map((tx, idx) => (
-                <tr key={`${tx.hash}-${tx.block_number}-${idx}`} className="hover:bg-white/5 transition-colors">
+              {data.transactions.map((tx) => (
+                <tr key={`${tx.hash}-${tx.block_number}-${tx.from}-${tx.to}`} className="hover:bg-white/5 transition-colors">
                   <td className="px-4 py-3 font-mono text-primary">
                     <a
                       href={getExplorerUrl(chain, tx.hash)}

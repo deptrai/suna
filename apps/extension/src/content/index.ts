@@ -201,7 +201,10 @@ function init() {
           const span = document.createElement('span');
           span.className = 'chainlens-token-highlight';
           span.textContent = match[0];
-          span.dataset.token = match[0];
+          // For `$TICKER` matches, group 1 captures the bare ticker (e.g. "BTC").
+          // For 0x/Solana matches, group 1 is undefined and we use the full match.
+          // Strip leading `$` defensively so advisory API and deep-link URLs receive a clean token.
+          span.dataset.token = match[1] ?? match[0].replace(/^\$/, '');
           span.addEventListener('mouseenter', handleMouseEnter);
           span.addEventListener('mouseleave', handleMouseLeave);
           fragment.appendChild(span);

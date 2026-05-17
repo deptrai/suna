@@ -45,7 +45,11 @@ export function RiskBadgeCard({ data, isLoading, errorMessage }: RiskBadgeCardPr
     );
   }
 
-  const isError = !data?.success || !!errorMessage;
+  // Error UI shows when (a) explicit errorMessage from caller, (b) data missing, or
+  // (c) data.success === false. A truthy errorMessage WITH a valid data.success=true
+  // is treated as a soft warning — render data normally, caller can surface message
+  // elsewhere if needed (currently no callers depend on this combination).
+  const isError = !data || data.success === false || (!!errorMessage && !data?.success);
 
   if (isError || !data) {
     return (

@@ -38,7 +38,13 @@ async function fetchTokenInfoServer(address: string, chain: string): Promise<Tok
 
     const text = await res.text();
     try {
-      return JSON.parse(text) as TokenInfoResponse;
+      const parsed = JSON.parse(text) as TokenInfoResponse;
+      // Guard partial responses where success=true but core fields missing — treat as soft failure
+      // so HeaderSection renders "Listing pending" fallback rather than blank `name`/`symbol`.
+      if (parsed.success && (!parsed.name || !parsed.symbol)) {
+        return { success: false, error: 'Upstream returned partial token-info response' };
+      }
+      return parsed;
     } catch {
       return { success: false, error: 'Upstream returned non-JSON' };
     }

@@ -7,8 +7,10 @@ export async function getServerAuthHeader(): Promise<Record<string, string>> {
     if (session?.access_token) {
       return { Authorization: `Bearer ${session.access_token}` };
     }
-  } catch {
-    // fallback to no auth
+    // No session — anonymous fetch; downstream will return 401 if endpoint requires auth.
+  } catch (err) {
+    // Log so SSR auth failures are observable (rather than silently 401-ing every section).
+    console.warn('[getServerAuthHeader] Supabase session lookup failed:', err instanceof Error ? err.message : err);
   }
   return {};
 }

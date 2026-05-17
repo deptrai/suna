@@ -621,8 +621,8 @@ export const config = {
   NEWS_API_KEY: env.NEWS_API_KEY,
 
   // ─── On-Chain Data Providers ──────────────────────────────────────────────
-  ONCHAIN_WORKER_ENABLED: true,
-  ONCHAIN_RETENTION_DAYS: 30,
+  ONCHAIN_WORKER_ENABLED: env.ONCHAIN_WORKER_ENABLED ?? false,
+  ONCHAIN_RETENTION_DAYS: env.ONCHAIN_RETENTION_DAYS ?? 30,
   DUNE_API_KEY: env.DUNE_API_KEY,
   NANSEN_API_KEY: env.NANSEN_API_KEY,
 

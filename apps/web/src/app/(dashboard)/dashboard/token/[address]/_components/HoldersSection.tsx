@@ -51,29 +51,31 @@ const numberFormatter = new Intl.NumberFormat('en-US', {
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
-// Format raw token balance using BigInt to avoid Number precision loss for large supplies.
-// `decimals` defaults to 18 — caller should pass real decimals from token-info when available.
-function formatBalance(rawBalance: string, decimals: number): string {
-  if (!rawBalance) return '0';
-  try {
-    const raw = BigInt(rawBalance);
-    const divisor = 10n ** BigInt(decimals);
-    const whole = raw / divisor;
-    const frac = raw % divisor;
-    // Combine whole + 4 decimal places (truncate, not round)
-    const fracStr = frac.toString().padStart(decimals, '0').slice(0, 4);
-    const wholeNum = Number(whole);
-    if (Number.isFinite(wholeNum)) {
-      return numberFormatter.format(wholeNum + Number(`0.${fracStr}`));
-    }
-    return `${whole.toString()}.${fracStr}`;
-  } catch {
-    return rawBalance;
+const getAddressExplorerUrl = (chain: string, addr: string): string => {
+  switch (chain) {
+    case 'arbitrum': return `https://arbiscan.io/address/${addr}`;
+    case 'base': return `https://basescan.org/address/${addr}`;
+    case 'polygon': return `https://polygonscan.com/address/${addr}`;
+    case 'bsc': return `https://bscscan.com/address/${addr}`;
+    case 'avalanche': return `https://snowtrace.io/address/${addr}`;
+    case 'optimism': return `https://optimistic.etherscan.io/address/${addr}`;
+    case 'ethereum':
+    default: return `https://etherscan.io/address/${addr}`;
   }
+};
+
+// Prefer Moralis `balance_formatted` (decimals applied upstream). Fall back to raw balance string
+// if missing. Avoids 18-decimals-hardcoded display bug for USDC (6) / WBTC (8) etc.
+function renderBalance(holder: { balance: string; balance_formatted?: string }): string {
+  const src = holder.balance_formatted ?? holder.balance;
+  if (!src) return '0';
+  const num = Number(src);
+  if (Number.isFinite(num)) return numberFormatter.format(num);
+  return src;
 }
 
 export async function HoldersSection({ address, chain }: HoldersSectionProps) {
-  if (chain === 'solana' || chain === 'sol') {
+  if (chain.toLowerCase() === 'solana' || chain.toLowerCase() === 'sol') {
     return (
       <div className="rounded-xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-2xl p-6">
         <h2 className="text-xl font-semibold mb-4">Top Holders</h2>
@@ -85,7 +87,7 @@ export async function HoldersSection({ address, chain }: HoldersSectionProps) {
   }
 
   const data = await fetchTokenHoldersServer(address, chain);
-  const isUnconfigured = data.success && (data as any).unconfigured === true;
+  const isUnconfigured = data.success && data.unconfigured === true;
 
   return (
     <div className="rounded-xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-2xl p-6">
@@ -130,7 +132,7 @@ export async function HoldersSection({ address, chain }: HoldersSectionProps) {
                         <span title="Zero address">{short}</span>
                       ) : (
                         <a
-                          href={`https://etherscan.io/address/${holder.address}`}
+                          href={getAddressExplorerUrl(chain, holder.address)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="hover:underline"
@@ -140,7 +142,7 @@ export async function HoldersSection({ address, chain }: HoldersSectionProps) {
                       )}
                     </td>
                     <td className="px-4 py-3 text-right font-mono">
-                      {formatBalance(holder.balance, 18)}
+                      {renderBalance(holder)}
                     </td>
                     <td className="px-4 py-3 text-right font-mono">
                       {Number.isFinite(holder.percentage) ? holder.percentage.toFixed(2) : '—'}%

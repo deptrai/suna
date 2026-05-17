@@ -33,6 +33,13 @@ export function OcContractRiskToolView({
   const rawOutput = toolResult?.output;
   const parsed = useMemo(() => parseOutput(rawOutput), [rawOutput]);
   const isError = !parsed?.success || toolResult?.success === false;
+  // Surface raw output excerpt when JSON parse fails so user sees the actual upstream error,
+  // not a generic "Risk check unavailable".
+  const rawErrorExcerpt = useMemo(() => {
+    if (parsed) return undefined;
+    const s = typeof rawOutput === 'string' ? rawOutput : '';
+    return s.length > 0 ? s.slice(0, 200) : undefined;
+  }, [parsed, rawOutput]);
 
   if (isStreaming && !toolResult) {
     return <LoadingState title="Checking Contract Risk" subtitle={shortAddr(address)} />;
@@ -57,9 +64,9 @@ export function OcContractRiskToolView({
         </div>
       </CardHeader>
 
-      <RiskBadgeCard 
-        data={parsed} 
-        errorMessage={isError ? (parsed?.error ?? 'Risk check unavailable') : undefined} 
+      <RiskBadgeCard
+        data={parsed}
+        errorMessage={isError ? (parsed?.error ?? rawErrorExcerpt ?? 'Risk check unavailable') : undefined}
       />
 
       <ToolViewFooter

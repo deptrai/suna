@@ -97,10 +97,14 @@ async function fetchGoPlus(
   let score = 0;
 
   if (result.is_honeypot === '1') { factors.push({ code: 'honeypot', label: 'Honeypot detected', severity: 'critical' }); score += 40; }
-  const buyTax = parseFloat(result.buy_tax ?? '0');
-  const sellTax = parseFloat(result.sell_tax ?? '0');
+  const buyTaxRaw = parseFloat(result.buy_tax ?? '0');
+  const sellTaxRaw = parseFloat(result.sell_tax ?? '0');
+  const buyTax = Number.isFinite(buyTaxRaw) ? buyTaxRaw : 0;
+  const sellTax = Number.isFinite(sellTaxRaw) ? sellTaxRaw : 0;
   if (sellTax > 0.5) { factors.push({ code: 'high_tax', label: `High sell tax (${(sellTax * 100).toFixed(0)}%)`, severity: 'high' }); score += 25; }
   else if (sellTax > 0.1) { factors.push({ code: 'elevated_tax', label: `Elevated sell tax (${(sellTax * 100).toFixed(0)}%)`, severity: 'medium' }); score += 10; }
+  if (buyTax > 0.5) { factors.push({ code: 'high_buy_tax', label: `High buy tax (${(buyTax * 100).toFixed(0)}%)`, severity: 'high' }); score += 20; }
+  else if (buyTax > 0.1) { factors.push({ code: 'elevated_buy_tax', label: `Elevated buy tax (${(buyTax * 100).toFixed(0)}%)`, severity: 'medium' }); score += 8; }
   if (result.is_mintable === '1') { factors.push({ code: 'mintable', label: 'Token is mintable', severity: 'high' }); score += 20; }
   if (result.hidden_owner === '1') { factors.push({ code: 'hidden_owner', label: 'Hidden owner detected', severity: 'high' }); score += 20; }
   if (result.can_take_back_ownership === '1') { factors.push({ code: 'recoverable_ownership', label: 'Ownership can be reclaimed', severity: 'medium' }); score += 15; }
@@ -160,8 +164,13 @@ export async function fetchContractRisk(
   const isSolana = chain === 'solana' || chain === 'sol';
   const chainId = CHAIN_ID_MAP[chain.toLowerCase()] ?? '1';
 
-  const goPlusSignal = AbortSignal.timeout(PER_UPSTREAM_TIMEOUT_MS);
-  const rugCheckSignal = AbortSignal.timeout(PER_UPSTREAM_TIMEOUT_MS);
+  // Honour caller's signal alongside per-upstream timeout so outer aborts cancel both calls.
+  const goPlusSignal = options.signal
+    ? AbortSignal.any([options.signal, AbortSignal.timeout(PER_UPSTREAM_TIMEOUT_MS)])
+    : AbortSignal.timeout(PER_UPSTREAM_TIMEOUT_MS);
+  const rugCheckSignal = options.signal
+    ? AbortSignal.any([options.signal, AbortSignal.timeout(PER_UPSTREAM_TIMEOUT_MS)])
+    : AbortSignal.timeout(PER_UPSTREAM_TIMEOUT_MS);
 
   const [goPlusResult, rugCheckResult] = await Promise.allSettled([
     !isSolana ? fetchGoPlus(address, chainId, goPlusSignal) : Promise.resolve({ score: 0, factors: [] as RiskFactor[], success: false }),

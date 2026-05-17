@@ -46,8 +46,15 @@ async function searchTokensServerSide(query: string): Promise<SearchResult[]> {
   }
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ address: string }> }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ address: string }>;
+  searchParams: Promise<{ chain?: string }>;
+}): Promise<Metadata> {
   const { address: raw } = await params;
+  const { chain: chainParam } = await searchParams;
   const detected = detectChain(raw);
 
   if (detected === 'unknown') {
@@ -56,6 +63,12 @@ export async function generateMetadata({ params }: { params: Promise<{ address: 
       robots: { index: false },
     };
   }
+
+  // Resolve chain for token-info lookup (parity với page chain validation).
+  const chainCandidateRaw = (chainParam ?? (detected === 'evm' ? 'ethereum' : 'solana')).toLowerCase();
+  const metaChain = ALLOWED_CHAINS_SET.has(chainCandidateRaw)
+    ? chainCandidateRaw
+    : (detected === 'evm' ? 'ethereum' : 'solana');
 
   // EVM addresses are case-insensitive — normalize to lowercase for canonical to avoid
   // SEO duplicate content. Solana base58 is case-sensitive — preserve.
@@ -74,7 +87,7 @@ export async function generateMetadata({ params }: { params: Promise<{ address: 
           'Content-Type': 'application/json',
           ...authHeader,
         },
-        body: JSON.stringify({ address: normalizeAddress(raw, detected === 'solana' ? 'solana' : 'ethereum') }),
+        body: JSON.stringify({ address: normalizeAddress(raw, metaChain), chain: metaChain }),
         signal: AbortSignal.timeout(1000),
         next: { revalidate: 60 },
       });
@@ -126,13 +139,17 @@ export default async function TokenDetailPage({
     return <TokenNotFound rawQuery={raw} suggestions={suggestions} />;
   }
 
-  // Validate chain query param against allowlist; fall back to detected default.
-  const chainCandidate = chainParam ?? (detected === 'evm' ? 'ethereum' : 'solana');
-  const chain = ALLOWED_CHAINS_SET.has(chainCandidate) ? chainCandidate : (detected === 'evm' ? 'ethereum' : 'solana');
-  // Reject EVM<>Solana mismatch
+  // Validate chain query param against allowlist (case-insensitive).
+  // If chainParam supplied but doesn't match allowlist → inline TokenNotFound (AC4 resolution 2026-05-17).
+  const detectedDefault = detected === 'evm' ? 'ethereum' : 'solana';
+  const chainCandidate = (chainParam ?? detectedDefault).toLowerCase();
+  if (chainParam && !ALLOWED_CHAINS_SET.has(chainCandidate)) {
+    return <TokenNotFound rawQuery={raw} suggestions={[]} message={`Unsupported chain: ${chainParam}`} />;
+  }
+  const chain = ALLOWED_CHAINS_SET.has(chainCandidate) ? chainCandidate : detectedDefault;
+  // Reject EVM<>Solana mismatch (e.g. ?chain=solana but raw is 0x…)
   if ((chain === 'solana') !== (detected === 'solana')) {
-    const suggestions = await searchTokensServerSide(raw);
-    return <TokenNotFound rawQuery={raw} suggestions={suggestions} />;
+    return <TokenNotFound rawQuery={raw} suggestions={[]} message={`Address/chain mismatch: ${chain}`} />;
   }
   const address = normalizeAddress(raw, chain);
 

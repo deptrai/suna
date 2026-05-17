@@ -39,11 +39,9 @@ txSimulator.post('/', async (c) => {
   }
 
   const { from, to, data, value, chain, action, session_id } = parseResult.data;
-  // Backend has no tier signal yet (Story 4.x will add tier-on-token); log calls so we can
-  // detect Tier-1 users bypassing the frontend gate via direct API access.
-  console.log(
-    `[TIER-BYPASS-SUSPECT] tx_simulator hit account=${accountId} chain=${chain} ua="${(c.req.header('user-agent') ?? '').slice(0, 80)}"`,
-  );
+  // Backend has no tier signal yet (Story 4.x will add tier-on-token). Until then a
+  // [TIER-BYPASS-SUSPECT] log would fire on every legitimate Tier-2 user too — left
+  // disabled. TODO Story 4.x: re-enable behind an actual tier check.
 
   // EVM addresses are case-insensitive — lowercase for cache key parity.
   // Cache key MUST include value — different swap amounts produce different gas/outcome.
