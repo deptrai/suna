@@ -1169,3 +1169,77 @@ export const mempoolAlerts = epsilonSchema.table(
     index('idx_mempool_alerts_pending').on(table.status).where(sql`${table.status} = 'pending'`),
   ],
 );
+
+// ─── Entity Wallet Labels (Story 2.1.2) ──────────────────────────────────────
+
+export const entityWalletLabels = epsilonSchema.table(
+  'entity_wallet_labels',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    chain: varchar('chain', { length: 32 }).notNull(),
+    address: varchar('address', { length: 128 }).notNull(),
+    entityId: varchar('entity_id', { length: 255 }),
+    entityName: varchar('entity_name', { length: 255 }),
+    entityType: varchar('entity_type', { length: 100 }),
+    label: varchar('label', { length: 255 }),
+    tags: jsonb('tags').default([]).$type<string[]>(),
+    confidence: numeric('confidence', { precision: 6, scale: 4 }),
+    riskCategory: varchar('risk_category', { length: 64 }),
+    riskScore: integer('risk_score'),
+    source: varchar('source', { length: 50 }).notNull().default('arkham'),
+    rawResponse: jsonb('raw_response').$type<Record<string, unknown>>(),
+    fetchedAt: timestamp('fetched_at', { withTimezone: true }),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('uq_entity_wallet_labels_chain_addr_src').on(table.chain, table.address, table.source),
+    index('idx_entity_wallet_labels_address').on(table.address),
+    index('idx_entity_wallet_labels_entity').on(table.entityId),
+    index('idx_entity_wallet_labels_risk').on(table.riskCategory),
+    index('idx_entity_wallet_labels_updated').on(table.updatedAt),
+  ],
+);
+
+export const tokenHolderEntityRisks = epsilonSchema.table(
+  'token_holder_entity_risks',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    chain: varchar('chain', { length: 32 }).notNull(),
+    tokenAddress: varchar('token_address', { length: 128 }).notNull(),
+    holderCount: integer('holder_count'),
+    labeledHolderCount: integer('labeled_holder_count'),
+    riskyHolderCount: integer('risky_holder_count'),
+    topEntities: jsonb('top_entities').default([]).$type<Record<string, unknown>[]>(),
+    riskFactors: jsonb('risk_factors').default([]).$type<Record<string, unknown>[]>(),
+    riskScore: integer('risk_score'),
+    riskLevel: varchar('risk_level', { length: 32 }),
+    source: varchar('source', { length: 50 }).notNull().default('arkham'),
+    analysisStatus: varchar('analysis_status', { length: 32 }).notNull().default('complete'),
+    rawSummary: jsonb('raw_summary').$type<Record<string, unknown>>(),
+    fetchedAt: timestamp('fetched_at', { withTimezone: true }),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('uq_token_holder_entity_risks_chain_token_src').on(table.chain, table.tokenAddress, table.source),
+    index('idx_token_holder_entity_risks_token').on(table.tokenAddress),
+    index('idx_token_holder_entity_risks_risk').on(table.riskLevel),
+    index('idx_token_holder_entity_risks_updated').on(table.updatedAt),
+  ],
+);
+
+export const entityWalletWatchlist = epsilonSchema.table(
+  'entity_wallet_watchlist',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    chain: varchar('chain', { length: 32 }).notNull(),
+    address: varchar('address', { length: 128 }).notNull(),
+    label: varchar('label', { length: 255 }),
+    notes: text('notes'),
+    addedAt: timestamp('added_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('uq_entity_wallet_watchlist_chain_addr').on(table.chain, table.address),
+    index('idx_entity_wallet_watchlist_address').on(table.address),
+  ],
+);

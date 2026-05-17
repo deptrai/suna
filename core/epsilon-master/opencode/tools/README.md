@@ -61,3 +61,32 @@ If the tool omits `since_minutes`, the route default of 60 minutes applies. The 
 - Tool only queries epsilon-api/DB cache (no upstream WebSocket).
 - Tool does not connect to QuickNode/Blocknative or open any mempool WebSocket.
 - Continuous sniffing is handled by the background worker (`mempool-worker`) only.
+
+---
+
+## entity_wallet_risk
+
+**File**: `entity_wallet_risk.ts`
+
+**Tier**: Tier 2 only (`chainlens-tier2.md` — `entity_wallet_risk: allow`, Tier 1 denied)
+
+**Purpose**: Check if a wallet address belongs to a known risky entity (hacker, sanctioned, mixer, etc.) or analyze the top holders of a token contract for concentration risk and known bad actors. Uses Arkham Intelligence labels cached in the `entity_wallet_labels` and `token_holder_entity_risks` DB tables.
+
+### Modes
+
+- **wallet**: Checks a single address against `entity_wallet_labels`. Returns entity info + risk classification.
+- **token_holders**: Analyzes `token_holder_entity_risks` for a token contract. Returns holder count, risky holder count, and risk factors.
+
+### Backend route
+
+`POST /v1/router/entity-wallet-risk`
+
+Body: `{ mode, chain, address?, token_address?, session_id? }`
+
+### Key constraints
+
+- Tool calls epsilon-api only (`EPSILON_API_URL/v1/router/entity-wallet-risk`). Never calls Arkham or QuickNode directly.
+- Arkham API key stays strictly backend-only (`apps/api`). Never exposed to OpenCode or frontend.
+- `raw_response` column is never included in tool responses (provider ToS risk).
+- First call for an unknown token address triggers a BullMQ job (`analyze-token-holders`) and returns `cache_status: 'pending'`. Retry after 60s.
+- Worker only runs if `ARKHAM_WORKER_ENABLED=true` and `ARKHAM_API_KEY` is set.

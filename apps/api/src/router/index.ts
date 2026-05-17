@@ -16,6 +16,7 @@ import { tokenSearch } from './routes/token-search';
 import { tokenOhlcv } from './routes/token-ohlcv';
 import { vibeTrading } from './routes/vibe-trading';
 import { mempoolAlertsRoute } from './routes/mempool-alerts';
+import { entityWalletRisk } from './routes/entity-wallet-risk';
 import { llm } from './routes/llm';
 import { proxy } from './routes/proxy';
 import { anthropic } from './routes/anthropic';
@@ -48,6 +49,7 @@ router.use('/token-search/*', combinedAuth);
 router.use('/token-ohlcv/*', combinedAuth);
 router.use('/vibe-trading/*', combinedAuth);
 router.use('/mempool-alerts/*', combinedAuth);
+router.use('/entity-wallet-risk/*', combinedAuth);
 router.route('/web-search', webSearch);
 router.route('/image-search', imageSearch);
 router.route('/deep-research', deepResearch);
@@ -62,6 +64,7 @@ router.route('/token-search', tokenSearch);
 router.route('/token-ohlcv', tokenOhlcv);
 router.route('/vibe-trading', vibeTrading);
 router.route('/mempool-alerts', mempoolAlertsRoute);
+router.route('/entity-wallet-risk', entityWalletRisk);
 
 // Public routes (no auth — FR5: discover feed public for all tiers)
 router.route('/narratives', narratives);

@@ -88,6 +88,10 @@ export {
   narrativeCategoryEnum,
   tokenSocialSignals,
   mempoolAlerts,
+  // Entity Wallet (Story 2.1.2)
+  entityWalletLabels,
+  tokenHolderEntityRisks,
+  entityWalletWatchlist,
   // Pool
   poolResources,
   poolSandboxes,

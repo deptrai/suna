@@ -238,6 +238,10 @@ const envSchema = z.object({
 
   // ─── On-Chain Data Providers ──────────────────────────────────────────────
   DUNE_API_KEY:                optStr,
+  // Dune query IDs for entity-wallet failover (set after creating queries at dune.com)
+  DUNE_LABEL_QUERY_ID:         optStr,
+  DUNE_TOKEN_HOLDERS_QUERY_ID: optStr,
+  DUNE_POLL_TIMEOUT_MS:        optInt(120_000),
   NANSEN_API_KEY:              optStr,
   ONCHAIN_WORKER_ENABLED:      optBoolFalse,
   ONCHAIN_RETENTION_DAYS:      optInt(30),
@@ -272,6 +276,26 @@ const envSchema = z.object({
   MEMPOOL_NATIVE_USD_ETHEREUM:      optFloat(3000),
   MEMPOOL_NATIVE_USD_BASE:          optFloat(3000),
   MEMPOOL_NATIVE_USD_BSC:           optFloat(600),
+
+  // ─── Entity Wallet Worker (Story 2.1.2) ──────────────────────────────────
+  // Arkham is the primary entity-label provider (paid/token-gated). Worker is
+  // default-off; a missing API key must degrade gracefully without crashing API.
+  // QuickNode HTTP RPC is optional targeted verification only (not label source).
+  ARKHAM_WORKER_ENABLED:            optBoolFalse,
+  ARKHAM_API_BASE_URL:              optStrDefault('https://api.arkm.com'),
+  ARKHAM_API_KEY:                   optStr,
+  ARKHAM_SYNC_INTERVAL_MS:          optInt(3_600_000),
+  ARKHAM_WORKER_CONCURRENCY:        optInt(1),
+  ARKHAM_TOP_HOLDER_LIMIT:          optInt(50),
+  ARKHAM_CACHE_TTL_MS:              optInt(86_400_000),
+  ENTITY_WALLET_CHAINS:             optStrDefault('ethereum'),
+  // Per-chain QuickNode HTTP RPC URLs for optional on-chain evidence verification.
+  // These stay strictly backend-only and are never forwarded to OpenCode tools.
+  ENTITY_WALLET_RPC_URL_ETHEREUM:   optStr,
+  ENTITY_WALLET_RPC_URL_BASE:       optStr,
+  ENTITY_WALLET_RPC_URL_POLYGON:    optStr,
+  ENTITY_WALLET_RPC_URL_ARBITRUM:   optStr,
+  ENTITY_WALLET_RPC_URL_BSC:        optStr,
   });
 
 // ─── Validation + Conditional Checks ────────────────────────────────────────
@@ -641,6 +665,9 @@ export const config = {
   ONCHAIN_WORKER_ENABLED: env.ONCHAIN_WORKER_ENABLED ?? false,
   ONCHAIN_RETENTION_DAYS: env.ONCHAIN_RETENTION_DAYS ?? 30,
   DUNE_API_KEY: env.DUNE_API_KEY,
+  DUNE_LABEL_QUERY_ID: env.DUNE_LABEL_QUERY_ID,
+  DUNE_TOKEN_HOLDERS_QUERY_ID: env.DUNE_TOKEN_HOLDERS_QUERY_ID,
+  DUNE_POLL_TIMEOUT_MS: env.DUNE_POLL_TIMEOUT_MS,
   NANSEN_API_KEY: env.NANSEN_API_KEY,
 
   // ─── Story 3.4 — Token Detail Page API keys ───────────────────────────────
@@ -676,6 +703,21 @@ export const config = {
   MEMPOOL_NATIVE_USD_ETHEREUM: Number.isFinite(env.MEMPOOL_NATIVE_USD_ETHEREUM) ? env.MEMPOOL_NATIVE_USD_ETHEREUM : 3000,
   MEMPOOL_NATIVE_USD_BASE: Number.isFinite(env.MEMPOOL_NATIVE_USD_BASE) ? env.MEMPOOL_NATIVE_USD_BASE : 3000,
   MEMPOOL_NATIVE_USD_BSC: Number.isFinite(env.MEMPOOL_NATIVE_USD_BSC) ? env.MEMPOOL_NATIVE_USD_BSC : 600,
+
+  // ─── Entity Wallet Worker (Story 2.1.2) ──────────────────────────────────
+  ARKHAM_WORKER_ENABLED: env.ARKHAM_WORKER_ENABLED,
+  ARKHAM_API_BASE_URL: env.ARKHAM_API_BASE_URL,
+  ARKHAM_API_KEY: env.ARKHAM_API_KEY,
+  ARKHAM_SYNC_INTERVAL_MS: env.ARKHAM_SYNC_INTERVAL_MS,
+  ARKHAM_WORKER_CONCURRENCY: env.ARKHAM_WORKER_CONCURRENCY,
+  ARKHAM_TOP_HOLDER_LIMIT: env.ARKHAM_TOP_HOLDER_LIMIT,
+  ARKHAM_CACHE_TTL_MS: env.ARKHAM_CACHE_TTL_MS,
+  ENTITY_WALLET_CHAINS: env.ENTITY_WALLET_CHAINS,
+  ENTITY_WALLET_RPC_URL_ETHEREUM: env.ENTITY_WALLET_RPC_URL_ETHEREUM,
+  ENTITY_WALLET_RPC_URL_BASE: env.ENTITY_WALLET_RPC_URL_BASE,
+  ENTITY_WALLET_RPC_URL_POLYGON: env.ENTITY_WALLET_RPC_URL_POLYGON,
+  ENTITY_WALLET_RPC_URL_ARBITRUM: env.ENTITY_WALLET_RPC_URL_ARBITRUM,
+  ENTITY_WALLET_RPC_URL_BSC: env.ENTITY_WALLET_RPC_URL_BSC,
 
   // ─── Helper Methods ────────────────────────────────────────────────────────
 

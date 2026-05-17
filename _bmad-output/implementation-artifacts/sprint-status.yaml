@@ -54,7 +54,7 @@ development_status:
   epic-2: in-progress
   2-1-crypto-data-worker-with-bullmq: done
   2-1-1-mempool-sniffing-mev-tracking: done  # 2026-05-17 code-review: 32 patches applied (all CRITICAL+HIGH+MED), 5 deferred
-  2-1-2-entity-hacker-wallet-tracking: ready-for-dev
+  2-1-2-entity-hacker-wallet-tracking: done  # 2026-05-17: 28 unit tests pass; Arkham service, BullMQ worker, API route, OpenCode tool
   2-2-ai-generated-discover-feed: done
   2-2-1-on-chain-fact-checking-layer: ready-for-dev
   2-2-2-social-sentiment-narrative-clustering: done

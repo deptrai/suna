@@ -5,3 +5,4 @@ export { startOnChainIndexWorker, setupOnChainIndexJobs, stopOnChainIndexWorker 
 export { startCryptoWorker, setupCryptoWorkerJobs, stopCryptoWorker } from './bullmq/workers/crypto-worker';
 export { startSocialSentimentWorker, setupSocialSentimentJobs, stopSocialSentimentWorker } from './bullmq/workers/social-sentiment-worker';
 export { startMempoolWorker, setupMempoolJobs, stopMempoolWorker, getMempoolQueue } from './bullmq/workers/mempool-worker';
+export { startEntityWalletWorker, setupEntityWalletJobs, stopEntityWalletWorker, getEntityWalletQueue } from './bullmq/workers/entity-wallet-worker';

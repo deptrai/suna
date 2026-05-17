@@ -43,6 +43,13 @@
       "when": 1747526400000,
       "tag": "0005_mempool_alerts",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1747612800000,
+      "tag": "0006_entity_wallet_labels",
+      "breakpoints": true
     }
   ]
 }
