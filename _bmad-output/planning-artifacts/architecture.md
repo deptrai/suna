@@ -13,11 +13,13 @@ inputDocuments:
   - docs/config-degradation-visual-handover.md
   - docs/justavps-restart-hardening-spec.md
   - docs/opencode-config-failsafe-spec.md
+  - _bmad-output/planning-artifacts/research/technical-self-host-defillama-chainlens-research-2026-05-18.md
 workflowType: 'architecture'
 project_name: 'chainlens'
 user_name: 'Luisphan'
 date: '2026-05-09'
 validation_status: 'IN_PROGRESS'
+updatedAt: '2026-05-18'
 ---
 
 # Architecture Decision Document
@@ -2095,5 +2097,171 @@ bunx lighthouse http://localhost:3000 --output json
 | All routes have loading state | `loading.tsx` coverage check |
 | React Compiler enabled | `experimental.reactCompiler: true` |
 | No regression after upgrade | `bun test` full suite pass |
+
+---
+
+## Section 13: DefiLlama Self-Host Provider Boundary Architecture
+
+**Added:** 2026-05-18 (Winston, after self-host technical research)
+
+This section amends Step 9. Step 9 remains the correct architecture for the public or Pro DeFiLlama API integration. This section defines the boundary if Chainlens chooses to run a selective self-hosted DefiLlama adapter runtime.
+
+### 13.1. Decision Summary
+
+**Decision:** Put all DeFiLlama access behind a `DefillamaDataProvider` boundary in `apps/api/src/router/services/defillama.ts`.
+
+`chainlens-data-service` is justified only when it runs DefiLlama adapters itself:
+- Node.js worker runs selected `DefiLlama-Adapters` and `dimension-adapters`
+- Worker fetches on-chain data through RPC providers
+- Service stores normalized metric snapshots in its own database or isolated schema
+- Chainlens API reads through an authenticated HTTP API
+
+If the service only calls `api.llama.fi` or `pro-api.llama.fi` and returns the result, do not create it. That duplicates Story 2.4 and adds an unnecessary network hop.
+
+### 13.2. Correct Communication Boundary
+
+```text
+OpenCode tool
+  -> Chainlens API route
+  -> apps/api/src/router/services/defillama.ts
+  -> DefillamaDataProvider
+      -> public/pro DeFiLlama provider
+      -> or self-host provider
+      -> optional fallback provider
+```
+
+For true self-host mode:
+
+```text
+Chainlens API
+  -> HTTPS + x-api-key
+  -> chainlens-data-service API
+      -> PostgreSQL metrics store
+      -> Node.js adapter worker
+      -> selected DefiLlama adapters
+      -> RPC providers
+```
+
+OpenCode tools, frontend code, browser extension code, and sandbox runtime must not call the self-host service directly. They continue to call Chainlens API.
+
+### 13.3. Provider Modes
+
+Add an explicit provider mode instead of scattering conditional logic across routes:
+
+```env
+DEFILLAMA_PROVIDER=public|pro|selfhost|hybrid
+DEFILLAMA_SELFHOST_URL=https://data.chainlens.internal
+DEFILLAMA_SELFHOST_API_KEY=...
+DEFILLAMA_SELFHOST_TIMEOUT_MS=3000
+DEFILLAMA_PUBLIC_FALLBACK_ENABLED=true
+```
+
+| Mode | Behavior |
+|---|---|
+| `public` | Use Free DeFiLlama endpoints from Step 9. |
+| `pro` | Use Pro DeFiLlama endpoints from Step 9. |
+| `selfhost` | Use only `chainlens-data-service`; return `no_data` or stale cache when unavailable. |
+| `hybrid` | Try self-host first for supported protocol/category, then fall back to Pro or Free endpoints. |
+
+Default for migration should be `hybrid`, not `selfhost`, until shadow validation passes.
+
+### 13.4. Impact on Epic 1 and Epic 2 Tools
+
+Tool contracts do not change.
+
+| Story/tool | Architecture impact |
+|---|---|
+| Story 1.2 `jit_sync` | Route response stays unchanged. Only `fetchProtocolSnapshot()` delegates to `DefillamaDataProvider`. |
+| Story 2.4 full crawler | Choose one ingestion owner. Either Chainlens BullMQ crawls public/pro API into Chainlens tables, or self-host service runs adapters and Chainlens reads it. Do not run both as primary. |
+| Story 2.5 `price_lookup` | Keep public/pro coins API unless self-host service explicitly implements coin pricing. Self-host adapters do not automatically replace `coins.llama.fi`. |
+| Story 2.6 `yields_lookup` | Keep DB/cache-first behavior. No realtime `/pools` fallback in request handlers because payload is too large. |
+| Story 2.7 `risk_lookup` | Hacks, emissions, and bridges remain Pro/API-backed unless self-host service explicitly implements equivalent data. Do not assume TVL/fees adapters cover Pro-only risk data. |
+| Nansen/Dune/Token Terminal stories | DefiLlama can replace valuation multiples derived from fees/revenue/mcap. It does not replace DAU, smart-money labeling, entity attribution, or arbitrary SQL analytics. |
+
+### 13.5. Data Ownership
+
+Preferred self-host data ownership:
+- `chainlens-data-service` owns adapter execution, RPC keys, and metric storage.
+- Chainlens owns product DB tables, billing, auth, tool contracts, and user-facing API shape.
+- Chainlens reads self-host metrics via HTTP, not direct table access.
+
+Shared PostgreSQL is acceptable only if the self-host service uses a separate database or schema and a dedicated DB user. Direct Chainlens reads of self-host tables are deferred until the API contract proves insufficient.
+
+### 13.6. Service Contract
+
+Minimum self-host API:
+
+```text
+GET /healthz
+GET /protocols
+GET /tvl/:protocol
+GET /fees/:protocol?days=7
+GET /yields/:protocol
+```
+
+Contract rules:
+- Auth uses `x-api-key`; no public access.
+- Chainlens timeout is 2-3 seconds.
+- Self-host response shape must be normalized to Chainlens service types before reaching routes.
+- Chainlens logs provider name, latency, cache source, and fallback reason.
+- Public/pro fallback must sanitize provider errors and never leak API keys.
+
+### 13.7. Runtime Boundary
+
+Do not import DefiLlama adapter runtime directly into `apps/api`.
+
+Reason:
+- Chainlens API runs Bun.
+- DefiLlama adapters and helper packages assume Node.js behavior.
+- Adapter dependencies and RPC workloads have a different failure profile from request handling.
+
+Self-host service runtime:
+- Node.js 20 LTS
+- TypeScript
+- Hono or Fastify HTTP API
+- `node-cron` or a small worker scheduler for MVP
+- Docker Compose on a small VPS
+- RPC providers configured per chain
+
+### 13.8. Migration Plan
+
+1. Add `DefillamaDataProvider` interface in `apps/api/src/router/services/defillama.ts`.
+2. Move existing public/pro URL logic behind `PublicDefillamaProvider`.
+3. Add `SelfHostedDefillamaProvider` with timeout, auth header, and normalized errors.
+4. Add `HybridDefillamaProvider` that tries self-host first and falls back to public/pro.
+5. Keep OpenCode tools and route response contracts unchanged.
+6. Run self-host in shadow mode and compare against public API before making it primary.
+
+### 13.9. Validation Requirements
+
+Self-host promotion from shadow to primary requires:
+- 7 days of shadow validation for tracked protocols.
+- TVL divergence under 2 percent for core protocols, or documented methodology reason.
+- Fees/revenue divergence under 5 percent, or documented adapter limitation.
+- `GET /healthz` uptime monitored.
+- RPC error rate under 1 percent.
+- Automatic fallback evidence in Chainlens logs.
+
+### 13.10. Cost Stance
+
+Step 9's $300/month DeFiLlama Pro assumption remains valid for the Pro API path.
+
+Selective self-host can reduce cash cost, but it is not "free":
+- VPS and free-tier RPC may start around $6-20/month.
+- RPC overage, adapter maintenance, upstream sync, and data validation become Chainlens responsibilities.
+- The economic win is strongest only if Chainlens tracks a selective set of protocols and does not attempt full DefiLlama parity.
+
+Architectural default: build the provider boundary first, then choose `public`, `pro`, or `hybrid` by environment.
+
+### 13.11. New Invariants
+
+| Invariant | Enforcement |
+|---|---|
+| Tools call Chainlens API, not data providers | OpenCode tool URLs remain `${EPSILON_API_URL}/v1/router/...` |
+| DeFiLlama integration has one backend boundary | `DefillamaDataProvider` in `router/services/defillama.ts` |
+| Self-host service exists only for true adapter execution | No `chainlens-data-service` if it only proxies public/pro API |
+| Bun API does not load DefiLlama adapter runtime | Node.js adapter code lives outside `apps/api` |
+| Fallback is a product behavior, not a tool behavior | Chainlens provider layer owns fallback and logging |
+| Epic 1/2 tool contracts remain stable | Routes normalize provider responses before returning JSON |
 
 ---
