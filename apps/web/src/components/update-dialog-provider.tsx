@@ -6,9 +6,13 @@ import { useGlobalSandboxUpdate } from '@/hooks/platform/use-global-sandbox-upda
 import { useSandboxConnectionStore } from '@/stores/sandbox-connection-store';
 import { useServerStore } from '@/stores/server-store';
 import { UpdateDialog } from '@/components/update-dialog';
-import type { UpdatePhase } from '@/lib/platform-client';
-
-const DEV_PHASES: UpdatePhase[] = ['pulling', 'patching', 'stopping', 'restarting', 'verifying', 'complete'];
+import {
+  DEV_PHASES,
+  getDevPhase,
+  getDevProgress,
+  shouldForceCloseUpdateDialog,
+  shouldForceOpenUpdateDialog,
+} from './update-dialog-provider.utils';
 
 export function UpdateDialogProvider() {
   const { open, targetVersion, closeDialog, openDialog } = useUpdateDialogStore();
@@ -25,11 +29,11 @@ export function UpdateDialogProvider() {
   } = useGlobalSandboxUpdate();
 
   useEffect(() => {
-    if (open && isUpdating && !isDestructive) closeDialog();
+    if (shouldForceCloseUpdateDialog(open, isUpdating, isDestructive)) closeDialog();
   }, [open, isUpdating, isDestructive, closeDialog]);
 
   useEffect(() => {
-    if (!open && isDestructive) openDialog();
+    if (shouldForceOpenUpdateDialog(open, isDestructive)) openDialog();
   }, [open, isDestructive, openDialog]);
 
   const [devMode, setDevMode] = useState(false);
@@ -37,8 +41,8 @@ export function UpdateDialogProvider() {
   const devModeRef = useRef(devMode);
   devModeRef.current = devMode;
 
-  const devPhase = devMode ? DEV_PHASES[devPhaseIdx] : phase;
-  const devProgress = devMode ? Math.round((devPhaseIdx / (DEV_PHASES.length - 1)) * 100) : phaseProgress;
+  const devPhase = getDevPhase(devMode, devPhaseIdx, phase);
+  const devProgress = getDevProgress(devMode, devPhaseIdx, phaseProgress);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

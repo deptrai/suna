@@ -212,8 +212,8 @@ describe('pollRun', () => {
   });
 
   test('exceeds maxWaitMs → throws "timeout"', async () => {
-    // Always return status=unknown without data_summary → never done
-    mockFetch(jsonResp({ success: true, run_id: 'r', status: 'unknown' }));
+    // Return non-terminal state so poll loop keeps retrying until deadline.
+    mockFetch(jsonResp({ success: true, run_id: 'r', status: 'pending' }));
 
     const { pollRun } = await import('@/lib/backtest-api');
     let caught: Error | null = null;

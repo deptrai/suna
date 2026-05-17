@@ -9,6 +9,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { BacktestStrategyEditorClient } from './strategy-editor';
+import { shouldCloseContextualModal, shouldRemountEditor } from './contextual-backtest-modal.utils';
 import type { RunResponse } from '@/lib/backtest-api';
 
 interface ContextualBacktestModalProps {
@@ -36,7 +37,7 @@ export function ContextualBacktestModal({
   const [isExecuting, setIsExecuting] = React.useState(false);
 
   React.useEffect(() => {
-    if (prevCodeRef.current !== initialCode) {
+    if (shouldRemountEditor(prevCodeRef.current, initialCode)) {
       setEditorKey((prev) => prev + 1);
       prevCodeRef.current = initialCode;
     }
@@ -45,11 +46,11 @@ export function ContextualBacktestModal({
   const handleOpenChange = React.useCallback(
     (next: boolean) => {
       // Block accidental dismiss while a backtest is executing — would abort the SSE stream
-      if (!next && isExecuting) {
-        const confirmed = window.confirm(
-          'A backtest is currently running. Close anyway and abort the run?',
-        );
-        if (!confirmed) return;
+      const allowed = shouldCloseContextualModal(next, isExecuting, () =>
+        window.confirm('A backtest is currently running. Close anyway and abort the run?'),
+      );
+      if (!allowed) {
+        return;
       }
       onOpenChange(next);
     },
