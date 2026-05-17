@@ -1243,14 +1243,29 @@ Implementing all features simultaneously using platform-subsidized API keys woul
 ## 2. API Pricing Breakdown
 
 ### 2.1. Mempool & MEV Data (Story 2.1.1)
-**Provider:** Blocknative
-*   **Developer/Free Tier:** $0 (Rate limited, ~1000 events/day, high latency ~2s). Suitable for prototyping.
-*   **Commercial/Enterprise:** **Custom Pricing** (Contact Sales). Public mid-tier plans (~$69/mo) have been discontinued in favor of custom enterprise contracts for high-volume mempool sniffing.
+**Provider decision (MVP):** QuickNode WebSocket endpoint configured by platform/operator.
+*   **Runtime model:** Background worker maintains long-lived WSS subscriptions using JSON-RPC `eth_subscribe` / `newPendingTransactions` where supported. If the provider returns only transaction hashes, the worker must fetch transaction details via the same QuickNode endpoint before filtering/classification.
+*   **Configuration:** Do not hardcode provider URLs or API keys. Use env vars such as `MEMPOOL_PROVIDER=quicknode`, `MEMPOOL_CHAINS=ethereum,bsc`, and per-chain WSS URLs (`MEMPOOL_WS_URL_ETHEREUM`, `MEMPOOL_WS_URL_BSC`, etc.).
+*   **Cost/coverage risk:** Pending-transaction streams can generate high delivered-message volume and provider credit usage. The worker must filter by configured chain/router watchlist and threshold; do not attempt unfiltered full-chain persistence for MVP.
+*   **Agent boundary:** OpenCode tool `mempool_alerts` queries Chainlens API/DB only. It must not connect directly to QuickNode, Blocknative, or any external mempool provider.
+*   **Legacy note:** Earlier planning referenced Blocknative. Keep provider adapter boundaries generic so Blocknative/self-hosted nodes can be added later, but QuickNode is the initial configured provider.
 
 ### 2.2. Entity & Hacker Wallet Tracking (Story 2.1.2)
-**Provider:** Arkham Intelligence
+**Provider decision (MVP):** Arkham Intelligence for entity labels; optional QuickNode HTTP RPC for on-chain verification.
 *   **Web Platform:** Free for individual use.
 *   **API Access:** **Custom Pricing / Token-gated**. Billed via a "Credit" system. Programmatic access requires an Enterprise agreement or holding/staking a significant amount of $ARKM tokens.
+*   **Runtime model:** Arkham remains the source of entity/label attribution. If additional verification is required, use per-chain QuickNode HTTP RPC configured by the platform/operator to read balance/log/call data for the specific token/address being analyzed.
+*   **Configuration:** Do not hardcode provider URLs or API keys. Use `ARKHAM_*` for label access and optional `ENTITY_WALLET_CHAINS=ethereum,base,...` plus `ENTITY_WALLET_RPC_URL_ETHEREUM`, `ENTITY_WALLET_RPC_URL_BASE`, etc. for QuickNode verification.
+*   **Scope:** Multi-chain by allowlist, not full-chain crawling. MVP processes queried tokens, watched wallets, and stale cached labels only.
+*   **Agent boundary:** OpenCode tool `entity_wallet_risk` queries Chainlens API/DB only. It must not call Arkham or QuickNode directly.
+
+### 2.2a. On-chain Fact Checking (Story 2.2.1)
+**Provider decision (MVP):** QuickNode HTTP RPC endpoint configured by platform/operator.
+*   **Runtime model:** Fact-check worker reads on-chain evidence through per-chain QuickNode HTTP RPC using JSON-RPC methods such as `eth_getLogs`, `eth_call`, and balance/state reads where needed. It verifies configured Dev/Treasury/team wallets for the token/article being published, then persists an audit row before Discover feed publication.
+*   **Configuration:** Use env vars such as `ONCHAIN_FACT_CHECK_PROVIDER=quicknode`, `ONCHAIN_FACT_CHECK_CHAINS=ethereum,base,polygon,arbitrum`, and per-chain URLs (`ONCHAIN_FACT_CHECK_RPC_URL_ETHEREUM`, `ONCHAIN_FACT_CHECK_RPC_URL_BASE`, etc.). Worker starts only when enabled and at least one configured chain endpoint exists.
+*   **Fallbacks:** Etherscan-compatible APIs, Blockscout, and Moralis can be used as fallback or supplemental sources for transfer history/current holders, but they are not the default provider for MVP.
+*   **Cost/coverage risk:** RPC log scans can be expensive. Restrict by chain allowlist, token contract, wallet watchlist, block/time window, and max transfer limits. Do not scan all logs or all wallets on a chain.
+*   **Discover boundary:** This is a backend publish-time verification layer for Discover. It is not an OpenCode tool in MVP unless a later story explicitly exposes one.
 
 ### 2.3. Social Sentiment & Narrative Clustering (Story 2.2.2)
 **Provider:** Santiment (SanAPI)
@@ -1272,9 +1287,14 @@ Implementing all features simultaneously using platform-subsidized API keys woul
 *   **Overage:** ~$1.60 per 100 extra credits. Complex SQL queries for custom dashboards will consume credits rapidly.
 
 ### 2.6. Financial Statements (P/S, DAU) (Story 2.3.2)
-**Provider:** Token Terminal
-*   **Pro Tier (Web/Export only):** ~$350/month (No API access).
-*   **API Tier:** **Custom Pricing** (Contact Sales). Typically reserved for larger startups and institutions.
+**Provider:** Token Terminal REST v2 API.
+*   **Pro Tier (Web/Export only):** ~$350/month (No API access). Do not implement this story via browser scraping, web login automation, or CSV export assumptions.
+*   **API Tier:** **Custom Pricing** (Contact Sales). Required for implementation because worker needs backend REST access with bearer-token auth.
+*   **Runtime model:** backend-only daily/cache-first worker, not live provider calls per Agent prompt. Worker refreshes project/metric metadata, pulls configured fundamentals, and computes valuation snapshots.
+*   **Operator configuration:** `TOKEN_TERMINAL_WORKER_ENABLED`, `TOKEN_TERMINAL_API_BASE_URL`, `TOKEN_TERMINAL_API_KEY`, `TOKEN_TERMINAL_PROJECTS`, `TOKEN_TERMINAL_METRICS`, sync interval, cache TTL, concurrency, and max projects per run.
+*   **Scope guard:** run only configured project/metric allowlists. Do not attempt "all protocols/all metrics" by default because provider access, redistribution, and rate-limit costs are contract-dependent.
+*   **API/tool boundary:** Agent/OpenCode uses internal `protocol_valuation` route/tool that reads normalized Chainlens DB/cache. The Token Terminal key never enters OpenCode, sandbox, frontend, public feeds, logs, or raw response payloads.
+*   **Rate and cost guard:** Token Terminal reference currently states 60 requests/minute; throttle worker below that limit. Cache hits should be free or low-cost internally; live refresh must require explicit backend permission and a product-approved Tier 2 credit key.
 
 ### 2.7. Chart Overlays & Indicators (Story 3.2.1)
 **Provider:** Glassnode

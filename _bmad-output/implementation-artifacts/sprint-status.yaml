@@ -1,5 +1,5 @@
 # generated: 2026-05-09
-# last_updated: 2026-05-17 (Story 3.4 code-review applied 34/36 patches; 2 LOW test action items remain)
+# last_updated: 2026-05-17 (Story 8.5 created: production-grade reliability & security — 12 issues Litestream/billing/advisory-lock/encryption/OTel; Story 3.4 code-review 34/36 patches applied)
 # project: chainlensnlens
 # project_key: NOKEY
 # tracking_system: file-system
@@ -33,7 +33,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-17 (Story 3.4 code-review applied 34/36 patches; 2 LOW test action items remain)
+last_updated: 2026-05-17 (Story 2.3.2 context created; Story 2.3.1 context created; QuickNode multi-chain provider docs aligned for Stories 2.1.2 and 2.2.1; Story 2.2.1 context created; Story 2.1.2 context created; Story 2.1.1 context created; Story 3.4 code-review applied 34/36 patches; 2 LOW test action items remain)
 project: chainlens
 project_key: NOKEY
 tracking_system: file-system
@@ -53,14 +53,14 @@ development_status:
   # Epic 2: Crypto Data Infrastructure
   epic-2: in-progress
   2-1-crypto-data-worker-with-bullmq: done
-  2-1-1-mempool-sniffing-mev-tracking: backlog
-  2-1-2-entity-hacker-wallet-tracking: backlog
+  2-1-1-mempool-sniffing-mev-tracking: ready-for-dev
+  2-1-2-entity-hacker-wallet-tracking: ready-for-dev
   2-2-ai-generated-discover-feed: done
-  2-2-1-on-chain-fact-checking-layer: backlog
+  2-2-1-on-chain-fact-checking-layer: ready-for-dev
   2-2-2-social-sentiment-narrative-clustering: done
   2-3-dune-and-nansen-on-chain-index-worker: done
-  2-3-1-vip-api-smart-money-flow: backlog
-  2-3-2-financial-statement-data-token-terminal: backlog
+  2-3-1-vip-api-smart-money-flow: ready-for-dev
+  2-3-2-financial-statement-data-token-terminal: ready-for-dev
   epic-2-retrospective: optional
 
   # Epic 3: Crypto Native Trading UI
@@ -116,6 +116,7 @@ development_status:
   8-3-llm-proxy-and-maas: backlog
   8-3-1-llm-proxy-bidirectional-fallback: ready-for-dev
   8-4-zero-data-leakage-enforcement-tier-3: backlog
+  8-5-production-grade-platform-reliability: ready-for-dev
   epic-8-retrospective: optional
 
   # ─── Phase 3 — MMOMarket Integration ───
