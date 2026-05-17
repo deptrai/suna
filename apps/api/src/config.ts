@@ -625,6 +625,13 @@ export const config = {
   ONCHAIN_RETENTION_DAYS: 30,
   DUNE_API_KEY: env.DUNE_API_KEY,
   NANSEN_API_KEY: env.NANSEN_API_KEY,
+
+  // ─── Story 3.4 — Token Detail Page API keys ───────────────────────────────
+  MORALIS_API_KEY: env.MORALIS_API_KEY,
+  ETHERSCAN_API_KEY: env.ETHERSCAN_API_KEY,
+  ARBISCAN_API_KEY: env.ARBISCAN_API_KEY,
+  BASESCAN_API_KEY: env.BASESCAN_API_KEY,
+  POLYGONSCAN_API_KEY: env.POLYGONSCAN_API_KEY,
   // Removed duplicates
 
   // ─── Crypto Data Worker (BullMQ) ──────────────────────────────────────────
