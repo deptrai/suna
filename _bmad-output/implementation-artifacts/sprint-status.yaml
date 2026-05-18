@@ -103,7 +103,7 @@ development_status:
   5-3-backtest-results-visualizer: done
   5-4-contextual-backtest-integration: done
   5-5-vibe-trading-mcp-proxy: done
-  5-6-shadow-account-swarm-ui: review  # 2026-05-18 code-review: 16 patches applied (TOFU ownership migration + typed VT errors + upload bug + tests), 3 deferred + audit 2026-05-18: M4 settings link fixed (/settings/api-keys) + Q2 tier-2+ gate added to shadow-reports route
+  5-6-shadow-account-swarm-ui: done  # 2026-05-18 review→done after fixing shadow-reports-route.test.ts regression (Q2 tier gate needed billing mock update); 7+4+7+8=26 tests pass; 16 review patches + 3 deferred + 2 audit fixes (M4 link, Q2 tier gate)
   5-7-user-llm-key-management: backlog
   5-8-per-user-persistent-memory: done  # 2026-05-18 /bmad-code-review applied 39 patches: pgvector removed, IDOR fixed, URL mount corrected, transactions, tests added
   epic-5-retrospective: optional

@@ -6,6 +6,9 @@ import type { AppContext } from '../../types';
 mock.module('../../router/services/billing', () => ({
   checkCredits: async () => ({ hasCredits: true }),
   deductToolCredits: async () => ({ success: true }),
+  // 5.6 audit Q2 (2026-05-18): route gates /shadow-reports/:shadowId to tier-2+.
+  // Mock returns tier2 so the existing assertions (which predate the gate) still pass.
+  resolveAccountTier: async () => 'tier2',
 }));
 
 mock.module('../../router/services/shadow-ownership', () => ({
@@ -103,5 +106,34 @@ describe('GET /shadow-reports/:shadowId', () => {
     const json = await res.json() as { success: boolean; error: string };
     expect(json.success).toBe(false);
     expect(json.error).toContain('502');
+  });
+
+  // 5.6 audit Q2 coverage: tier-1 accounts must be rejected with 403 before
+  // any VT call fires. Re-mocks billing to return tier1 for this test only.
+  test('403 when account is tier1 (audit Q2 gate)', async () => {
+    const { mock: bunMock } = await import('bun:test');
+    bunMock.module('../../router/services/billing', () => ({
+      checkCredits: async () => ({ hasCredits: true }),
+      deductToolCredits: async () => ({ success: true }),
+      resolveAccountTier: async () => 'tier1',
+    }));
+
+    let fetchCalled = false;
+    globalThis.fetch = mock(async () => {
+      fetchCalled = true;
+      return new Response('should-not-be-called', { status: 200 });
+    }) as unknown as typeof fetch;
+
+    const app = makeApp();
+    const res = await app.request('/shadow-reports/shadow_deadbeef?format=html');
+    expect(res.status).toBe(403);
+    expect(fetchCalled).toBe(false);
+
+    // Reset to tier2 mock for any subsequent tests in this file.
+    bunMock.module('../../router/services/billing', () => ({
+      checkCredits: async () => ({ hasCredits: true }),
+      deductToolCredits: async () => ({ success: true }),
+      resolveAccountTier: async () => 'tier2',
+    }));
   });
 });
