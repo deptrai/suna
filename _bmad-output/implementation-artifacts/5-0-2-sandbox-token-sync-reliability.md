@@ -1,6 +1,8 @@
 # Story 5.0.2: Sandbox Token Sync Reliability — P0 Hotfix
 
-Status: review
+Status: done
+
+**Code-review (2026-05-18 — /bmad-code-review)**: 3-layer adversarial review applied 11 patches + 4 spec-required test files (~600 LOC). All decision-needed resolved (D2 + D4 deferred + documented; D1, D3, D5, D6 patched). 34/34 tests pass.
 
 **Epic:** 5 — Backtesting Sandbox
 **Type:** P0 hotfix (infrastructure debt)
@@ -318,6 +320,55 @@ Before starting implementation, dev MUST:
 - [Source: core/epsilon-master/src/config.ts#L66](core/epsilon-master/src/config.ts#L66) — runtime token resolution
 - [Source: apps/api/src/platform/services/sandbox-provisioner.ts#L32](apps/api/src/platform/services/sandbox-provisioner.ts#L32) — provision flow
 - [Source: apps/api/src/lib/sentry.ts#L85](apps/api/src/lib/sentry.ts#L85) — Sentry pattern to mirror
+
+## Review Findings (2026-05-18 — /bmad-code-review)
+
+3-layer adversarial review (Blind Hunter + Edge Case Hunter + Acceptance Auditor). 8 patches, 6 decision-needed, 6 deferred, 5 dismissed.
+
+### Decision-needed (all resolved)
+
+- [x] [Review][Decision→Applied] D1 — Refactored `createApiKey` in [api-keys.ts](apps/api/src/repositories/api-keys.ts) to accept optional `tx` param; provisioner now passes `tx` so api_keys insert participates in the same atomic boundary. Also fixes DF3 (deadlock risk under small Postgres pool).
+- [x] [Review][Decision→Deferred + Documented] D2 — JustAVPS drift coverage deferred. Gate `!baseUrlOverride` in [local-preview.ts:387](apps/api/src/sandbox-proxy/routes/local-preview.ts#L387) is intentional + now documented (test 3 asserts the gate so future changes don't silently extend it). Follow-up: Story 5.0.3 (DB-canonical) will redesign the cloud-sandbox auth path.
+- [x] [Review][Decision→Applied] D3 — Parameterized `updateSandboxServiceKeyInDb(newKey, externalId?)` and `reconcileSandboxToken` now passes `sandboxId`. Multi-sandbox safe; falls back to `config.SANDBOX_CONTAINER_NAME` when externalId omitted.
+- [x] [Review][Decision→Deferred + Structured Log] D4 — Sentry SDK NOT added to epsilon-master (would pull `@sentry/bun` dep). Canonical alerting path = structured `console.warn(JSON.stringify({event: 'sandbox.token.<reason>', event_kind: 'token_drift', ...}))` parsed by Logtail/Loki alert rule. Test 4 asserts the contract.
+- [x] [Review][Decision→Applied] D5 — `EPSILON_DRIFT_ALERTS_ENABLED` env gate added to `shouldEmitAlert`. Default ON in production; set `=0` in CI / test envs to silence fixture-replay noise. Test 4 verifies all three states (default ON, explicit ON, explicit OFF).
+- [x] [Review][Decision→Applied] D6 — All 4 spec-required test files written (~600 LOC):
+  - [apps/api/src/__tests__/unit/sandbox-provisioner-atomic.test.ts](apps/api/src/__tests__/unit/sandbox-provisioner-atomic.test.ts) — 11 tests
+  - [apps/api/src/__tests__/unit/internal-service-key-env-sync.test.ts](apps/api/src/__tests__/unit/internal-service-key-env-sync.test.ts) — 5 tests
+  - [apps/api/src/__tests__/unit/token-drift-reconcile.test.ts](apps/api/src/__tests__/unit/token-drift-reconcile.test.ts) — 8 tests
+  - [core/epsilon-master/tests/unit/epsilon-user-middleware.test.ts](core/epsilon-master/tests/unit/epsilon-user-middleware.test.ts) — 10 tests
+  - Total: 34 tests pass. Tests 1-3 use source-inspection pattern (contract assertions on implementation source) to avoid the deep config/pool/db mock chain; test 4 exercises the middleware in-process with stubbed Hono ctx.
+
+### Patches (applied)
+
+- [x] [Review][Patch→Applied] P1 — Restructured error handling: `innerProvisionFailed` flag hoisted to outer try scope; outer `catch (err)` re-throws when set instead of falling through to `createSandbox`. [sandbox-provisioner.ts:55-180](apps/api/src/platform/services/sandbox-provisioner.ts#L55).
+- [x] [Review][Patch→Applied] P2 — `reconcileSandboxToken` → `syncInternalServiceKeyToEnvFile` now sets `process.env.INTERNAL_SERVICE_KEY = newKey` in-process so next request sees the corrected key, no restart loop. [local-preview.ts:217](apps/api/src/sandbox-proxy/routes/local-preview.ts#L217).
+- [x] [Review][Patch→Applied] P3 — `.env` sync rewritten with async `fs/promises`, crypto-random tmp suffix, quoted value `INTERNAL_SERVICE_KEY="${newKey}"`, EXDEV fallback to copyFile. [local-preview.ts:175-225](apps/api/src/sandbox-proxy/routes/local-preview.ts#L175).
+- [x] [Review][Patch→Applied] P4 — `secretPrefix` field removed from structured alert payload. Test 4 asserts secret prefix never appears in captured logs. [epsilon-user-middleware.ts:80](core/epsilon-master/src/services/epsilon-user-middleware.ts#L80).
+- [x] [Review][Patch→Applied] P5 — `x-epsilon-token-drift` added to `STRIP_RESPONSE_HEADERS`. Internal drift signal never reaches browser clients. [local-preview.ts:276](apps/api/src/sandbox-proxy/routes/local-preview.ts#L276).
+- [x] [Review][Patch→Applied] P6 — Outer catch guard via `innerProvisionFailed` flag prevents double-`provider.remove()` after inner `destroyOne`. Bundled with P1. [sandbox-provisioner.ts:165-180](apps/api/src/platform/services/sandbox-provisioner.ts#L165).
+- [x] [Review][Patch→Applied] P7 — Distinct event slug per reason: `event: \`sandbox.token.${result.reason}\``. Dashboard categorization works. [epsilon-user-middleware.ts:95](core/epsilon-master/src/services/epsilon-user-middleware.ts#L95).
+- [x] [Review][Patch→Applied] P8 — CLAUDE.md Troubleshooting restructured: auto-reconcile note is primary path, manual `docker exec` steps collapsed under `<details>`. [CLAUDE.md:111-130](CLAUDE.md#L111).
+- [x] [Review][Patch→Applied] P9 — `createApiKey` accepts optional `tx: DbOrTx`; provisioner passes `tx` so api_keys insert is atomic with sandbox row (closes D1). [api-keys.ts:61-105](apps/api/src/repositories/api-keys.ts#L61).
+- [x] [Review][Patch→Applied] P10 — `updateSandboxServiceKeyInDb(newKey, externalId?)` parameterized on externalId. Reconcile passes sandboxId (closes D3). [local-preview.ts:150-170](apps/api/src/sandbox-proxy/routes/local-preview.ts#L150).
+- [x] [Review][Patch→Applied] P11 — `EPSILON_DRIFT_ALERTS_ENABLED` env gate in `shouldEmitAlert` (closes D5). Default ON; set `=0` in CI / test to silence fixture-replay alerts. [epsilon-user-middleware.ts:43-52](core/epsilon-master/src/services/epsilon-user-middleware.ts#L43).
+
+### Deferred (pre-existing or edge-case)
+
+- [x] [Review][Defer] DF1 — `RECENT_ALERTS` map unbounded under sustained attack >256 distinct sandbox IDs (MED). Bound 512 LRU. Single-process Bun deployment + debounce makes this narrow.
+- [x] [Review][Defer] DF2 — Dynamic `import('..')` for `buildSignedUserContextHeader` not guaranteed to resolve module fn on cold start with circular dep (MED). Verify with manual smoke; if working, document why dynamic import was chosen.
+- [x] [Review][Defer] DF3 — Drizzle tx + `createApiKey` may deadlock on Supabase free-tier `pool_size=5` under burst (MED). Same root cause as D1 — defer with D1.
+- [x] [Review][Defer] DF4 — Provider dynamic `import('../providers')` in error handler may throw under `bun --hot` reload mid-flight (MED).
+- [x] [Review][Defer] DF5 — Concurrent reconcile narrow stale-key race overwrite (LOW).
+- [x] [Review][Defer] DF6 — `.env` sync silently skipped when `ENV_MODE=staging` + local Docker hybrid setup (LOW). Document.
+
+### Dismissed (noise / false positive)
+
+- DM1 — "incomingBody stream consumed on retry" → FALSE POSITIVE: `incomingBody: ArrayBuffer | undefined` is buffered, can be reused.
+- DM2 — Alert prune loop race condition → math doesn't actually cause double-emit (newly inserted entry has `v = now`, cutoff is `now - ALERT_DEBOUNCE_MS`).
+- DM3 — Error marker row unique constraint collision → handled (`catch (markErr)` logs and continues).
+- DM4 — `invalidateProviderCache` only transitively called inside `updateSandboxServiceKeyInDb` → functionally correct, doc-only.
+- DM5 — Grafana panel query missing → out-of-diff PR description item.
 
 ## Dev Agent Record
 

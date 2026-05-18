@@ -1,5 +1,5 @@
 import { eq, and } from 'drizzle-orm';
-import { epsilonApiKeys } from '@epsilon/db';
+import { epsilonApiKeys, type Database } from '@epsilon/db';
 import { db } from '../shared/db';
 import {
   hashSecretKey,
@@ -8,6 +8,11 @@ import {
   isApiKeySecretConfigured,
   isEpsilonToken,
 } from '../shared/crypto';
+
+// 5.0.2 review P9: caller may pass a transaction handle so the api_keys insert
+// participates in an atomic provision boundary. Without this, a Drizzle tx
+// rollback in the caller leaves an orphan epsilon_api_keys row.
+type DbOrTx = Database | Parameters<Parameters<Database['transaction']>[0]>[0];
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -58,7 +63,10 @@ const lastUsedCache = new Map<string, number>();
  * type='user'    → epsilon_<32> secret key (user-created, external access)
  * type='sandbox' → epsilon_sb_<32> secret key (auto-managed, injected into sandbox)
  */
-export async function createApiKey(params: CreateApiKeyParams): Promise<CreateApiKeyResult> {
+export async function createApiKey(
+  params: CreateApiKeyParams,
+  tx?: DbOrTx,
+): Promise<CreateApiKeyResult> {
   if (!isApiKeySecretConfigured()) {
     throw new Error('API_KEY_SECRET not configured');
   }
@@ -69,7 +77,11 @@ export async function createApiKey(params: CreateApiKeyParams): Promise<CreateAp
     : generateApiKeyPair();
   const secretKeyHash = hashSecretKey(secretKey);
 
-  const [row] = await db
+  // 5.0.2 review P9: when called inside a Drizzle db.transaction, the caller
+  // passes `tx` so this insert participates in the same atomic boundary. Falling
+  // back to the module-level db connection (legacy behavior) when no tx given.
+  const handle = (tx ?? db) as Database;
+  const [row] = await handle
     .insert(epsilonApiKeys)
     .values({
       sandboxId: params.sandboxId,

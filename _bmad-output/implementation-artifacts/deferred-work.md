@@ -2,6 +2,15 @@
 
 Items deferred from code reviews — pre-existing issues or hard policy calls that aren't actionable in the current change.
 
+## Deferred from: code review of 5-0-2-sandbox-token-sync-reliability (2026-05-18)
+
+- `RECENT_ALERTS` map in [epsilon-user-middleware.ts:40-55] unbounded under sustained attack with >256 distinct sandboxIds. Bound to 512 LRU. Narrow in single-process Bun + 5-min debounce, but worth fixing in observability hardening pass.
+- Dynamic `import('..')` for `buildSignedUserContextHeader` in [local-preview.ts:325-326] may resolve to `undefined` on cold-start circular-dep race. Document rationale; if smoke confirms it works, leave as-is.
+- Drizzle `db.transaction` + `createApiKey` (which uses module-level `db`) can deadlock on Supabase free-tier `pool_size=5` under burst. Same root cause as D1 (createApiKey orphan) — bundle with that fix.
+- Provider dynamic `import('../providers')` in error handler (sandbox-provisioner.ts:155) may throw under `bun --hot` reload mid-flight. Rare race.
+- Concurrent drift reconcile path can overwrite DB with stale container key in narrow window (two requests both pass circuit check simultaneously). Idempotent if no external party concurrently rotates.
+- `.env` sync silently skipped when `ENV_MODE=staging` + local Docker hybrid (Story 5.0.3 territory). Document.
+
 ## Deferred from: code review of 5-0-1-shadow-account-volume-hotfix (2026-05-18)
 
 - Non-atomic `Path.write_text` on shared shadow_accounts volume can corrupt JSON profiles when vibe-trading + worker write concurrently. Vibe-Trading `storage.py:68-73`. Pre-existing storage logic. Fix needs tmpfile+rename or `FileLock` — track as VT shadow-storage hardening.

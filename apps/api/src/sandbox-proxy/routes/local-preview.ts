@@ -146,8 +146,13 @@ function readContainerBootstrapKey(): string | null {
  * Push a corrected serviceKey back into the sandboxes table so the
  * provider cache can refresh and future requests use the right value
  * without another 401 → docker exec round-trip.
+ *
+ * 5.0.2 review P10: caller passes the actual sandbox externalId so this
+ * works for multi-sandbox deployments. Falls back to
+ * config.SANDBOX_CONTAINER_NAME for legacy single-sandbox callers.
  */
-async function updateSandboxServiceKeyInDb(newKey: string): Promise<void> {
+async function updateSandboxServiceKeyInDb(newKey: string, externalId?: string): Promise<void> {
+  const targetExternalId = externalId ?? config.SANDBOX_CONTAINER_NAME;
   try {
     const { db } = await import('../../shared/db');
     const { sandboxes } = await import('@epsilon/db');
@@ -155,9 +160,9 @@ async function updateSandboxServiceKeyInDb(newKey: string): Promise<void> {
     await db
       .update(sandboxes)
       .set({ config: sql`jsonb_set(config, '{serviceKey}', ${JSON.stringify(newKey)}::jsonb)` as any })
-      .where(eq(sandboxes.externalId, config.SANDBOX_CONTAINER_NAME));
-    invalidateProviderCache(config.SANDBOX_CONTAINER_NAME);
-    console.log('[LOCAL-PREVIEW] Refreshed sandbox serviceKey in DB + invalidated cache');
+      .where(eq(sandboxes.externalId, targetExternalId));
+    invalidateProviderCache(targetExternalId);
+    console.log(`[LOCAL-PREVIEW] Refreshed sandbox serviceKey in DB + invalidated cache (externalId=${targetExternalId})`);
   } catch (err) {
     console.warn('[LOCAL-PREVIEW] Could not update sandbox serviceKey in DB:', (err as Error).message);
   }
@@ -176,29 +181,55 @@ async function syncInternalServiceKeyToEnvFile(newKey: string): Promise<void> {
   if (!config.isLocal()) return;
   try {
     const path = await import('path');
-    const fs = await import('fs');
+    const fs = await import('fs/promises');
+    const fsSync = await import('fs');
+    const crypto = await import('crypto');
 
     // Resolve apps/api/.env path: env var override → derived from cwd
     const envPath = process.env.EPSILON_API_ENV_FILE ?? path.resolve(process.cwd(), '.env');
-    if (!fs.existsSync(envPath)) {
+    if (!fsSync.existsSync(envPath)) {
       console.warn(`[reconcile] .env not found at ${envPath} — skipping sync`);
       return;
     }
 
-    const existing = fs.readFileSync(envPath, 'utf8');
+    // Quote the value so spaces / shell metachars in keys don't break dotenv parsing.
+    const quotedLine = `INTERNAL_SERVICE_KEY="${newKey}"`;
+    const existing = await fs.readFile(envPath, 'utf8');
     const KEY_LINE_RE = /^INTERNAL_SERVICE_KEY=.*$/m;
     let next: string;
     if (KEY_LINE_RE.test(existing)) {
-      next = existing.replace(KEY_LINE_RE, `INTERNAL_SERVICE_KEY=${newKey}`);
+      next = existing.replace(KEY_LINE_RE, quotedLine);
     } else {
-      next = existing.replace(/\s*$/, '') + `\nINTERNAL_SERVICE_KEY=${newKey}\n`;
+      next = existing.replace(/\s*$/, '') + `\n${quotedLine}\n`;
     }
     if (next === existing) return; // no-op when key already matches
 
-    const tmpPath = `${envPath}.tmp-${process.pid}`;
-    fs.writeFileSync(tmpPath, next, { mode: 0o600 });
-    fs.renameSync(tmpPath, envPath);
-    console.log(`[reconcile] .env INTERNAL_SERVICE_KEY synced to ${newKey.slice(0, 16)}…; restart backend to fully apply`);
+    // Crypto-random tmp suffix avoids collision when concurrent reconciles race
+    // (PID alone is not unique under sustained drift); writeFile uses async I/O
+    // so the event loop isn't blocked by disk write.
+    const tmpPath = `${envPath}.tmp-${process.pid}-${crypto.randomBytes(6).toString('hex')}`;
+    await fs.writeFile(tmpPath, next, { mode: 0o600 });
+    try {
+      await fs.rename(tmpPath, envPath);
+    } catch (renameErr) {
+      // EXDEV (cross-device link) can fire if tmp + target are on different mounts
+      // (Docker volume mount edge case). Fall back to copy + unlink so the sync
+      // still happens — slightly less atomic but durable.
+      if ((renameErr as NodeJS.ErrnoException).code === 'EXDEV') {
+        await fs.copyFile(tmpPath, envPath);
+        await fs.unlink(tmpPath).catch(() => {});
+      } else {
+        throw renameErr;
+      }
+    }
+
+    // 5.0.2 review P2: also update the live process.env so config.INTERNAL_SERVICE_KEY
+    // getter sees the new value immediately. Without this, the next request reads
+    // stale process.env → drift detected again → reconcile loop fires every 30s
+    // until the backend is restarted.
+    process.env.INTERNAL_SERVICE_KEY = newKey;
+
+    console.log(`[reconcile] .env INTERNAL_SERVICE_KEY synced to ${newKey.slice(0, 16)}…; process.env updated, no restart needed`);
   } catch (err) {
     console.warn('[reconcile] Failed to sync INTERNAL_SERVICE_KEY into .env:', (err as Error).message);
   }
@@ -250,7 +281,9 @@ async function reconcileSandboxToken(sandboxId: string, currentDbKey: string): P
     // response pass through.
     return null;
   }
-  await updateSandboxServiceKeyInDb(containerKey);
+  // 5.0.2 review P10: pass sandboxId so multi-sandbox deployments update the
+  // right row instead of always config.SANDBOX_CONTAINER_NAME.
+  await updateSandboxServiceKeyInDb(containerKey, sandboxId);
   await syncInternalServiceKeyToEnvFile(containerKey);
   return containerKey;
 }
@@ -268,6 +301,9 @@ const STRIP_REQUEST_HEADERS = new Set([
 // Hop-by-hop response headers must not be forwarded by proxies.
 // Passing these through while re-streaming can produce malformed chunked
 // responses (for example ERR_INCOMPLETE_CHUNKED_ENCODING in browsers).
+//
+// 5.0.2 review P5: also strip x-epsilon-token-drift so the internal drift
+// signal (with embedded sandboxId) never reaches browser clients.
 const STRIP_RESPONSE_HEADERS = new Set([
   'connection',
   'keep-alive',
@@ -278,6 +314,7 @@ const STRIP_RESPONSE_HEADERS = new Set([
   'transfer-encoding',
   'upgrade',
   'content-length',
+  'x-epsilon-token-drift',
 ]);
 
 /**

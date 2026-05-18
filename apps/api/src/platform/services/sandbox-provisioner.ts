@@ -54,6 +54,11 @@ export async function provisionSandboxFromCheckout(opts: {
     // Try pool claim first
     if (config.isPoolEnabled()) {
       let claimed: Awaited<ReturnType<typeof pool.grab>> = null;
+      // 5.0.2 review P1+P6: hoisted to outer try scope so the outer catch can
+      // see whether the inner partial-provision handler already ran and cleaned
+      // up the pool slot — avoids double-remove and silent fall-through to
+      // createSandbox.
+      let innerProvisionFailed = false;
       try {
         claimed = await pool.grab({ serverType, location: location || undefined });
         console.log(`[sandbox-provisioner] Pool grab: ${claimed ? 'CLAIMED ' + claimed.externalId : 'empty'}`);
@@ -84,12 +89,14 @@ export async function provisionSandboxFromCheckout(opts: {
                 })
                 .returning();
 
+              // 5.0.2 review P9: pass tx so the api_keys insert is part of the
+              // same atomic boundary — on rollback, no orphan epsilon_api_keys row.
               const sandboxKey = await createApiKey({
                 sandboxId: insertedRow.sandboxId,
                 accountId,
                 title: 'Sandbox Token',
                 type: 'sandbox',
-              });
+              }, tx);
 
               await tx
                 .update(sandboxes)
@@ -109,6 +116,7 @@ export async function provisionSandboxFromCheckout(opts: {
               return { row: refreshedRow, sandboxKey: sandboxKey.secretKey };
             });
           } catch (provisionErr) {
+            innerProvisionFailed = true;
             const errMsg = provisionErr instanceof Error ? provisionErr.message : String(provisionErr);
             console.error(`[sandbox-provisioner] Atomic provision failed (rolled back DB write): ${errMsg}`);
             // Mark sandbox row outside the rolled-back transaction so operators
@@ -142,6 +150,9 @@ export async function provisionSandboxFromCheckout(opts: {
             } catch (cleanupErr) {
               console.error(`[sandbox-provisioner] Failed to destroy orphaned pool sandbox ${claim.externalId}:`, cleanupErr);
             }
+            // 5.0.2 review P1: propagate to caller. The outer catch checks
+            // innerProvisionFailed and re-throws to avoid silently falling
+            // through to the createSandbox fallback path.
             throw provisionErr;
           }
 
@@ -149,7 +160,18 @@ export async function provisionSandboxFromCheckout(opts: {
           return { row: provisioned.row, created: true };
         }
       } catch (err) {
+        // 5.0.2 review P1: if the inner partial-provision handler already ran
+        // (already cleaned up the pool slot, recorded the error row), this catch
+        // must re-throw so we don't silently fall through to createSandbox.
+        // The user asked for a pool claim — a partial-provision failure is a
+        // real error, not a reason to silently double-provision a fresh sandbox.
+        if (innerProvisionFailed) {
+          throw err;
+        }
         console.warn('[sandbox-provisioner] Pool claim failed, falling back:', err);
+        // 5.0.2 review P6: only clean up here when the inner cleanup did NOT
+        // run (i.e. pool.grab itself threw, or claimed but never entered the
+        // inner try). Otherwise we'd double-remove and emit log noise.
         if (claimed?.externalId) {
           try {
             const { getProvider } = await import('../providers');

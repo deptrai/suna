@@ -109,9 +109,20 @@ Repo này lớn (3,642 indexed files / 83k functions). **Đừng `grep -r` hoặ
 - Story 3.4 (Token Detail Page) — backlog
 
 ## Troubleshooting / Known Issues
-- **Backend API "Cannot connect to API" / 401 Unauthorized / memory không inject vào AI**: Triệu chứng của sandbox token drift giữa `apps/api/.env`, DB `epsilon.sandboxes.config.serviceKey`, và container `/workspace/.secrets/.bootstrap-env.json`.
+- **Backend API "Cannot connect to API" / 401 Unauthorized / memory không inject vào AI**: Triệu chứng của sandbox token drift giữa `apps/api/.env`, DB `epsilon.sandboxes.config.serviceKey`, container `/workspace/.secrets/.bootstrap-env.json`, và container s6 env `/run/s6/container_environment/EPSILON_TOKEN`.
 
-  **Story 5.0.2 (2026-05-18) đã ship auto-reconcile** — gửi request bất kỳ vào sandbox sẽ tự fix nếu drift detected. Check log `[reconcile] sandbox=X drift detected (...); attempting reconcile + sync retry` trong `apps/api/.log` để confirm auto-heal kicked in. Nếu không, manual fix:
+  **Auto-recovery (mặc định)**: Story 5.0.2 (2026-05-18) đã ship auto-reconcile chain — gửi request bất kỳ vào sandbox sẽ tự fix nếu drift detected. Trong apps/api log tìm dòng:
+  ```
+  [reconcile] sandbox=X drift detected (bad_signature; sandbox=...); attempting reconcile + sync retry
+  [reconcile] .env INTERNAL_SERVICE_KEY synced to ...; process.env updated, no restart needed
+  [reconcile] sandbox=X drift resolved (DB Y… → container Z…); retry status=200
+  ```
+  Khi auto-reconcile thành công, **không cần restart backend** — patch P2 (5.0.2 review) đã update `process.env.INTERNAL_SERVICE_KEY` in-place. Circuit breaker (30s cool-off) bảo vệ chống retry storm khi container unreachable.
+
+  **Cấu trúc 4-layer token store** (Story 5.0.2 docs): `apps/api/.env INTERNAL_SERVICE_KEY` (A) ↔ DB `sandboxes.config.serviceKey` (B) ↔ container `/workspace/.secrets/.bootstrap-env.json` (C) ↔ container s6 env `/run/s6/container_environment/EPSILON_TOKEN` (D). Story 5.0.3 sẽ DB-canonical hóa (cloud) + static mount (local) để eliminate drift triggers.
+
+  <details>
+  <summary><strong>Manual fix (nếu auto-reconcile fail — rare)</strong></summary>
 
   1. Đọc key trong sandbox: `docker exec epsilon-sandbox cat /workspace/.persistent-system/secrets/.bootstrap-env.json || docker exec epsilon-sandbox cat /workspace/.secrets/.bootstrap-env.json`
   2. Lấy giá trị của `INTERNAL_SERVICE_KEY` (hoặc `EPSILON_TOKEN`).
@@ -119,7 +130,7 @@ Repo này lớn (3,642 indexed files / 83k functions). **Đừng `grep -r` hoặ
   4. Update DB serviceKey nếu cần: `docker exec -e PGPASSWORD=postgres supabase_db_epsilon-local psql -U supabase_admin -d postgres -c "UPDATE epsilon.sandboxes SET config = jsonb_set(config, '{serviceKey}', '\"$TRUE_KEY\"') WHERE external_id = 'epsilon-sandbox';"`
   5. Restart lại tiến trình backend (`bun run dev`).
 
-  **Cấu trúc 4-layer token store** (Story 5.0.2 docs): `apps/api/.env INTERNAL_SERVICE_KEY` (A) ↔ DB `sandboxes.config.serviceKey` (B) ↔ container `/workspace/.secrets/.bootstrap-env.json` (C) ↔ container s6 env `/run/s6/container_environment/EPSILON_TOKEN` (D). Story 5.0.3 sẽ DB-canonical hóa (cloud) + static mount (local) để eliminate drift triggers.
+  </details>
 
 - **Shadow Account data loss khi tear-down vibe-trading containers** (Story 5.0.1): Shadow profiles + reports + backtest cache lưu trong 3 Docker named volumes (`vibe-trading-shadow-{accounts,reports,runs}`). `docker compose down` giữ nguyên data; chỉ `docker volume rm` mới xoá. Backup pattern (chi tiết tại [core/docker/README.md](core/docker/README.md#shadow-account-persistence-story-501)):
 

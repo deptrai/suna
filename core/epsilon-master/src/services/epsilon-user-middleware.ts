@@ -35,12 +35,24 @@ declare module 'hono' {
 }
 
 // Story 5.0.2 AC1: rate-limit alerts to 1 per (sandbox, reason) per 5-min window.
-// Ops alert rules should match `event=sandbox.token.bad_signature` substring in
-// the structured log line below.
+// Ops alert rules should match `event=sandbox.token.<reason>` (5.0.2 review P7 —
+// distinct event slug per reason so dashboards can categorize drift cause).
+//
+// 5.0.2 review P11: EPSILON_DRIFT_ALERTS_ENABLED env gate. Default ON in
+// production; explicitly turn off in CI / test envs where fixture replay with
+// stale signed tokens would create alert noise. shouldEmitAlert() returns
+// false fast when disabled — no map mutation, no log line.
 const RECENT_ALERTS = new Map<string, number>()
 const ALERT_DEBOUNCE_MS = 5 * 60 * 1000
 
+function driftAlertsEnabled(): boolean {
+  const v = process.env.EPSILON_DRIFT_ALERTS_ENABLED
+  if (v === undefined) return true // default ON in production
+  return v === '1' || v.toLowerCase() === 'true'
+}
+
 function shouldEmitAlert(sandboxId: string, reason: string): boolean {
+  if (!driftAlertsEnabled()) return false
   const key = `${sandboxId}|${reason}`
   const now = Date.now()
   const last = RECENT_ALERTS.get(key)
@@ -78,17 +90,19 @@ export function epsilonUserContextMiddleware() {
     if (!result.ok) {
       const sandboxId = process.env.SANDBOX_ID ?? 'unknown'
       const tokenPrefix = raw.slice(0, 16)
-      const secretPrefix = secret.slice(0, 16)
+      // 5.0.2 review P4: do NOT log any portion of the signing secret. Even a
+      // 16-char prefix in shipped logs materially reduces brute-force key space.
 
       console.warn(
         `[epsilon-user] Ignoring bad ${EPSILON_USER_CONTEXT_HEADER} (${result.reason}); continuing without user context`,
       )
 
-      // Story 5.0.2 AC1: structured alert log (Logtail rule alerts when event_kind=token_drift fires)
+      // Story 5.0.2 AC1: structured alert log (Logtail rule alerts when event_kind=token_drift fires).
+      // 5.0.2 review P7: distinct event slug per reason for dashboard categorization.
       if (shouldEmitAlert(sandboxId, result.reason)) {
         console.warn(
           JSON.stringify({
-            event: 'sandbox.token.bad_signature',
+            event: `sandbox.token.${result.reason}`,
             event_kind: 'token_drift',
             level: 'warning',
             sandboxId,
@@ -96,7 +110,6 @@ export function epsilonUserContextMiddleware() {
             requestMethod: c.req.method,
             requestPath: c.req.path,
             tokenPrefix,
-            secretPrefix,
             ts: new Date().toISOString(),
           }),
         )
