@@ -1,2 +1,3 @@
-#!/bin/bash
+#!/usr/bin/with-contenv bash
+echo "[svc-epsilon-master] exited with code $1 signal $2 — s6 will restart" >&2
 sleep 2

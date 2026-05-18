@@ -53,23 +53,20 @@ export const DEFAULT_PM_SLUG = 'project-manager'
  * win over inferred ones):
  *   1. per-call `override` (e.g. the caller's session model)
  *   2. `EPSILON_DEFAULT_AGENT_MODEL` env
- *   3. direct `ANTHROPIC_API_KEY` — if the user set it, they want Anthropic
- *   4. cloud: `epsilon-yolo/think` when yolo keys are injected (prod billing)
- *   5. local dev via epsilon router: `epsilon/minimax-m27`
- *   6. last resort: `epsilon-yolo/think` (upstream picks up when provisioned)
+ *   3. cloud: `epsilon-yolo/think` when yolo keys are injected (prod billing)
+ *   4. local dev via epsilon router: `epsilon/minimax-m27`
+ *   5. last resort: `epsilon-yolo/think` (upstream picks up when provisioned)
  *
- * Kept as a function so env changes between spawns (rare) are respected, and
- * so callers that want to pass a session-level model can override per-call
- * via `resolveDefaultModel({ override })`.
+ * NOTE: ANTHROPIC_API_KEY is intentionally NOT checked here. Sandboxes always
+ * have ANTHROPIC_API_KEY injected (it's the proxy key routed via ANTHROPIC_PROXY_URL),
+ * so checking it would always pick anthropic/claude-sonnet-4-6 even when the key
+ * is not a real Anthropic key. Use EPSILON_DEFAULT_AGENT_MODEL to force Anthropic.
  */
 export function resolveDefaultModel(opts?: { override?: string | null }): string {
   const override = opts?.override?.trim()
   if (override) return override
   const envOverride = process.env.EPSILON_DEFAULT_AGENT_MODEL?.trim()
   if (envOverride) return envOverride
-  if (process.env.ANTHROPIC_API_KEY) {
-    return 'anthropic/claude-sonnet-4-6'
-  }
   if (process.env.EPSILON_YOLO_API_KEY && process.env.EPSILON_YOLO_URL) {
     return 'epsilon-yolo/think'
   }
