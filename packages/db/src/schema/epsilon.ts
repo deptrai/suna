@@ -106,6 +106,33 @@ export const accountMembers = epsilonSchema.table(
   ],
 );
 
+export const accountMemories = epsilonSchema.table(
+  'account_memories',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    accountId: uuid('account_id')
+      .notNull()
+      .references(() => accounts.accountId, { onDelete: 'cascade' }),
+    createdByUserId: uuid('created_by_user_id'),
+    category: varchar('category', { length: 32 }).notNull(),
+    content: text('content').notNull(),
+    confidence: numeric('confidence', { precision: 3, scale: 2 }).notNull().default('1.00'),
+    sourceSessionId: varchar('source_session_id', { length: 128 }),
+    invalidatedAt: timestamp('invalidated_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('idx_account_memories_account_active').on(table.accountId, table.invalidatedAt),
+    index('idx_account_memories_account_category').on(table.accountId, table.category),
+    unique('uq_account_memories_account_category_content').on(
+      table.accountId,
+      table.category,
+      table.content,
+    ),
+  ],
+);
+
 export const sandboxes = epsilonSchema.table(
   'sandboxes',
   {

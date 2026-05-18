@@ -645,6 +645,17 @@ export const menuRegistry: MenuItemDef[] = [
     actionId: 'openProviderModal',
     keywords: 'llm providers models anthropic openai openrouter google groq xai',
   },
+  {
+    id: 'memory-settings',
+    label: 'Memory',
+    icon: Brain,
+    group: 'settingsPages',
+    showIn: ['commandPalette'],
+    kind: 'navigate',
+    href: '/settings/memory',
+    tabType: 'settings',
+    keywords: 'memory persistent preferences risk profile trading style',
+  },
   // ──────────────────────────────────────────────────────────────────────────
   // PREFERENCES — open settings modal to a tab
   // ──────────────────────────────────────────────────────────────────────────

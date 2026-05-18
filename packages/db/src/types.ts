@@ -1,4 +1,4 @@
-import { sandboxes, deployments, epsilonApiKeys, integrationCredentials, integrations, sandboxIntegrations, serverEntries, accounts, accountMembers, creditAccounts, tunnelConnections, tunnelPermissions, tunnelPermissionRequests, tunnelAuditLogs } from './schema/epsilon';
+import { sandboxes, deployments, epsilonApiKeys, integrationCredentials, integrations, sandboxIntegrations, serverEntries, accounts, accountMembers, accountMemories, creditAccounts, tunnelConnections, tunnelPermissions, tunnelPermissionRequests, tunnelAuditLogs } from './schema/epsilon';
 import { apiKeys, accountUser } from './schema/public';
 
 // Select types (what you get back from queries)
@@ -6,6 +6,8 @@ export type Account = typeof accounts.$inferSelect;
 export type AccountMember = typeof accountMembers.$inferSelect;
 export type NewAccount = typeof accounts.$inferInsert;
 export type NewAccountMember = typeof accountMembers.$inferInsert;
+export type AccountMemory = typeof accountMemories.$inferSelect;
+export type NewAccountMemory = typeof accountMemories.$inferInsert;
 export type Sandbox = typeof sandboxes.$inferSelect;
 export type ApiKey = typeof apiKeys.$inferSelect;
 export type CreditAccount = typeof creditAccounts.$inferSelect;

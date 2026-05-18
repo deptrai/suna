@@ -27,6 +27,9 @@ const ApiKeysPage = lazy(() =>
 const ProvidersPage = lazy(() =>
 	import('@/app/(dashboard)/settings/providers/page'),
 );
+const MemoryPage = lazy(() =>
+	import('@/app/(dashboard)/settings/memory/page'),
+);
 
 const CreditsPage = lazy(() =>
 	import('@/app/(dashboard)/credits-explained/page'),
@@ -156,6 +159,7 @@ const PAGE_COMPONENTS: Record<string, ComponentType> = {
 	'/settings/credentials': SecretsPage,
 	'/settings/api-keys': ApiKeysPage,
 	'/settings/providers': ProvidersPage,
+	'/settings/memory': MemoryPage,
 	'/credits-explained': CreditsPage,
 	'/changelog': ChangelogPage,
 	'/workspace': WorkspacePage,

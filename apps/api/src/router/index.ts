@@ -24,6 +24,7 @@ import { protocolValuation } from './routes/protocol-valuation';
 import { llm } from './routes/llm';
 import { proxy } from './routes/proxy';
 import { anthropic } from './routes/anthropic';
+import { memory } from './routes/memory';
 
 const router = new Hono();
 
@@ -58,6 +59,9 @@ router.use('/entity-wallet-risk/*', combinedAuth);
 router.use('/onchain-fact-check/*', combinedAuth);
 router.use('/smart-money-flow/*', combinedAuth);
 router.use('/protocol-valuation/*', combinedAuth);
+router.use('/memory/render', apiKeyAuth);
+router.use('/memory/extract', apiKeyAuth);
+router.use('/memory/*', combinedAuth);
 router.route('/web-search', webSearch);
 router.route('/image-search', imageSearch);
 router.route('/deep-research', deepResearch);
@@ -77,6 +81,7 @@ router.route('/entity-wallet-risk', entityWalletRisk);
 router.route('/onchain-fact-check', onchainFactCheck);
 router.route('/smart-money-flow', smartMoneyFlow);
 router.route('/protocol-valuation', protocolValuation);
+router.route('/memory', memory);
 
 // Public routes (no auth — FR5: discover feed public for all tiers)
 router.route('/narratives', narratives);

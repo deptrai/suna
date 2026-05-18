@@ -4,6 +4,8 @@ import { Database } from "bun:sqlite"
 import { ensureGlobalMemoryFiles, renderMergedMemoryContext, renderProjectContext, resolveEpsilonDir } from "./lib/paths"
 import { MEMORY_CONTEXT_MARKER, upsertMemoryContextAtPromptEnd, wrapInEpsilonSystemTags } from "./lib/message-transform"
 import { DB_PATH, STORAGE_BASE, buildSessionLineage, changeSummary, formatMessages, getEnv, searchSessions, shortTs, ttcCompress } from "./lib/session"
+import { lookupSessionOwner } from "./lib/session-owner-lookup"
+import { fetchAccountMemories, triggerExtraction } from "./lib/memory-client"
 
 const _projectPathCache = new Map<string, string | null>()
 
@@ -28,6 +30,40 @@ function projectPathForSession(sessionID: string): string | null {
 
 export const EpsilonSessionsPlugin: Plugin = async ({ client, directory }) => {
 	let currentSessionId: string | null = null
+	const extractionTimers = new Map<string, ReturnType<typeof setTimeout>>()
+	const EXTRACTION_DEBOUNCE_MS = 10 * 60 * 1000
+
+	function formatParts(parts: any[]): string {
+		return parts
+			.filter((p: any) => p?.type === "text" && typeof p?.text === "string")
+			.map((p: any) => p.text)
+			.join("\n")
+			.slice(0, 20000)
+	}
+
+	function scheduleExtraction(sessionId: string) {
+		const existing = extractionTimers.get(sessionId)
+		if (existing) clearTimeout(existing)
+		const timer = setTimeout(async () => {
+			extractionTimers.delete(sessionId)
+			try {
+				const userId = lookupSessionOwner(sessionId)
+				if (!userId) return
+				const messagesRes = await client.session.messages({ path: { id: sessionId } })
+				const messages = (messagesRes.data ?? []).slice(-20)
+				if (messages.length < 5) return
+				const payload = messages.map((m: any) => ({
+					role: m?.info?.role ?? "user",
+					content: formatParts(m?.parts ?? []),
+				})).filter((m: any) => m.content.length > 0)
+				if (payload.length === 0) return
+				void triggerExtraction(userId, sessionId, payload)
+			} catch (err) {
+				console.warn(`[epsilon-sessions] scheduleExtraction failed: ${err}`)
+			}
+		}, EXTRACTION_DEBOUNCE_MS)
+		extractionTimers.set(sessionId, timer)
+	}
 
 	try {
 		ensureGlobalMemoryFiles(import.meta.dir)
@@ -41,6 +77,22 @@ export const EpsilonSessionsPlugin: Plugin = async ({ client, directory }) => {
 				try {
 					if (event.type === "session.created") {
 						currentSessionId = (event as any).properties?.sessionID ?? currentSessionId
+						return
+					}
+					if (event.type === "session.idle") {
+						const sid = (event as any).properties?.sessionID
+						if (typeof sid === "string" && sid) scheduleExtraction(sid)
+						return
+					}
+					if (event.type === "session.deleted") {
+						const sid = (event as any).properties?.info?.id
+						if (typeof sid === "string" && sid) {
+							const t = extractionTimers.get(sid)
+							if (t) {
+								clearTimeout(t)
+								extractionTimers.delete(sid)
+							}
+						}
 					}
 				} catch (err) {
 					console.error(`[epsilon-sessions] event hook failed: ${err}`)
@@ -59,6 +111,16 @@ export const EpsilonSessionsPlugin: Plugin = async ({ client, directory }) => {
 						// Wrap memory context in epsilon_system tags so frontend strips it from UI
 						const memCtx = `<memory>\n${mergedMemory}\n</memory>`
 						parts.push(wrapInEpsilonSystemTags(memCtx, { type: "memory-context", source: "epsilon-sessions" }))
+					}
+					if (currentSessionId) {
+						const userId = lookupSessionOwner(currentSessionId)
+						if (userId) {
+							const accountMemory = await fetchAccountMemories(userId, currentSessionId)
+							if (accountMemory) {
+								const memCtx = `<account_memory>\n${accountMemory}\n</account_memory>`
+								parts.push(wrapInEpsilonSystemTags(memCtx, { type: "account-memory", source: "epsilon-sessions" }))
+							}
+						}
 					}
 					if (currentSessionId) {
 						const projectPath = projectPathForSession(currentSessionId)

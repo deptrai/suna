@@ -169,6 +169,12 @@ const STATIC_TAB_ROUTES: Record<string, TabDescriptor> = {
     type: 'settings',
     href: '/settings/providers',
   },
+  '/settings/memory': {
+    id: 'page:/settings/memory',
+    title: 'Memory',
+    type: 'settings',
+    href: '/settings/memory',
+  },
   // Dashboard pages
   '/dashboard/backtest': {
     id: 'page:/dashboard/backtest',

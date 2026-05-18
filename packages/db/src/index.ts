@@ -15,6 +15,7 @@ export {
   // Epsilon tables — accounts
   accounts,
   accountMembers,
+  accountMemories,
   accountRoleEnum,
   accountsRelations,
   accountMembersRelations,
@@ -128,6 +129,8 @@ export type {
   AccountMember,
   NewAccount,
   NewAccountMember,
+  AccountMemory,
+  NewAccountMemory,
   Sandbox,
   NewSandbox,
   ApiKey,
