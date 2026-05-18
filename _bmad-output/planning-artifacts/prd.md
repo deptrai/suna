@@ -209,12 +209,13 @@ Bởi vì Chainlens hoạt động trong không gian Crypto/Web3, hệ thống p
 - **Session Data Durability (NFR-R1):** OpenCode session history (chat turns, file state, onboarding) PHẢI survive sandbox delete + recreate. Implementation: Litestream WAL replication tới Supabase Storage S3 — near-zero RPO (<1s lag), RTO ~seconds. Mỗi user có isolated path trong storage. *→ Story 8.5 Sprint 1*
 - **Sandbox Wake Verification (NFR-R2):** Sau khi wake sandbox từ stopped/archived state, API PHẢI verify `/epsilon/health` respond OK trước khi trả endpoint về caller. Unverified wake = thước đo UX thất bại. *→ Story 8.5 Sprint 4*
 - **Provisioning Retry Backoff (NFR-R3):** Retry delay PHẢI tăng theo exponential: `[2s, 15s, 60s]` thay vì fixed 2s — giảm thundering herd khi Daytona transient failures. *→ Story 8.5 Sprint 4*
+- **Provisioning Status Accuracy (NFR-R4):** Sau khi `provider.create()` resolve thành công, DB row PHẢI được update `status='active'` trong tất cả provisioning paths bao gồm async path (Daytona). Bug confirmed: `provisionAsync()` hiện tại thiếu transition này. *→ Story 8.5 Sprint 1 fix*
 
 ### 7.4. Security & Abuse Prevention (Bảo mật & Chống lạm dụng)
 - **Atomic Credit Deduction:** Giao dịch trừ Internal Credits khi sử dụng LLM hoặc RAG phải đảm bảo tính nguyên tử (Atomic). Implementation: PostgreSQL `atomic_use_credits` function — check + deduct in 1 statement, no TOCTOU. Nếu trừ điểm thất bại, hệ thống sẽ chặn request.
 - **No Fire-and-Forget Billing (NFR-S1):** Tất cả `deductToolCredits()` call PHẢI là `await` — không được dùng `.catch(console.error)` pattern cho billing. Revenue leak = critical bug. *→ Story 8.5 Sprint 1 audit*
 - **Strict Rate Limiting (NFR-S2):** Sandbox provisioning endpoint: max 3 request/hour/user. LLM proxy routes: max 100 request/minute/user. Implementation: `hono-rate-limiter` middleware, return 429 với `Retry-After` header. *→ Story 8.5 Sprint 3*
-- **Secrets Encryption at Rest (NFR-S3):** `serviceKey` (sandbox auth token) KHÔNG được lưu plaintext trong DB. Implementation: `pgcrypto` `pgp_sym_encrypt()` với `DB_ENCRYPTION_KEY` env var. *→ Story 8.5 Sprint 2*
+- **Secrets Encryption at Rest (NFR-S3):** `serviceKey` (sandbox auth token) KHÔNG được lưu plaintext trong DB. Implementation: AES-256-GCM tại application layer qua `sandbox-secrets.ts` (`setSandboxServiceKeyInConfig` / `getSandboxServiceKeyFromConfig`) với `SANDBOX_SERVICE_KEY_ENCRYPTION_SECRET` env var (required trong cloud mode). ~~pgcrypto + BYTEA column — không cần, đã có application-layer encryption.~~ *→ Story 8.5 Sprint 2*
 - **Token-in-URL Prevention (NFR-S4):** JWT/auth tokens KHÔNG được xuất hiện trong WebSocket/SSE URL query string (nginx logs, browser history). Implementation: first-message authentication pattern — token trong WS frame đầu tiên, không trong URL. *→ Story 8.5 Sprint 2*
 - **Sandbox Isolation:** Code sinh ra chạy trong Sandbox (Tier 2) bị ngắt truy cập mạng bên ngoài (no outbound network), chỉ được kết nối đến Vibe Trading API nội bộ, nhằm chống lại mã độc (C2C).
 
@@ -229,7 +230,7 @@ Bởi vì Chainlens hoạt động trong không gian Crypto/Web3, hệ thống p
 ### 7.6. Observability & Operational (Vận hành & Quan sát)
 - **Distributed Tracing & Metrics (NFR-O1):** API PHẢI export traces và metrics qua OpenTelemetry Protocol (OTLP). Key metrics: `sandbox.provision.duration_ms` (histogram, label: success/fail), `sandbox.provision.attempts_total` (counter), HTTP request duration (auto-instrumented). *→ Story 8.5 Sprint 3*
 - **Stable Tunnel URL (NFR-O2):** `EPSILON_URL` (cloudflared bridge sandbox→API) PHẢI trỏ vào permanent URL (named Cloudflare Tunnel), không phải quick-tunnel URL thay đổi khi restart. *→ Story 8.5 Sprint 3*
-- **Multi-Replica Safe Dedup (NFR-O3):** Sandbox provisioning deduplication PHẢI work khi API scale lên 2+ replicas. Implementation: Postgres advisory lock thay in-memory `Set<string>`. *→ Story 8.5 Sprint 3*
+- **Multi-Replica Safe Dedup (NFR-O3):** Sandbox provisioning deduplication PHẢI work khi API scale lên 2+ replicas. Implementation: Postgres **session-level** advisory lock (`pg_advisory_lock` + `pg_advisory_unlock` trong try/finally) thay in-memory `Set<string>`. ~~`pg_try_advisory_xact_lock` không phù hợp — Daytona provision mất tới 16 phút, xact-level lock sẽ exhaust connection pool.~~ *→ Story 8.5 Sprint 3*
 - **Model Availability Freshness (NFR-O4):** Trạng thái availability/quota của model hiển thị trên UI phải được đồng bộ với backend trong tối đa 30 giây kể từ khi backend đổi trạng thái.
 - **Unavailable Selection Failure Rate (NFR-O5):** Sau rollout guardrail, tỷ lệ request thất bại do user chọn model unavailable phải dưới 0.5% tổng request model-selection mỗi ngày.
 

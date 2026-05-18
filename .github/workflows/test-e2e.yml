@@ -1,0 +1,139 @@
+name: E2E Tests (Playwright)
+
+# Runs on push to main (post-merge) and manual dispatch.
+# NOT on PRs — chaos infra is too heavy for PR turnaround.
+#
+# Specs that run in CI (sandbox-only stack):
+#   - sandbox-token-drift-recovery.spec.ts (gated by SANDBOX_CHAOS_TESTS_ENABLED)
+# Specs 01-07 + market-dashboard + generative-widgets require the full self-hosted
+# stack (frontend + supabase + api containers) and are skipped in CI unless
+# CI_FULL_STACK=true (self-hosted runner with full stack).
+#
+# Chaos tests (sandbox-token-drift-recovery.spec.ts) are skipped unless:
+#   - workflow_dispatch with chaos=true, OR
+#   - repo variable CI_CHAOS_ENABLED=true
+# The spec-side gate (SANDBOX_CHAOS_TESTS_ENABLED) is already wired in Story 5.0.4.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/api/**'
+      - 'core/**'
+      - 'packages/**'
+      - 'tests/**'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/test-e2e.yml'
+  workflow_dispatch:
+    inputs:
+      chaos:
+        description: 'Run chaos tests (sandbox-token-drift-recovery)'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: test-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  playwright-e2e:
+    name: Playwright E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+          # GH_PAT required for private Vibe-Trading submodule.
+          # If secret is absent, submodule init will fail — set GH_PAT in repo secrets.
+          token: ${{ secrets.GH_PAT || github.token }}
+      - run: git submodule sync --recursive && git submodule update --init --recursive
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8.15.8
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.12'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install tests/ npm dependencies
+        run: cd tests && npm ci
+
+      - name: Prepare compose prerequisites
+        run: |
+          # core/docker/.env is gitignored — create from example for CI
+          cp core/docker/.env.example core/docker/.env
+          # secrets/sandbox-token.txt is gitignored — create placeholder for CI
+          # (sandbox will use EPSILON_TOKEN env var from .env instead)
+          mkdir -p secrets
+          echo "ci-placeholder-token" > secrets/sandbox-token.txt
+
+      - name: Build sandbox Docker image
+        run: docker build -f core/docker/Dockerfile -t epsilon/computer:dev .
+        timeout-minutes: 15
+
+      - name: Boot Docker compose stack
+        run: |
+          docker compose -f core/docker/docker-compose.yml up -d --wait
+        timeout-minutes: 5
+
+      - name: Verify sandbox reachable (epsilon-master port 14000)
+        run: |
+          timeout 60 bash -c 'until curl -sf http://localhost:14000/epsilon/health; do sleep 2; done'
+          echo "Sandbox healthy"
+
+      - name: Launch apps/api sidecar
+        run: |
+          bun run --cwd apps/api dev &
+          timeout 60 bash -c 'until curl -sf http://localhost:8008/v1/health; do sleep 2; done'
+          echo "apps/api healthy"
+
+      - name: Install Playwright browsers
+        run: cd tests && npx playwright install --with-deps chromium
+
+      - name: Run Playwright tests
+        env:
+          SANDBOX_CHAOS_TESTS_ENABLED: ${{ github.event.inputs.chaos == 'true' || vars.CI_CHAOS_ENABLED == 'true' }}
+        run: cd tests && npx playwright test -c playwright.config.ts
+
+      - name: Upload HTML report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-html-${{ github.run_id }}
+          path: test-results/html/
+          retention-days: 7
+
+      - name: Upload traces/screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts-${{ github.run_id }}
+          path: test-results/artifacts/
+          retention-days: 7
+
+      - name: Tear down compose stack
+        if: always()
+        run: docker compose -f core/docker/docker-compose.yml down
+
+      - name: Kill apps/api sidecar
+        if: always()
+        run: kill $(lsof -ti:8008) 2>/dev/null || true

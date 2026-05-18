@@ -1,0 +1,197 @@
+name: Test
+
+# Two-tier CI model:
+#   test-fast  — required to pass before merge (typecheck + targeted green suites)
+#   test-full-unit — informational only (full unit suite, ~142 baseline failures expected)
+#
+# Fast-tier file list verified green at: 2026-05-18 (commit feat/rename-chainlens-epsilon)
+# Verification command: cd apps/api && bun test src/__tests__/unit/<file>
+# apps/api: 26/26 pass; epsilon-master: 24/24 pass
+# Re-verify before tightening gates — baseline drifts daily.
+
+on:
+  pull_request:
+    paths:
+      - 'apps/api/**'
+      - 'apps/web/**'
+      - 'core/**'
+      - 'packages/**'
+      - 'tests/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/test.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/api/**'
+      - 'apps/web/**'
+      - 'core/**'
+      - 'packages/**'
+      - 'tests/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/test.yml'
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  detect-changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      code_changed: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Path filter
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            code:
+              - 'apps/api/**'
+              - 'apps/web/**'
+              - 'core/**'
+              - 'packages/**'
+              - 'tests/**'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - '.github/workflows/test.yml'
+
+  test-fast:
+    name: Fast tier (required)
+    needs: detect-changes
+    if: needs.detect-changes.outputs.code_changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+          token: ${{ secrets.GH_PAT || github.token }}
+      - run: git submodule sync --recursive && git submodule update --init --recursive
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8.15.8
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.12'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: TypeScript — apps/api
+        run: cd apps/api && bunx tsc --noEmit
+
+      - name: TypeScript — core/epsilon-master
+        run: cd core/epsilon-master && bunx tsc --noEmit
+
+      - name: Unit tests — apps/api (fast tier)
+        run: |
+          cd apps/api && bun test \
+            src/__tests__/unit/internal-bootstrap-route.test.ts \
+            src/__tests__/unit/sandbox-drift-reconciler.test.ts \
+            src/__tests__/unit/admin-rotate-sandbox-token.test.ts \
+            src/__tests__/unit/sandbox-token-rotation.test.ts \
+            src/__tests__/unit/sandbox-provisioner-rollback.test.ts
+
+      - name: Unit tests — epsilon-master (fast tier)
+        run: |
+          cd core/epsilon-master && bun test \
+            src/services/__tests__/load-canonical-token.test.ts \
+            src/services/__tests__/token-grace.test.ts \
+            src/services/__tests__/realtime-reauth.test.ts \
+            tests/unit/verify-fail-closed.test.ts
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Fast tier result" >> "$GITHUB_STEP_SUMMARY"
+          echo "- TypeScript: apps/api + epsilon-master" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Unit tests: 9 files (26 apps/api + 24 epsilon-master = 50 tests)" >> "$GITHUB_STEP_SUMMARY"
+          echo "See [ci-baseline-failures.md](docs/runbooks/ci-baseline-failures.md) for full baseline." >> "$GITHUB_STEP_SUMMARY"
+
+  test-full-unit:
+    name: Full unit suite (informational)
+    needs: detect-changes
+    if: needs.detect-changes.outputs.code_changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+          token: ${{ secrets.GH_PAT || github.token }}
+      - run: git submodule sync --recursive && git submodule update --init --recursive
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8.15.8
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.12'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Full unit suite — apps/api
+        run: |
+          cd apps/api && bun test src/__tests__/unit/ 2>&1 | tee /tmp/bun-test-results-api.txt; exit 0
+
+      - name: Full unit suite — epsilon-master
+        run: |
+          cd core/epsilon-master && bun test 2>&1 | tee /tmp/bun-test-results-epsilon.txt; exit 0
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-full-unit-${{ github.run_id }}
+          path: |
+            /tmp/bun-test-results-api.txt
+            /tmp/bun-test-results-epsilon.txt
+          retention-days: 7
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Full unit suite (informational — baseline failures expected)" >> "$GITHUB_STEP_SUMMARY"
+          echo "Baseline: ~142 fail in apps/api, ~76 fail in epsilon-master (pre-existing)." >> "$GITHUB_STEP_SUMMARY"
+          echo "See [ci-baseline-failures.md](docs/runbooks/ci-baseline-failures.md) for triage." >> "$GITHUB_STEP_SUMMARY"
+          if [ -f /tmp/bun-test-results-api.txt ]; then
+            echo "#### apps/api" >> "$GITHUB_STEP_SUMMARY"
+            grep "(fail)" /tmp/bun-test-results-api.txt | head -10 >> "$GITHUB_STEP_SUMMARY" || true
+            tail -3 /tmp/bun-test-results-api.txt >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ -f /tmp/bun-test-results-epsilon.txt ]; then
+            echo "#### epsilon-master" >> "$GITHUB_STEP_SUMMARY"
+            grep "(fail)" /tmp/bun-test-results-epsilon.txt | head -10 >> "$GITHUB_STEP_SUMMARY" || true
+            tail -3 /tmp/bun-test-results-epsilon.txt >> "$GITHUB_STEP_SUMMARY"
+          fi

@@ -102,6 +102,41 @@ Repo này lớn (3,642 indexed files / 83k functions). **Đừng `grep -r` hoặ
 - Test web: `bun test src/...`
 - Test api: `bun test src/__tests__/...`
 
+## How CI works (Story 5.0.5)
+
+**Workflow files:** `.github/workflows/test.yml` (PR gate) + `.github/workflows/test-e2e.yml` (post-merge E2E)
+
+**Two-tier model:**
+- `test-fast` — **required** to pass before merge. Runs: TypeScript typecheck (apps/api + epsilon-master) + 9 targeted test files (50 tests). ≤3 min.
+- `test-full-unit` — **informational only** (`continue-on-error: true`). Runs full unit suite; ~142 baseline failures expected in apps/api, ~76 in epsilon-master. Does NOT block merge.
+- `playwright-e2e` — runs on push to `main` only (not PRs). Boots Docker compose stack + apps/api sidecar. Chaos tests skipped unless `CI_CHAOS_ENABLED=true` or `workflow_dispatch chaos=true`.
+
+**Branch protection:** Only `test-fast` is a required status check on `main`.
+
+**GitHub secrets required:** `GH_PAT` — Personal Access Token with `repo` scope, needed for private `Vibe-Trading` submodule checkout in CI. Set in repo Settings → Secrets.
+
+**E2E scope in CI:** `test-e2e.yml` only runs `sandbox-token-drift-recovery.spec.ts` (sandbox-only stack). Specs 01-07 + market/widgets require full self-hosted stack — run locally or set `CI_FULL_STACK=true` on a self-hosted runner.
+
+**Before pushing:** Run fast-tier locally to avoid CI failures:
+```sh
+# apps/api (must run from apps/api dir)
+cd apps/api && bun test \
+  src/__tests__/unit/internal-bootstrap-route.test.ts \
+  src/__tests__/unit/sandbox-drift-reconciler.test.ts \
+  src/__tests__/unit/admin-rotate-sandbox-token.test.ts \
+  src/__tests__/unit/sandbox-token-rotation.test.ts \
+  src/__tests__/unit/sandbox-provisioner-rollback.test.ts
+
+# epsilon-master
+cd core/epsilon-master && bun test \
+  src/services/__tests__/load-canonical-token.test.ts \
+  src/services/__tests__/token-grace.test.ts \
+  src/services/__tests__/realtime-reauth.test.ts \
+  tests/unit/verify-fail-closed.test.ts
+```
+
+**Baseline failures:** See [docs/runbooks/ci-baseline-failures.md](docs/runbooks/ci-baseline-failures.md) for categorized list + triage guide.
+
 ## Story 3.x context (Crypto Native Trading UI)
 - Story 3.1 (markets dashboard) — done
 - Story 3.2 (TradingView chart) — done (verified browser 2026-05-10)

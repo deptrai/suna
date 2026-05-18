@@ -33,7 +33,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-18 (Story 5.0.5 CI workflow in-progress)
+last_updated: 2026-05-19 (Story 5.5.1 created — async swarm execution pattern; defect follow-up to 5.5 surfaced during 22-tool integration test)
 project: chainlens
 project_key: NOKEY
 tracking_system: file-system
@@ -97,12 +97,13 @@ development_status:
   5-0-2-sandbox-token-sync-reliability: done  # 2026-05-18 code-review applied 11 patches + 4 test files (34 tests pass): tx-aware createApiKey (P9/D1), parameterized externalId (P10/D3), env-gated alerts (P11/D5), Sentry deferred + Logtail rule path (D4), JustAVPS coverage deferred + documented (D2)
   5-0-3-sandbox-token-lifecycle-db-canonical: done  # 2026-05-18-19: review accepted; WS reauth signal implemented, deferred hardening items tracked in deferred-work.md
   5-0-4-sandbox-token-drift-chaos-tests: done  # 2026-05-18 T1-T6 shipped (helpers + chaos specs + verify-fail-closed + provisioner-rollback + runbook); 57 unit tests pass; T7 CI scaffolding descoped to 5.0.5
-  5-0-5-ci-workflow-bun-test-playwright: in-progress  # 2026-05-18 story spec drafted (6 ACs, 6 tasks); two-tier CI model (fast required + full informational); Task 1 pre-flight: fix advisory-risk.ts 8 TS errors before workflow lands
+  5-0-5-ci-workflow-bun-test-playwright: done  # 2026-05-18 code-review: 13 patches + 1 decision applied (compose build step, env_file, secrets, npm ci, GH_PAT, detect-changes filter, --remote removed, dev mode, node setup, timeout, artifact names, artifact paths, bail snippet); playwright.config.ts testIgnore for CI sandbox-only stack
   5-1-vibe-trading-api-integration-in-sandbox: done
   5-2-backtest-strategy-editor-monaco-editor: done
   5-3-backtest-results-visualizer: done
   5-4-contextual-backtest-integration: done
   5-5-vibe-trading-mcp-proxy: done
+  5-5-1-vibe-trading-swarm-async-execution: ready-for-dev  # 2026-05-19 defect follow-up to 5.5 — proxy AbortSignal.timeout(30_000) incompatible with run_swarm 5-30min runtime; restore 5.6 original async polling design (start_swarm + poll get_swarm_status + get_run_result + deposit/finalize billing)
   5-6-shadow-account-swarm-ui: done  # 2026-05-18 review→done after fixing shadow-reports-route.test.ts regression (Q2 tier gate needed billing mock update); 7+4+7+8=26 tests pass; 16 review patches + 3 deferred + 2 audit fixes (M4 link, Q2 tier gate)
   5-7-user-llm-key-management: backlog
   5-8-per-user-persistent-memory: done  # 2026-05-18 /bmad-code-review applied 39 patches: pgvector removed, IDOR fixed, URL mount corrected, transactions, tests added

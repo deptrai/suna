@@ -230,3 +230,10 @@ Items deferred from code reviews — pre-existing issues or hard policy calls th
 - `unknown_large_tx` design noise (wallet-to-wallet large native transfers flooding feed at typical thresholds) — tune post-MVP.
 - `tx.value='0x'` empty-hex edge — current fail-closed behavior correct; not real-world provider output.
 - `TOOL_TIMEOUT_MS = 5000` deviation from CLAUDE.md 1.5s typical — document rationale (mempool query may need 5s on cold cache).
+
+## Deferred from: code review of 5-0-5-ci-workflow-bun-test-playwright (2026-05-18)
+
+- `pnpm-store` cache sem `restore-keys` fallback — melhoria de performance, não afeta corretude. Adicionar `restore-keys: pnpm-${{ runner.os }}-` em ambos os workflows quando houver oportunidade.
+- `pkill -f "bun run.*apps/api"` pattern pode não matar processo correto — risco baixo em runner efêmero (processo morre com o runner). Considerar `kill $(lsof -ti:8008)` como alternativa mais precisa.
+- `tail -3` no Summary trunca nomes de testes — cosmético. Considerar `grep "(fail)" /tmp/api-results.txt | head -20` para mostrar nomes dos testes que falharam.
+- `continue-on-error: true` mascara falhas de infra (OOM, disk) — design tradeoff intencional para não bloquear merge. Considerar threshold check (total tests < 400 → alerta) em story futura.

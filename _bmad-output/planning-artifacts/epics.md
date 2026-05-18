@@ -1551,14 +1551,17 @@ so that users không mất session data khi sandbox recreate, billing không có
 **When** audit billing flow trong tất cả router routes
 **Then** xác nhận không có fire-and-forget `deductToolCredits` pattern; tất cả billing là `await`
 
+**Given** `provisionAsync()` trong `ensure-sandbox.ts` là Daytona async provisioning path
+**When** Daytona sandbox provision hoàn tất (epsilon/health 200)
+**Then** DB row được update `status='active'` — `provisionAsync()` hiện tại thiếu transition này (bug confirmed)
+
 **Given** `provisioningSubscriptions: Set<string>` (volatile in-memory) trong `sandbox-provisioner.ts`
 **When** API scale lên 2+ replicas
-**Then** Postgres advisory lock `pg_try_advisory_xact_lock()` thay Set in-memory — multi-replica safe
+**Then** Postgres **session-level** advisory lock (`pg_advisory_lock/unlock` với try/finally) thay Set in-memory — multi-replica safe. KHÔNG dùng `pg_try_advisory_xact_lock` vì Daytona provision timeout 960s sẽ giữ transaction mở 16 phút.
 
-**Given** `sandboxes.config` JSONB chứa `{ serviceKey: "..." }` plaintext
-**When** implement column encryption
-**Then** `serviceKeyEncrypted BYTEA` column dùng `pgp_sym_encrypt` / `DB_ENCRYPTION_KEY`
-**And** JSONB `serviceKey` bị NULL-ed sau migration
+**Given** `sandboxes.config` JSONB — `sandbox-secrets.ts` đã implement AES-256-GCM encryption tại application layer (`setSandboxServiceKeyInConfig` / `getSandboxServiceKeyFromConfig`)
+**When** enforce encryption at rest
+**Then** `SANDBOX_SERVICE_KEY_ENCRYPTION_SECRET` là required trong cloud mode; tất cả code paths dùng `setSandboxServiceKeyInConfig()` (không direct JSONB write). KHÔNG cần `pgcrypto` hay BYTEA column mới — encryption đã đủ.
 
 **Given** WebSocket/SSE endpoints dùng `?token=<jwt>` trong URL (logged by nginx/cloudflared)
 **When** implement first-message auth
@@ -1584,7 +1587,8 @@ so that users không mất session data khi sandbox recreate, billing không có
 **When** sandbox wake từ stopped state
 **Then** poll `/epsilon/health` tối đa 2 phút sau `start()`; throw nếu runtime không up
 
-**Sprint breakdown:** S1 (Litestream + billing audit + status verify), S2 (serviceKey encryption + WS token), S3 (rate limiting + advisory lock + OTel + named tunnel), S4 (polling backoff + retry + ensureRunning)
+**Sprint breakdown:** S1 (Litestream + billing audit + **fix provisionAsync status transition**), S2 (**enforce existing AES-256-GCM encryption** + WS token), S3 (rate limiting + **session-level** advisory lock + OTel + named tunnel), S4 (polling backoff + retry + ensureRunning)
+**Architect corrections (2026-05-19):** AC3 = bug fix provisionAsync; AC4 = enforce sandbox-secrets.ts AES encryption (không phải pgcrypto); AC7 = session-level lock (không phải xact-level).
 
 **Story file:** `_bmad-output/implementation-artifacts/8-5-production-grade-platform-reliability.md`
 
