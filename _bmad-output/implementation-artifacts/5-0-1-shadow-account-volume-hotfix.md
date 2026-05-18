@@ -1,9 +1,11 @@
 # Story 5.0.1: Shadow Account Volume Hotfix (Platform Infra)
 
-Status: ready-for-dev
+Status: review
+
+**Implementation log (audit 2026-05-18)**: Shadow volume mounts applied to [scripts/compose/docker-compose.yml](scripts/compose/docker-compose.yml) — added 2 named volumes (`vibe-trading-shadow-accounts`, `vibe-trading-shadow-reports`) + mounted at `/home/vibe/.vibe-trading/shadow_{accounts,reports}` in both `vibe-trading` and `vibe-trading-worker` services. Container user verified as `vibe` (HOME=/home/vibe) via `docker exec`. Restart required: `docker compose up -d vibe-trading vibe-trading-worker` to attach new volumes. Existing volumes unchanged (rolling deploy safe).
 
 **Depends on**: [Story 5.0](5-0-vibe-trading-platform-foundation.md) done.
-**Blocks**: [Story 5.6](5-6-shadow-account-trade-journal-ui.md) — 5.6 cannot ship until this is merged.
+**Blocks**: [Story 5.6](5-6-shadow-account-swarm-ui.md) — 5.6 cannot ship until this is merged.
 
 <!-- Created 2026-05-12 by Winston. Retroactive infra hotfix to Story 5.0 scope.
      Story 5.0 provisioned vibe-trading-runs + vibe-trading-sessions volumes but
@@ -175,6 +177,6 @@ so there is no existing shadow state to migrate. This is a clean slate — just 
 ### References
 
 - [Story 5.0](5-0-vibe-trading-platform-foundation.md) — initial VT platform foundation
-- [Story 5.6](5-6-shadow-account-trade-journal-ui.md) — consumer of these volumes
+- [Story 5.6](5-6-shadow-account-swarm-ui.md) — consumer of these volumes
 - [VT shadow_reports path](Vibe-Trading/agent/api_server.py#L1665)
 - [VT Dockerfile vibe user](Vibe-Trading/Dockerfile#L40)

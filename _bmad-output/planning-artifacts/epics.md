@@ -915,6 +915,124 @@ nhưng missed shadow state dirs. Retroactive hotfix cần thiết trước khi S
 **And** both mounted at user home dir shadow paths in `vibe-trading` + `vibe-trading-worker` services
 **And** existing volumes unchanged (no data loss, rolling deploy safe)
 
+### Story 5.0.2: Sandbox Token Sync Reliability — P0 Hotfix *(hotfix)*
+
+As a Chainlens platform operator,
+I want sandbox `EPSILON_TOKEN` consistent across 4 storage layers (apps/api .env, DB `epsilon.sandboxes.config.serviceKey`, container `.bootstrap-env.json`, s6 env dir),
+So that signed `X-Epsilon-User-Context` HMAC verifies successfully every request — restoring per-user features (memory inject, spending-cap gating, audit attribution).
+
+**Depends on:** Story 5.0 done. **Blocks:** Story 5.8 (memory UI), Story 5.6 (Shadow UI), Story 5.4 (spending-cap), any future per-user feature.
+
+**FRs:** N/A (infrastructure). **NFRs:** NFR8 (atomic billing — currently degrading to anonymous on drift), NFR10 (sandbox isolation), AR8 (security).
+**ARs:** AR1, AR3, AR8.
+
+**Context:** Empirical debug session 2026-05-18 (1h) revealed 3 distinct `epsilon_sb_*` values across 4 storage layers caused `[epsilon-user] bad_signature` silent drops → `stampSessionOwner` never fires → `session_owners` SQLite empty → plugin `lookupSessionOwner` returns null → memory inject + spending-cap silently disabled. Reference: [_bmad-output/planning-artifacts/architecture-notes-token-sync-2026-05-18.md](_bmad-output/planning-artifacts/architecture-notes-token-sync-2026-05-18.md).
+
+**Scope (P0 only — STOP THE BLEED):**
+
+**Given** `[epsilon-user] Ignoring bad X-Epsilon-User-Context (bad_signature)` is currently logged as WARN with zero alerting
+**When** Story 5.0.2 ships
+**Then** `bad_signature` events emit to Sentry/Logtail with rate limit (1 alert per 5-min window per sandbox)
+**And** dashboard panel shows `bad_signature_count` per sandbox per hour (Grafana or equivalent)
+
+**Given** apps/api signs HMAC with `epsilon.sandboxes.config.serviceKey` (DB lookup)
+**And** epsilon-master verifies HMAC with `process.env.EPSILON_TOKEN` (in-container s6 env)
+**And** these can drift independently (sandbox restart → bootstrap-env.json mutation)
+**When** verification fails with `bad_signature`
+**Then** apps/api `epsilonUserContextMiddleware` triggers a one-shot reconcile: read container bootstrap via existing `docker exec` fallback, UPDATE `epsilon.sandboxes.config.serviceKey`, invalidate `providerCache` entry, retry request once
+**And** if reconcile succeeds, log `[reconcile] sandbox=X drift detected and resolved` (INFO level)
+**And** if reconcile fails or token still mismatches after retry, return 401 (not silent drop) so caller sees failure
+
+**Given** `provisionSandboxFromCheckout` ([sandbox-provisioner.ts:32](apps/api/src/platform/services/sandbox-provisioner.ts#L32)) generates new token on provision
+**When** Story 5.0.2 ships
+**Then** provision writes token atomically to 3 layers in a single transaction: (1) DB `sandboxes.config.serviceKey`, (2) container bootstrap via `docker exec`, (3) apps/api in-process cache
+**And** if any of the 3 writes fails, the whole provision rolls back (no half-provisioned sandbox)
+**And** unit test verifies rollback path: simulate DB write success but `docker exec` fail → expect sandbox marked `error` with reason `token_provision_partial`
+
+**Given** `local-preview.ts` already has 401 retry hook that reads container bootstrap on Bearer-token failure
+**When** Story 5.0.2 ships
+**Then** that hook is extended to also push the read key back into `apps/api/.env INTERNAL_SERVICE_KEY` (via filesystem write, NOT just DB) so subsequent backend restarts use the correct value
+**And** in `ENV_MODE=cloud`, this filesystem write is skipped (secrets manager owns the cloud key)
+
+**Estimated effort:** 1 day. **Owner:** Bao (DevOps).
+
+### Story 5.0.3: Sandbox Token Lifecycle — DB-Canonical Migration *(P1, deferred)*
+
+As a Chainlens platform operator,
+I want `epsilon.sandboxes.config.serviceKey` to be the single source of truth for sandbox tokens (with `.env` static fallback only for local dev),
+So that future rotation, multi-sandbox provisioning, and BYOK encryption derivation have a predictable invariant.
+
+**Depends on:** Story 5.0.2 done.
+**Blocks:** Future cloud-scale (>10 sandboxes per tenant), Story 5.7 BYOK key derivation, SOC2 audit trail completeness.
+
+**FRs:** N/A. **NFRs:** NFR8, NFR10. **ARs:** AR1, AR3, AR8.
+
+**Decision (per architect note 2026-05-18): hybrid Option A + Option C:**
+- **Cloud** (Daytona, JustAVPS): DB-canonical, sandbox pulls token from `GET /v1/internal/bootstrap-token` on boot. Bootstrap file becomes read-only mirror of DB.
+- **Local dev** (`epsilon-sandbox` container): Static `INTERNAL_SERVICE_KEY` from `apps/api/.env` mounted into container via Docker volume bind. No mutation paths.
+
+**Acceptance Criteria:**
+
+**Given** cloud sandbox boots fresh
+**When** epsilon-master starts inside container
+**Then** boot script calls `GET ${EPSILON_API_URL}/v1/internal/bootstrap-token?sandboxId=${SANDBOX_ID}` with `Authorization: Bearer ${PROVISIONING_KEY}` (separate short-lived key from provisioning step)
+**And** apps/api validates `PROVISIONING_KEY`, returns canonical `serviceKey` from DB
+**And** sandbox writes returned key to s6 env + bootstrap file as read-only mirror
+**And** `saveBootstrapEnv()` is deprecated — replaced with `loadCanonicalToken()` that NEVER mutates DB
+
+**Given** local-dev sandbox boots
+**When** docker-compose starts `epsilon-sandbox` container
+**Then** `INTERNAL_SERVICE_KEY` is bind-mounted as read-only file from host `apps/api/.env`-derived secret
+**And** container does NOT regenerate or mutate the key
+**And** rotation requires manual `.env` edit + `docker compose restart` (documented in CLAUDE.md troubleshooting)
+
+**Given** drift reconciler cron runs every 1-min in apps/api
+**When** Story 5.0.3 ships
+**Then** reconciler queries each active sandbox: compares DB serviceKey vs container bootstrap vs s6 env (via existing `/env/INTERNAL_SERVICE_KEY` route)
+**And** emits Prometheus metric `sandbox_token_drift_total{sandbox_id, source_pair}` when any pair differs
+**And** in cloud mode: auto-heals from DB (writes DB value into container)
+**And** in local mode: alerts only (no auto-heal — operator owns it)
+
+**Given** `epsilon.sandboxes.config.serviceKey` is rotated via admin API
+**When** Story 5.0.3 ships
+**Then** apps/api emits rotation event, all open WebSocket / SSE connections re-authenticate with new key
+**And** in-flight requests using old key complete (grace period 30s)
+**And** after grace, old key rejected with 401
+
+**Estimated effort:** 3 days. **Owner:** Bao + Luisphan code review.
+
+### Story 5.0.4: Sandbox Token Drift — Chaos & Regression Tests *(P1, deferred)*
+
+As a Chainlens QA owner,
+I want chaos tests that simulate sandbox restart, key rotation, and bootstrap-file corruption to prove drift detection + auto-heal work end-to-end,
+So that Story 5.0.2/5.0.3 don't regress as cloud provisioning logic evolves.
+
+**Depends on:** Story 5.0.2 done. Strongly recommended before 5.0.3 ships.
+
+**FRs:** N/A. **NFRs:** NFR8, NFR10. **ARs:** AR1, AR8.
+
+**Acceptance Criteria:**
+
+**Given** Playwright E2E test harness
+**When** Story 5.0.4 ships
+**Then** test `sandbox-token-drift-recovery.spec.ts`:
+  - Provisions a sandbox
+  - Verifies session creation works (signature OK)
+  - Forces drift: `docker exec epsilon-sandbox sh -c "echo bogus > /run/s6/container_environment/EPSILON_TOKEN"`
+  - Triggers new session create
+  - Asserts P0.2 reconcile fires, session creation succeeds within 2 retries
+  - Asserts `session_owners` row stamped within 2s
+
+**Given** unit test for `verifyEpsilonUserContext`
+**When** Story 5.0.4 ships
+**Then** new test: sign with key A, verify with key B → returns `{ok: false, reason: 'bad_signature'}` (fail closed, never silently fallback to anonymous)
+
+**Given** integration test for `provisionSandboxFromCheckout`
+**When** Story 5.0.4 ships
+**Then** new test: mock `docker exec` to fail → expect provision rolls back, sandbox marked `error`, DB row reverted
+
+**Estimated effort:** 1 day. **Owner:** TestArch (Murat) + Bao.
+
 ### Story 5.1: Vibe Trading Backend Proxy + OpenCode Tool
 
 As a Tier 2 user,

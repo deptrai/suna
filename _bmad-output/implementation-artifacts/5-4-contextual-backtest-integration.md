@@ -13,7 +13,7 @@ So that I can seamlessly review, edit, and execute AI-generated strategies witho
 ## Acceptance Criteria
 
 1. **Trigger UI**: Given the user is viewing a Chart or chatting with the AI agent, when the AI suggests a strategy or the user clicks "Run Backtest" on the chart toolbar, then a "⚡ Review & Run Backtest" action card/button is presented.
-2. **Editor Modal**: Given the contextual trigger is clicked, an action opens a Modal/Popup containing the Strategy Editor (Monaco) pre-filled with the asset, timeframe, and generated code.
+2. **Editor Modal**: Given the contextual trigger is clicked, an action opens a Modal/Popup containing the Strategy Editor (CodeMirror 6, per Story 5.2 §Stack Decision — spec text "Monaco" was inherited from epic draft; actual stack is CodeMirror 6 to avoid 3MB bundle bloat + theming conflicts) pre-filled with the asset, timeframe, and generated code.
 3. **Execution**: Given the Contextual Backtest Modal is open, when the user clicks "Run Backtest" inside the Modal, then the execution flows through the Vibe Sandbox as normal via the SSE stream endpoint from Story 5.3.
 4. **Results View**: The Equity Curve and KPI results are rendered directly inside the Modal or inline in the Chat without navigating away.
 

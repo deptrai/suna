@@ -5,7 +5,7 @@ Status: review
 **Epic:** 5 — Backtesting Sandbox
 **Created:** 2026-05-12 (v3 — MCP proxy approach)
 **Updated:** 2026-05-18 (context-engineered rewrite — verified patterns in code, exact file paths)
-**Depends on:** [Story 5.5](5-5-vibe-trading-mcp-proxy.md) `done` (MCP proxy unlocks all 21 VT tools at `/v1/router/vibe-trading-mcp/*`).
+**Depends on:** [Story 5.5](5-5-vibe-trading-mcp-proxy.md) `done` (MCP proxy unlocks all 22 VT tools at `/v1/router/vibe-trading-mcp/*` — corrected 2026-05-18, was previously "21").
 **Blocks:** Nothing.
 **FRs:** FR3 (Vibe-Trading platform integration)
 **NFRs:** NFR8 (atomic billing — already enforced in MCP proxy), NFR10 (sandbox egress unchanged)
@@ -215,6 +215,14 @@ _Generated 2026-05-18 by `/bmad-code-review` (Blind Hunter + Edge Case Hunter + 
 **Schema export added**: `shadowAccountOwnership` in `packages/db/src/schema/epsilon.ts` + re-exported from `packages/db/src/index.ts`.
 
 ## Dev Notes
+
+### Naming intent (audit L2, 2026-05-18)
+
+**Why `shadow-reports` lives under `/vibe-trading/` (Story 5.1 namespace), not `/vibe-trading-mcp/` (Story 5.5)**:
+- VT runs TWO services with distinct ports:
+  - `vibe-trading:8899` — REST HTTP API including `/shadow-reports/:id` ([api_server.py:1654](Vibe-Trading/agent/api_server.py#L1654)). Proxied through `/v1/router/vibe-trading/*`.
+  - `vibe-trading-mcp:8900` — MCP server (SSE) for the 22 tools. Proxied through `/v1/router/vibe-trading-mcp/*`.
+- Shadow report file serving is an HTTP REST resource (not an MCP tool call), so it MUST go through the REST proxy. Naming is intentional, not duplicate.
 
 ### Critical brownfield guardrails
 

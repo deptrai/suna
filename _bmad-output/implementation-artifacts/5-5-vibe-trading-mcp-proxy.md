@@ -40,6 +40,16 @@ forwards to VT MCP server. OpenCode connects via remote MCP config (same pattern
 - Sandbox egress whitelist unchanged — sandbox still only calls epsilon-api
 - Billing tracked via `deductToolCredits` pattern
 
+**Coexistence with Story 5.1 (audit L1, 2026-05-18)**:
+The repo ships **two distinct VT integration paths** by design — they are NOT competing/duplicate:
+
+| Path | Story | Port | Use case |
+|---|---|---|---|
+| `/v1/router/vibe-trading/*` (REST) | 5.1 | `vibe-trading:8899` | Heavy backtest jobs (Celery, SSE streaming, equity curve, Phase A/B state machine) + shadow-reports file serving (5.6 AC3) |
+| `/v1/router/vibe-trading-mcp/*` (MCP/SSE) | 5.5 | `vibe-trading-mcp:8900` | 22 lightweight tools (market data, options, factor analysis, swarm presets, Shadow Account ops, finance skills, file I/O) |
+
+Both authenticated via `combinedAuth`; both billed via `deductToolCredits`; both share the same `epsilon.sandboxes.config.serviceKey` (token sync per Story 5.0.2). Do NOT consolidate.
+
 ## Story
 
 As a Tier 2 user trên Chainlens,

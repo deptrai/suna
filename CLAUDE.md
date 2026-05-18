@@ -109,8 +109,14 @@ Repo này lớn (3,642 indexed files / 83k functions). **Đừng `grep -r` hoặ
 - Story 3.4 (Token Detail Page) — backlog
 
 ## Troubleshooting / Known Issues
-- **Backend API "Cannot connect to API" / 401 Unauthorized**: Có thể do lỗi lệch `INTERNAL_SERVICE_KEY` giữa `.env` của `apps/api` (và `apps/web`) so với sandbox container. Cách fix:
+- **Backend API "Cannot connect to API" / 401 Unauthorized / memory không inject vào AI**: Triệu chứng của sandbox token drift giữa `apps/api/.env`, DB `epsilon.sandboxes.config.serviceKey`, và container `/workspace/.secrets/.bootstrap-env.json`.
+
+  **Story 5.0.2 (2026-05-18) đã ship auto-reconcile** — gửi request bất kỳ vào sandbox sẽ tự fix nếu drift detected. Check log `[reconcile] sandbox=X drift detected (...); attempting reconcile + sync retry` trong `apps/api/.log` để confirm auto-heal kicked in. Nếu không, manual fix:
+
   1. Đọc key trong sandbox: `docker exec epsilon-sandbox cat /workspace/.persistent-system/secrets/.bootstrap-env.json || docker exec epsilon-sandbox cat /workspace/.secrets/.bootstrap-env.json`
   2. Lấy giá trị của `INTERNAL_SERVICE_KEY` (hoặc `EPSILON_TOKEN`).
   3. Cập nhật vào file `apps/api/.env` và `apps/web/.env` sao cho khớp.
-  4. Restart lại tiến trình backend (`bun run dev`).
+  4. Update DB serviceKey nếu cần: `docker exec -e PGPASSWORD=postgres supabase_db_epsilon-local psql -U supabase_admin -d postgres -c "UPDATE epsilon.sandboxes SET config = jsonb_set(config, '{serviceKey}', '\"$TRUE_KEY\"') WHERE external_id = 'epsilon-sandbox';"`
+  5. Restart lại tiến trình backend (`bun run dev`).
+
+  **Cấu trúc 4-layer token store** (Story 5.0.2 docs): `apps/api/.env INTERNAL_SERVICE_KEY` (A) ↔ DB `sandboxes.config.serviceKey` (B) ↔ container `/workspace/.secrets/.bootstrap-env.json` (C) ↔ container s6 env `/run/s6/container_environment/EPSILON_TOKEN` (D). Story 5.0.3 sẽ DB-canonical hóa (cloud) + static mount (local) để eliminate drift triggers.
