@@ -132,6 +132,8 @@ Repo này lớn (3,642 indexed files / 83k functions). **Đừng `grep -r` hoặ
 
   </details>
 
+  **Chaos drill**: To verify the auto-reconcile chain end-to-end, run [docs/runbooks/sandbox-token-drift-drill.md](docs/runbooks/sandbox-token-drift-drill.md) quarterly. Story 5.0.4 ships the runbook + Playwright chaos tests.
+
 - **Shadow Account data loss khi tear-down vibe-trading containers** (Story 5.0.1): Shadow profiles + reports + backtest cache lưu trong 3 Docker named volumes (`vibe-trading-shadow-{accounts,reports,runs}`). `docker compose down` giữ nguyên data; chỉ `docker volume rm` mới xoá. Backup pattern (chi tiết tại [core/docker/README.md](core/docker/README.md#shadow-account-persistence-story-501)):
 
   ```sh

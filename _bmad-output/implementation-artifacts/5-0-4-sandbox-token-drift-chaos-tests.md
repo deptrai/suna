@@ -1,6 +1,38 @@
 # Story 5.0.4: Sandbox Token Drift — Chaos & Regression Tests
 
-Status: ready-for-dev
+Status: done
+
+**Implementation log (2026-05-18)**: T1-T6 shipped. T7 (CI scaffolding) descoped to Story 5.0.5 per user decision — repo has no existing CI workflow running `bun test` or Playwright; greenfield scaffolding is out of scope.
+
+**Deliverables:**
+- [tests/e2e/helpers/sandbox-chaos.ts](tests/e2e/helpers/sandbox-chaos.ts) — `execInSandbox`, `readContainerBootstrapKey`, `readContainerS6EnvKey`, `querySandboxServiceKey`, `stopSandboxContainer`, `startSandboxContainer`, `waitForSandboxReady`, `forceDriftOnS6Env`, `restoreS6EnvFromBootstrap` (T1)
+- [tests/e2e/helpers/session-owner.ts](tests/e2e/helpers/session-owner.ts) — `sessionOwnerExists`, `getSessionOwnerUserId`, `countSessionOwners` (T1)
+- [tests/e2e/helpers/api-log-tail.ts](tests/e2e/helpers/api-log-tail.ts) — `tailApiLog`, `logContains`, `countLogMatches`, `waitForLogLine` (T1)
+- [tests/e2e/specs/sandbox-token-drift-recovery.spec.ts](tests/e2e/specs/sandbox-token-drift-recovery.spec.ts) — AC1 drift-recovery + AC2 circuit-breaker tests, gated `SANDBOX_CHAOS_TESTS_ENABLED=true` (T2 + T3)
+- [core/epsilon-master/tests/unit/verify-fail-closed.test.ts](core/epsilon-master/tests/unit/verify-fail-closed.test.ts) — 11 tests, all 4 reason values reachable, timing-safe comparison verified (T4)
+- [apps/api/src/__tests__/unit/sandbox-provisioner-rollback.test.ts](apps/api/src/__tests__/unit/sandbox-provisioner-rollback.test.ts) — 12 tests, source-inspection of atomic tx + rollback postconditions (T5)
+- [docs/runbooks/sandbox-token-drift-drill.md](docs/runbooks/sandbox-token-drift-drill.md) — 10-min manual chaos drill with 8 verification steps + failure mode table (T6)
+- [CLAUDE.md](CLAUDE.md) — runbook linked from Troubleshooting
+
+**Test results:** 57/57 pass (36 apps/api + 21 epsilon-master unit). E2E chaos specs require a live sandbox + `SANDBOX_CHAOS_TESTS_ENABLED=true` to run.
+
+**Verification commands (run isolated, the default apps/api glob doesn't pick up src/__tests__/unit/):**
+```sh
+# apps/api unit
+cd apps/api
+bun test src/__tests__/unit/sandbox-provisioner-atomic.test.ts
+bun test src/__tests__/unit/sandbox-provisioner-rollback.test.ts
+bun test src/__tests__/unit/internal-service-key-env-sync.test.ts
+bun test src/__tests__/unit/token-drift-reconcile.test.ts
+
+# epsilon-master unit (auto-discovered)
+cd ../../core/epsilon-master
+bun test tests/unit/verify-fail-closed.test.ts
+bun test tests/unit/epsilon-user-middleware.test.ts
+
+# Chaos E2E (requires live sandbox)
+SANDBOX_CHAOS_TESTS_ENABLED=true bun x playwright test tests/e2e/specs/sandbox-token-drift-recovery.spec.ts --project=chromium
+```
 
 **Epic:** 5 — Backtesting Sandbox
 **Type:** P1 test infrastructure
