@@ -212,9 +212,9 @@ envRouter.get('/:key',
     try {
       const key = c.req.param('key')
       if (!isValidEnvKey(key)) return c.json({ error: 'Invalid key' }, 400)
-      if (isCanonicalManagedKey(key)) {
-        return c.json({ error: 'managed by canonical source — use admin rotation API' }, 403)
-      }
+      // GET is allowed for canonical keys — drift reconciler (Task 5.3) reads
+      // INTERNAL_SERVICE_KEY/EPSILON_TOKEN to detect drift. Writes are blocked
+      // by POST/PUT/DELETE handlers below.
       const value = await secretStore.get(key)
       // Return 200 with null value when key doesn't exist — avoids 404 retry loops
       // in the frontend (e.g. ONBOARDING_COMPLETE before first onboarding).
@@ -333,6 +333,9 @@ envRouter.put('/:key',
     try {
       const key = c.req.param('key')
       if (!isValidEnvKey(key)) return c.json({ error: 'Invalid key' }, 400)
+      if (isCanonicalManagedKey(key)) {
+        return c.json({ error: 'managed by canonical source — use admin rotation API' }, 403)
+      }
       const body = await safeJsonBody(c)
       if (!body) return c.json({ error: 'Invalid JSON body' }, 400)
       if (!body || typeof body.value !== 'string') {
@@ -367,6 +370,9 @@ envRouter.delete('/:key',
     try {
       const key = c.req.param('key')
       if (!isValidEnvKey(key)) return c.json({ error: 'Invalid key' }, 400)
+      if (isCanonicalManagedKey(key)) {
+        return c.json({ error: 'managed by canonical source — use admin rotation API' }, 403)
+      }
       await secretStore.deleteEnv(key)
       await deleteS6Env(key)
       await syncSecretToAuth(key, '')  // clear provider key from auth.json

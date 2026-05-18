@@ -1,6 +1,6 @@
 # Story 5.0.3: Sandbox Token Lifecycle — DB-Canonical Migration
 
-Status: in-progress
+Status: in-progress (post-review 2026-05-18 — 19 patches applied; Task 6.4 + 7.x deferred per spec)
 
 **Epic:** 5 — Backtesting Sandbox
 **Type:** P1 architectural migration (deferred from 5.0.2 hotfix)
@@ -317,3 +317,52 @@ apps/api/src/__tests__/integration/cloud-sandbox-bootstrap.test.ts    (NEW — A
 ### Completion Notes List
 
 ### File List
+
+## Review Findings (2026-05-18 — bmad-code-review on commit 4f5ef9bf86)
+
+> 3 review layers ran (Blind Hunter, Edge Case Hunter, Acceptance Auditor). Triage: 6 BLOCK / 9 MAJOR / 4 MINOR / 4 DEFER. Dedup merged 13 raw findings into 6 unified entries. Source legend: `B`=Blind, `E`=Edge, `A`=Auditor.
+
+### Patch — BLOCK (must fix before merge) — ALL APPLIED 2026-05-18
+
+- [x] [Review][Patch][BLOCK] Hardcoded Daytona API key in `apps/api/check-eu.ts` — file deleted; `.gitignore` updated to block `apps/api/check-*.ts` and `apps/api/debug-*.ts`. **⚠️ Operator must revoke `dtn_ef6fa4e8…` in Daytona dashboard — key remains in git history at commit `4f5ef9bf86`.** Source: B+E+A.
+- [x] [Review][Patch][BLOCK] `PUT /env/:key` + `DELETE /env/:key` now reject canonical keys (403). Source: B+A. [core/epsilon-master/src/routes/env.ts]
+- [x] [Review][Patch][BLOCK] Drift reconciler unblocked — `GET /env/:key` no longer 403s for canonical keys (read-only access required by Task 5.3); writes still blocked via POST/PUT/DELETE guards. Source: B+E+A.
+- [x] [Review][Patch][BLOCK] `SANDBOX_ID` now injected at `ensureSandbox.createOpts.envVars` (line 238) AND `sandbox-cloud.ts:491` AND `pool/env-injector.ts buildEnvPayload` — covers all 3 provisioning paths (sync, async, pool). Source: E.
+- [x] [Review][Patch][BLOCK] Async provisioning DB write now includes `provisioningKey: provisioningKeyHash` (parity with sync path). Source: E. [apps/api/src/platform/routes/sandbox-cloud.ts:551]
+- [x] [Review][Patch][BLOCK] `sync-s6-env.ts` migrated to `loadCanonicalToken()` — restart no longer overwrites fresh token with stale mirror. Source: E.
+
+### Patch — MAJOR — ALL APPLIED 2026-05-18
+
+- [x] [Review][Patch][MAJOR] `loadCanonicalToken` now falls back to mirror on ANY non-2xx (was only ≥500). [core/epsilon-master/src/services/load-canonical-token.ts]
+- [x] [Review][Patch][MAJOR] Bootstrap endpoint accepts `status IN ('active', 'provisioning')` so async-provisioned sandboxes can bootstrap before DB flip to active. [apps/api/src/router/routes/internal-bootstrap.ts]
+- [x] [Review][Patch][MAJOR] IP allowlist now gated on `TRUSTED_PROXY_IPS` env — refuses XFF as identity unless we trust the proxy chain. PROVISIONING_KEY hash is the real gate.
+- [x] [Review][Patch][MAJOR] Rate-limit map now self-evicts hourly (`startRateMapCleanup`) — bounded memory growth.
+- [x] [Review][Patch][MAJOR] Admin rotate `acceptOldUntil` computed once, shared between log + response. Sandbox-side grace window relies on push success; failure path falls through to drift reconciler auto-heal (now unblocked). [apps/api/src/admin/index.ts]
+- [x] [Review][Patch][MAJOR] `provisionSync` now rolls back container via `provider.remove()` + status='error' if DB write fails. [apps/api/src/platform/services/ensure-sandbox.ts:419]
+- [x] [Review][Patch][MAJOR] AC2 stale-file mismatch — added `make sandbox-token-check` target for pre-up enforcement; `loadCanonicalToken` now hard-errors on empty mounted file (was silently returning `{ source: 'env' }`).
+- [x] [Review][Patch][MAJOR] `verifyServiceKey` cleaned up — removed always-true `prev.length === a.length` dead-code guard.
+- [x] [Review][Patch][MAJOR] Created spec-named test files: `apps/api/src/__tests__/unit/sandbox-token-rotation.test.ts` + `core/epsilon-master/src/services/__tests__/load-canonical-token.test.ts`. All 28 unit tests for changed files pass.
+
+### Patch — MINOR — ALL APPLIED 2026-05-18
+
+- [x] [Review][Patch][MINOR] `acceptOldUntil` computed once, log + response use the same `acceptOldUntilIso` const. [apps/api/src/admin/index.ts]
+- [x] [Review][Patch][MINOR] `rateBySandbox` Map self-evicts entries with `windowStartedAt < cutoff` hourly via `startRateMapCleanup`. [apps/api/src/router/routes/internal-bootstrap.ts]
+- [x] [Review][Patch][MINOR] `persistMirror` now writes `EPSILON_YOLO_API_KEY` in addition to the original 3 keys (parity with `writeCoreAuthVars`). EPSILON_API_URL stays out — provider-injected, not derived from token.
+- [x] [Review][Patch][MINOR] Audit log fields converted to snake_case per spec AC4: `sandbox_id`, `rotated_by_user_id`, `old_key_prefix`, `new_key_prefix`, `accept_old_until`. Test updated to match.
+
+### Defer (out-of-scope / spec marks `[ ]` / pre-existing)
+
+- [x] [Review][Defer] Task 6.4 WebSocket `re-auth` signal — spec marks `[ ]`, explicitly deferred to future PR
+- [x] [Review][Defer] AC5 PROVISIONING_KEY 24h TTL — spec language ambiguous (says "kept in DB for re-bootstrap"); defer until threat model clarified
+- [x] [Review][Defer] AC5 leaked-key abuse detection (auto-invalidate + force re-provision) — partial mitigation via rate limiter; full anomaly detection out-of-scope
+- [x] [Review][Defer] Task 6.1 file-location deviation (route in `admin/index.ts` not `admin-rotate-sandbox-token.ts`) — functionally equivalent, low value to refactor
+
+### Dismissed (noise / false positive)
+
+- `serviceKey` stored plaintext in DB JSONB (Blind F2) — out-of-scope here; same pattern exists pre-5.0.3, would touch every prior story to migrate. Track separately as "encrypt sandbox.config secrets at rest".
+- `SANDBOX_TOKEN_DRIFT_RECONCILER_ENABLED` env var ignored in local mode (Auditor F14) — intended behavior per spec ("default false local"), env-override-vs-hardcode is a NIT not a defect.
+- Mirror path default `.secrets/` vs spec-stated `.persistent-system/secrets/` (Auditor F11) — repo convention is `.secrets/` (consistent with existing `bootstrap-env.ts`); spec is the outlier, not the code. Override available via `BOOTSTRAP_PATH`.
+- Internal bootstrap route mounted without auth middleware (Edge F14) — already protected by per-handler PROVISIONING_KEY validation + IP check. Adding outer middleware is redundant.
+- `prev.length === a.length` always-true guard (Blind F5) — folded into the MAJOR "dedupe grace logic" patch above.
+
+

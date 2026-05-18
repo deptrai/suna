@@ -27,6 +27,7 @@ function buildEnvPayload(
   serviceKey: string,
   metadata?: Record<string, unknown>,
   provisioningKey?: string,
+  sandboxId?: string,
 ): Record<string, string> {
   const sandboxApiBase = config.EPSILON_URL.replace(/\/v1\/router\/?$/, '');
   const routerBase = `${sandboxApiBase}/v1/router`;
@@ -49,6 +50,7 @@ function buildEnvPayload(
     TUNNEL_API_URL: sandboxApiBase,
     TUNNEL_TOKEN: serviceKey,
     ...(provisioningKey ? { PROVISIONING_KEY: provisioningKey } : {}),
+    ...(sandboxId ? { SANDBOX_ID: sandboxId } : {}),
     // Both vars only injected when feature enabled (key set). Missing key means
     // sandbox shouldn't attempt to call vibe-trading at all — avoid confusing
     // connection errors by omitting URL too.
@@ -82,11 +84,12 @@ export async function inject(
   poolSandbox: Pick<PoolSandbox, 'baseUrl' | 'metadata' | 'externalId'>,
   serviceKey: string,
   provisioningKey?: string,
+  sandboxId?: string,
 ): Promise<void> {
   const meta = (poolSandbox.metadata as Record<string, unknown>) ?? {};
   const url = buildEpsilonMasterUrl(poolSandbox.baseUrl);
   const headers = buildHeaders(meta, serviceKey);
-  const keys = buildEnvPayload(serviceKey, meta, provisioningKey);
+  const keys = buildEnvPayload(serviceKey, meta, provisioningKey, sandboxId);
 
   // Step 1: Inject into the running container
   const res = await fetch(url, {

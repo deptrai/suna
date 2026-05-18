@@ -2,6 +2,14 @@
 
 Items deferred from code reviews — pre-existing issues or hard policy calls that aren't actionable in the current change.
 
+## Deferred from: code review of 5-0-3-sandbox-token-lifecycle-db-canonical (2026-05-18)
+
+- Task 6.4 WebSocket `{ type: 'reauth', newKeyVersion: N }` signal to active sandbox connections — spec marks `[ ]`, explicitly deferred to future PR. AC4 partially unmet without it.
+- AC5 PROVISIONING_KEY 24h TTL — spec language ambiguous: AC5 says "HMAC-based with 24h TTL" but Dev Notes say "kept in DB for re-bootstrap if container restarts mid-life" (implies key valid for sandbox lifetime). Defer until threat model is clarified.
+- AC5 leaked-key abuse detection (auto-invalidate + force re-provision on suspicious bootstrap pulls from unexpected IPs) — partial mitigation via rate limiter; full IP anomaly detection out-of-scope for this PR.
+- Task 6.1 file-location deviation: rotation route lives at `apps/api/src/admin/index.ts` instead of spec-listed `apps/api/src/router/routes/admin-rotate-sandbox-token.ts` — functionally equivalent; tests already match the implementation location. Low value to refactor.
+- `serviceKey` stored as plaintext in `epsilon.sandboxes.config` JSONB (Blind Hunter F2) — out-of-scope for 5.0.3; same pattern existed in 5.0.2 and prior. Track as a separate hardening story: "encrypt sandbox.config secrets at rest" (depends on Story 5.7 BYOK key derivation).
+
 ## Deferred from: code review of 5-0-2-sandbox-token-sync-reliability (2026-05-18)
 
 - `RECENT_ALERTS` map in [epsilon-user-middleware.ts:40-55] unbounded under sustained attack with >256 distinct sandboxIds. Bound to 512 LRU. Narrow in single-process Bun + 5-min debounce, but worth fixing in observability hardening pass.

@@ -96,3 +96,7 @@ _bmad/
 
 apps/api/.env.cloud-test
 secrets/
+
+# Ad-hoc debug scripts (must not contain credentials)
+apps/api/check-*.ts
+apps/api/debug-*.ts

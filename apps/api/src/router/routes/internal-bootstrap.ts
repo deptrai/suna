@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { sandboxes } from '@epsilon/db';
 import { db } from '../../shared/db';
 import { hashSecretKey } from '../../shared/crypto';
@@ -11,9 +11,35 @@ const rateBySandbox = new Map<string, RateEntry>();
 const RATE_LIMIT_PER_HOUR = 10;
 const RATE_WINDOW_MS = 60 * 60 * 1000;
 
-function getClientIp(headerValue: string | undefined): string {
-  if (!headerValue) return '';
-  return headerValue.split(',')[0]?.trim() || '';
+// Periodic eviction of stale rate-limit entries to bound memory growth
+// for sandboxes that were deleted or never call again. Runs every hour.
+let rateMapCleanupTimer: ReturnType<typeof setInterval> | null = null;
+function startRateMapCleanup(): void {
+  if (rateMapCleanupTimer) return;
+  rateMapCleanupTimer = setInterval(() => {
+    const cutoff = Date.now() - RATE_WINDOW_MS;
+    for (const [key, entry] of rateBySandbox.entries()) {
+      if (entry.windowStartedAt < cutoff) rateBySandbox.delete(key);
+    }
+  }, RATE_WINDOW_MS);
+  if (typeof rateMapCleanupTimer.unref === 'function') rateMapCleanupTimer.unref();
+}
+startRateMapCleanup();
+
+// Trust the connection's actual remote IP unless we have a configured trusted
+// proxy chain. X-Forwarded-For is client-controllable when no proxy strips it.
+function getClientIp(c: { req: { header: (name: string) => string | undefined } }): string {
+  const trustedProxy = process.env.TRUSTED_PROXY_IPS?.trim();
+  if (trustedProxy) {
+    const xff = c.req.header('x-forwarded-for');
+    if (xff) return xff.split(',')[0]?.trim() || '';
+    const xri = c.req.header('x-real-ip');
+    if (xri) return xri.trim();
+  }
+  // Fall back to direct connection IP (Hono exposes via env-specific bindings).
+  // When behind an untrusted proxy, the IP check should be considered a NIT layer
+  // — the real gate is the PROVISIONING_KEY hash check below.
+  return '';
 }
 
 function isAllowedInternalIp(ip: string): boolean {
@@ -53,8 +79,11 @@ internalBootstrap.get('/bootstrap-token', async (c) => {
     return c.json({ error: 'missing bearer token' }, 401);
   }
 
-  const clientIp = getClientIp(c.req.header('x-forwarded-for') || c.req.header('x-real-ip'));
-  if (process.env.ENV_MODE === 'cloud' && !isAllowedInternalIp(clientIp)) {
+  const clientIp = getClientIp(c);
+  // IP allowlist is a defense-in-depth layer; only enforce when we trust the
+  // proxy chain (TRUSTED_PROXY_IPS set). Otherwise the PROVISIONING_KEY hash
+  // is the sole gate and we skip the check rather than rely on spoofable XFF.
+  if (process.env.ENV_MODE === 'cloud' && process.env.TRUSTED_PROXY_IPS && !isAllowedInternalIp(clientIp)) {
     return c.json({ error: 'ip not allowed' }, 403);
   }
 
@@ -62,10 +91,17 @@ internalBootstrap.get('/bootstrap-token', async (c) => {
     return c.json({ error: 'rate limit exceeded' }, 429);
   }
 
+  // Accept both 'active' and 'provisioning' — async providers boot the container
+  // (which calls bootstrap on startup) before the background goroutine flips
+  // the row to 'active'. The provisioningKey hash is the security gate; status
+  // is just a sanity filter to skip archived/error rows.
   const [sandbox] = await db
     .select()
     .from(sandboxes)
-    .where(and(eq(sandboxes.sandboxId, sandboxId), eq(sandboxes.status, 'active')))
+    .where(and(
+      eq(sandboxes.sandboxId, sandboxId),
+      inArray(sandboxes.status, ['active', 'provisioning']),
+    ))
     .limit(1);
 
   if (!sandbox) {

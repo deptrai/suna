@@ -1066,15 +1066,20 @@ adminApp.post('/api/sandboxes/:id/rotate-token', async (c) => {
       }
     }
 
+    // Compute once, reuse for log + response so audit & client agree on the
+    // exact grace boundary. Drift reconciler will heal sandbox container if
+    // push failed — sandbox-side grace window only fires when push succeeds.
+    const acceptOldUntilIso = new Date(Date.now() + 30_000).toISOString();
+
     console.log(JSON.stringify({
       event: 'sandbox.token.rotated',
-      sandboxId,
-      rotatedByUserId: actorUserId ?? 'unknown',
-      oldKeyPrefix: oldPrefix,
-      newKeyPrefix: newPrefix,
+      sandbox_id: sandboxId,
+      rotated_by_user_id: actorUserId ?? 'unknown',
+      old_key_prefix: oldPrefix,
+      new_key_prefix: newPrefix,
       reason,
       pushed,
-      acceptOldUntil: new Date(Date.now() + 30_000).toISOString(),
+      accept_old_until: acceptOldUntilIso,
       ts: new Date().toISOString(),
     }));
 
@@ -1083,7 +1088,7 @@ adminApp.post('/api/sandboxes/:id/rotate-token', async (c) => {
       sandboxId,
       reason,
       pushed,
-      acceptOldUntil: new Date(Date.now() + 30_000).toISOString(),
+      acceptOldUntil: acceptOldUntilIso,
     });
   } catch (e: any) {
     return c.json({ error: e?.message || String(e) }, 500);

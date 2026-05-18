@@ -221,11 +221,14 @@ function verifyServiceKey(candidate: string): boolean {
   const b = createHash('sha256').update(expected).digest()
   if (timingSafeEqual(a, b)) return true
 
+  // Grace window: accept the previous token briefly after rotation so in-flight
+  // requests don't fail. SHA-256 always produces 32-byte buffers — same shape as
+  // `a`, so timingSafeEqual works directly without a length guard.
   if (isWithinGraceWindow()) {
     const { previousToken } = getTokenGraceState()
     if (previousToken) {
       const prev = createHash('sha256').update(previousToken).digest()
-      return prev.length === a.length && timingSafeEqual(a, prev)
+      return timingSafeEqual(a, prev)
     }
   }
   return false

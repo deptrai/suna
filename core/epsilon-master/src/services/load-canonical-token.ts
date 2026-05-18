@@ -21,9 +21,18 @@ async function writeS6File(key: string, value: string): Promise<void> {
 async function persistMirror(token: string): Promise<void> {
   const dir = MIRROR_PATH.split('/').slice(0, -1).join('/')
   if (dir && !existsSync(dir)) mkdirSync(dir, { recursive: true, mode: 0o700 })
+  // Mirror keys must match the set written by writeCoreAuthVars so a restart
+  // through sync-s6-env doesn't lose EPSILON_YOLO_API_KEY when Docker env is
+  // missing. EPSILON_API_URL stays out of the mirror — it's stable per-sandbox
+  // and provider-injected, not derived from the canonical token.
   await Bun.write(
     MIRROR_PATH,
-    JSON.stringify({ EPSILON_TOKEN: token, INTERNAL_SERVICE_KEY: token, TUNNEL_TOKEN: token }, null, 2),
+    JSON.stringify({
+      EPSILON_TOKEN: token,
+      INTERNAL_SERVICE_KEY: token,
+      EPSILON_YOLO_API_KEY: token,
+      TUNNEL_TOKEN: token,
+    }, null, 2),
   )
 }
 
@@ -48,10 +57,12 @@ export async function loadCanonicalToken(): Promise<{ source: TokenSource }> {
       return { source: 'env' }
     }
     const localToken = readFileSync(s6TokenPath, 'utf8').trim()
-    if (localToken) {
-      writeCoreAuthVars(localToken)
-      await persistMirror(localToken)
+    if (!localToken) {
+      console.error("[bootstrap] sandbox-token.txt is empty — run 'make sandbox-token' on host")
+      return { source: 'env' }
     }
+    writeCoreAuthVars(localToken)
+    await persistMirror(localToken)
     return { source: 'env' }
   }
 
@@ -85,13 +96,15 @@ export async function loadCanonicalToken(): Promise<{ source: TokenSource }> {
       }
     }
 
-    if (res.status >= 500) {
-      const fallback = readMirrorToken()
-      if (fallback) {
-        console.warn('[bootstrap] canonical token API unavailable; using mirror fallback')
-        writeCoreAuthVars(fallback)
-        return { source: 'mirror' }
-      }
+    // Any non-2xx (4xx including 401/403/428/429, or 5xx) — fall back to the
+    // mirror so the sandbox starts with a stale-but-functional token rather
+    // than no token at all. The drift reconciler / 5.0.2 auto-heal will
+    // resolve once the API is reachable.
+    const fallback = readMirrorToken()
+    if (fallback) {
+      console.warn(`[bootstrap] canonical token API returned ${res.status}; using mirror fallback`)
+      writeCoreAuthVars(fallback)
+      return { source: 'mirror' }
     }
   } catch (err) {
     console.warn('[bootstrap] canonical token API request failed:', err)

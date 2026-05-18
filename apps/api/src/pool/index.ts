@@ -28,8 +28,9 @@ export async function injectEnv(
   claimed: ClaimedSandbox,
   serviceKey: string,
   provisioningKey?: string,
+  sandboxId?: string,
 ): Promise<void> {
-  return envInjector.inject(claimed.poolSandbox, serviceKey, provisioningKey);
+  return envInjector.inject(claimed.poolSandbox, serviceKey, provisioningKey, sandboxId);
 }
 
 export async function replenish(): Promise<{ created: number }> {

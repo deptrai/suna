@@ -95,7 +95,7 @@ development_status:
   5-0-vibe-trading-platform-foundation: done
   5-0-1-shadow-account-volume-hotfix: done  # 2026-05-18 code-review applied 5 patches: scope extended to 3 volumes + mcp service + Dockerfile mkdir/chown + README.md runbook + CLAUDE.md backup note
   5-0-2-sandbox-token-sync-reliability: done  # 2026-05-18 code-review applied 11 patches + 4 test files (34 tests pass): tx-aware createApiKey (P9/D1), parameterized externalId (P10/D3), env-gated alerts (P11/D5), Sentry deferred + Logtail rule path (D4), JustAVPS coverage deferred + documented (D2)
-  5-0-3-sandbox-token-lifecycle-db-canonical: ready-for-dev  # P1 — 7 tasks; phased rollout (week 1-4); blocks until 5.0.2 done
+  5-0-3-sandbox-token-lifecycle-db-canonical: in-progress  # 2026-05-18 code-review applied 19 patches (6 BLOCK + 9 MAJOR + 4 MINOR); Task 6.4 (WS reauth) + 7.x (docs/CLAUDE.md update) deferred per spec
   5-0-4-sandbox-token-drift-chaos-tests: done  # 2026-05-18 T1-T6 shipped (helpers + chaos specs + verify-fail-closed + provisioner-rollback + runbook); 57 unit tests pass; T7 CI scaffolding descoped to 5.0.5
   5-0-5-ci-workflow-bun-test-playwright: backlog  # P2 — scaffold CI workflow (bun test + Playwright + Docker compose stack); descoped from 5.0.4 T7 (no existing workflow runs these)
   5-1-vibe-trading-api-integration-in-sandbox: done

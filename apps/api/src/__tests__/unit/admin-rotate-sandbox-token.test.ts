@@ -23,8 +23,8 @@ describe('story 5.0.3 admin rotate token contract', () => {
 
   test('writes structured rotation audit log with prefixes and reason', () => {
     expect(SOURCE).toContain("event: 'sandbox.token.rotated'");
-    expect(SOURCE).toContain('oldKeyPrefix');
-    expect(SOURCE).toContain('newKeyPrefix');
+    expect(SOURCE).toContain('old_key_prefix');
+    expect(SOURCE).toContain('new_key_prefix');
     expect(SOURCE).toContain('reason');
   });
 });

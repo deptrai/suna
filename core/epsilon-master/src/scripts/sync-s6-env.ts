@@ -1,17 +1,16 @@
 import { mkdir } from 'fs/promises'
 import { existsSync } from 'fs'
 import { SecretStore } from '../services/secret-store'
-import { loadBootstrapEnv } from '../services/bootstrap-env'
+import { loadCanonicalToken } from '../services/load-canonical-token'
 
 const S6_ENV_DIR = process.env.S6_ENV_DIR || '/run/s6/container_environment'
 
 async function main() {
-  // Load bootstrap env FIRST — restores EPSILON_TOKEN (the SecretStore encryption
-  // key) from the persistent bootstrap file before we try to decrypt secrets.
-  // Without this, EPSILON_TOKEN may be empty (Docker passes it as "" on restart),
-  // causing SecretStore to use 'default-key' and fail to decrypt, which triggers
-  // destructive auto-purge of all encrypted secrets.
-  loadBootstrapEnv()
+  // Load canonical token FIRST — restores EPSILON_TOKEN (the SecretStore encryption
+  // key) before we try to decrypt secrets. Cloud: pulls from DB-canonical bootstrap
+  // API. Local: reads from s6 bind-mount. Replaces the deprecated mirror-based
+  // loadBootstrapEnv() which would overwrite a fresh token with a stale mirror.
+  await loadCanonicalToken()
 
   const store = new SecretStore()
   const envVars = await store.getAll()

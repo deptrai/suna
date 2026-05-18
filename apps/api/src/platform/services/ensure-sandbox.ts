@@ -171,7 +171,7 @@ async function tryClaimFromPool(
       })
       .where(eq(sandboxes.sandboxId, row.sandboxId));
 
-    await pool.injectEnv(claimed, sandboxKey.secretKey, provisioningKey);
+    await pool.injectEnv(claimed, sandboxKey.secretKey, provisioningKey, row.sandboxId);
 
     console.log(`[ensureSandbox] Claimed from pool: ${row.sandboxId} (ext: ${claimed.externalId})`);
     return { row, created: true };
@@ -235,6 +235,7 @@ async function provisionNewSandbox(
     envVars: {
       EPSILON_TOKEN: sandboxKey.secretKey,
       PROVISIONING_KEY: provisioningKey,
+      SANDBOX_ID: sandbox.sandboxId,
     },
   };
 
@@ -396,23 +397,49 @@ async function provisionSync(
           .where(eq(sandboxes.sandboxId, sandbox.sandboxId));
       },
     });
-    const [updated] = await db
-      .update(sandboxes)
-      .set({
+    let updated;
+    try {
+      [updated] = await db
+        .update(sandboxes)
+        .set({
+          externalId: result.externalId,
+          status: 'active',
+          baseUrl: result.baseUrl,
+          metadata: buildSandboxInitSuccessMetadata(
+            sandbox.metadata as Record<string, unknown> | null,
+            result.metadata,
+            attempts,
+          ),
+          config: { serviceKey },
+          provisioningKey: provisioningKeyHash,
+          updatedAt: new Date(),
+        })
+        .where(eq(sandboxes.sandboxId, sandbox.sandboxId))
+        .returning();
+    } catch (dbErr) {
+      // Compensating action: container is up with PROVISIONING_KEY but DB never
+      // recorded the hash → bootstrap would 428 forever. Tear it down so a
+      // retry creates a fresh consistent state instead of a permanently-broken
+      // sandbox row.
+      console.error('[ensureSandbox] DB write failed after provider.create — rolling back container', {
+        sandboxId: sandbox.sandboxId,
         externalId: result.externalId,
-        status: 'active',
-        baseUrl: result.baseUrl,
-        metadata: buildSandboxInitSuccessMetadata(
-          sandbox.metadata as Record<string, unknown> | null,
-          result.metadata,
-          attempts,
-        ),
-        config: { serviceKey },
-        provisioningKey: provisioningKeyHash,
-        updatedAt: new Date(),
-      })
-      .where(eq(sandboxes.sandboxId, sandbox.sandboxId))
-      .returning();
+        error: dbErr instanceof Error ? dbErr.message : String(dbErr),
+      });
+      try {
+        await provider.remove(result.externalId);
+      } catch (delErr) {
+        console.error('[ensureSandbox] container rollback delete failed', {
+          externalId: result.externalId,
+          error: delErr instanceof Error ? delErr.message : String(delErr),
+        });
+      }
+      await db
+        .update(sandboxes)
+        .set({ status: 'error', updatedAt: new Date() })
+        .where(eq(sandboxes.sandboxId, sandbox.sandboxId));
+      throw dbErr;
+    }
 
     return { row: updated, created: true };
   } catch (err) {

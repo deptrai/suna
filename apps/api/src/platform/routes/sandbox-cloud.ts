@@ -489,6 +489,7 @@ export function createCloudSandboxRouter(
         envVars: {
           EPSILON_TOKEN: sandboxKey.secretKey,
           PROVISIONING_KEY: provisioningKey,
+          SANDBOX_ID: sandbox.sandboxId,
         },
       };
 
@@ -548,6 +549,7 @@ export function createCloudSandboxRouter(
                   attempts,
                 ),
                 config: { serviceKey: sandboxKey.secretKey },
+                provisioningKey: provisioningKeyHash,
                 updatedAt: new Date(),
               })
               .where(eq(sandboxes.sandboxId, sandbox.sandboxId));
