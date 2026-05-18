@@ -33,7 +33,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-18 (IR resolution complete: C1 (Story 6.4 spec ready-for-dev), A1-A4 done; minor items partial: m3 a11y backlog stub + m5 note in Story 8.5; m1/m2/m4/m6/A5 deferred to sprint planning per "best practices" decision)
+last_updated: 2026-05-18 (Story 5.9 Multi-Strategy Backtest Comparison filed as backlog under Epic 5 — feature request to leverage VT's "7 backtesting engines + comparison panel" capability already in platform)
 project: chainlens
 project_key: NOKEY
 tracking_system: file-system
@@ -106,6 +106,7 @@ development_status:
   5-6-shadow-account-swarm-ui: done  # 2026-05-18 review→done after fixing shadow-reports-route.test.ts regression (Q2 tier gate needed billing mock update); 7+4+7+8=26 tests pass; 16 review patches + 3 deferred + 2 audit fixes (M4 link, Q2 tier gate)
   5-7-user-llm-key-management: backlog
   5-8-per-user-persistent-memory: done  # 2026-05-18 /bmad-code-review applied 39 patches: pgvector removed, IDOR fixed, URL mount corrected, transactions, tests added
+  5-9-multi-strategy-backtest-comparison: backlog  # 2026-05-18 feature request — leverage VT's "7 engines + comparison panel"; coordinator endpoint + Monaco multi-tab + comparison visualizer; ~2-3 days
   epic-5-retrospective: optional
 
   # Epic 6: Browser Intelligence Extension

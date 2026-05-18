@@ -1213,6 +1213,52 @@ so that I don't need to re-explain my context every time I start a new conversat
 
 **Estimated effort:** 3 ngày (v2 simplified — bỏ pgvector + embeddings v1).
 
+### Story 5.9: Multi-Strategy Backtest Comparison *(backlog, added 2026-05-18)*
+
+As a Tier 2 trader,
+I want chạy nhiều backtest chiến lược cùng lúc và xem so sánh side-by-side (KPI table + Equity Curve overlay + correlation heatmap),
+So that tôi có thể đánh giá nhanh chiến lược nào tốt nhất trước khi triển khai vốn thật.
+
+**Depends on:** Story 5.2 done (Monaco editor), Story 5.3 done (Visualizer), Story 5.5 done (MCP proxy billing pipeline).
+**Blocks nothing critical** — feature enhancement on top of existing single-strategy backtest.
+
+**Vibe Trading capability check (verified 2026-05-18)**: Backend platform đã sẵn sàng. [Vibe-Trading/agent/SKILL.md:4](Vibe-Trading/agent/SKILL.md#L4) advertises "7 backtesting engines + benchmark comparison panel". [mcp_server.py:115](Vibe-Trading/agent/mcp_server.py#L115) exposes `backtest(run_dir)` tool và `run_shadow_backtest` đã chạy multi-market (A股/港股/美股/crypto) trong 1 call. Story 5.9 chỉ thêm UI surface + coordinator endpoint — không cần code mới ở VT.
+
+**Acceptance Criteria:**
+
+**Given** Monaco editor đang hiển thị 1 strategy
+**When** user click "Add Strategy" tab (max 5 tabs, hard cap để giữ NFR3 sandbox timeout budget)
+**Then** mỗi tab có Monaco editor độc lập với strategy code riêng
+**And** state mỗi tab serialize vào sessionStorage để recover khi reload
+
+**Given** user đã edit N strategies (2 ≤ N ≤ 5)
+**When** user click "Run All" button
+**Then** apps/api enqueue N parallel Celery jobs qua `POST /v1/router/vibe-trading/backtest-multi`
+**And** atomic billing: deduct N × backtest_cost trong 1 transaction (NFR8 parity 5.5 MCP proxy)
+**And** nếu bất kỳ job nào fail → rollback toàn bộ credit deduction + return 503
+
+**Given** N backtest jobs hoàn thành trong 2-min wall-clock budget
+**When** results trả về frontend
+**Then** Comparison view render với 3 panels:
+  - KPI table side-by-side (Sharpe / Drawdown / CAGR / Win-rate / Max Loss) với statistical winner highlight per metric
+  - Equity Curve overlay (N curves + benchmark line, hover tooltip per strategy)
+  - Correlation heatmap (N × N matrix, color-coded -1 đến +1)
+**And** "Promote to single-strategy view" button trên mỗi row để zoom 1 strategy vào Story 5.3 visualizer
+
+**Given** total wall-clock vượt 2 phút (NFR3 budget × N)
+**When** any job timeout
+**Then** UI hiển thị partial results với "X of N completed in time" warning
+**And** failed jobs vẫn được charge credit nếu computation thực sự đã chạy (per atomic billing pattern)
+
+**Tasks (high-level):**
+- T1: Backend coordinator `POST /v1/router/vibe-trading/backtest-multi` (apps/api/src/router/routes/vibe-trading.ts)
+- T2: Celery batch job orchestrator (Vibe-Trading/agent/src/worker/celery_app.py extend)
+- T3: Web Monaco multi-tab UI (apps/web/src/app/(dashboard)/dashboard/backtest/backtest-client.tsx extend)
+- T4: ComparisonVisualizer component (apps/web/src/components/backtest/comparison-visualizer.tsx NEW)
+- T5: Unit tests (backend coordinator) + E2E test (full Run All flow)
+
+**Estimated effort:** 2-3 ngày code. **Owner:** TBD.
+
 ## Epic 6: Browser Intelligence Extension
 
 Xây dựng Browser Extension auto-detect token/contract khi browse crypto sites, sync với web account, risk tooltips, nút Expand mở full app.
