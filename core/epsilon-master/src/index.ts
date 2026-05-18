@@ -42,8 +42,9 @@ import milestonesRouter from './routes/milestones'
 import credentialsRouter from './routes/credentials'
 import { serviceManager } from './services/service-manager'
 import { config } from './config'
-import { loadBootstrapEnv, normalizeBootstrapAuthAliases, saveBootstrapEnv } from './services/bootstrap-env'
+import { loadCanonicalToken } from './services/load-canonical-token'
 import { HealthResponse, PortsResponse } from './schemas/common'
+import { getTokenGraceState, isWithinGraceWindow } from './services/token-grace'
 
 // ─── Crash protection ────────────────────────────────────────────────────────
 // Prevent unhandled errors from silently killing the process or leaving it
@@ -57,10 +58,9 @@ process.on('unhandledRejection', (reason) => {
 
 const app = new Hono()
 
-// ─── Bootstrap: restore core env vars if missing from process.env ───────────
+// ─── Bootstrap: resolve canonical sandbox token before SecretStore ───────────
 // Must run BEFORE SecretStore because EPSILON_TOKEN is the encryption key.
-loadBootstrapEnv()
-normalizeBootstrapAuthAliases()
+await loadCanonicalToken()
 
 // Initialize secret store and load ENV variables
 const secretStore = new SecretStore()
@@ -92,8 +92,8 @@ initShareStore()
     if (!val && key === 'EPSILON_YOLO_URL') {
       val = 'https://api-yolo.epsilon.com/v1'
     }
-    // Ensure defaulted values are in process.env so saveBootstrapEnv() persists them
-    // and downstream code (YOLO client, OpenCode config) can read them.
+    // Ensure defaulted values are in process.env so downstream code
+    // (YOLO client, OpenCode config) can read them.
     if (val && !process.env[key]) {
       process.env[key] = val
     }
@@ -118,8 +118,6 @@ initShareStore()
   if (synced > 0) {
     console.log(`[Epsilon Master] Synced ${synced} core env var(s) to s6 env dir`)
   }
-  // Persist core vars so they survive across restarts even if Docker env is lost
-  saveBootstrapEnv()
 }
 
 const authSyncDisabled = process.env.EPSILON_DISABLE_AUTH_SYNC === 'true'
@@ -221,7 +219,16 @@ function verifyServiceKey(candidate: string): boolean {
   if (!candidate || !expected) return false
   const a = createHash('sha256').update(candidate).digest()
   const b = createHash('sha256').update(expected).digest()
-  return timingSafeEqual(a, b)
+  if (timingSafeEqual(a, b)) return true
+
+  if (isWithinGraceWindow()) {
+    const { previousToken } = getTokenGraceState()
+    if (previousToken) {
+      const prev = createHash('sha256').update(previousToken).digest()
+      return prev.length === a.length && timingSafeEqual(a, prev)
+    }
+  }
+  return false
 }
 
 // ─── Localhost detection ─────────────────────────────────────────────────────

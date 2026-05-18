@@ -156,6 +156,7 @@ const envSchema = z.object({
   // ── Sandbox Pool (optional — pre-provision sandboxes for instant claiming) ──
   POOL_ENABLED:                optBoolFalse,
   POOL_MAX_AGE_HOURS:          optInt(24),
+  SANDBOX_TOKEN_DRIFT_RECONCILER_ENABLED: optBoolTrue,
 
   // ── Sandbox Platform ──────────────────────────────────────────────────────
   // EPSILON_URL is auto-derived from PORT if not explicitly set (see validateEnv).
@@ -587,6 +588,10 @@ export const config = {
   // ─── Sandbox Pool ─────────────────────────────────────────────────────────
   POOL_ENABLED: env.POOL_ENABLED,
   POOL_MAX_AGE_HOURS: env.POOL_MAX_AGE_HOURS,
+  SANDBOX_TOKEN_DRIFT_RECONCILER_ENABLED:
+    env.ENV_MODE === 'cloud'
+      ? env.SANDBOX_TOKEN_DRIFT_RECONCILER_ENABLED
+      : false,
 
   // ─── Sandbox Provisioning (Platform) ──────────────────────────────────────
   EPSILON_URL: env.EPSILON_URL,

@@ -41,6 +41,7 @@ import { initModelPricing, stopModelPricing } from './router/config/model-pricin
 import { tunnelApp, wsHandlers as tunnelWsHandlers, startTunnelService, stopTunnelService, getTunnelServiceStatus } from './tunnel';
 import { startSandboxHealthMonitor, stopSandboxHealthMonitor } from './platform/services/sandbox-health';
 import { startProvisionPoller, stopProvisionPoller } from './platform/services/sandbox-provision-poller';
+import { startSandboxTokenDriftReconciler, stopSandboxTokenDriftReconciler } from './platform/services/sandbox-drift-reconciler';
 import { defaultSandboxAutoUpdatePolicy, startSandboxAutoUpdateLoop, stopSandboxAutoUpdateLoop } from './update/auto-update';
 import { startInviteCleanup, stopInviteCleanup } from './teams';
 import { db as appDb } from './shared/db';
@@ -53,6 +54,7 @@ import { adminApp } from './admin';
 import { sandboxPoolAdminApp } from './platform/routes/sandbox-pool-admin';
 import { oauthApp } from './oauth';
 import { advisoryApp } from './advisory';
+import { internalBootstrap } from './router/routes/internal-bootstrap';
 
 function shellQuote(value: string): string {
   return `'${value.replace(/'/g, `"'"'`)}'`;
@@ -432,6 +434,7 @@ app.route('/v1/servers', serversApp);        // /v1/servers, /v1/servers/:id, /v
 app.use('/v1/queue/*', combinedAuth);
 app.route('/v1/queue', queueApp);            // /v1/queue/sessions/:id, /v1/queue/messages/:id, /v1/queue/all, /v1/queue/status
 app.route('/v1/advisory', advisoryApp);      // /v1/advisory/risk (public, no auth)
+app.route('/v1/internal', internalBootstrap); // /v1/internal/bootstrap-token
 
 // Public device-auth endpoints (no auth — CLI uses these)
 import { createDeviceAuthPublicRouter } from './tunnel/routes/device-auth';
@@ -1089,6 +1092,7 @@ function startBackgroundServices() {
   startTunnelService();
   startAutoReplenish();
   startInviteCleanup(appDb);
+  startSandboxTokenDriftReconciler();
 }
 
 // Ensure DB schema exists before starting services that depend on it.
@@ -1143,6 +1147,7 @@ async function shutdown(signal: string) {
   stopTunnelService();
   stopSandboxHealthMonitor();
   stopProvisionPoller();
+  stopSandboxTokenDriftReconciler();
   stopSandboxAutoUpdateLoop();
   stopAutoReplenish();
   stopAccessControlCache();

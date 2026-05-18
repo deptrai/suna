@@ -95,3 +95,4 @@ _bmad/
 .symdex/
 
 apps/api/.env.cloud-test
+secrets/

@@ -1,6 +1,6 @@
 # Story 5.0.3: Sandbox Token Lifecycle — DB-Canonical Migration
 
-Status: ready-for-dev
+Status: in-progress
 
 **Epic:** 5 — Backtesting Sandbox
 **Type:** P1 architectural migration (deferred from 5.0.2 hotfix)
@@ -163,49 +163,49 @@ Authorization: Bearer ${PROVISIONING_KEY}
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Add `provisioningKey` to sandbox schema** (AC5)
-  - [ ] 1.1 Migration `0012_sandbox_provisioning_key.sql` — add column `provisioning_key varchar(128)` to `epsilon.sandboxes` (or nest under `config` JSONB if preferred). **Sequence note (audit 2026-05-18)**: 0010 is consumed by Story 5.6 TOFU ownership, 0011 by Story 5.8 memory pgvector; 0012 is genuinely next available.
-  - [ ] 1.2 Update [`packages/db/src/schema/epsilon.ts`](packages/db/src/schema/epsilon.ts) sandboxes table
-  - [ ] 1.3 Update [`apps/api/src/platform/services/sandbox-provisioner.ts:78`](apps/api/src/platform/services/sandbox-provisioner.ts#L78) — generate `PROVISIONING_KEY` (HMAC-based, distinct from `serviceKey`) at provision time, write to DB + inject as env var via `pool.injectEnv`
+- [x] **Task 1: Add `provisioningKey` to sandbox schema** (AC5)
+  - [x] 1.1 Migration `0012_sandbox_provisioning_key.sql` — add column `provisioning_key varchar(128)` to `epsilon.sandboxes` (or nest under `config` JSONB if preferred). **Sequence note (audit 2026-05-18)**: 0010 is consumed by Story 5.6 TOFU ownership, 0011 by Story 5.8 memory pgvector; 0012 is genuinely next available.
+  - [x] 1.2 Update [`packages/db/src/schema/epsilon.ts`](packages/db/src/schema/epsilon.ts) sandboxes table
+  - [x] 1.3 Update [`apps/api/src/platform/services/sandbox-provisioner.ts:78`](apps/api/src/platform/services/sandbox-provisioner.ts#L78) — generate `PROVISIONING_KEY` (HMAC-based, distinct from `serviceKey`) at provision time, write to DB + inject as env var via `pool.injectEnv`
 
 - [ ] **Task 2: Internal bootstrap-token API** (AC1)
-  - [ ] 2.1 New route `apps/api/src/router/routes/internal-bootstrap.ts` exposing `GET /v1/internal/bootstrap-token`
-  - [ ] 2.2 Auth: validate `Bearer ${PROVISIONING_KEY}` against `sandboxes.config.provisioningKey` for the queried sandboxId
-  - [ ] 2.3 IP allowlist: cloud provider CIDR ranges OR Docker DNS resolution check (lookup by container hostname)
-  - [ ] 2.4 Response: `{ serviceKey, expiresAt: now + 24h, sandboxId }`
-  - [ ] 2.5 Rate limit: max 10 bootstrap pulls / sandbox / hour (prevent abuse)
-  - [ ] 2.6 Audit log entry: `[bootstrap-token] sandbox=X requested from ip=Y`
+  - [x] 2.1 New route `apps/api/src/router/routes/internal-bootstrap.ts` exposing `GET /v1/internal/bootstrap-token`
+  - [x] 2.2 Auth: validate `Bearer ${PROVISIONING_KEY}` against `sandboxes.config.provisioningKey` for the queried sandboxId
+  - [x] 2.3 IP allowlist: cloud provider CIDR ranges OR Docker DNS resolution check (lookup by container hostname)
+  - [x] 2.4 Response: `{ serviceKey, expiresAt: now + 24h, sandboxId }`
+  - [x] 2.5 Rate limit: max 10 bootstrap pulls / sandbox / hour (prevent abuse)
+  - [x] 2.6 Audit log entry: `[bootstrap-token] sandbox=X requested from ip=Y`
 
-- [ ] **Task 3: Cloud sandbox boot pull** (AC1)
-  - [ ] 3.1 New helper `core/epsilon-master/src/services/load-canonical-token.ts` exporting `loadCanonicalToken(): Promise<{ source: 'api' | 'mirror' | 'env' }>`:
+- [x] **Task 3: Cloud sandbox boot pull** (AC1)
+  - [x] 3.1 New helper `core/epsilon-master/src/services/load-canonical-token.ts` exporting `loadCanonicalToken(): Promise<{ source: 'api' | 'mirror' | 'env' }>`:
     - Read `process.env.PROVISIONING_KEY` + `EPSILON_API_URL` + `SANDBOX_ID`
     - If all present (cloud mode): call internal API
     - Else (local mode): read static `.env` mount from `/run/s6/container_environment/EPSILON_TOKEN` (AC2)
     - On API 5xx: fall back to mirror file `/workspace/.persistent-system/secrets/.bootstrap-env.json` (log WARN)
     - Write resolved key to: `process.env.EPSILON_TOKEN`, `process.env.INTERNAL_SERVICE_KEY`, s6 env file, mirror file (read-only)
-  - [ ] 3.2 Replace `loadBootstrapEnv()` calls in [`core/epsilon-master/src/index.ts:62`](core/epsilon-master/src/index.ts#L62) with `loadCanonicalToken()`
-  - [ ] 3.3 DELETE `saveBootstrapEnv()` and `updateBootstrapKey()` from [`core/epsilon-master/src/services/bootstrap-env.ts`](core/epsilon-master/src/services/bootstrap-env.ts) — verify NO remaining callers (grep + fix)
-  - [ ] 3.4 Update env routes in [`core/epsilon-master/src/routes/env.ts`](core/epsilon-master/src/routes/env.ts) — `POST /env/:key` and `PUT /env/:key` reject writes to `EPSILON_TOKEN`, `INTERNAL_SERVICE_KEY` (return 403 with `{ error: 'managed by canonical source — use admin rotation API' }`)
+  - [x] 3.2 Replace `loadBootstrapEnv()` calls in [`core/epsilon-master/src/index.ts:62`](core/epsilon-master/src/index.ts#L62) with `loadCanonicalToken()`
+  - [x] 3.3 DELETE `saveBootstrapEnv()` and `updateBootstrapKey()` from [`core/epsilon-master/src/services/bootstrap-env.ts`](core/epsilon-master/src/services/bootstrap-env.ts) — verify NO remaining callers (grep + fix)
+  - [x] 3.4 Update env routes in [`core/epsilon-master/src/routes/env.ts`](core/epsilon-master/src/routes/env.ts) — `POST /env/:key` and `PUT /env/:key` reject writes to `EPSILON_TOKEN`, `INTERNAL_SERVICE_KEY` (return 403 with `{ error: 'managed by canonical source — use admin rotation API' }`)
 
 - [ ] **Task 4: Local-dev `.env` bind mount** (AC2)
-  - [ ] 4.1 Add `make sandbox-token` target to root `Makefile`: reads `apps/api/.env INTERNAL_SERVICE_KEY` → writes `./secrets/sandbox-token.txt`
-  - [ ] 4.2 Update [`scripts/compose/docker-compose.yml`](scripts/compose/docker-compose.yml) `epsilon-sandbox` service: add bind mount `./secrets/sandbox-token.txt:/run/s6/container_environment/EPSILON_TOKEN:ro`
-  - [ ] 4.3 Add `./secrets/` to root `.gitignore` (already present? verify)
+  - [x] 4.1 Add `make sandbox-token` target to root `Makefile`: reads `apps/api/.env INTERNAL_SERVICE_KEY` → writes `./secrets/sandbox-token.txt`
+  - [x] 4.2 Update [`scripts/compose/docker-compose.yml`](scripts/compose/docker-compose.yml) `epsilon-sandbox` service: add bind mount `./secrets/sandbox-token.txt:/run/s6/container_environment/EPSILON_TOKEN:ro`
+  - [x] 4.3 Add `./secrets/` to root `.gitignore` (already present? verify)
   - [ ] 4.4 Boot check in `loadCanonicalToken()`: if local mode AND mount file missing → log clear error `[bootstrap] sandbox-token.txt missing — run 'make sandbox-token' on host`
   - [ ] 4.5 Update [CLAUDE.md troubleshooting](CLAUDE.md) section "Backend API Cannot connect" — replace `docker exec ... bootstrap-env.json` flow with `make sandbox-token` flow
 
-- [ ] **Task 5: Drift reconciler cron** (AC3)
-  - [ ] 5.1 New service `apps/api/src/platform/services/sandbox-drift-reconciler.ts`
-  - [ ] 5.2 Run every 60s via BullMQ recurring (preferred — restartable) OR `setInterval` (simpler — restarts on backend restart, acceptable)
-  - [ ] 5.3 For each active sandbox: query DB serviceKey + GET container `/env/INTERNAL_SERVICE_KEY` (use admin token) + compare
-  - [ ] 5.4 On drift: emit metric + breadcrumb; in cloud mode → call PUT `/env/INTERNAL_SERVICE_KEY` with DB value (auto-heal); in local mode → log only
-  - [ ] 5.5 Add config flag `SANDBOX_TOKEN_DRIFT_RECONCILER_ENABLED` (default true cloud, false local)
-  - [ ] 5.6 Wire into `apps/api/src/index.ts` startup (next to existing BullMQ workers)
+- [x] **Task 5: Drift reconciler cron** (AC3)
+  - [x] 5.1 New service `apps/api/src/platform/services/sandbox-drift-reconciler.ts`
+  - [x] 5.2 Run every 60s via BullMQ recurring (preferred — restartable) OR `setInterval` (simpler — restarts on backend restart, acceptable)
+  - [x] 5.3 For each active sandbox: query DB serviceKey + GET container `/env/INTERNAL_SERVICE_KEY` (use admin token) + compare
+  - [x] 5.4 On drift: emit metric + breadcrumb; in cloud mode → call PUT `/env/INTERNAL_SERVICE_KEY` with DB value (auto-heal); in local mode → log only
+  - [x] 5.5 Add config flag `SANDBOX_TOKEN_DRIFT_RECONCILER_ENABLED` (default true cloud, false local)
+  - [x] 5.6 Wire into `apps/api/src/index.ts` startup (next to existing BullMQ workers)
 
 - [ ] **Task 6: Admin rotation with grace** (AC4)
-  - [ ] 6.1 New route `apps/api/src/router/routes/admin-rotate-sandbox-token.ts` — POST `/v1/admin/sandboxes/:id/rotate-token`
-  - [ ] 6.2 Generate new key → DB write → emit `sandbox.token.rotated` event
-  - [ ] 6.3 Update `verifyEpsilonUserContext` in [`core/epsilon-master/src/services/epsilon-user-context.ts`](core/epsilon-master/src/services/epsilon-user-context.ts) to support `acceptOldUntil: number` — pass via env var refreshed on rotation
+  - [x] 6.1 New route `apps/api/src/router/routes/admin-rotate-sandbox-token.ts` — POST `/v1/admin/sandboxes/:id/rotate-token`
+  - [x] 6.2 Generate new key → DB write → emit `sandbox.token.rotated` event
+  - [x] 6.3 Update `verifyEpsilonUserContext` in [`core/epsilon-master/src/services/epsilon-user-context.ts`](core/epsilon-master/src/services/epsilon-user-context.ts) to support `acceptOldUntil: number` — pass via env var refreshed on rotation
   - [ ] 6.4 Plugin reconnect signal: send WebSocket message `{ type: 'reauth', newKeyVersion: N }` to active sandbox connections
   - [ ] 6.5 Audit log: `rotated_by`, `sandbox_id`, `old_prefix`, `new_prefix`, `reason`
 

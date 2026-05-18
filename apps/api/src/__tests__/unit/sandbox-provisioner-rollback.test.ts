@@ -45,7 +45,7 @@ describe('AC4 atomic transaction wrapping (5.0.2 ship)', () => {
       /db\.transaction\(async \(tx\) => \{([\s\S]*?)\n[ ]+\}\);\s*\n\s*\} catch \(provisionErr\)/,
     );
     expect(txMatch).not.toBeNull();
-    expect(txMatch![1]).toContain('await pool.injectEnv(claim, sandboxKey.secretKey)');
+    expect(txMatch![1]).toContain('await pool.injectEnv(claim, sandboxKey.secretKey, provisioningKey);');
   });
 });
 

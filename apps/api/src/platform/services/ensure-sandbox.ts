@@ -2,6 +2,7 @@ import { eq, and, desc, inArray, sql } from 'drizzle-orm';
 import { sandboxes } from '@epsilon/db';
 import { db } from '../../shared/db';
 import { createApiKey } from '../../repositories/api-keys';
+import { generateProvisioningKey, hashSecretKey } from '../../shared/crypto';
 import {
   getProvider,
   getDefaultProviderName,
@@ -156,15 +157,21 @@ async function tryClaimFromPool(
       title: 'Sandbox Token',
       type: 'sandbox',
     });
+    const provisioningKey = generateProvisioningKey();
+    const provisioningKeyHash = hashSecretKey(provisioningKey);
 
     await ensureSandboxCreatorMember(db, row.sandboxId, userId);
 
     await db
       .update(sandboxes)
-      .set({ config: { serviceKey: sandboxKey.secretKey }, updatedAt: new Date() })
+      .set({
+        config: { serviceKey: sandboxKey.secretKey },
+        provisioningKey: provisioningKeyHash,
+        updatedAt: new Date(),
+      })
       .where(eq(sandboxes.sandboxId, row.sandboxId));
 
-    await pool.injectEnv(claimed, sandboxKey.secretKey);
+    await pool.injectEnv(claimed, sandboxKey.secretKey, provisioningKey);
 
     console.log(`[ensureSandbox] Claimed from pool: ${row.sandboxId} (ext: ${claimed.externalId})`);
     return { row, created: true };
@@ -216,6 +223,8 @@ async function provisionNewSandbox(
   const sandbox = await insertProvisioningRow(accountId, providerName, opts.isIncluded);
   await ensureSandboxCreatorMember(db, sandbox.sandboxId, userId);
   const sandboxKey = await createSandboxApiKey(sandbox.sandboxId, accountId);
+  const provisioningKey = generateProvisioningKey();
+  const provisioningKeyHash = hashSecretKey(provisioningKey);
 
   const createOpts = {
     accountId,
@@ -223,14 +232,17 @@ async function provisionNewSandbox(
     name: sandbox.name,
     serverType: opts.serverType,
     location: opts.location,
-    envVars: { EPSILON_TOKEN: sandboxKey.secretKey },
+    envVars: {
+      EPSILON_TOKEN: sandboxKey.secretKey,
+      PROVISIONING_KEY: provisioningKey,
+    },
   };
 
   if (provider.provisioning.async) {
-    return provisionAsync(provider, sandbox, sandboxKey.secretKey, createOpts);
+    return provisionAsync(provider, sandbox, sandboxKey.secretKey, provisioningKeyHash, createOpts);
   }
 
-  return provisionSync(provider, sandbox, sandboxKey.secretKey, createOpts);
+  return provisionSync(provider, sandbox, sandboxKey.secretKey, provisioningKeyHash, createOpts);
 }
 
 async function insertProvisioningRow(accountId: string, providerName: ProviderName, isIncluded?: boolean) {
@@ -270,6 +282,7 @@ async function provisionAsync(
   provider: ReturnType<typeof getProvider>,
   sandbox: typeof sandboxes.$inferSelect,
   serviceKey: string,
+  provisioningKeyHash: string,
   createOpts: Parameters<ReturnType<typeof getProvider>['create']>[0],
 ): Promise<EnsureSandboxResult> {
   const firstStage = provider.provisioning.stages[0];
@@ -278,6 +291,7 @@ async function provisionAsync(
     .update(sandboxes)
     .set({
       config: { serviceKey },
+      provisioningKey: provisioningKeyHash,
       metadata: buildSandboxInitAttemptMetadata(
         sandbox.metadata as Record<string, unknown> | null,
         1,
@@ -348,6 +362,7 @@ async function provisionSync(
   provider: ReturnType<typeof getProvider>,
   sandbox: typeof sandboxes.$inferSelect,
   serviceKey: string,
+  provisioningKeyHash: string,
   createOpts: Parameters<ReturnType<typeof getProvider>['create']>[0],
 ): Promise<EnsureSandboxResult> {
   try {
@@ -393,6 +408,7 @@ async function provisionSync(
           attempts,
         ),
         config: { serviceKey },
+        provisioningKey: provisioningKeyHash,
         updatedAt: new Date(),
       })
       .where(eq(sandboxes.sandboxId, sandbox.sandboxId))

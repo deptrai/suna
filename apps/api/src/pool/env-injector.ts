@@ -23,7 +23,11 @@ function buildHeaders(metadata: Record<string, unknown>, serviceKey?: string): R
   return headers;
 }
 
-function buildEnvPayload(serviceKey: string, metadata?: Record<string, unknown>): Record<string, string> {
+function buildEnvPayload(
+  serviceKey: string,
+  metadata?: Record<string, unknown>,
+  provisioningKey?: string,
+): Record<string, string> {
   const sandboxApiBase = config.EPSILON_URL.replace(/\/v1\/router\/?$/, '');
   const routerBase = `${sandboxApiBase}/v1/router`;
   const payload: Record<string, string> = {
@@ -44,6 +48,7 @@ function buildEnvPayload(serviceKey: string, metadata?: Record<string, unknown>)
     FIRECRAWL_API_URL: `${routerBase}/firecrawl`,
     TUNNEL_API_URL: sandboxApiBase,
     TUNNEL_TOKEN: serviceKey,
+    ...(provisioningKey ? { PROVISIONING_KEY: provisioningKey } : {}),
     // Both vars only injected when feature enabled (key set). Missing key means
     // sandbox shouldn't attempt to call vibe-trading at all — avoid confusing
     // connection errors by omitting URL too.
@@ -73,11 +78,15 @@ function buildEnvPayload(serviceKey: string, metadata?: Record<string, unknown>)
  * 2. Update /etc/justavps/env on the host via toolbox (persists across restarts).
  * Throws on failure so callers can handle broken sandboxes.
  */
-export async function inject(poolSandbox: Pick<PoolSandbox, 'baseUrl' | 'metadata' | 'externalId'>, serviceKey: string): Promise<void> {
+export async function inject(
+  poolSandbox: Pick<PoolSandbox, 'baseUrl' | 'metadata' | 'externalId'>,
+  serviceKey: string,
+  provisioningKey?: string,
+): Promise<void> {
   const meta = (poolSandbox.metadata as Record<string, unknown>) ?? {};
   const url = buildEpsilonMasterUrl(poolSandbox.baseUrl);
   const headers = buildHeaders(meta, serviceKey);
-  const keys = buildEnvPayload(serviceKey, meta);
+  const keys = buildEnvPayload(serviceKey, meta, provisioningKey);
 
   // Step 1: Inject into the running container
   const res = await fetch(url, {

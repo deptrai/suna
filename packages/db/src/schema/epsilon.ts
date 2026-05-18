@@ -143,6 +143,7 @@ export const sandboxes = epsilonSchema.table(
     externalId: text('external_id'),
     status: sandboxStatusEnum('status').default('provisioning').notNull(),
     baseUrl: text('base_url').notNull(),
+    provisioningKey: varchar('provisioning_key', { length: 128 }),
     config: jsonb('config').default({}).$type<Record<string, unknown>>(),
     metadata: jsonb('metadata').default({}).$type<Record<string, unknown>>(),
     lastUsedAt: timestamp('last_used_at', { withTimezone: true }),

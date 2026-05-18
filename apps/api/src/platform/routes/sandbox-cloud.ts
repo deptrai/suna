@@ -16,6 +16,7 @@ import { eq, and, desc, sql, inArray } from 'drizzle-orm';
 import { sandboxes, type Database } from '@epsilon/db';
 import { db as defaultDb } from '../../shared/db';
 import { createApiKey } from '../../repositories/api-keys';
+import { generateProvisioningKey, hashSecretKey } from '../../shared/crypto';
 import { supabaseAuth as authMiddleware } from '../../middleware/auth';
 import {
   getProvider as defaultGetProvider,
@@ -429,6 +430,8 @@ export function createCloudSandboxRouter(
         title: 'Sandbox Token',
         type: 'sandbox',
       });
+      const provisioningKey = generateProvisioningKey();
+      const provisioningKeyHash = hashSecretKey(provisioningKey);
 
       // ── Try pool claim before provider.create() ──────────────────────────
       if (config.isPoolEnabled() && isManagedVpsProvider(providerName)) {
@@ -450,11 +453,12 @@ export function createCloudSandboxRouter(
                   ...claimed.metadata,
                 },
                 config: { serviceKey: sandboxKey.secretKey },
+                provisioningKey: provisioningKeyHash,
                 updatedAt: new Date(),
               })
               .where(eq(sandboxes.sandboxId, sandbox.sandboxId));
 
-            await pool.injectEnv(claimed, sandboxKey.secretKey);
+            await pool.injectEnv(claimed, sandboxKey.secretKey, provisioningKey);
 
             const [updated] = await db
               .select()
@@ -484,6 +488,7 @@ export function createCloudSandboxRouter(
         location: requestedLocation,
         envVars: {
           EPSILON_TOKEN: sandboxKey.secretKey,
+          PROVISIONING_KEY: provisioningKey,
         },
       };
 
@@ -667,6 +672,7 @@ export function createCloudSandboxRouter(
             attempts,
           ),
           config: { serviceKey: sandboxKey.secretKey },
+          provisioningKey: provisioningKeyHash,
           updatedAt: new Date(),
         })
         .where(eq(sandboxes.sandboxId, sandbox.sandboxId))

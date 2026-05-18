@@ -12,6 +12,7 @@ import { config } from '../../config';
 import * as pool from '../../pool';
 import { createSandbox, generateSandboxName } from './ensure-sandbox';
 import { createApiKey } from '../../repositories/api-keys';
+import { generateProvisioningKey, hashSecretKey } from '../../shared/crypto';
 const provisioningSubscriptions = new Set<string>();
 
 /** Find sandbox by subscription ID — checks both column and metadata */
@@ -97,16 +98,22 @@ export async function provisionSandboxFromCheckout(opts: {
                 title: 'Sandbox Token',
                 type: 'sandbox',
               }, tx);
+              const provisioningKey = generateProvisioningKey();
+              const provisioningKeyHash = hashSecretKey(provisioningKey);
 
               await tx
                 .update(sandboxes)
-                .set({ config: { serviceKey: sandboxKey.secretKey }, updatedAt: new Date() })
+                .set({
+                  config: { serviceKey: sandboxKey.secretKey },
+                  provisioningKey: provisioningKeyHash,
+                  updatedAt: new Date(),
+                })
                 .where(eq(sandboxes.sandboxId, insertedRow.sandboxId));
 
               // pool.injectEnv inside the transaction: if it throws, Drizzle rolls
               // back DB writes. Re-fetch the updated row so we return the version
               // with serviceKey populated.
-              await pool.injectEnv(claim, sandboxKey.secretKey);
+              await pool.injectEnv(claim, sandboxKey.secretKey, provisioningKey);
 
               const [refreshedRow] = await tx
                 .select()

@@ -4,7 +4,7 @@ import { mkdir, rm } from 'fs/promises'
 import { existsSync, readFileSync, readdirSync } from 'fs'
 import { SecretStore } from '../services/secret-store'
 import { syncSecretToAuth } from '../services/auth-sync'
-import { updateBootstrapKey } from '../services/bootstrap-env'
+import { startTokenGraceWindow } from '../services/token-grace'
 import {
   ErrorResponse,
   UnauthorizedResponse,
@@ -22,6 +22,7 @@ const envRouter = new Hono()
 const secretStore = new SecretStore()
 
 const S6_ENV_DIR = process.env.S6_ENV_DIR || '/run/s6/container_environment'
+const CANONICAL_MANAGED_KEYS = new Set(['EPSILON_TOKEN', 'INTERNAL_SERVICE_KEY'])
 
 // NOTE: Per-route auth middleware removed — global auth in index.ts now
 // always enforces INTERNAL_SERVICE_KEY on all routes (auto-generated if not set).
@@ -49,6 +50,10 @@ async function safeJsonBody(c: any): Promise<any | null> {
 
 function isValidEnvKey(key: string): boolean {
   return !!key && key.length <= 255 && !key.includes('/') && !key.includes('\0')
+}
+
+function isCanonicalManagedKey(key: string): boolean {
+  return CANONICAL_MANAGED_KEYS.has(key)
 }
 
 /**
@@ -177,10 +182,10 @@ envRouter.post('/',
       let updated = 0
       for (const [key, value] of Object.entries(keys as Record<string, unknown>)) {
         if (typeof value !== 'string') continue
+        if (isCanonicalManagedKey(key)) continue
         await secretStore.setEnv(key, value)
         await writeS6Env(key, value)
         await syncSecretToAuth(key, value)  // sync provider keys → auth.json
-        updateBootstrapKey(key, value)  // persist core vars for bootstrap recovery
         updated++
       }
       return c.json({ ok: true, updated, restarted: false })
@@ -207,6 +212,9 @@ envRouter.get('/:key',
     try {
       const key = c.req.param('key')
       if (!isValidEnvKey(key)) return c.json({ error: 'Invalid key' }, 400)
+      if (isCanonicalManagedKey(key)) {
+        return c.json({ error: 'managed by canonical source — use admin rotation API' }, 403)
+      }
       const value = await secretStore.get(key)
       // Return 200 with null value when key doesn't exist — avoids 404 retry loops
       // in the frontend (e.g. ONBOARDING_COMPLETE before first onboarding).
@@ -242,12 +250,21 @@ envRouter.post('/rotate-token',
         return c.json({ error: 'Request body must contain a "token" string' }, 400)
       }
 
+      const oldToken = process.env.EPSILON_TOKEN || process.env.INTERNAL_SERVICE_KEY || ''
+
       // Update token — encryption is decoupled, no re-encryption needed
       const result = await secretStore.rotateToken(newToken)
 
       // Persist new token to s6 env dir + bootstrap so it survives service/container restarts
       await writeS6Env('EPSILON_TOKEN', newToken)
-      updateBootstrapKey('EPSILON_TOKEN', newToken)
+      await writeS6Env('INTERNAL_SERVICE_KEY', newToken)
+      process.env.EPSILON_TOKEN = newToken
+      process.env.INTERNAL_SERVICE_KEY = newToken
+
+      // Grace window: allow old token briefly for in-flight requests.
+      if (oldToken && oldToken !== newToken) {
+        startTokenGraceWindow(oldToken, 30_000)
+      }
 
       // Restart OpenCode to pick up the new token
       await restartServices(['opencode'])
@@ -279,6 +296,9 @@ envRouter.post('/:key',
     try {
       const key = c.req.param('key')
       if (!isValidEnvKey(key)) return c.json({ error: 'Invalid key' }, 400)
+      if (isCanonicalManagedKey(key)) {
+        return c.json({ error: 'managed by canonical source — use admin rotation API' }, 403)
+      }
       const body = await safeJsonBody(c)
       if (!body) return c.json({ error: 'Invalid JSON body' }, 400)
       if (!body || typeof body.value !== 'string') {
@@ -287,7 +307,6 @@ envRouter.post('/:key',
       await secretStore.setEnv(key, body.value)
       await writeS6Env(key, body.value)
       await syncSecretToAuth(key, body.value)  // sync provider keys → auth.json
-      updateBootstrapKey(key, body.value)  // persist core vars for bootstrap recovery
       return c.json({ ok: true, key, restarted: false })
     } catch (error) {
       console.error('[ENV API] Error setting key:', error)
@@ -322,7 +341,6 @@ envRouter.put('/:key',
       await secretStore.setEnv(key, body.value)
       await writeS6Env(key, body.value)
       await syncSecretToAuth(key, body.value)  // sync provider keys → auth.json
-      updateBootstrapKey(key, body.value)  // persist core vars for bootstrap recovery
       return c.json({ ok: true, key, restarted: false })
     } catch (error) {
       console.error('[ENV API] Error setting key:', error)

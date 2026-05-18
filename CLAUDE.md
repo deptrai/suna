@@ -109,7 +109,9 @@ Repo này lớn (3,642 indexed files / 83k functions). **Đừng `grep -r` hoặ
 - Story 3.4 (Token Detail Page) — backlog
 
 ## Troubleshooting / Known Issues
-- **Backend API "Cannot connect to API" / 401 Unauthorized / memory không inject vào AI**: Triệu chứng của sandbox token drift giữa `apps/api/.env`, DB `epsilon.sandboxes.config.serviceKey`, container `/workspace/.secrets/.bootstrap-env.json`, và container s6 env `/run/s6/container_environment/EPSILON_TOKEN`.
+- **Backend API "Cannot connect to API" / 401 Unauthorized / memory không inject vào AI**: Story 5.0.3 chuyển sang canonical token lifecycle:
+  - Cloud: DB `epsilon.sandboxes.config.serviceKey` là source of truth; sandbox pull qua `/v1/internal/bootstrap-token`.
+  - Local Docker: source of truth là `apps/api/.env INTERNAL_SERVICE_KEY` và bind mount readonly `secrets/sandbox-token.txt -> /run/s6/container_environment/EPSILON_TOKEN`.
 
   **Auto-recovery (mặc định)**: Story 5.0.2 (2026-05-18) đã ship auto-reconcile chain — gửi request bất kỳ vào sandbox sẽ tự fix nếu drift detected. Trong apps/api log tìm dòng:
   ```
@@ -119,16 +121,17 @@ Repo này lớn (3,642 indexed files / 83k functions). **Đừng `grep -r` hoặ
   ```
   Khi auto-reconcile thành công, **không cần restart backend** — patch P2 (5.0.2 review) đã update `process.env.INTERNAL_SERVICE_KEY` in-place. Circuit breaker (30s cool-off) bảo vệ chống retry storm khi container unreachable.
 
-  **Cấu trúc 4-layer token store** (Story 5.0.2 docs): `apps/api/.env INTERNAL_SERVICE_KEY` (A) ↔ DB `sandboxes.config.serviceKey` (B) ↔ container `/workspace/.secrets/.bootstrap-env.json` (C) ↔ container s6 env `/run/s6/container_environment/EPSILON_TOKEN` (D). Story 5.0.3 sẽ DB-canonical hóa (cloud) + static mount (local) để eliminate drift triggers.
+  **Local rotation flow (bắt buộc)**:
+  1. Update `INTERNAL_SERVICE_KEY` trong `apps/api/.env`
+  2. Chạy `make sandbox-token` tại repo root (regenerate `secrets/sandbox-token.txt`)
+  3. Restart sandbox container: `docker compose -f core/docker/docker-compose.yml restart desktop`
 
   <details>
   <summary><strong>Manual fix (nếu auto-reconcile fail — rare)</strong></summary>
 
-  1. Đọc key trong sandbox: `docker exec epsilon-sandbox cat /workspace/.persistent-system/secrets/.bootstrap-env.json || docker exec epsilon-sandbox cat /workspace/.secrets/.bootstrap-env.json`
-  2. Lấy giá trị của `INTERNAL_SERVICE_KEY` (hoặc `EPSILON_TOKEN`).
-  3. Cập nhật vào file `apps/api/.env` và `apps/web/.env` sao cho khớp.
-  4. Update DB serviceKey nếu cần: `docker exec -e PGPASSWORD=postgres supabase_db_epsilon-local psql -U supabase_admin -d postgres -c "UPDATE epsilon.sandboxes SET config = jsonb_set(config, '{serviceKey}', '\"$TRUE_KEY\"') WHERE external_id = 'epsilon-sandbox';"`
-  5. Restart lại tiến trình backend (`bun run dev`).
+  1. Sync key local: cập nhật `apps/api/.env` rồi chạy `make sandbox-token`.
+  2. Restart sandbox: `docker compose -f core/docker/docker-compose.yml restart desktop`.
+  3. Nếu cloud sandbox lỗi bootstrap, verify DB `serviceKey` + `provisioning_key` trước khi rotate token.
 
   </details>
 

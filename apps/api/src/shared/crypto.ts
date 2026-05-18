@@ -23,6 +23,7 @@ export function randomAlphanumeric(length: number): string {
  */
 export const KEY_PREFIX = 'epsilon_';
 export const KEY_PREFIX_SANDBOX = 'epsilon_sb_';
+export const KEY_PREFIX_PROVISIONING = 'epsilon_prv_';
 export const KEY_PREFIX_TUNNEL = 'epsilon_tnl_';
 export const KEY_PREFIX_PUBLIC = 'pk_';
 
@@ -66,6 +67,14 @@ export function generateSandboxKeyPair(): { publicKey: string; secretKey: string
  */
 export function generateTunnelToken(): string {
   return `${KEY_PREFIX_TUNNEL}${randomAlphanumeric(SECRET_RANDOM_LENGTH)}`;
+}
+
+/**
+ * Generate a provisioning bootstrap token for sandbox first-boot token pull.
+ * Token is short-lived operational credential and is stored hashed in DB.
+ */
+export function generateProvisioningKey(): string {
+  return `${KEY_PREFIX_PROVISIONING}${randomAlphanumeric(SECRET_RANDOM_LENGTH)}`;
 }
 
 const UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';

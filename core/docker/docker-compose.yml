@@ -95,6 +95,7 @@ services:
       # recreate MUST live here.
       - sandbox_data:/workspace
       - sandbox_data:/config
+      - ../../secrets/sandbox-token.txt:/run/s6/container_environment/EPSILON_TOKEN:ro
       # ── Docker-in-Docker data root ─────────────────────────────────────
       # Dedicated named volume for dockerd's /var/lib/docker. This is NOT
       # "user data" — it's image layers, container fs, volumes, networks.

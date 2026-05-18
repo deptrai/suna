@@ -27,6 +27,7 @@ import {
   type EpsilonUserContext,
 } from './epsilon-user-context'
 import { rememberUserScopes } from './user-scope-cache'
+import { getTokenGraceState, isWithinGraceWindow } from './token-grace'
 
 declare module 'hono' {
   interface ContextVariableMap {
@@ -86,7 +87,16 @@ export function epsilonUserContextMiddleware() {
       return
     }
 
-    const result = verifyEpsilonUserContext(raw, secret)
+    let result = verifyEpsilonUserContext(raw, secret)
+    if (!result.ok && result.reason === 'bad_signature' && isWithinGraceWindow()) {
+      const { previousToken } = getTokenGraceState()
+      if (previousToken) {
+        const previousResult = verifyEpsilonUserContext(raw, previousToken)
+        if (previousResult.ok) {
+          result = previousResult
+        }
+      }
+    }
     if (!result.ok) {
       const sandboxId = process.env.SANDBOX_ID ?? 'unknown'
       const tokenPrefix = raw.slice(0, 16)
