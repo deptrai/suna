@@ -54,6 +54,11 @@ services:
     volumes:
       - vibe-trading-runs:/app/agent/runs
       - vibe-trading-sessions:/app/agent/sessions
+      # Story 5.0.1: Shadow Account state must persist across container restarts.
+      # Python code uses Path.home() which resolves to /home/vibe (container USER).
+      # Without these mounts, shadow strategies + rendered reports vanish on restart.
+      - vibe-trading-shadow-accounts:/home/vibe/.vibe-trading/shadow_accounts
+      - vibe-trading-shadow-reports:/home/vibe/.vibe-trading/shadow_reports
     depends_on:
       redis:
         condition: service_healthy
@@ -101,6 +106,9 @@ services:
     volumes:
       - vibe-trading-runs:/app/agent/runs
       - vibe-trading-sessions:/app/agent/sessions
+      # Story 5.0.1: worker also writes shadow state when running render jobs
+      - vibe-trading-shadow-accounts:/home/vibe/.vibe-trading/shadow_accounts
+      - vibe-trading-shadow-reports:/home/vibe/.vibe-trading/shadow_reports
     restart: unless-stopped
     profiles: [backend, all]
     networks:
@@ -144,3 +152,6 @@ volumes:
   redis-data:
   vibe-trading-runs:
   vibe-trading-sessions:
+  # Story 5.0.1 (audit 2026-05-18): shadow state persistence for Story 5.6 features
+  vibe-trading-shadow-accounts:
+  vibe-trading-shadow-reports:
