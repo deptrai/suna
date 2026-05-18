@@ -1,0 +1,16 @@
+[Unit]
+Description=Cloudflared tunnel URL watchdog (auto-sync to Dokploy)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/tunnel-watchdog/env
+ExecStart=/usr/local/bin/tunnel-watchdog.sh
+Restart=always
+RestartSec=10
+StandardOutput=append:/var/log/tunnel-watchdog.log
+StandardError=append:/var/log/tunnel-watchdog.log
+
+[Install]
+WantedBy=multi-user.target

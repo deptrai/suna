@@ -734,9 +734,44 @@ EPSILON_URL=https://<random>.trycloudflare.com/v1/router
 
 **Lưu ý quan trọng:**
 
-- Quick tunnel URL **đổi mỗi lần restart cloudflared** — sau cập nhật phải đồng bộ Dokploy env
-- Sandbox đã provision trước đó **giữ EPSILON_API_URL cũ** trong env Daytona — phải delete + re-init các sandbox đó để load URL mới
-- Production-grade: dùng **named tunnel** với Cloudflare account + custom domain → URL persistent, không phụ thuộc cloudflared restart
+- Quick tunnel URL **đổi mỗi lần restart cloudflared** — phải sync Dokploy env tự động (xem watchdog dưới)
+- Sandbox đã provision trước đó **giữ EPSILON_API_URL cũ** trong env Daytona — startup hook ([apps/api/src/index.ts:609](apps/api/src/index.ts#L609)) sẽ tự sync khi api restart, nhưng nếu sandbox đang archived thì user phải re-init
+- Named tunnel KHÔNG khả thi với Daytona free tier (verified 2026-05-18: `bridge.chainlens.net`, `*.cfargotunnel.com` đều bị Daytona block — chỉ `*.trycloudflare.com` direct subdomain reachable)
+
+**Auto-recovery watchdog (REQUIRED cho production):**
+
+Production phải chạy [scripts/tunnel-watchdog.sh](scripts/tunnel-watchdog.sh) như systemd service. Script monitor cloudflared log mỗi 30s; nếu URL thay đổi:
+1. PATCH Dokploy api env qua API (replace `EPSILON_URL`)
+2. Trigger Dokploy redeploy
+3. Recovery time: ~2-3 phút từ tunnel reconnect đến chat back online
+
+Setup 1 lần:
+
+```bash
+# Trên prod server (167.172.66.16)
+# Copy script + service file vào
+install -m 755 scripts/tunnel-watchdog.sh /usr/local/bin/tunnel-watchdog.sh
+install -m 644 scripts/tunnel-watchdog.service /etc/systemd/system/tunnel-watchdog.service
+
+# Tạo env file
+mkdir -p /etc/tunnel-watchdog
+cat > /etc/tunnel-watchdog/env <<EOF
+DOKPLOY_URL=http://localhost:3000/api
+DOKPLOY_API_KEY=<dokploy-api-key>
+APP_ID=<api-djcsof-applicationId>
+TUNNEL_CONTAINER=cloudflared-api-bridge
+POLL_SEC=30
+STATE_FILE=/var/lib/tunnel-watchdog/last-url
+EOF
+chmod 600 /etc/tunnel-watchdog/env
+
+# Enable + start
+systemctl daemon-reload
+systemctl enable --now tunnel-watchdog.service
+
+# Logs
+tail -f /var/log/tunnel-watchdog.log
+```
 
 **Verify chain hoạt động:**
 
@@ -748,7 +783,7 @@ curl https://<tunnel-url>/v1/health  # → 200 ok
 curl -sS -m 8 https://<tunnel-url>/v1/health  # → 200
 ```
 
-Verified 2026-05-17: chat response chat OK với `epsilon/gpt-4o-mini`, latency ~3s từ POST message tới response complete.
+Verified 2026-05-18: chat response OK với `epsilon/gpt-4o-mini`, latency ~3s từ POST message tới response complete. Watchdog tested với cloudflared restart → URL drift detected trong ~30s → Dokploy patched + redeployed automatically.
 
 ### `DAYTONA_NETWORK_ALLOW_LIST` block AI providers
 

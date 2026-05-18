@@ -1617,20 +1617,47 @@ Capture tunnel URL via `docker logs cloudflared-api-bridge | grep trycloudflare\
 
 **Trade-offs of quick tunnel:**
 
-| Aspect | Quick tunnel (current) | Named tunnel (future) |
+| Aspect | Quick tunnel | Named tunnel (cfargotunnel) |
 |---|---|---|
 | Auth required | None | Cloudflare account |
-| URL | Random, changes on restart | Fixed (custom domain or `*.cfargotunnel.com`) |
+| URL | Random, changes on restart | Fixed via `*.cfargotunnel.com` or custom domain |
 | TLS | Cloudflare-issued | Cloudflare-issued |
 | Stability | Best effort, no SLA | Production-grade |
-| Re-deploy ergonomics | Must update `EPSILON_URL` + re-init existing sandboxes | Stable across container restarts |
+| **Daytona reachability** | ✅ Allowed | ❌ **NOT allowed** (verified 2026-05-18) |
 
-**Migration path to named tunnel** (recommended when stabilizing):
-1. Create Cloudflare account, install `cloudflared` CLI on prod server.
-2. `cloudflared tunnel create chainlens-sandbox-bridge` → token + UUID.
-3. Map subdomain (e.g. `sandbox-bridge.chainlens.net`) to tunnel via DNS API.
-4. Replace quick tunnel container with `cloudflared tunnel run --token <TOKEN>`.
-5. Update `EPSILON_URL=https://sandbox-bridge.chainlens.net/v1/router` once.
+**Critical finding 2026-05-18: Named tunnels DON'T WORK on Daytona free tier.**
+
+Tested all variants from inside Daytona EU sandbox:
+- ✅ `*.trycloudflare.com` (random subdomain) — reachable
+- ❌ `bridge.chainlens.net` (custom CNAME → CF Tunnel) — Connection reset
+- ❌ `<UUID>.cfargotunnel.com` — DNS resolves to ULA private IPv6 `fd10::`, unreachable
+- ✅ `api.anthropic.com`, `api.openai.com`, `openrouter.ai`, `railway.app`
+
+→ Daytona Tier firewall whitelists by hostname (not IP), and only direct `*.trycloudflare.com` subdomains qualify. Custom domains routed through Cloudflare are blocked even if backed by the same edge IPs.
+
+**Solution: Tunnel URL Drift Auto-Recovery Watchdog**
+
+Since named tunnels are infeasible, production runs a systemd-managed watchdog ([scripts/tunnel-watchdog.sh](scripts/tunnel-watchdog.sh)) that:
+
+1. Polls `docker logs cloudflared-api-bridge` every 30s for current `*.trycloudflare.com` URL
+2. Compares against last-seen state in `/var/lib/tunnel-watchdog/last-url`
+3. On drift detected:
+   - PATCHes `EPSILON_URL` in Dokploy api env via Dokploy REST API
+   - Triggers Dokploy redeploy
+4. Recovery time: **30s detection + ~90s redeploy = ~2 minutes** end-to-end
+
+The startup hook in [`apps/api/src/index.ts:609`](apps/api/src/index.ts#L609) then automatically pushes the new `EPSILON_API_URL` into running sandboxes via their `/env` API — no manual sandbox re-init needed for already-warm sandboxes.
+
+**Verified live 2026-05-18**: simulated cloudflared restart → URL changed → watchdog detected within 30s → Dokploy patched + redeployed → chat back online without manual intervention.
+
+**Future: True Named Tunnel Path**
+
+To eliminate the drift problem entirely, would need either:
+- Daytona paid tier with custom firewall allow-list (allow `*.cfargotunnel.com`)
+- Daytona BYO-network configuration
+- Self-host sandbox runner outside Daytona (defeats the purpose)
+
+For now, the watchdog approach is the pragmatic best-practice within free-tier constraints.
 
 ### 10.5. `INTERNAL_SERVICE_KEY` Drift After Redeploy (Production-only Bug)
 
