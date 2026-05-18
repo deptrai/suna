@@ -650,7 +650,7 @@ export const menuRegistry: MenuItemDef[] = [
     label: 'Memory',
     icon: Brain,
     group: 'settingsPages',
-    showIn: ['commandPalette'],
+    showIn: ['commandPalette', 'leftSidebar'],
     kind: 'navigate',
     href: '/settings/memory',
     tabType: 'settings',

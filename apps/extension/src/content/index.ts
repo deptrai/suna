@@ -87,7 +87,7 @@ function init() {
     const timeoutId = setTimeout(() => controller.abort(), 5000);
 
     try {
-      const apiUrl = `${getCanonicalBaseUrl()}/api/v1/advisory/risk?query=${encodeURIComponent(token)}`;
+      const apiUrl = `${getCanonicalBaseUrl()}/v1/advisory/risk?q=${encodeURIComponent(token)}`;
       const res = await fetch(apiUrl, { signal: controller.signal });
       clearTimeout(timeoutId);
 

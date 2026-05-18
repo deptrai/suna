@@ -207,7 +207,7 @@ export async function fetchDuneAddressLabel(
     if (!rows.length) return null;
     return normalizeLabelRow(rows[0] as DuneLabelRow, address, chain);
   } catch (err) {
-    logger.warn({ err }, 'dune-labels: fetchDuneAddressLabel failed');
+    logger.warn('dune-labels: fetchDuneAddressLabel failed', { err });
     return null;
   }
 }
@@ -259,7 +259,7 @@ export async function fetchDuneTokenHolders(
     if (holders.length === 0) return { ...empty, analysisStatus: 'empty' };
     return { holders, totalHolders: holders.length, chain, tokenAddress, analysisStatus: 'complete' };
   } catch (err) {
-    logger.warn({ err }, 'dune-labels: fetchDuneTokenHolders failed');
+    logger.warn('dune-labels: fetchDuneTokenHolders failed', { err });
     const message = err instanceof Error ? err.message : String(err);
     const isTimeout = message.toLowerCase().includes('timed out');
     return {

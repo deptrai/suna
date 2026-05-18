@@ -216,7 +216,7 @@ async function pollSingleSandbox(sandbox: typeof sandboxes.$inferSelect): Promis
       });
 
       if (!readiness.ready) {
-        const recoveredStatus = nextRecoveredStatus(sandbox.status, false);
+        const recoveredStatus = nextRecoveredStatus(sandbox.status as any, false);
         await db
           .update(sandboxes)
           .set({
@@ -252,7 +252,7 @@ async function pollSingleSandbox(sandbox: typeof sandboxes.$inferSelect): Promis
       await db
         .update(sandboxes)
         .set({
-          status: nextRecoveredStatus(sandbox.status, true),
+          status: nextRecoveredStatus(sandbox.status as any, true),
           metadata: buildSandboxInitSuccessMetadata(meta, healedMeta, initAttempts),
           updatedAt: new Date(),
         })
@@ -340,7 +340,7 @@ async function pollSingleSandbox(sandbox: typeof sandboxes.$inferSelect): Promis
         externalId: sandbox.externalId,
         event: 'provision_poll',
         status: 'error',
-        message: errorMeta.provisioningError,
+        message: String(errorMeta.provisioningError ?? ''),
         timestamp: new Date().toISOString(),
       });
       return;
@@ -354,7 +354,7 @@ async function pollSingleSandbox(sandbox: typeof sandboxes.$inferSelect): Promis
         provisioningMessage: getStageMessage(incomingStage),
         ...(machine.ip ? { publicIp: machine.ip } : {}),
       };
-      const recoveredStatus = nextRecoveredStatus(sandbox.status, false);
+      const recoveredStatus = nextRecoveredStatus(sandbox.status as any, false);
 
       await db
         .update(sandboxes)

@@ -42,7 +42,7 @@ async function run() {
     const origFetch = window.fetch.bind(window);
     window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
-      if (url.includes('/api/v1/advisory/risk')) {
+      if (url.includes('/v1/advisory/risk')) {
         return new Response(JSON.stringify(riskPayload), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },

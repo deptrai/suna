@@ -59,9 +59,14 @@ router.use('/entity-wallet-risk/*', combinedAuth);
 router.use('/onchain-fact-check/*', combinedAuth);
 router.use('/smart-money-flow/*', combinedAuth);
 router.use('/protocol-valuation/*', combinedAuth);
+// F12: /render + /extract are service-to-service (plugin → backend) with
+// `epsilon_*` Bearer token via apiKeyAuth. /memory + /memory/:id are user-facing
+// (Settings UI) via combinedAuth (Supabase JWT). Wildcard /memory/* would
+// double-match /render and /extract — explicit per-path mounts avoid that.
 router.use('/memory/render', apiKeyAuth);
 router.use('/memory/extract', apiKeyAuth);
-router.use('/memory/*', combinedAuth);
+router.use('/memory', combinedAuth);
+router.use('/memory/:id', combinedAuth);
 router.route('/web-search', webSearch);
 router.route('/image-search', imageSearch);
 router.route('/deep-research', deepResearch);

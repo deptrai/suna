@@ -1186,25 +1186,25 @@ adminApp.post('/api/sandboxes/:id/repair', async (c) => {
 
     switch (action) {
       case 'start_host': {
-        await justavpsFetch(`/machines/${row.externalId}/start`, { method: 'POST' });
-        queueRecovery(provider.waitForHostRecovery(row.externalId, `repair:start_host:${sandboxId}`), 'start_host');
+        await justavpsFetch(`/machines/${row.externalId!}/start`, { method: 'POST' });
+        queueRecovery(provider.waitForHostRecovery(row.externalId!, `repair:start_host:${sandboxId}`), 'start_host');
         await db.update(sandboxes).set({ status: 'active' }).where(eq(sandboxes.sandboxId, sandboxId));
         return c.json({ success: true, action, state: 'recovering' }, 202);
       }
       case 'reboot_host': {
-        const dispatched = await provider.dispatchHostRestart(row.externalId);
-        queueRecovery(provider.waitForHostRecovery(row.externalId, `repair:reboot_host:${sandboxId}`), 'reboot_host');
+        const dispatched = await provider.dispatchHostRestart(row.externalId!);
+        queueRecovery(provider.waitForHostRecovery(row.externalId!, `repair:reboot_host:${sandboxId}`), 'reboot_host');
         await db.update(sandboxes).set({ status: 'active' }).where(eq(sandboxes.sandboxId, sandboxId));
         return c.json({ success: true, action, dispatched, state: 'recovering' }, 202);
       }
       case 'stop_host': {
-        await provider.stop(row.externalId);
+        await provider.stop(row.externalId!);
         await db.update(sandboxes).set({ status: 'stopped' }).where(eq(sandboxes.sandboxId, sandboxId));
         return c.json({ success: true, action, state: 'stopped' });
       }
       case 'start_workload':
       case 'restart_workload': {
-        queueRecovery(provider.ensureRunning(row.externalId), action);
+        queueRecovery(provider.ensureRunning(row.externalId!), action);
         await db.update(sandboxes).set({ status: 'active' }).where(eq(sandboxes.sandboxId, sandboxId));
         return c.json({ success: true, action, state: 'recovering' }, 202);
       }
@@ -1219,14 +1219,14 @@ adminApp.post('/api/sandboxes/:id/repair', async (c) => {
           });
           return c.json({ success: true, action, state: 'reprovisioned', sandbox: refreshed });
         }
-        queueRecovery(provider.ensureRunning(row.externalId), action);
+        queueRecovery(provider.ensureRunning(row.externalId!), action);
         await db.update(sandboxes).set({ status: 'active' }).where(eq(sandboxes.sandboxId, sandboxId));
         return c.json({ success: true, action, state: 'recovering' }, 202);
       }
       case 'stop_workload': {
-        const machineStatus = await provider.getStatus(row.externalId);
+        const machineStatus = await provider.getStatus(row.externalId!);
         if (machineStatus !== 'stopped' && machineStatus !== 'removed') {
-          const endpoint = await provider.resolveEndpoint(row.externalId);
+          const endpoint = await provider.resolveEndpoint(row.externalId!);
           await execOnHost(endpoint, 'systemctl stop justavps-docker.service 2>/dev/null || true; docker rm -f justavps-workload 2>/dev/null || true', 45);
         }
         return c.json({ success: true, action, state: 'stopped' });

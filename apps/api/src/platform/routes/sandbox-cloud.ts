@@ -301,19 +301,18 @@ export function createCloudSandboxRouter(
           ?? Math.round(selectedType.priceMonthly * COMPUTE_PRICE_MARKUP * 100); // cents
 
         const stripe = getStripe();
-        let customer = await getCustomerByAccountId(accountId);
-        if (!customer) {
+        let customerId = (await getCustomerByAccountId(accountId))?.id;
+        if (!customerId) {
           if (!userEmail) {
             return c.json({ success: false, error: 'No billing customer found' }, 400);
           }
-          const customerId = await getOrCreateStripeCustomer(accountId, userEmail);
-          customer = { id: customerId } as typeof customer;
+          customerId = await getOrCreateStripeCustomer(accountId, userEmail);
         }
 
         // ── Payment method check ────────────────────────────────────────────
         let defaultPaymentMethodId: string | null = null;
         try {
-          const stripeCustomer = await stripe.customers.retrieve(customer.id, {
+          const stripeCustomer = await stripe.customers.retrieve(customerId, {
             expand: ['invoice_settings.default_payment_method'],
           });
           if (!('deleted' in stripeCustomer) || !stripeCustomer.deleted) {
@@ -331,7 +330,7 @@ export function createCloudSandboxRouter(
         // Fall back to checking if any card is attached
         if (!defaultPaymentMethodId) {
           try {
-            const methods = await stripe.paymentMethods.list({ customer: customer.id, type: 'card', limit: 1 });
+            const methods = await stripe.paymentMethods.list({ customer: customerId, type: 'card', limit: 1 });
             defaultPaymentMethodId = methods.data[0]?.id ?? null;
           } catch {
             // ignore
@@ -342,7 +341,7 @@ export function createCloudSandboxRouter(
           let portalUrl: string | null = null;
           try {
             const portalSession = await stripe.billingPortal.sessions.create({
-              customer: customer.id,
+                  customer: customerId,
               return_url: `${config.FRONTEND_URL ?? 'https://app.epsilon.com'}/subscription`,
             });
             portalUrl = portalSession.url;
@@ -360,7 +359,7 @@ export function createCloudSandboxRouter(
 
         // ── Create standalone Stripe subscription for this machine ───────────
         const subscription = await stripe.subscriptions.create({
-          customer: customer.id,
+          customer: customerId,
           items: [{
             price_data: {
               currency: 'usd',

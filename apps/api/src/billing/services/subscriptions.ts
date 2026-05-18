@@ -332,16 +332,15 @@ export async function confirmInlineCheckout(params: {
 }
 
 export async function createPortalSession(accountId: string, returnUrl: string, email?: string) {
-  let customer = await getCustomerByAccountId(accountId);
-  if (!customer) {
+  let customerId = (await getCustomerByAccountId(accountId))?.id;
+  if (!customerId) {
     if (!email) throw new BillingError('No billing customer found');
-    const customerId = await getOrCreateStripeCustomer(accountId, email);
-    customer = { id: customerId } as typeof customer;
+    customerId = await getOrCreateStripeCustomer(accountId, email);
   }
 
   const stripe = getStripe();
   const session = await stripe.billingPortal.sessions.create({
-    customer: customer.id,
+    customer: customerId,
     return_url: returnUrl,
   });
 
