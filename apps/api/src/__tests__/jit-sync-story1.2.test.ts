@@ -29,7 +29,7 @@ mock.module('../router/services/defillama', () => ({
 const { jitSync } = await import('../router/routes/jit-sync');
 const { _clearCacheForTests } = await import('../router/services/jit-cache');
 
-const app = new Hono();
+const app = new Hono<any>();
 app.onError((err, c) => {
   if (err instanceof HTTPException) return c.json({ message: err.message }, err.status);
   return c.json({ message: String(err) }, 500);

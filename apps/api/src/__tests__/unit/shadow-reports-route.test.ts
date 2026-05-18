@@ -75,7 +75,7 @@ describe('GET /shadow-reports/:shadowId', () => {
     globalThis.fetch = mock(async () => new Response('<html>ok</html>', {
       status: 200,
       headers: { 'content-type': 'text/html; charset=utf-8' },
-    })) as unknown as typeof fetch;
+    })) as unknown as unknown as typeof fetch;
 
     const app = makeApp();
     const res = await app.request('/shadow-reports/shadow_deadbeef?format=html');
@@ -85,7 +85,7 @@ describe('GET /shadow-reports/:shadowId', () => {
   });
 
   test('404 from downstream propagates', async () => {
-    globalThis.fetch = mock(async () => new Response('missing', { status: 404 })) as unknown as typeof fetch;
+    globalThis.fetch = mock(async () => new Response('missing', { status: 404 })) as unknown as unknown as typeof fetch;
 
     const app = makeApp();
     const res = await app.request('/shadow-reports/shadow_deadbeef?format=html');
@@ -95,7 +95,7 @@ describe('GET /shadow-reports/:shadowId', () => {
   });
 
   test('503 on upstream 5xx (downstream catch)', async () => {
-    globalThis.fetch = mock(async () => new Response('boom', { status: 502 })) as unknown as typeof fetch;
+    globalThis.fetch = mock(async () => new Response('boom', { status: 502 })) as unknown as unknown as typeof fetch;
 
     const app = makeApp();
     const res = await app.request('/shadow-reports/shadow_deadbeef?format=html');

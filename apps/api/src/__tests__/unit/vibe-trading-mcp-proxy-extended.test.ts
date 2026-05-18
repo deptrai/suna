@@ -48,7 +48,7 @@ function makeFetch(resp: MockResp): typeof fetch {
       text: async () => bodyStr,
       json: async () => resp.body,
     } as unknown as Response;
-  }) as unknown as typeof fetch;
+  }) as unknown as unknown as typeof fetch;
 }
 
 function makeTimeoutFetch(): typeof fetch {
@@ -56,7 +56,7 @@ function makeTimeoutFetch(): typeof fetch {
     const err = new Error('The operation was aborted due to timeout');
     err.name = 'TimeoutError';
     throw err;
-  }) as unknown as typeof fetch;
+  }) as unknown as unknown as typeof fetch;
 }
 
 // ─── App factory ─────────────────────────────────────────────────────────────

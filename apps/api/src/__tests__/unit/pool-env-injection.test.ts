@@ -38,7 +38,7 @@ describe('pool env injection — VIBE_TRADING_* vars', () => {
     global.fetch = mock(async (_url: string, opts?: RequestInit) => {
       if (opts?.body) capturedBodies.push(JSON.parse(opts.body as string));
       return new Response('{}', { status: 200 });
-    }) as unknown as typeof fetch;
+    }) as unknown as unknown as typeof fetch;
   });
 
   afterEach(() => {

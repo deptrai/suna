@@ -95,7 +95,7 @@ describe('JustAVPS provider bootstrap script resolution', () => {
       throw new Error(`Unexpected fetch ${method} ${url}`);
     });
 
-    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    globalThis.fetch = fetchMock as unknown as unknown as typeof fetch;
 
     const result = await provider.create({
       accountId: 'acc12345-0000-4000-a000-000000000001',

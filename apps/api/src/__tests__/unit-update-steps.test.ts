@@ -27,7 +27,7 @@ describe('verifyContainer', () => {
     globalThis.setTimeout = ((callback: TimerHandler) => {
       if (typeof callback === 'function') callback();
       return 0 as never;
-    }) as typeof setTimeout;
+    }) as unknown as typeof setTimeout;
   });
 
   afterEach(() => {
@@ -82,7 +82,7 @@ describe('ensureContainerRunning', () => {
     globalThis.setTimeout = ((callback: TimerHandler) => {
       if (typeof callback === 'function') callback();
       return 0 as never;
-    }) as typeof setTimeout;
+    }) as unknown as typeof setTimeout;
   });
 
   afterEach(() => {

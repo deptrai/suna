@@ -117,6 +117,7 @@ mock.module('../router/services/billing', () => ({
   checkCredits: async (accountId: string, min?: number, opts?: any) => mockCheckCreditsResult,
   deductToolCredits: async (...args: any[]) => mockDeductResult,
   deductLLMCredits: async (...args: any[]) => mockDeductResult,
+  resolveAccountTier: async () => 'tier1',
 }));
 
 mock.module('../router/services/llm', () => ({

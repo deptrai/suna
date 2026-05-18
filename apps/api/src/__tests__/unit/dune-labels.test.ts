@@ -40,7 +40,7 @@ function makeFetchSequence(responses: MockResponse[]): typeof fetch {
       json: async () => r.body,
       text: async () => (typeof r.body === 'string' ? r.body : JSON.stringify(r.body)),
     } as unknown as Response;
-  }) as unknown as typeof fetch;
+  }) as unknown as unknown as typeof fetch;
 }
 
 const EXECUTE_OK: MockResponse = { ok: true, body: { execution_id: 'exec-123' } };
@@ -131,7 +131,7 @@ describe('fetchDuneAddressLabel', () => {
   test('[P0] returns null on network error (fetch throws)', async () => {
     globalThis.fetch = mock(async () => {
       throw new TypeError('network error');
-    }) as unknown as typeof fetch;
+    }) as unknown as unknown as typeof fetch;
     expect(await fetchDuneAddressLabel('0xabc', 'ethereum')).toBeNull();
   });
 
@@ -214,7 +214,7 @@ describe('fetchDuneTokenHolders', () => {
         json: async () => ({ state: 'QUERY_STATE_COMPLETED', result: { rows: [] } }),
         text: async () => '',
       } as unknown as Response;
-    }) as unknown as typeof fetch;
+    }) as unknown as unknown as typeof fetch;
 
     await fetchDuneTokenHolders('ethereum', '0xtoken');
     expect((capturedBody?.query_parameters as Record<string, unknown>).holder_limit).toBe(100);
@@ -232,7 +232,7 @@ describe('fetchDuneTokenHolders', () => {
         json: async () => ({ state: 'QUERY_STATE_COMPLETED', result: { rows: [] } }),
         text: async () => '',
       } as unknown as Response;
-    }) as unknown as typeof fetch;
+    }) as unknown as unknown as typeof fetch;
 
     await fetchDuneTokenHolders('ethereum', '0xTOKENADDR');
     const params = (capturedBody?.query_parameters as Record<string, unknown>);
@@ -257,7 +257,7 @@ describe('fetchDuneTokenHolders', () => {
   test('[P0] returns empty on network error', async () => {
     globalThis.fetch = mock(async () => {
       throw new TypeError('network error');
-    }) as unknown as typeof fetch;
+    }) as unknown as unknown as typeof fetch;
     const r = await fetchDuneTokenHolders('ethereum', '0xtoken');
     expect(r.holders).toHaveLength(0);
   });
@@ -299,7 +299,7 @@ describe('fetchDuneTokenHolders', () => {
         json: async () => ({ state: 'QUERY_STATE_COMPLETED', result: { rows: [] } }),
         text: async () => '',
       } as unknown as Response;
-    }) as unknown as typeof fetch;
+    }) as unknown as unknown as typeof fetch;
 
     const r = await fetchDuneTokenHolders('base', '0xTOKEN');
     expect(r.analysisStatus).toBe('empty');

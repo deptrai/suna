@@ -1,7 +1,7 @@
 import { describe, expect, mock, test } from 'bun:test';
 import { Hono } from 'hono';
 
-const sandboxRow = {
+const sandboxRow: any = {
   sandboxId: '21fe49f9-e1fa-48dc-9cba-0cb1cafbdaf0',
   accountId: 'acct_test',
   provider: 'justavps',

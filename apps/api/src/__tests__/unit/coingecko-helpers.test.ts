@@ -23,12 +23,12 @@ const originalFetch = globalThis.fetch;
 
 function stubFetchOk(body: unknown) {
   globalThis.fetch = (async () =>
-    new Response(JSON.stringify(body), { status: 200 })) as typeof fetch;
+    new Response(JSON.stringify(body), { status: 200 })) as unknown as typeof fetch;
 }
 
 function stubFetchStatus(status: number, body: unknown = {}) {
   globalThis.fetch = (async () =>
-    new Response(JSON.stringify(body), { status })) as typeof fetch;
+    new Response(JSON.stringify(body), { status })) as unknown as typeof fetch;
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
@@ -139,7 +139,7 @@ describe('resolveCoinIdFromAddress', () => {
     globalThis.fetch = (async (url: string | URL | Request) => {
       capturedUrl = String(url);
       return new Response(JSON.stringify({ id: 'eth-token' }), { status: 200 });
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
 
     await resolveCoinIdFromAddress('0x' + 'a'.repeat(40), undefined);
     expect(capturedUrl).toContain('/coins/ethereum/contract/');
@@ -150,7 +150,7 @@ describe('resolveCoinIdFromAddress', () => {
     globalThis.fetch = (async (url: string | URL | Request) => {
       capturedUrl = String(url);
       return new Response(JSON.stringify({ id: 'x' }), { status: 200 });
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
 
     const upper = '0xABCDEF0123456789012345678901234567890123';
     await resolveCoinIdFromAddress(upper, 'ethereum');
@@ -164,7 +164,7 @@ describe('resolveCoinIdFromAddress', () => {
     globalThis.fetch = (async (url: string | URL | Request) => {
       capturedUrl = String(url);
       return new Response(JSON.stringify({ id: 'x' }), { status: 200 });
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
 
     await resolveCoinIdFromAddress('0x' + 'a'.repeat(40), 'ethereum');
     expect(capturedUrl).not.toContain('//coins');
@@ -173,7 +173,7 @@ describe('resolveCoinIdFromAddress', () => {
   test('[P1] wraps unrelated network errors with "CoinGecko request failed"', async () => {
     globalThis.fetch = (async () => {
       throw new Error('ECONNREFUSED');
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
 
     await expect(
       resolveCoinIdFromAddress('0x' + 'a'.repeat(40), 'ethereum'),

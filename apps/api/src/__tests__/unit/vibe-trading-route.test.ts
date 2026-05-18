@@ -56,7 +56,7 @@ function makeApp() {
 }
 
 function mockFetch(response: Response) {
-  globalThis.fetch = mock(() => Promise.resolve(response)) as unknown as typeof fetch;
+  globalThis.fetch = mock(() => Promise.resolve(response)) as unknown as unknown as typeof fetch;
 }
 
 function jsonResp(body: unknown, status = 200) {

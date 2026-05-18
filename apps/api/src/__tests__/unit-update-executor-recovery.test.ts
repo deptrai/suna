@@ -82,7 +82,7 @@ describe('executeUpdate container recovery', () => {
         }), { status: 200 });
       }
       return new Response('{}', { status: 200 });
-    }) as unknown as typeof fetch;
+    }) as unknown as unknown as typeof fetch;
   });
 
   afterEach(() => {

@@ -15,14 +15,14 @@ describe('probeJustAvpsSandboxReadiness', () => {
   });
 
   test('treats 200 as ready', async () => {
-    globalThis.fetch = mock(async () => new Response('{}', { status: 200 })) as typeof fetch;
+    globalThis.fetch = mock(async () => new Response('{}', { status: 200 })) as unknown as typeof fetch;
     const result = await probeJustAvpsSandboxReadiness({ slug: 'abc', proxyToken: 'pt_test', serviceKey: 'sk_test' });
     expect(result.ready).toBe(true);
     expect(result.httpStatus).toBe(200);
   });
 
   test('treats 503 as still starting', async () => {
-    globalThis.fetch = mock(async () => new Response('{}', { status: 503 })) as typeof fetch;
+    globalThis.fetch = mock(async () => new Response('{}', { status: 503 })) as unknown as typeof fetch;
     const result = await probeJustAvpsSandboxReadiness({ slug: 'abc' });
     expect(result.ready).toBe(false);
     expect(result.httpStatus).toBe(503);

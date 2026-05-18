@@ -15,12 +15,12 @@ const originalFetch = globalThis.fetch;
 
 function stubFetchOk(body: unknown) {
   globalThis.fetch = (async () =>
-    new Response(JSON.stringify(body), { status: 200 })) as typeof fetch;
+    new Response(JSON.stringify(body), { status: 200 })) as unknown as typeof fetch;
 }
 
 function stubFetchError(status: number, message: string) {
   globalThis.fetch = (async () =>
-    new Response(message, { status })) as typeof fetch;
+    new Response(message, { status })) as unknown as typeof fetch;
 }
 
 function captureFetch(): { calls: Array<{ url: string; init?: RequestInit }> } {
@@ -28,7 +28,7 @@ function captureFetch(): { calls: Array<{ url: string; init?: RequestInit }> } {
   globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
     calls.push({ url: String(url), init });
     return new Response(JSON.stringify({ images: [] }), { status: 200 });
-  }) as typeof fetch;
+  }) as unknown as typeof fetch;
   return { calls };
 }
 

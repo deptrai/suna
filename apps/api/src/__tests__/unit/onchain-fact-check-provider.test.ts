@@ -114,7 +114,7 @@ function enqueueFetch(responses: Response[]): void {
     const res = responses[idx++];
     if (!res) throw new Error(`Unexpected fetch call #${idx} — no more queued responses`);
     return Promise.resolve(res);
-  }) as unknown as typeof fetch;
+  }) as unknown as unknown as typeof fetch;
 }
 
 describe('runOnchainFactCheck — provider adapters', () => {

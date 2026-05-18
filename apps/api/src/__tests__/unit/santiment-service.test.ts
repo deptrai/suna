@@ -18,7 +18,7 @@ function makePoints(values: number[], stepHours: number = 1) {
 
 function stubGraphqlOk(data: unknown) {
   globalThis.fetch = (async () =>
-    new Response(JSON.stringify({ data }), { status: 200 })) as typeof fetch;
+    new Response(JSON.stringify({ data }), { status: 200 })) as unknown as typeof fetch;
 }
 
 describe('fetchTokenMetrics — happy paths', () => {
@@ -103,7 +103,7 @@ describe('fetchTokenMetrics — happy paths', () => {
           price: { timeseriesData: [] },
         },
       }), { status: 200 });
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
 
     await fetchTokenMetrics('bitcoin', 'my-secret-key');
     expect(capturedAuth).toBe('Apikey my-secret-key');
@@ -121,7 +121,7 @@ describe('fetchTokenMetrics — happy paths', () => {
           price: { timeseriesData: [] },
         },
       }), { status: 200 });
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
 
     await fetchTokenMetrics('bitcoin', 'leaky-key');
     expect(capturedUrl).not.toContain('leaky-key');
@@ -134,7 +134,7 @@ describe('fetchTokenMetrics — error handling', () => {
     globalThis.fetch = (async () => {
       calls++;
       return new Response('forbidden', { status: 403 });
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
     await expect(fetchTokenMetrics('x', 'k')).rejects.toThrow(/Santiment API error: 403/);
     expect(calls).toBe(1);
   });
@@ -143,19 +143,19 @@ describe('fetchTokenMetrics — error handling', () => {
     globalThis.fetch = (async () =>
       new Response(JSON.stringify({
         errors: [{ message: 'invalid metric' }],
-      }), { status: 200 })) as typeof fetch;
+      }), { status: 200 })) as unknown as typeof fetch;
 
     await expect(fetchTokenMetrics('x', 'k')).rejects.toThrow(/GraphQL errors/);
   });
 
   test('[P0] throws "non-JSON" on unparseable body', async () => {
     globalThis.fetch = (async () =>
-      new Response('<<not-json>>', { status: 200 })) as typeof fetch;
+      new Response('<<not-json>>', { status: 200 })) as unknown as typeof fetch;
     await expect(fetchTokenMetrics('x', 'k')).rejects.toThrow(/non-JSON/);
   });
 
   test('[P0] wraps fetch network errors with "request failed"', async () => {
-    globalThis.fetch = (async () => { throw new Error('ECONNRESET'); }) as typeof fetch;
+    globalThis.fetch = (async () => { throw new Error('ECONNRESET'); }) as unknown as typeof fetch;
     await expect(fetchTokenMetrics('x', 'k')).rejects.toThrow(/Santiment request failed/);
   });
 });

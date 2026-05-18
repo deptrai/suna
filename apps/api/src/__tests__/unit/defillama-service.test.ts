@@ -16,11 +16,11 @@ afterEach(() => {
 
 function stubFetchOk(body: unknown) {
   globalThis.fetch = (async () =>
-    new Response(JSON.stringify(body), { status: 200 })) as typeof fetch;
+    new Response(JSON.stringify(body), { status: 200 })) as unknown as typeof fetch;
 }
 
 function stubFetchStatus(status: number, body: string = '') {
-  globalThis.fetch = (async () => new Response(body, { status })) as typeof fetch;
+  globalThis.fetch = (async () => new Response(body, { status })) as unknown as typeof fetch;
 }
 
 const baseTvl = (t = 1700000000) => [
@@ -79,7 +79,7 @@ describe('fetchProtocolSnapshot — happy paths', () => {
       return new Response(JSON.stringify({
         id: 'p-1', name: 'Aave', chains: [], tvl: baseTvl(),
       }), { status: 200 });
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
     await fetchProtocolSnapshot('aave');
     expect(capturedUrl).toBe('https://api.llama.fi/protocol/aave');
     expect(capturedUrl).not.toContain('//protocol');
@@ -92,7 +92,7 @@ describe('fetchProtocolSnapshot — happy paths', () => {
       return new Response(JSON.stringify({
         id: 'p', name: 'X', chains: [], tvl: baseTvl(),
       }), { status: 200 });
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
     await fetchProtocolSnapshot('weird/slug');
     expect(capturedUrl).toContain('weird%2Fslug');
   });
@@ -110,13 +110,13 @@ describe('fetchProtocolSnapshot — error handling', () => {
   });
 
   test('[P0] wraps fetch network errors with "request failed"', async () => {
-    globalThis.fetch = (async () => { throw new Error('socket hang up'); }) as typeof fetch;
+    globalThis.fetch = (async () => { throw new Error('socket hang up'); }) as unknown as typeof fetch;
     await expect(fetchProtocolSnapshot('aave')).rejects.toThrow(/DeFiLlama request failed/);
   });
 
   test('[P0] throws "non-JSON" when body fails to parse', async () => {
     globalThis.fetch = (async () =>
-      new Response('not json', { status: 200, headers: { 'Content-Type': 'text/plain' } })) as typeof fetch;
+      new Response('not json', { status: 200, headers: { 'Content-Type': 'text/plain' } })) as unknown as typeof fetch;
     await expect(fetchProtocolSnapshot('aave')).rejects.toThrow(/DeFiLlama returned non-JSON/);
   });
 

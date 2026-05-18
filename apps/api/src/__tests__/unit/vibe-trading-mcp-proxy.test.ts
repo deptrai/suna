@@ -48,7 +48,7 @@ function makeFetch(resp: MockResp): typeof fetch {
       text: async () => bodyStr,
       json: async () => resp.body,
     } as unknown as Response;
-  }) as unknown as typeof fetch;
+  }) as unknown as unknown as typeof fetch;
 }
 
 // ─── App factory ─────────────────────────────────────────────────────────────

@@ -69,7 +69,7 @@ export function registerGlobalMocks() {
     config: {
       STRIPE_WEBHOOK_SECRET: 'whsec_test',
       ENV_MODE: 'cloud',
-      INTERNAL_EPSILON_ENV: 'staging',
+      INTERNAL_EPSILON_ENV: 'prod',
     },
   }));
 
@@ -129,6 +129,7 @@ export function registerGlobalMocks() {
   mock.module('../../platform/services/sandbox-provisioner', () => ({
     provisionSandboxFromCheckout: async (...args: any[]) =>
       mockRegistry.provisionSandboxFromCheckout ? mockRegistry.provisionSandboxFromCheckout(...args) : undefined,
+    archiveSandboxBySubscription: async () => undefined,
   }));
 
   mock.module('../../billing/repositories/account-deletion', () => ({
@@ -142,6 +143,19 @@ export function registerGlobalMocks() {
       mockRegistry.markDeletionCompleted ? mockRegistry.markDeletionCompleted(id) : undefined,
     getScheduledDeletions: async () =>
       mockRegistry.getScheduledDeletions ? mockRegistry.getScheduledDeletions() : [],
+  }));
+
+  mock.module('../../shared/db', () => ({
+    db: {
+      select: () => ({
+        from: () => ({
+          where: () => ({
+            limit: async () => [],
+          }),
+        }),
+      }),
+    },
+    hasDatabase: true,
   }));
 }
 
@@ -280,8 +294,9 @@ export function createMockStripeCheckoutSession(overrides: Record<string, any> =
 }
 
 export function createMockStripeEvent(type: string, object: any, overrides: Record<string, any> = {}) {
+  const seq = (globalThis as any).__stripe_evt_seq = ((globalThis as any).__stripe_evt_seq ?? 0) + 1;
   return {
-    id: `evt_test_${Date.now()}`,
+    id: `evt_test_${Date.now()}_${seq}`,
     type,
     data: { object },
     created: Math.floor(Date.now() / 1000),
@@ -324,6 +339,21 @@ export function createMockStripeClient(overrides: Record<string, any> = {}) {
         id: 'cus_new_123',
         email: params.email,
         metadata: params.metadata,
+      })),
+      retrieve: overrides.customersRetrieve ?? (async () => ({
+        id: 'cus_test_123',
+        deleted: false,
+        invoice_settings: { default_payment_method: null },
+      })),
+    },
+    paymentMethods: {
+      list: overrides.paymentMethodsList ?? (async () => ({ data: [] })),
+    },
+    prices: {
+      retrieve: overrides.pricesRetrieve ?? (async () => ({
+        id: 'price_test_123',
+        unit_amount: 5000,
+        recurring: { interval: 'month' },
       })),
     },
     checkout: {

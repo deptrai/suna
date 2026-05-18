@@ -15,7 +15,7 @@ const originalFetch = globalThis.fetch;
 
 function stubFetchOk(body: unknown) {
   globalThis.fetch = (async () =>
-    new Response(JSON.stringify(body), { status: 200 })) as typeof fetch;
+    new Response(JSON.stringify(body), { status: 200 })) as unknown as typeof fetch;
 }
 
 function captureFetch(): { calls: Array<{ url: string; init?: RequestInit }> } {
@@ -27,7 +27,7 @@ function captureFetch(): { calls: Array<{ url: string; init?: RequestInit }> } {
       choices: [{ message: { role: 'assistant', content: 'Answer' } }],
       citations: [],
     }), { status: 200 });
-  }) as typeof fetch;
+  }) as unknown as typeof fetch;
   return { calls };
 }
 
@@ -90,14 +90,14 @@ describe('deepResearchPerplexity', () => {
   });
 
   test('[P0] throws "Perplexity API error: <status>" on non-2xx', async () => {
-    globalThis.fetch = (async () => new Response('rate limit hit', { status: 429 })) as typeof fetch;
+    globalThis.fetch = (async () => new Response('rate limit hit', { status: 429 })) as unknown as typeof fetch;
     await expect(deepResearchPerplexity('q')).rejects.toThrow(/Perplexity API error: 429/);
   });
 
   test('[P0] wraps fetch network errors', async () => {
     globalThis.fetch = (async () => {
       throw new Error('ECONNRESET');
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
     await expect(deepResearchPerplexity('q')).rejects.toThrow(/Perplexity API request failed/);
   });
 

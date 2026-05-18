@@ -48,11 +48,11 @@ const VALID_PAYLOAD = {
 };
 
 function mockFetch(response: Response) {
-  globalThis.fetch = mock(() => Promise.resolve(response)) as unknown as typeof fetch;
+  globalThis.fetch = mock(() => Promise.resolve(response)) as unknown as unknown as typeof fetch;
 }
 
 function mockFetchReject(err: Error) {
-  globalThis.fetch = mock(() => Promise.reject(err)) as unknown as typeof fetch;
+  globalThis.fetch = mock(() => Promise.reject(err)) as unknown as unknown as typeof fetch;
 }
 
 describe('submitBacktestJob', () => {

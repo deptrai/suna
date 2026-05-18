@@ -173,7 +173,7 @@ describe('GET /vibe-trading/runs/:jobId/stream', () => {
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         ),
       ),
-    ) as unknown as typeof fetch;
+    ) as unknown as unknown as typeof fetch;
 
     const app = makeApp();
     const res = await app.request('/runs/abc-123/stream');
@@ -198,7 +198,7 @@ describe('GET /vibe-trading/runs/:jobId/stream', () => {
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         ),
       ),
-    ) as unknown as typeof fetch;
+    ) as unknown as unknown as typeof fetch;
 
     const app = makeApp();
     const res = await app.request('/runs/abc-123/stream');
@@ -224,7 +224,7 @@ describe('GET /vibe-trading/runs/:jobId/stream', () => {
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         ),
       ),
-    ) as unknown as typeof fetch;
+    ) as unknown as unknown as typeof fetch;
 
     const app = makeApp();
     const res = await app.request('/runs/fail-123/stream');
@@ -240,7 +240,7 @@ describe('GET /vibe-trading/runs/:jobId/stream', () => {
   test('emits "failed" with reason when downstream throws', async () => {
     globalThis.fetch = mock(() =>
       Promise.resolve(new Response('Service down', { status: 503 })),
-    ) as unknown as typeof fetch;
+    ) as unknown as unknown as typeof fetch;
 
     const app = makeApp();
     const res = await app.request('/runs/down-123/stream');
@@ -266,7 +266,7 @@ describe('GET /vibe-trading/runs/:jobId/stream', () => {
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         ),
       ),
-    ) as unknown as typeof fetch;
+    ) as unknown as unknown as typeof fetch;
 
     const app = makeApp();
     const res = await app.request('/runs/dup-123/stream');
@@ -301,7 +301,7 @@ describe('GET /vibe-trading/runs/:jobId/stream', () => {
           headers: { 'Content-Type': 'application/json' },
         }),
       );
-    }) as unknown as typeof fetch;
+    }) as unknown as unknown as typeof fetch;
 
     const app = makeApp();
     const res = await app.request('/runs/seq-1/stream');
@@ -327,7 +327,7 @@ describe('GET /vibe-trading/runs/:jobId/stream', () => {
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         ),
       ),
-    ) as unknown as typeof fetch;
+    ) as unknown as unknown as typeof fetch;
 
     // Note: Hono's fetch layer already rejects raw \r\n in headers (HTTP spec).
     // We defend in depth against tab chars + any other control chars that survive the layer.
@@ -347,7 +347,7 @@ describe('GET /vibe-trading/runs/:jobId/stream', () => {
   test('failed event does NOT trigger spurious timeout after it', async () => {
     globalThis.fetch = mock(() =>
       Promise.resolve(new Response('boom', { status: 500 })),
-    ) as unknown as typeof fetch;
+    ) as unknown as unknown as typeof fetch;
 
     const app = makeApp();
     const res = await app.request('/runs/no-timeout/stream');

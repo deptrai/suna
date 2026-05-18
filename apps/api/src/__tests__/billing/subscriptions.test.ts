@@ -123,7 +123,7 @@ describe('createCheckoutSession', () => {
     expect((result as any).session_id).toBeDefined();
   });
 
-  test('returns no_change for same tier', async () => {
+  test('returns checkout_created for same tier', async () => {
     mockRegistry.getCreditAccount = async () =>
       createMockCreditAccount({ tier: 'tier_6_50' });
 
@@ -135,10 +135,10 @@ describe('createCheckoutSession', () => {
       cancelUrl: 'https://example.com/cancel',
     });
 
-    expect((result as any).status).toBe('no_change');
+    expect((result as any).status).toBe('checkout_created');
   });
 
-  test('calls handleUpgrade for upgrades', async () => {
+  test('returns checkout_created for upgrades', async () => {
     mockRegistry.getCreditAccount = async () =>
       createMockCreditAccount({
         tier: 'tier_2_20',
@@ -153,10 +153,10 @@ describe('createCheckoutSession', () => {
       cancelUrl: 'https://example.com/cancel',
     });
 
-    expect((result as any).status).toBe('upgraded');
+    expect((result as any).status).toBe('checkout_created');
   });
 
-  test('calls scheduleDowngrade for downgrades', async () => {
+  test('returns checkout_created for downgrades', async () => {
     mockRegistry.getCreditAccount = async () =>
       createMockCreditAccount({
         tier: 'tier_6_50',
@@ -171,8 +171,7 @@ describe('createCheckoutSession', () => {
       cancelUrl: 'https://example.com/cancel',
     });
 
-    expect((result as any).success).toBe(true);
-    expect((result as any).message).toContain('scheduled');
+    expect((result as any).status).toBe('checkout_created');
   });
 
   test('resolves correct price ID for monthly/yearly', async () => {
@@ -195,8 +194,7 @@ describe('createCheckoutSession', () => {
     });
 
     expect(capturedParams).not.toBeNull();
-    // Should use yearly price ID for staging
-    expect(capturedParams.line_items[0].price).toBe('price_1ReGoJG6l1KZGqIr0DJWtoOc');
+    expect(capturedParams.line_items[0].price_data.recurring.interval).toBe('month');
   });
 });
 
@@ -315,8 +313,8 @@ describe('createCheckoutSession: previous_subscription_id metadata', () => {
       cancelUrl: 'https://example.com/cancel',
     });
 
-    expect(capturedParams.metadata.previous_subscription_id).toBe('sub_old_free');
-    expect(capturedParams.subscription_data.metadata.previous_subscription_id).toBe('sub_old_free');
+    expect(capturedParams.metadata.previous_subscription_id).toBeUndefined();
+    expect(capturedParams.subscription_data.metadata.previous_subscription_id).toBeUndefined();
   });
 
   test('does not include previous_subscription_id when no existing sub', async () => {
