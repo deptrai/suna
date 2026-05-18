@@ -453,12 +453,20 @@ setupApp.get('/status', async (c) => {
   } catch {}
 
   return c.json({
-    envMode: config.ENV_MODE,
+    envMode: config.ENV_MODE ?? 'local',
     dockerRunning,
     envExists,
     sandboxEnvExists,
     projectRoot: root,
   });
+});
+
+/**
+ * GET /v1/setup/schema
+ * Backward-compat route consumed by legacy setup UI/tests.
+ */
+setupApp.get('/schema', async (c) => {
+  return c.json(buildProviderKeySchema());
 });
 
 /**

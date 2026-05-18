@@ -48,18 +48,6 @@ mock.module('../middleware/auth', () => ({
     c.set('userEmail', 'test@epsilon.dev');
     await next();
   },
-  combinedAuth: async (c: any, next: any) => {
-    const authHeader = c.req.header('Authorization');
-    const cookieHeader = c.req.header('Cookie') || '';
-    const cookieMatch = cookieHeader.match(/(?:^|;\s*)__preview_session=([^;]+)/);
-    const hasCookie = !!cookieMatch;
-    if (!authHeader?.startsWith('Bearer ') && !hasCookie) {
-      throw new HTTPException(401, { message: 'Missing authentication token' });
-    }
-    c.set('userId', TEST_USER_ID);
-    c.set('userEmail', 'test@epsilon.dev');
-    await next();
-  },
   supabaseAuth: async (c: any, next: any) => { await next(); },
   apiKeyAuth: async (c: any, next: any) => { await next(); },
 }));
@@ -70,6 +58,7 @@ mock.module('../middleware/auth', () => ({
 // This is more resilient to query reordering than the old call-counter approach.
 mock.module('../shared/db', () => {
   return {
+    hasDatabase: true,
     db: {
       select: (fields: any) => {
         // Determine which table is being queried by inspecting selected fields
@@ -123,6 +112,21 @@ mock.module('../config', () => ({
     isDaytonaEnabled: () => true,
     isLocalDockerEnabled: () => false,
     isJustAVPSEnabled: () => false,
+  },
+}));
+
+// Preview ownership mock — keep this suite focused on proxy behavior, not
+// account/team resolution internals.
+mock.module('../shared/preview-ownership', () => ({
+  canAccessPreviewSandbox: async () => !!mockDbSandbox && !!mockDbMembership,
+  resolvePreviewUserContext: async (previewSandboxId: string, userId?: string) => {
+    if (!userId || !mockDbSandbox || !mockDbMembership) return null;
+    return {
+      userId,
+      sandboxId: previewSandboxId,
+      sandboxRole: mockDbMembership.accountRole === 'owner' ? 'owner' : 'member',
+      scopes: ['*'],
+    };
   },
 }));
 
