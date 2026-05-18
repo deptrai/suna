@@ -6,6 +6,8 @@ Status: ready-for-dev
      Plan approved at: .claude/plans/chainlens-net-production-fancy-yeti.md
      12 issues identified, prioritized into 4 sprints. -->
 
+> **IR finding m5 (2026-05-18)**: Consider folding load-test + accuracy-benchmark verification for NFR1 (TTFB AI Chat <2s), NFR4 (≥1,000 CCU), NFR5 (Worker auto-scaling), and NFR11 (AI Report & Code Accuracy >80%) into 8.5's observability/SRE sprint. These NFRs are currently listed cross-cutting in PRD §7 but have no dedicated verification path. If 8.5's scope is already saturated, file a follow-up Story 8.6 "Load testing + accuracy benchmark suite". Decision needed from PM at sprint planning before 8.5 starts.
+
 ## Story
 
 As a platform engineer vận hành chainlens.net,

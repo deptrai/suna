@@ -33,7 +33,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-18 (IR resolution: A1+A2+C1 backlog tracking added — 6.4 (Model Availability), 2.4-2.7 (DeFiLlama Pro sub-stories), 3.1.1/3.2.1/3.3.1/3.3.2/3.4.1 (Deep-Dive variants); A3 epics.md duplicate 3.1.1 heading deduped; A4 6.4 → 8.3 sequencing note added)
+last_updated: 2026-05-18 (IR resolution complete: C1 (Story 6.4 spec ready-for-dev), A1-A4 done; minor items partial: m3 a11y backlog stub + m5 note in Story 8.5; m1/m2/m4/m6/A5 deferred to sprint planning per "best practices" decision)
 project: chainlens
 project_key: NOKEY
 tracking_system: file-system
@@ -147,6 +147,7 @@ development_status:
   11-2-bundle-splitting-heavy-libraries: backlog
   11-3-loading-states-route-skeletons: backlog
   11-4-react-compiler-performance-validation: backlog
+  11-5-accessibility-wcag-aa-enforcement: backlog  # 2026-05-18 IR m3 — WCAG 2.1 AA keyboard nav + screen reader + contrast (UX spec §9 mentions, no story yet); story spec TBD when scheduled
   epic-11-retrospective: optional
 
   # ─── Phase 3 — MMOMarket Integration ───
