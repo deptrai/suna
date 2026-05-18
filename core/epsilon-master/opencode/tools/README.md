@@ -36,6 +36,45 @@ Job continues in background after the 30-second budget. The tool returns `{ succ
 
 Billing: 1.00 credit per job submission (`vibe_trading_backtest` in `TOOL_PRICING`).
 
+## vibe_trading_swarm
+
+**Tier**: Tier 2 only (`chainlens-tier2.md` — `vibe_trading_swarm: allow`)
+
+Async wrapper around the Vibe-Trading MCP swarm trio (`start_swarm` + poll `get_swarm_status` + `get_run_result` + optional `cancel_swarm`). 6-15 min real runtime depending on preset. Returns progress markers (▶️ ⏳) plus the final markdown report.
+
+### Why this exists
+
+The original `run_swarm` MCP tool blocks synchronously for up to 30 minutes — incompatible with the proxy's 30s `AbortSignal.timeout`. Story 5.5.1 (2026-05-19) introduced this wrapper to restore the original async polling design intent from Story 5.6.
+
+### Architecture
+
+Wrapper opens **one SSE-MCP session** to `${EPSILON_API_URL}/v1/router/vibe-trading-mcp/sse` per `execute()` call (via `lib/mcp-sse-client.ts`), then issues `tools/call` for:
+
+1. `start_swarm` (deposit 0.05 credit, returns `run_id`)
+2. `get_swarm_status` every 5s (free poll)
+3. `get_run_result` once status hits terminal (finalize 0.20 credit on `completed`; skipped on `failed` / `cancelled`)
+4. `cancel_swarm` if `ctx.abort.aborted` OR the 30-min client-side ceiling hits (free)
+
+Total successful run = 0.05 + 0.20 = 0.25 credits (parity with old flat `run_swarm` charge — no price hike).
+
+### MCP tool registry (22 tools, with this story's deltas)
+
+| MCP tool | Status | Notes |
+|---|---|---|
+| `list_swarm_presets` | active (free) | Catalogue browser |
+| `start_swarm` | **new (Story 5.5.1)** | Fire-and-forget; returns `run_id` |
+| `get_swarm_status` | active (free) | Ownership-gated by proxy |
+| `get_run_result` | active (free; triggers finalize) | Ownership-gated by proxy |
+| `cancel_swarm` | **new (Story 5.5.1)** | Idempotent abort; ownership-gated |
+| `list_runs` | active (free; re-hydrates ownership) | Recovery path after proxy restart |
+| `run_swarm` | **DEPRECATED 2026-05-19** | Proxy returns 410. Sunset 2026-06-19. |
+
+### Backend route
+
+`POST /v1/router/vibe-trading-mcp/messages/?session_id=...` (FastMCP SSE protocol; managed by the wrapper's `McpSseClient`). The proxy enforces ownership gating on `run_id`-scoped tools — see [vibe-trading-mcp.ts](../../../../apps/api/src/router/routes/vibe-trading-mcp.ts).
+
+Billing entries: `vt_mcp_start_swarm`, `vt_mcp_run_swarm_finalize`, `vt_mcp_cancel_swarm` in [config.ts](../../../../apps/api/src/config.ts).
+
 ## mempool_alerts
 
 **Tier**: Tier 2 only (`chainlens-tier2.md` — `mempool_alerts: allow`, Tier 1 denied)

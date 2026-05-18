@@ -108,7 +108,9 @@ jobs:
             src/__tests__/unit/sandbox-drift-reconciler.test.ts \
             src/__tests__/unit/admin-rotate-sandbox-token.test.ts \
             src/__tests__/unit/sandbox-token-rotation.test.ts \
-            src/__tests__/unit/sandbox-provisioner-rollback.test.ts
+            src/__tests__/unit/sandbox-provisioner-rollback.test.ts \
+            src/__tests__/unit/vibe-trading-swarm-async.test.ts \
+            src/__tests__/unit/swarm-finalize-billing.test.ts
 
       - name: Unit tests — epsilon-master (fast tier)
         run: |
@@ -116,14 +118,15 @@ jobs:
             src/services/__tests__/load-canonical-token.test.ts \
             src/services/__tests__/token-grace.test.ts \
             src/services/__tests__/realtime-reauth.test.ts \
-            tests/unit/verify-fail-closed.test.ts
+            tests/unit/verify-fail-closed.test.ts \
+            opencode/tools/__tests__/vibe_trading_swarm.test.ts
 
       - name: Summary
         if: always()
         run: |
           echo "### Fast tier result" >> "$GITHUB_STEP_SUMMARY"
           echo "- TypeScript: apps/api + epsilon-master" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Unit tests: 9 files (26 apps/api + 24 epsilon-master = 50 tests)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Unit tests: 12 files (Story 5.5.1 added 3: vibe-trading-swarm-async, swarm-finalize-billing, vibe_trading_swarm)" >> "$GITHUB_STEP_SUMMARY"
           echo "See [ci-baseline-failures.md](docs/runbooks/ci-baseline-failures.md) for full baseline." >> "$GITHUB_STEP_SUMMARY"
 
   test-full-unit:

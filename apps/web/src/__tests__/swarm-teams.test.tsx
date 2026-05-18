@@ -46,8 +46,10 @@ describe('buildSwarmPrompt', () => {
   test('embeds preset name and JSON-stringified vars', () => {
     const prompt = buildSwarmPrompt(preset, { target: 'AAPL.US', market: 'us' });
     expect(prompt).toContain(`"${preset.name}"`);
-    expect(prompt).toContain('run_swarm');
-    expect(prompt).toContain('get_swarm_run_status');
+    // Story 5.5.1 — dispatches via vibe_trading_swarm OpenCode wrapper,
+    // NOT the deprecated run_swarm MCP tool (proxy returns 410 for that).
+    expect(prompt).toContain('vibe_trading_swarm');
+    expect(prompt).not.toContain('run_swarm');
     expect(prompt).toContain('"target": "AAPL.US"');
     expect(prompt).toContain('"market": "us"');
   });

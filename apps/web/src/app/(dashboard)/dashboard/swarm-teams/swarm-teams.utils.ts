@@ -1,7 +1,12 @@
 import type { SwarmPreset } from '@/components/swarm-teams/preset-catalog';
 
 export function buildSwarmPrompt(preset: SwarmPreset, vars: Record<string, string>): string {
-  return `Run the Vibe-Trading swarm preset "${preset.name}" with these variables:\n${JSON.stringify(vars, null, 2)}\n\nUse the run_swarm MCP tool. Stream the run_id back, then poll get_swarm_run_status every 30s until status=done. Show the final report.`;
+  // Story 5.5.1 — dispatch via the vibe_trading_swarm OpenCode wrapper (NOT the
+  // deprecated run_swarm MCP tool, which the proxy now rejects with 410). The
+  // wrapper handles start → poll → finalize internally and surfaces progress
+  // markers + the final markdown report. Press Stop in the chat to cancel
+  // (wrapper detects ctx.abort and fires cancel_swarm).
+  return `Run the Vibe-Trading swarm preset "${preset.name}" with these variables:\n${JSON.stringify(vars, null, 2)}\n\nUse the vibe_trading_swarm tool (preset + variables args). It handles polling internally — return the final report once it completes.`;
 }
 
 export async function dispatchSwarmPrompt(

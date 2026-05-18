@@ -8,7 +8,16 @@ const apiURL = process.env.E2E_API_URL || 'http://localhost:13738/v1';
 // is safe to run against the minimal compose stack (desktop service only).
 // Set CI_FULL_STACK=true to run all specs (self-hosted runner with full stack).
 const ciIgnorePatterns = process.env.CI && !process.env.CI_FULL_STACK
-  ? ['**/0[1-7]-*.spec.ts', '**/market-dashboard.spec.ts', '**/generative-widgets.spec.ts']
+  ? [
+      '**/0[1-7]-*.spec.ts',
+      '**/market-dashboard.spec.ts',
+      '**/generative-widgets.spec.ts',
+      // Story 5.5.1 — swarm E2E specs need the full stack (vibe-trading + MCP +
+      // apps/api + frontend). swarm-resume-after-api-restart is also chaos-gated.
+      '**/swarm-async-roundtrip.spec.ts',
+      '**/swarm-cancel.spec.ts',
+      '**/swarm-resume-after-api-restart.spec.ts',
+    ]
   : [];
 
 export default defineConfig({

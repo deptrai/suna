@@ -81,6 +81,18 @@ Repo này lớn (3,642 indexed files / 83k functions). **Đừng `grep -r` hoặ
 - `core/epsilon-master/opencode/agents/{agent}.md` — frontmatter `permission: { tool_name: allow|deny }`
 - Tier 1/Tier 2 differentiation tại đây — **chưa có cơ chế surface tier info ra UI**
 
+### Vibe-Trading async swarm pattern (Story 5.5.1, 2026-05-19) — CANONICAL
+
+Bất kỳ MCP tool nào có runtime >30s **PHẢI** dùng async start/poll/finalize pattern, KHÔNG block trong `tools/call`. Lý do: `apps/api` proxy ép `AbortSignal.timeout(30_000)` cho mọi `tools/call`.
+
+**Reference impl**: `Vibe-Trading/agent/mcp_server.py:start_swarm` + `cancel_swarm` (5.5.1). OpenCode wrapper: [core/epsilon-master/opencode/tools/vibe_trading_swarm.ts](core/epsilon-master/opencode/tools/vibe_trading_swarm.ts) (poll qua [lib/mcp-sse-client.ts](core/epsilon-master/opencode/tools/lib/mcp-sse-client.ts)).
+
+**Billing**: deposit on start (gates parallel run abuse) + finalize on completion (pay-for-what-you-got). Failed/cancelled run = deposit only.
+
+**Ownership**: per-`run_id` access gated by in-memory `runOwnership` map in [vibe-trading-mcp.ts](apps/api/src/router/routes/vibe-trading-mcp.ts) — 24h TTL, fail-closed on proxy restart, re-hydrate via `list_runs`. `run_swarm` (DEPRECATED) returns 410 Gone via proxy; sunset 2026-06-19.
+
+**Wrapper UI**: progress markers (▶️ start, ⏳ N/M agents, 🛑 cancel, ❌ error) parsed by [OcVibeTradingSwarmToolView.tsx](apps/web/src/components/thread/tool-views/opencode/OcVibeTradingSwarmToolView.tsx). Chat Stop button fires `ctx.abort` → wrapper calls `cancel_swarm`.
+
 ---
 
 ## Communication

@@ -119,6 +119,24 @@ interface SidebarSandboxConfigStatus {
   problems: SidebarSandboxConfigProblem[];
 }
 
+/**
+ * The sandbox's /config/status endpoint can return a `problem.message` that
+ * includes the entire offending JSONC file content (kilobytes of text). Rendering
+ * that verbatim in the sidebar overflows the panel and bleeds into menu items.
+ * Extract just the `--- Errors ---` section when present, otherwise truncate.
+ */
+function summarizeConfigProblem(raw: string | undefined): string {
+  if (!raw) return 'An invalid config source is being ignored.';
+  // Strip the JSONC dump block; keep only the trailing error lines.
+  const errIdx = raw.indexOf('--- Errors ---');
+  let body = errIdx >= 0 ? raw.slice(errIdx + '--- Errors ---'.length) : raw;
+  // Drop the trailing closing marker and any surrounding whitespace
+  body = body.replace(/---\s*End\s*---/g, '').trim();
+  // Cap at ~400 chars so even unstructured messages stay sidebar-sized
+  if (body.length > 400) body = body.slice(0, 400).trimEnd() + '…';
+  return body || 'An invalid config source is being ignored.';
+}
+
 interface SidebarProjectSummary {
   id: string;
   name: string;
@@ -1195,7 +1213,9 @@ function SidebarConfigDegradationNotice({ collapsed, onExpand }: { collapsed: bo
           </TooltipTrigger>
           <TooltipContent side="right" sideOffset={12} className="max-w-64 text-xs">
             <div className="font-medium">Config degraded — runtime still healthy</div>
-            <div className="mt-1 text-muted-foreground">{primaryProblem.message || 'Invalid config source ignored.'}</div>
+            <div className="mt-1 max-h-48 overflow-y-auto whitespace-pre-wrap break-words text-muted-foreground">
+              {summarizeConfigProblem(primaryProblem.message)}
+            </div>
           </TooltipContent>
         </Tooltip>
       </div>
@@ -1223,8 +1243,8 @@ function SidebarConfigDegradationNotice({ collapsed, onExpand }: { collapsed: bo
           </div>
 
           <div className="space-y-1">
-            <div className="text-[11px] leading-relaxed text-muted-foreground">
-              {primaryProblem.message || 'An invalid config source is being ignored.'}
+            <div className="max-h-32 overflow-y-auto whitespace-pre-wrap break-words text-[11px] leading-relaxed text-muted-foreground">
+              {summarizeConfigProblem(primaryProblem.message)}
             </div>
             <div className="truncate text-[10px] font-mono text-muted-foreground/80">
               {primaryProblem.source}

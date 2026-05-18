@@ -103,6 +103,18 @@ const BacktestPage = lazy(() =>
 	})),
 );
 
+const SwarmTeamsPage = lazy(() =>
+	import('@/app/(dashboard)/dashboard/swarm-teams/swarm-teams-client').then((m) => ({
+		default: m.SwarmTeamsClient,
+	})),
+);
+
+const ShadowAccountPage = lazy(() =>
+	import('@/app/(dashboard)/dashboard/shadow-account/shadow-account-client').then((m) => ({
+		default: m.ShadowAccountClient,
+	})).catch(() => ({ default: () => null })),
+);
+
 const DiscoverPage = lazy(() =>
 	import('@/app/(dashboard)/discover/discover-feed-client').then((m) => ({
 		default: function DiscoverPageWrapper() {
@@ -180,6 +192,8 @@ const PAGE_COMPONENTS: Record<string, ComponentType> = {
 	'/discover': DiscoverPage,
 	'/markets': MarketsPage,
 	'/dashboard/backtest': BacktestPage,
+	'/dashboard/swarm-teams': SwarmTeamsPage,
+	'/dashboard/shadow-account': ShadowAccountPage,
 	// Admin
 	'/admin/analytics': AdminAnalyticsPage,
 	'/admin/feedback': AdminFeedbackPage,

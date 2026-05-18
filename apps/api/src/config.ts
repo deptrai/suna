@@ -1005,7 +1005,16 @@ export const TOOL_PRICING: Record<string, ToolPricing> = {
   vt_mcp_write_file:              { baseCost: 0,    perResultCost: 0, markupMultiplier: 1.0 },
   vt_mcp_read_file:               { baseCost: 0,    perResultCost: 0, markupMultiplier: 1.0 },
   vt_mcp_list_swarm_presets:      { baseCost: 0,    perResultCost: 0, markupMultiplier: 1.0 },
+  // run_swarm is DEPRECATED (Story 5.5.1) — proxy returns 410 Gone for any
+  // tools/call. Entry kept so direct sandbox bypass (test rigs) still bills
+  // correctly; production path never reaches it.
   vt_mcp_run_swarm:               { baseCost: 0.25, perResultCost: 0, markupMultiplier: 1.0 },
+  // Async swarm pricing (Story 5.5.1): deposit on start + finalize on completion.
+  // Total successful run = 0.05 + 0.20 = 0.25 credits (parity with run_swarm).
+  // Failed/cancelled run = 0.05 deposit only.
+  vt_mcp_start_swarm:             { baseCost: 0.05, perResultCost: 0, markupMultiplier: 1.0 },
+  vt_mcp_run_swarm_finalize:      { baseCost: 0.20, perResultCost: 0, markupMultiplier: 1.0 },
+  vt_mcp_cancel_swarm:            { baseCost: 0,    perResultCost: 0, markupMultiplier: 1.0 },
   vt_mcp_get_swarm_status:        { baseCost: 0,    perResultCost: 0, markupMultiplier: 1.0 },
   vt_mcp_get_run_result:          { baseCost: 0,    perResultCost: 0, markupMultiplier: 1.0 },
   vt_mcp_list_runs:               { baseCost: 0,    perResultCost: 0, markupMultiplier: 1.0 },

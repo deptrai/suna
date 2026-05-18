@@ -1,6 +1,6 @@
 # Story 5.5.1: Vibe-Trading Swarm — Async Execution Pattern
 
-Status: ready-for-dev
+Status: review
 
 **Epic:** 5 — Vibe-Trading Platform
 **Type:** P1 architectural defect follow-up to Story 5.5
@@ -345,62 +345,62 @@ Gate behind `CI_CHAOS_ENABLED=true` per Story 5.0.4/5.0.5 pattern. Skip on PR bu
 
 ### Task 1 — Vibe-Trading MCP server: add `start_swarm` + `cancel_swarm` (AC1, AC5b)
 
-- [ ] 1.1 Open `Vibe-Trading/agent/mcp_server.py` after existing `run_swarm` definition (line ~430). **Note:** Vibe-Trading is a submodule currently on branch `v1-1` (not `main`); changes land against that branch. Coordinate via upstream PR to `deptrai/Vibe-Trading` after local validation.
-- [ ] 1.2 Add `@mcp.tool def start_swarm(preset_name: str, variables: dict[str, str]) -> str:` — body uses `SwarmRuntime.start_run` and returns immediately
-- [ ] 1.3 Validate `preset_name` against `list_presets()` before spawning thread; return JSON error if unknown
-- [ ] 1.4 Add `@mcp.tool def cancel_swarm(run_id: str) -> str:` — calls `SwarmRuntime.cancel_run(run_id)`, returns `{"status":"cancelling","run_id":"..."}`
-- [ ] 1.5 Add deprecation docstring to existing `run_swarm` referencing this story
-- [ ] 1.6 Local smoke test: `python mcp_server.py --transport sse --port 8900`, call start_swarm via test script, verify `<2s` return time; call cancel_swarm and verify the run transitions to `cancelled` within 2 layers
+- [x] 1.1 Open `Vibe-Trading/agent/mcp_server.py` after existing `run_swarm` definition (line ~430). **Note:** Vibe-Trading is a submodule currently on branch `v1-1` (not `main`); changes land against that branch. Coordinate via upstream PR to `deptrai/Vibe-Trading` after local validation.
+- [x] 1.2 Add `@mcp.tool def start_swarm(preset_name: str, variables: dict[str, str]) -> str:` — body uses `SwarmRuntime.start_run` and returns immediately
+- [x] 1.3 Validate `preset_name` against `list_presets()` before spawning thread; return JSON error if unknown
+- [x] 1.4 Add `@mcp.tool def cancel_swarm(run_id: str) -> str:` — calls `SwarmRuntime.cancel_run(run_id)`, returns `{"status":"cancelling","run_id":"..."}`
+- [x] 1.5 Add deprecation docstring to existing `run_swarm` referencing this story
+- [x] 1.6 Local smoke test: `python mcp_server.py --transport sse --port 8900`, call start_swarm via test script, verify `<2s` return time; call cancel_swarm and verify the run transitions to `cancelled` within 2 layers
 
 ### Task 2 — apps/api proxy: 410 Gone + ownership map + billing entries (AC1b, AC2)
 
-- [ ] 2.1 Open `apps/api/src/router/routes/vibe-trading-mcp.ts`, add `LONG_RUNNING_TOOLS_DENY = new Set(['run_swarm'])` + 410 Gone check inside `isBillable` block before `checkCredits`
-- [ ] 2.2 Add in-memory `runOwnership: Map<string, {accountId, expiresAt, finalized}>` (24h TTL) per AC1b
-- [ ] 2.3 On `start_swarm` success response: parse `run_id` from body, populate `runOwnership` with current `accountId`
-- [ ] 2.4 On `get_swarm_status` / `get_run_result` / `cancel_swarm`: parse `run_id` from request params, reject 403 if `runOwnership.get(run_id)?.accountId !== accountId`. Log `[swarm-ownership-violation]` on reject.
-- [ ] 2.5 Add re-hydration path: on `list_runs` response, populate `runOwnership` for each returned run_id with current accountId.
-- [ ] 2.6 Update `apps/api/src/config.ts` TOOL_PRICING at line ~858 area: add `vt_mcp_start_swarm`, `vt_mcp_run_swarm_finalize`, `vt_mcp_cancel_swarm` entries
-- [ ] 2.7 Verify tier 1 still gets 403 BEFORE hitting the 410 branch (test in AC6 covers this)
+- [x] 2.1 Open `apps/api/src/router/routes/vibe-trading-mcp.ts`, add `LONG_RUNNING_TOOLS_DENY = new Set(['run_swarm'])` + 410 Gone check inside `isBillable` block before `checkCredits`
+- [x] 2.2 Add in-memory `runOwnership: Map<string, {accountId, expiresAt, finalized}>` (24h TTL) per AC1b
+- [x] 2.3 On `start_swarm` success response: parse `run_id` from body, populate `runOwnership` with current `accountId`
+- [x] 2.4 On `get_swarm_status` / `get_run_result` / `cancel_swarm`: parse `run_id` from request params, reject 403 if `runOwnership.get(run_id)?.accountId !== accountId`. Log `[swarm-ownership-violation]` on reject.
+- [x] 2.5 Add re-hydration path: on `list_runs` response, populate `runOwnership` for each returned run_id with current accountId.
+- [x] 2.6 Update `apps/api/src/config.ts` TOOL_PRICING at line ~858 area: add `vt_mcp_start_swarm`, `vt_mcp_run_swarm_finalize`, `vt_mcp_cancel_swarm` entries
+- [x] 2.7 Verify tier 1 still gets 403 BEFORE hitting the 410 branch (test in AC6 covers this)
 
 ### Task 3 — OpenCode tool: `vibe_trading_swarm.ts` (AC3)
 
-- [ ] 3.0 **Research subtask (≤30 min):** Read `node_modules/@opencode-ai/plugin/dist/*.d.ts` to determine actual `ToolContext` API. Confirm whether `ctx.write` / `ctx.output` / `ctx.abortSignal` exist. Document findings in Dev Agent Record before continuing.
-- [ ] 3.1 Create `core/epsilon-master/opencode/tools/vibe_trading_swarm.ts` using `vibe_trading_backtest.ts` as template. **Auto-discovered** per [tools/README.md](core/epsilon-master/opencode/tools/README.md) — no index.ts update needed.
-- [ ] 3.2 Implement poll loop. If Task 3.0 confirms `ctx.write` streaming → use it. Otherwise buffer progress lines + return concatenated string (MVP fallback).
-- [ ] 3.3 Implement client-side cancel: if `ctx.abortSignal?.aborted` OR 30-min client timeout → fire `cancel_swarm` before exiting
-- [ ] 3.4 Update Tier 2 agent system prompt [chainlens-tier2.md](core/epsilon-master/opencode/agents/chainlens-tier2.md) to reference `vibe_trading_swarm` and document deprecation of `run_swarm`
+- [x] 3.0 **Research subtask (≤30 min):** Read `node_modules/@opencode-ai/plugin/dist/*.d.ts` to determine actual `ToolContext` API. Confirm whether `ctx.write` / `ctx.output` / `ctx.abortSignal` exist. Document findings in Dev Agent Record before continuing.
+- [x] 3.1 Create `core/epsilon-master/opencode/tools/vibe_trading_swarm.ts` using `vibe_trading_backtest.ts` as template. **Auto-discovered** per [tools/README.md](core/epsilon-master/opencode/tools/README.md) — no index.ts update needed.
+- [x] 3.2 Implement poll loop. If Task 3.0 confirms `ctx.write` streaming → use it. Otherwise buffer progress lines + return concatenated string (MVP fallback).
+- [x] 3.3 Implement client-side cancel: if `ctx.abortSignal?.aborted` OR 30-min client timeout → fire `cancel_swarm` before exiting
+- [x] 3.4 Update Tier 2 agent system prompt [chainlens-tier2.md](core/epsilon-master/opencode/agents/chainlens-tier2.md) to reference `vibe_trading_swarm` and document deprecation of `run_swarm`
 
 ### Task 4 — UI: `OcVibeTradingSwarmToolView` + Stop button (AC4, AC5b)
 
-- [ ] 4.1 Create `apps/web/src/components/thread/tool-views/opencode/OcVibeTradingSwarmToolView.tsx` — pattern parity with closest existing tool view (see 43 Oc*ToolView files in directory)
-- [ ] 4.2 Implement progress parser (regex on stdout lines for `▶️`, `⏳`, `🛑`, `❌`)
-- [ ] 4.3 Register in `tool-renderers.tsx` via `ToolRegistry.register('vibe_trading_swarm', ...)` at line ~422
-- [ ] 4.4 Update `/dashboard/swarm-teams` page run-row UI: surface "Stop" button on in-flight runs → invokes `cancel_swarm` via OpenCode tool path (or direct MCP call if page already has direct path from 5.6)
-- [ ] 4.5 Update `/dashboard/swarm-teams` page run dispatch to use `vibe_trading_swarm` OpenCode tool instead of raw `run_swarm` MCP call (if page currently bypasses OpenCode)
+- [x] 4.1 Create `apps/web/src/components/thread/tool-views/opencode/OcVibeTradingSwarmToolView.tsx` — pattern parity with closest existing tool view (see 43 Oc*ToolView files in directory)
+- [x] 4.2 Implement progress parser (regex on stdout lines for `▶️`, `⏳`, `🛑`, `❌`)
+- [x] 4.3 Register in `tool-renderers.tsx` via `ToolRegistry.register('vibe_trading_swarm', ...)` at line ~422
+- [x] 4.4 Update `/dashboard/swarm-teams` page run-row UI: surface "Stop" button on in-flight runs → invokes `cancel_swarm` via OpenCode tool path (or direct MCP call if page already has direct path from 5.6)
+- [x] 4.5 Update `/dashboard/swarm-teams` page run dispatch to use `vibe_trading_swarm` OpenCode tool instead of raw `run_swarm` MCP call (if page currently bypasses OpenCode)
 
 ### Task 5 — Billing finalize logic via in-memory flag (AC5)
 
-- [ ] 5.1 In proxy `vibe-trading-mcp.ts`, after a successful `get_run_result` response: parse body, if `result.status === 'completed'` AND `runOwnership.get(run_id).finalized === false` → call `deductToolCredits(accountId, 'vt_mcp_run_swarm_finalize', 0, ...)` and set `finalized = true`
-- [ ] 5.2 Failure path: status !== completed → skip finalize. Cancellation path: skip finalize.
-- [ ] 5.3 Idempotency verification: second `get_run_result` call for same run_id MUST NOT re-charge (flag is the gate). Test in AC6.
-- [ ] 5.4 Document in code comment: "Finalize state is in-memory only; on process restart, a re-fetch may re-charge at most once per process lifetime — acceptable per AC5 design."
+- [x] 5.1 In proxy `vibe-trading-mcp.ts`, after a successful `get_run_result` response: parse body, if `result.status === 'completed'` AND `runOwnership.get(run_id).finalized === false` → call `deductToolCredits(accountId, 'vt_mcp_run_swarm_finalize', 0, ...)` and set `finalized = true`
+- [x] 5.2 Failure path: status !== completed → skip finalize. Cancellation path: skip finalize.
+- [x] 5.3 Idempotency verification: second `get_run_result` call for same run_id MUST NOT re-charge (flag is the gate). Test in AC6.
+- [x] 5.4 Document in code comment: "Finalize state is in-memory only; on process restart, a re-fetch may re-charge at most once per process lifetime — acceptable per AC5 design."
 
 ### Task 6 — Tests (AC6, AC7)
 
-- [ ] 6.1 Write `vibe-trading-swarm-async.test.ts` (proxy 410 + start_swarm billing)
-- [ ] 6.2 Write `swarm-finalize-billing.test.ts` (idempotency)
-- [ ] 6.3 Write `vibe_trading_swarm.test.ts` (OpenCode wrapper)
-- [ ] 6.4 Write `swarm-async-roundtrip.spec.ts` (Playwright E2E, smallest preset)
-- [ ] 6.5 Write `swarm-resume-after-api-restart.spec.ts` (chaos, gated)
-- [ ] 6.6 Add fast-tier test entry for the new unit specs to `.github/workflows/test.yml` (parity Story 5.0.5)
-- [ ] 6.7 Update `vibe-trading-mcp-proxy.test.ts` with 410 case for `run_swarm`
+- [x] 6.1 Write `vibe-trading-swarm-async.test.ts` (proxy 410 + start_swarm billing)
+- [x] 6.2 Write `swarm-finalize-billing.test.ts` (idempotency)
+- [x] 6.3 Write `vibe_trading_swarm.test.ts` (OpenCode wrapper)
+- [x] 6.4 Write `swarm-async-roundtrip.spec.ts` (Playwright E2E, smallest preset)
+- [x] 6.5 Write `swarm-resume-after-api-restart.spec.ts` (chaos, gated)
+- [x] 6.6 Add fast-tier test entry for the new unit specs to `.github/workflows/test.yml` (parity Story 5.0.5)
+- [x] 6.7 Update `vibe-trading-mcp-proxy.test.ts` with 410 case for `run_swarm`
 
 ### Task 7 — Docs + sunset tracking (AC8)
 
-- [ ] 7.1 Update `run_swarm` docstring with deprecation notice
-- [ ] 7.2 Add entry to `deferred-work.md` for sunset tracking
-- [ ] 7.3 Update `core/epsilon-master/opencode/tools/README.md` MCP tools section
-- [ ] 7.4 Update `CLAUDE.md` Vibe-Trading section: document the async swarm pattern as canonical
+- [x] 7.1 Update `run_swarm` docstring with deprecation notice
+- [x] 7.2 Add entry to `deferred-work.md` for sunset tracking
+- [x] 7.3 Update `core/epsilon-master/opencode/tools/README.md` MCP tools section
+- [x] 7.4 Update `CLAUDE.md` Vibe-Trading section: document the async swarm pattern as canonical
 
 ## Dev Notes
 
@@ -519,3 +519,76 @@ For UI polish: surface "Resume run" affordance in `/dashboard/swarm-teams` for a
   - **Critical fixes:** Added AC1b ownership gating (cross-account leak fix); replaced billing `idempotencyKey` plan with in-memory `finalized` flag (avoids `deductToolCredits` signature migration); explicitly scoped `LONG_RUNNING_TOOLS_DENY` to `run_swarm` only with the other 4 long-running tools deferred to follow-up story.
   - **Enhancements:** Added AC5b `cancel_swarm` MCP tool + UI Stop button; Task 3.0 research subtask for `ctx.write` API verification; documented `live_callback` + `events.jsonl` as future enhancement path.
   - **Corrections:** Fixed line numbers (run_swarm at 430, TOOL_PRICING at 858, AbortSignal at 85); specified `bun:test` framework for new test files; noted Vibe-Trading submodule on branch `v1-1` with potential unmerged conflicts; added R8/R9/R10 to Risk Register.
+- **2026-05-19 (dev complete)** — Implementation shipped. All 7 tasks completed. 23 new unit tests (17 apps/api + 6 epsilon-master) GREEN; existing 88 apps/api + 30 epsilon-master + 8 apps/web swarm-teams tests still pass — no regressions. 3 E2E specs scaffolded under `tests/e2e/specs/swarm-*.spec.ts` (gated `CI_FULL_STACK=true` + `CI_CHAOS_ENABLED=true`). Task 3.0 research: `@opencode-ai/plugin@1.14.28` exposes `ToolContext.abort: AbortSignal` but NOT `ctx.write` / `ctx.output` — MVP fallback (buffer progress, return concatenated string) used; UI parser extracts progress markers from stdout in `OcVibeTradingSwarmToolView`. Status: ready-for-dev → in-progress → review.
+
+## Dev Agent Record
+
+### Implementation summary
+
+- **Vibe-Trading MCP (`Vibe-Trading/agent/mcp_server.py`)** — Added `start_swarm` + `cancel_swarm` MCP tools after `run_swarm` (lines 487-580 area). Added deprecation docstring to `run_swarm` (sunset 2026-06-19). Introduced module-level `_swarm_runtime_singleton` so `start` and `cancel` share `cancel_events` (per `SwarmRuntime` instance state). File was in `UU` state — clean (no conflict markers); marked resolved via `git add`.
+- **apps/api proxy (`apps/api/src/router/routes/vibe-trading-mcp.ts`)** — Full rewrite with:
+  - `LONG_RUNNING_TOOLS_DENY = {'run_swarm'}` returning 410 Gone (AC2).
+  - In-memory `runOwnership` Map with 24h TTL + `finalized` flag (AC1b, AC5).
+  - `OWNERSHIP_GATED_TOOLS = {'get_swarm_status', 'get_run_result', 'cancel_swarm'}` — 403 on mismatch, log `[swarm-ownership-violation]`.
+  - `parseToolResult` helper for FastMCP envelope unwrapping (`result.content[0].text` → JSON).
+  - On `start_swarm` success: capture `run_id`, seed ownership.
+  - On `list_runs` success: re-hydrate ownership for runs this account asked about (proxy-restart recovery), guarded against cross-account theft via `!runOwnership.has(...)` check.
+  - On `get_run_result` with `status === 'completed'`: claim `finalized = true` BEFORE await (defence-in-depth against re-entry), then deduct `vt_mcp_run_swarm_finalize`.
+  - Exported `__resetOwnershipForTests` for unit test isolation.
+- **Billing config (`apps/api/src/config.ts`)** — Added `vt_mcp_start_swarm` (0.05), `vt_mcp_run_swarm_finalize` (0.20), `vt_mcp_cancel_swarm` (0) to TOOL_PRICING. Kept `vt_mcp_run_swarm` (0.25) untouched for direct-sandbox bypass test rigs.
+- **OpenCode wrapper (`core/epsilon-master/opencode/tools/vibe_trading_swarm.ts`)** — Implements start/poll/finalize via inline SSE-MCP client (`lib/mcp-sse-client.ts`). MVP fallback (no `ctx.write` available) buffers progress markers and returns as concatenated string. Cooperative cancel via `ctx.abort.aborted` check.
+- **SSE-MCP client (`core/epsilon-master/opencode/tools/lib/mcp-sse-client.ts`)** — Minimal client: open SSE → parse `event: endpoint` for `session_id` → POST `tools/call` to `/messages/?session_id=...` → wait for matching response in SSE stream → `close()` on tool exit. Handles proxy 410/403/402 short-circuit responses (non-SSE 4xx).
+- **Tier 2 agent prompt (`core/epsilon-master/opencode/agents/chainlens-tier2.md`)** — Added `vibe_trading_swarm: allow` to permissions. Rewrote "Swarm Teams" section to make wrapper canonical, mark `run_swarm` DEPRECATED.
+- **UI tool view (`apps/web/src/components/thread/tool-views/opencode/OcVibeTradingSwarmToolView.tsx`)** — New component. Parses wrapper stdout for `▶️`/`⏳`/`🛑`/`❌` markers + `---`-separated final markdown report. Renders progress strip with percentage bar + Done/Cancelled/Error badge. Falls back to "No output yet." when input is empty.
+- **Tool registration (`apps/web/src/components/session/tool-renderers.tsx`)** — `ToolRegistry.register('vibe_trading_swarm', OcVibeTradingSwarmToolView)` + hyphen variant. Component uses `ToolProps` (part-based) directly, so no adapter needed.
+- **Swarm Teams page (`apps/web/src/app/(dashboard)/dashboard/swarm-teams/swarm-teams.utils.ts`)** — Prompt builder rewritten to dispatch `vibe_trading_swarm` wrapper instead of raw `run_swarm` MCP. Existing test (`apps/web/src/__tests__/swarm-teams.test.tsx`) updated to assert the new tool name + absence of `run_swarm`.
+- **CI fast-tier (`.github/workflows/test.yml`)** — Added 3 new files: `vibe-trading-swarm-async.test.ts`, `swarm-finalize-billing.test.ts` (apps/api), `vibe_trading_swarm.test.ts` (epsilon-master). Updated summary count.
+- **E2E specs** — `swarm-async-roundtrip.spec.ts` (full stack happy path), `swarm-cancel.spec.ts` (Stop mid-flight), `swarm-resume-after-api-restart.spec.ts` (chaos: docker kill + restart). All three added to `tests/playwright.config.ts` CI skip list to gate behind `CI_FULL_STACK=true` (and `CI_CHAOS_ENABLED=true` for the chaos one).
+- **Sunset tracking (`_bmad-output/implementation-artifacts/deferred-work.md`)** — Added Story 5.5.1 deferral section with sunset for `run_swarm`, future async migration for 4 other long-running tools, `tail_swarm_events` enhancement, DB-backed ownership promotion, UI "Resume run" affordance, chaos billing assertion.
+- **CLAUDE.md** — Added "Vibe-Trading async swarm pattern" section under Stack & Architecture documenting the canonical start/poll/finalize architecture for any future MCP tool with >30s runtime.
+
+### Decisions & deviations
+
+- **Task 3.0 research outcome**: `@opencode-ai/plugin@1.14.28` `ToolContext` exposes `abort: AbortSignal` and `metadata(...)` but NOT `ctx.write` / `ctx.output`. MVP fallback path mandatory. UI tool view parses progress markers from final stdout.
+- **MCP transport choice**: FastMCP server only supports SSE transport (per `mcp_server.py:984`). Wrapper uses a hand-rolled SSE-MCP client (`lib/mcp-sse-client.ts`) — one session per `execute()` lifetime, closed in `finally`. No external dependency added.
+- **Test isolation**: avoided mocking `../../config` in new test files because `mock.module` is process-global in Bun and would pollute `vibe-trading-mcp-pricing.test.ts` when run together. Tests use the real config (which already has the new pricing entries from this story).
+- **Stop button location**: Story 5.6 page has no "in-flight run row" UI — runs are dispatched as chat sessions. The cancel affordance is the existing chat Stop button, which fires `ctx.abort` into the wrapper's poll loop. No new page-level button needed; documented in Task 4 deviation note.
+- **Submodule state**: Vibe-Trading was in `UU` mid-merge state at start of session — content already clean (no conflict markers), just needed `git add` to mark resolved. R4 risk mitigated.
+
+### Tests passing (regression)
+
+- `apps/api` fast-tier (10 files): **88 pass / 0 fail**
+- `core/epsilon-master` fast-tier (5 files): **30 pass / 0 fail**
+- `apps/web` swarm-teams (1 file): **8 pass / 0 fail**
+- TypeScript: `apps/api` ✅, `core/epsilon-master` ✅ (no new errors)
+
+### File List
+
+**Created:**
+- `Vibe-Trading/agent/tests/test_async_swarm_mcp_tools.py`
+- `apps/api/src/__tests__/unit/vibe-trading-swarm-async.test.ts`
+- `apps/api/src/__tests__/unit/swarm-finalize-billing.test.ts`
+- `core/epsilon-master/opencode/tools/vibe_trading_swarm.ts`
+- `core/epsilon-master/opencode/tools/lib/mcp-sse-client.ts`
+- `core/epsilon-master/opencode/tools/__tests__/vibe_trading_swarm.test.ts`
+- `apps/web/src/components/thread/tool-views/opencode/OcVibeTradingSwarmToolView.tsx`
+- `tests/e2e/specs/swarm-async-roundtrip.spec.ts`
+- `tests/e2e/specs/swarm-cancel.spec.ts`
+- `tests/e2e/specs/swarm-resume-after-api-restart.spec.ts`
+
+**Modified:**
+- `Vibe-Trading/agent/mcp_server.py` — added `start_swarm` + `cancel_swarm` MCP tools; deprecation docstring on `run_swarm`
+- `apps/api/src/router/routes/vibe-trading-mcp.ts` — 410 deny-list + in-memory ownership map + finalize billing trigger
+- `apps/api/src/config.ts` — 3 new TOOL_PRICING entries
+- `apps/api/src/__tests__/unit/vibe-trading-mcp-proxy-extended.test.ts` — 410 regression case
+- `apps/web/src/app/(dashboard)/dashboard/swarm-teams/swarm-teams.utils.ts` — prompt dispatches `vibe_trading_swarm`
+- `apps/web/src/__tests__/swarm-teams.test.tsx` — updated assertion to match new prompt
+- `apps/web/src/components/session/tool-renderers.tsx` — registered `OcVibeTradingSwarmToolView`
+- `core/epsilon-master/opencode/agents/chainlens-tier2.md` — `vibe_trading_swarm: allow` + swarm section rewrite
+- `core/epsilon-master/opencode/tools/README.md` — `vibe_trading_swarm` section + MCP tool registry deltas
+- `.github/workflows/test.yml` — 3 new fast-tier test files; summary count updated
+- `tests/playwright.config.ts` — gate new E2E specs behind `CI_FULL_STACK=true`
+- `_bmad-output/implementation-artifacts/deferred-work.md` — Story 5.5.1 sunset section
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — flip 5-5-1 to in-progress → review
+- `_bmad-output/implementation-artifacts/5-5-1-vibe-trading-swarm-async-execution.md` — status, Dev Agent Record, File List, Change Log
+- `CLAUDE.md` — "Vibe-Trading async swarm pattern" canonical doc

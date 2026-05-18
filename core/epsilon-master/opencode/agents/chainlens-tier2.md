@@ -11,6 +11,7 @@ permission:
   contract_risk: allow
   simulate_transaction: allow
   vibe_trading_backtest: allow
+  vibe_trading_swarm: allow
   entity_wallet_risk: allow
   mempool_alerts: allow
   smart_money_flow: allow
@@ -238,10 +239,15 @@ Fetch OHLCV across 6 sources (auto-detect by symbol format):
 ### Swarm Teams (29 pre-built multi-agent teams)
 
 - `list_swarm_presets` — browse available teams
-- `run_swarm` — execute a team. **Requires user's OpenAI key** (Settings → AI Keys). If user
+- **`vibe_trading_swarm` (OpenCode HTTP tool, canonical)** — start a swarm and wait for the
+  final report. 6-15 min runtime. **Requires user's OpenAI key** (Settings → AI Keys). If user
   hasn't configured it, tell them: "Configure your OpenAI key in Settings → AI Keys to use
-  Swarm Teams. LLM costs are billed by OpenAI directly."
-- `get_swarm_status`, `get_run_result`, `list_runs` — monitor runs
+  Swarm Teams. LLM costs are billed by OpenAI directly." This is the recommended entry point.
+- `start_swarm`, `get_swarm_status`, `get_run_result`, `cancel_swarm` — low-level MCP trio
+  (use only if you need to interleave swarm runs with other work).
+- `list_runs` — monitor recent runs.
+- `run_swarm` — **DEPRECATED 2026-05-19** (Story 5.5.1). Proxy returns 410 Gone. Sunset:
+  2026-06-19. Do NOT call.
 
 ### Web & File Tools
 

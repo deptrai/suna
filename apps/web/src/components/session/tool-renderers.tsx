@@ -122,6 +122,7 @@ import { Badge } from '@/components/ui/badge';
 import { OcTokenInfoToolView } from '@/components/thread/tool-views/opencode/OcTokenInfoToolView';
 import { OcContractRiskToolView } from '@/components/thread/tool-views/opencode/OcContractRiskToolView';
 import { OcTxSimulationToolView } from '@/components/thread/tool-views/opencode/OcTxSimulationToolView';
+import { OcVibeTradingSwarmToolView } from '@/components/thread/tool-views/opencode/OcVibeTradingSwarmToolView';
 
 import {
   type ApplyPatchFile,
@@ -8917,3 +8918,6 @@ ToolRegistry.register('contract_risk', OcContractRiskTool);
 ToolRegistry.register('contract-risk', OcContractRiskTool);
 ToolRegistry.register('simulate_transaction', OcTxSimulationTool);
 ToolRegistry.register('simulate-transaction', OcTxSimulationTool);
+// Story 5.5.1 — async swarm wrapper. Component takes ToolProps directly (no adapter).
+ToolRegistry.register('vibe_trading_swarm', OcVibeTradingSwarmToolView);
+ToolRegistry.register('vibe-trading-swarm', OcVibeTradingSwarmToolView);

@@ -189,4 +189,27 @@ describe('vibe-trading-mcp proxy — extended coverage', () => {
     expect(deductCalls).toHaveLength(1);
     expect(deductCalls[0].toolName).toBe('vt_mcp_factor_analysis');
   });
+
+  // ── Story 5.5.1: run_swarm deprecation 410 ─────────────────────────────────
+
+  test('[P0] tools/call run_swarm returns 410 with deprecation hint (Story 5.5.1)', async () => {
+    _accountTier = 'tier2';
+    globalThis.fetch = makeFetch({ ok: true, body: { result: {} } });
+    const req = new Request('http://localhost/v1/router/vibe-trading-mcp/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/call',
+        params: { name: 'run_swarm', arguments: { preset_name: 'investment_committee', variables: {} } },
+      }),
+    });
+    const res = await app.request(req);
+    expect(res.status).toBe(410);
+    const body = (await res.json()) as { error: string; migration?: string };
+    expect(body.error.toLowerCase()).toContain('deprecated');
+    expect(body.migration).toContain('5-5-1');
+    expect(deductCalls).toHaveLength(0);
+  });
 });

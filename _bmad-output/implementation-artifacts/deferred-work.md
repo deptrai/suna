@@ -2,6 +2,15 @@
 
 Items deferred from code reviews — pre-existing issues or hard policy calls that aren't actionable in the current change.
 
+## Deferred from: Story 5.5.1 (2026-05-19)
+
+- **Sunset `run_swarm` MCP tool by 2026-06-19.** Story 5.5.1 deprecates the synchronous tool via proxy 410 Gone + docstring marker. Separate cleanup story Q3 should remove the tool body from `Vibe-Trading/agent/mcp_server.py` (after the 30-day grace window expires) and drop the `vt_mcp_run_swarm` `TOOL_PRICING` entry in `apps/api/src/config.ts`. Until then the entry is kept so direct-sandbox-bypass test rigs still bill correctly.
+- **Other long-running tools sharing the same 30s mismatch** — `backtest`, `factor_analysis`, `run_shadow_backtest`, `render_shadow_report` work today with typical inputs <30s, but follow the same architectural defect as `run_swarm`. Track a follow-up story to migrate them to the async start/poll/finalize pattern OR raise their per-tool timeout budget. Out of scope for 5.5.1 which is scoped to `run_swarm` (the only tool that *always* exceeds 30s).
+- **Live event streaming via `SwarmRuntime.live_callback` / `events.jsonl`** — `runtime.py:76` already exposes a per-event callback. A future story can add a `tail_swarm_events(run_id, since_offset)` MCP tool that reads `events.jsonl` incrementally, then switch the OpenCode wrapper from 5s polling to event-driven streaming (≤200ms latency per agent transition). V1 uses 5s polling — simpler, fits existing patterns, latency acceptable for 6-15min swarms.
+- **Promote in-memory `runOwnership` map to DB-backed** — `apps/api/src/router/routes/vibe-trading-mcp.ts` keeps ownership in a `Map` with 24h TTL. On apps/api restart the map clears → fails-closed for any in-flight run until the user calls `list_runs` to re-hydrate. Acceptable for V1 (≈7-day MTBF on apps/api). When usage justifies the complexity, persist ownership in `epsilon.swarm_runs` table (or extend `SwarmRun` model with `account_id` in `Vibe-Trading/agent/src/swarm/models.py`).
+- **UI "Resume run" affordance for orphan runs** — if the OpenCode wrapper's 30min client timeout hits, the server-side run can still be re-fetched via `get_run_result(run_id)` if the user types the ID back into chat. Better UX: surface a "Resume run" button in `/dashboard/swarm-teams` for any run_id older than the user's last chat tab.
+- **Chaos test billing assertion** — `tests/e2e/specs/swarm-resume-after-api-restart.spec.ts` covers the chaos path structurally but stops short of asserting the credit_transactions table shows exactly one deposit + one finalize entry per run_id. Add when a billing-query helper exists in `tests/e2e/helpers/`.
+
 ## Deferred from: code review of 5-0-3-sandbox-token-lifecycle-db-canonical (2026-05-18)
 
 - Task 6.4 WebSocket `{ type: 'reauth', newKeyVersion: N }` signal to active sandbox connections — spec marks `[ ]`, explicitly deferred to future PR. AC4 partially unmet without it.

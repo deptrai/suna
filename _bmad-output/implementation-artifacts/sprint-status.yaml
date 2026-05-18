@@ -33,7 +33,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-19 (Story 5.5.1 created — async swarm execution pattern; defect follow-up to 5.5 surfaced during 22-tool integration test)
+last_updated: 2026-05-19 (Story 5.5.1 in-progress → review — async swarm execution pattern shipped)
 project: chainlens
 project_key: NOKEY
 tracking_system: file-system
@@ -103,7 +103,7 @@ development_status:
   5-3-backtest-results-visualizer: done
   5-4-contextual-backtest-integration: done
   5-5-vibe-trading-mcp-proxy: done
-  5-5-1-vibe-trading-swarm-async-execution: ready-for-dev  # 2026-05-19 defect follow-up to 5.5 — proxy AbortSignal.timeout(30_000) incompatible with run_swarm 5-30min runtime; restore 5.6 original async polling design (start_swarm + poll get_swarm_status + get_run_result + deposit/finalize billing)
+  5-5-1-vibe-trading-swarm-async-execution: review  # 2026-05-19 dev complete: start_swarm/cancel_swarm MCP tools (VT) + proxy 410 + ownership map + finalize billing (apps/api) + OpenCode wrapper (epsilon-master) + UI tool view (apps/web) + 23 new unit tests + 3 E2E specs scaffolded
   5-6-shadow-account-swarm-ui: done  # 2026-05-18 review→done after fixing shadow-reports-route.test.ts regression (Q2 tier gate needed billing mock update); 7+4+7+8=26 tests pass; 16 review patches + 3 deferred + 2 audit fixes (M4 link, Q2 tier gate)
   5-7-user-llm-key-management: backlog
   5-8-per-user-persistent-memory: done  # 2026-05-18 /bmad-code-review applied 39 patches: pgvector removed, IDOR fixed, URL mount corrected, transactions, tests added
