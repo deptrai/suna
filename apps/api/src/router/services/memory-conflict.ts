@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { accountMemories } from '@epsilon/db';
 import { db } from '../../shared/db';
 
@@ -28,20 +28,31 @@ export function textSimilarity(a: string, b: string): number {
   return 1 - dist / Math.max(aa.length, bb.length);
 }
 
+// F14: Atomic via Postgres advisory lock keyed on (accountId, category) hash.
+// Read-then-update over two roundtrips lets concurrent extracts both decide the
+// cap is fine, then both insert. The advisory lock serializes the enforcement
+// per (account, category) so only one extraction at a time can invalidate +
+// caller-insert. Lock auto-released at txn end.
 export async function enforceCategoryLimit(accountId: string, category: string, maxEntries = 3): Promise<void> {
-  const rows = await db.query.accountMemories.findMany({
-    where: and(
-      eq(accountMemories.accountId, accountId),
-      eq(accountMemories.category, category),
-      isNull(accountMemories.invalidatedAt),
-    ),
-    orderBy: asc(accountMemories.updatedAt),
-    columns: { id: true },
-  });
-  if (rows.length < maxEntries) return;
-  const toInvalidate = rows.slice(0, rows.length - maxEntries + 1).map((r) => r.id);
-  await db
+  await db.transaction(async (tx) => {
+    // Two int4 lock keys: hash of accountId + category. pg_advisory_xact_lock
+    // releases on txn commit/rollback.
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${accountId}), hashtext(${category}))`);
+
+    const rows = await tx.query.accountMemories.findMany({
+      where: and(
+        eq(accountMemories.accountId, accountId),
+        eq(accountMemories.category, category),
+        isNull(accountMemories.invalidatedAt),
+      ),
+      orderBy: asc(accountMemories.updatedAt),
+      columns: { id: true },
+    });
+    if (rows.length < maxEntries) return;
+    const toInvalidate = rows.slice(0, rows.length - maxEntries + 1).map((r) => r.id);
+    await tx
       .update(accountMemories)
       .set({ invalidatedAt: new Date(), updatedAt: new Date() })
       .where(inArray(accountMemories.id, toInvalidate));
+  });
 }

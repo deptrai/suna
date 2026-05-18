@@ -23,7 +23,7 @@ const categoryTitle: Record<string, string> = {
 };
 
 async function fetchMemories(): Promise<MemoryItem[]> {
-  const res = await authenticatedFetch('/v1/memory');
+  const res = await authenticatedFetch('/v1/router/memory');
   if (!res.ok) throw new Error('Failed to load memories');
   const data = await res.json() as { items: MemoryItem[] };
   return data.items ?? [];
@@ -35,7 +35,7 @@ export function MemoryList() {
 
   const delOne = useMutation({
     mutationFn: async (id: string) => {
-      const res = await authenticatedFetch(`/v1/memory/${id}`, { method: 'DELETE' });
+      const res = await authenticatedFetch(`/v1/router/memory/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Delete failed');
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['memory-items'] }),
@@ -43,7 +43,7 @@ export function MemoryList() {
 
   const clearAll = useMutation({
     mutationFn: async () => {
-      const res = await authenticatedFetch('/v1/memory', { method: 'DELETE' });
+      const res = await authenticatedFetch('/v1/router/memory', { method: 'DELETE' });
       if (!res.ok) throw new Error('Clear all failed');
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['memory-items'] }),

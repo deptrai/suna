@@ -253,9 +253,19 @@ const EpsilonSystemPlugin: Plugin = async (ctx) => {
 		// Inject the project status / no-project gate / v2-route-only reminder
 		// into the last user message before each LLM call. Skipped entirely
 		// when projects are disabled — the LLM gets no mention of projects.
+		// Story 5.8: also delegate to sessions plugin for Layer 1 memory inject
+		// (account_memories markdown wrapped in <account_memory>...</account_memory>).
+		// sessions.hooks were previously orphaned — this restores the wiring.
 		"experimental.chat.messages.transform": async (input: any, output: { messages: any[] }) => {
-			if (!projectsEnabled) return
-			await projectStatus(input, output).catch(() => {})
+			if (projectsEnabled) {
+				await projectStatus(input, output).catch(() => {})
+			}
+			const sessionsTransform = sessions?.hooks?.["experimental.chat.messages.transform"]
+			if (typeof sessionsTransform === "function") {
+				await sessionsTransform(input, output).catch((err: unknown) => {
+					console.warn("[epsilon-system] sessions transform failed:", err)
+				})
+			}
 		},
 
 		// BTW command
@@ -291,6 +301,13 @@ const EpsilonSystemPlugin: Plugin = async (ctx) => {
 			if (autowork?.event) await autowork.event(payload).catch(() => {})
 			if (todoEnforcer?.event) await todoEnforcer.event(payload).catch(() => {})
 			if (worktreeModule?.event) await worktreeModule.event(payload).catch(() => {})
+			// Story 5.8: delegate to sessions plugin for session.idle (debounced extract) +
+			// session.deleted (timer cleanup) + session.created (currentSessionId stamp).
+			if (sessions?.hooks?.event) {
+				await sessions.hooks.event(payload).catch((err: unknown) => {
+					console.warn("[epsilon-system] sessions event failed:", err)
+				})
+			}
 
 			// Agent async completion — runs last so autowork has already updated its active set
 			if (sid && (

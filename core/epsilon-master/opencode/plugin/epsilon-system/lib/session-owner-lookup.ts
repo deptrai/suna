@@ -1,7 +1,10 @@
 import { Database } from 'bun:sqlite';
 import { resolveEpsilonDir } from './paths';
 
-type CacheEntry = { userId: string | null; expiresAt: number };
+type CacheEntry = { userId: string; expiresAt: number };
+// F10: only cache POSITIVE lookups. Caching null poisons the lookup for 5min
+// when session_owners stamp races with the first chat message — by the time
+// the stamp lands, plugin still returns null.
 const cache = new Map<string, CacheEntry>();
 const TTL_MS = 5 * 60 * 1000;
 
@@ -24,6 +27,12 @@ export function lookupSessionOwner(sessionId: string): string | null {
     userId = null;
   }
 
-  cache.set(sessionId, { userId, expiresAt: now + TTL_MS });
+  // Only cache hits — misses re-read SQLite next call (cheap, local file).
+  if (userId) cache.set(sessionId, { userId, expiresAt: now + TTL_MS });
   return userId;
+}
+
+/** Invalidate cache for a session — call on session.deleted. */
+export function clearSessionOwnerCache(sessionId: string): void {
+  cache.delete(sessionId);
 }

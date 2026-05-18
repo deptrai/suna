@@ -5,7 +5,7 @@ const state = {
   invalidatedIds: [] as string[],
 };
 
-const fakeDb = {
+const txApi = {
   query: {
     accountMemories: {
       findMany: async () => state.rows,
@@ -13,13 +13,19 @@ const fakeDb = {
   },
   update: () => ({
     set: () => ({
-      where: (ids: any) => {
-        // lightweight capture; function under test ensures ids are narrowed.
+      where: (_ids: any) => {
         state.invalidatedIds = state.rows.slice(0, state.rows.length - 2).map((r) => r.id);
         return Promise.resolve();
       },
     }),
   }),
+  execute: async () => ({}),
+};
+
+const fakeDb = {
+  ...txApi,
+  // F14 introduced db.transaction wrapper around enforceCategoryLimit.
+  transaction: async (fn: (tx: typeof txApi) => Promise<void>) => fn(txApi),
 };
 
 mock.module('../../shared/db', () => ({ db: fakeDb }));

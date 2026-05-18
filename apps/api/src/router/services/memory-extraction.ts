@@ -7,11 +7,28 @@ import { enforceCategoryLimit, textSimilarity } from './memory-conflict';
 
 const CATEGORIES = new Set(['preference', 'trading_style', 'risk_profile', 'fact', 'tool_usage']);
 
+const EXTRACTION_SYSTEM_PROMPT = `Extract memorable facts about the user from this conversation.
+Return JSON array, max 5 items, strict schema:
+[{ "category": "preference|trading_style|risk_profile|fact|tool_usage", "content": "string (max 15 words)" }]
+
+RULES:
+- ONLY high-signal, reusable facts (NOT: emotional state, speculation, PII, session-specific context)
+- Category definitions:
+  - preference: UI/workflow preferences ("prefers 4H timeframe", "dislikes notifications")
+  - trading_style: trading approach ("uses 10% position sizing", "scalps with 1m entries")
+  - risk_profile: risk tolerance ("conservative, avoids leverage", "comfortable with 2x")
+  - fact: domain knowledge about user ("focuses on ETH and BTC", "has 5 years trading experience")
+  - tool_usage: tool preferences ("always asks for RSI analysis", "prefers Vibe Trading backtest")
+- EXAMPLES GOOD: "Prefers 4H timeframe for crypto", "Risk profile: conservative, max 2% per trade"
+- EXAMPLES BAD: "User seemed frustrated today", "Asked about BTC price"
+
+Return [] if no memorable facts found. Do NOT hallucinate.`;
+
 type Fact = { category: string; content: string };
 
 type ExtractResult = { extracted: number; deduped: number; accountId: string | null; skipped?: boolean };
 
-function sanitizeFacts(input: unknown): Fact[] {
+export function sanitizeFacts(input: unknown): Fact[] {
   if (!Array.isArray(input)) return [];
   return input
     .map((x) => {
@@ -26,21 +43,12 @@ function sanitizeFacts(input: unknown): Fact[] {
     .slice(0, 5);
 }
 
-function buildPseudoEmbedding(text: string, dims = 8): number[] {
-  const out = new Array(dims).fill(0);
-  for (let i = 0; i < text.length; i++) out[i % dims] += text.charCodeAt(i);
-  const norm = Math.sqrt(out.reduce((a, b) => a + b * b, 0)) || 1;
-  return out.map((v) => Number((v / norm).toFixed(6)));
-}
-
-async function upsertVector(memoryId: string, accountId: string, content: string): Promise<void> {
-  const vec = `[${buildPseudoEmbedding(content).join(',')}]`;
-  await db.execute(sql`
-    INSERT INTO epsilon.account_memory_vectors (memory_id, account_id, embedding, updated_at)
-    VALUES (${memoryId}::uuid, ${accountId}::uuid, ${vec}::vector, now())
-    ON CONFLICT (memory_id)
-    DO UPDATE SET embedding = EXCLUDED.embedding, updated_at = now()
-  `);
+// F11: Layer 2 (semantic recall via pgvector) is DEFERRED per spec v2.1.
+// The `account_memory_vectors` table is kept so a future story can ship real
+// embeddings without another migration. Until then we no-op the upsert rather
+// than write meaningless pseudo-hashes that would mislead any future consumer.
+async function upsertVector(_memoryId: string, _accountId: string, _content: string): Promise<void> {
+  // Intentional no-op. Re-enable when Layer 2 ships with real embeddings.
 }
 
 async function extractFacts(messages: Array<{ role: string; content: string }>): Promise<Fact[]> {
@@ -49,7 +57,7 @@ async function extractFacts(messages: Array<{ role: string; content: string }>):
     model: 'claude-haiku-4-5-20251001',
     max_tokens: 500,
     stream: false,
-    system: 'Extract memorable user facts. Return ONLY JSON array [{"category":"preference|trading_style|risk_profile|fact|tool_usage","content":"max 15 words"}] max 5 items.',
+    system: EXTRACTION_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: compact }],
   } as Record<string, unknown>;
 
@@ -58,17 +66,83 @@ async function extractFacts(messages: Array<{ role: string; content: string }>):
   const json = await res.json().catch(() => null) as any;
   const text = json?.content?.find?.((p: any) => p?.type === 'text')?.text;
   if (!text || typeof text !== 'string') return [];
-  const parsed = JSON.parse(text);
+  // Haiku sometimes wraps JSON in ```json ... ``` markdown fences; also handle leading prose.
+  const cleaned = extractJsonArray(text);
+  if (!cleaned) {
+    console.warn('[memory-extraction] Haiku returned no parseable JSON array, skipping');
+    return [];
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    console.warn('[memory-extraction] Haiku returned non-JSON text, skipping');
+    return [];
+  }
   return sanitizeFacts(parsed);
 }
 
-export async function extractMemoriesForUser(payload: {
+/**
+ * Extract the first valid JSON array substring from arbitrary LLM text.
+ * F15: try every `[…]` block found, return first that parses to an array of objects.
+ * Handles prose-with-brackets like "Here are [the] facts: [{…}]".
+ * F16: only enter escape mode when inside a string AND prev char is `\`, so
+ * `\\"` inside string bodies doesn't confuse the depth counter.
+ */
+export function extractJsonArray(text: string): string | null {
+  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const candidate = fenceMatch ? fenceMatch[1] : text;
+
+  let searchFrom = 0;
+  while (searchFrom < candidate.length) {
+    const start = candidate.indexOf('[', searchFrom);
+    if (start < 0) return null;
+    const block = scanBalancedArray(candidate, start);
+    if (block) {
+      try {
+        const parsed = JSON.parse(block);
+        if (Array.isArray(parsed)) return block;
+      } catch {
+        // not a valid array — try next `[`
+      }
+      searchFrom = start + block.length;
+    } else {
+      // unbalanced — give up, no more matches possible
+      return null;
+    }
+  }
+  return null;
+}
+
+function scanBalancedArray(s: string, start: number): string | null {
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let i = start; i < s.length; i++) {
+    const ch = s[i];
+    if (inString) {
+      if (escape) { escape = false; continue; }
+      if (ch === '\\') { escape = true; continue; }
+      if (ch === '"') { inString = false; continue; }
+      continue;
+    }
+    if (ch === '"') { inString = true; continue; }
+    if (ch === '[') depth++;
+    else if (ch === ']') {
+      depth--;
+      if (depth === 0) return s.slice(start, i + 1);
+    }
+  }
+  return null;
+}
+
+export async function extractMemoriesForAccount(payload: {
+  accountId: string;
   userId: string;
   sessionId: string;
   messages: Array<{ role: string; content: string }>;
 }): Promise<ExtractResult> {
-  const accountId = await resolveAccountIdFromUserId(payload.userId);
-  if (!accountId) return { extracted: 0, deduped: 0, accountId: null };
+  const { accountId } = payload;
 
   const recent = await db.query.accountMemories.findFirst({
     where: and(
@@ -134,4 +208,15 @@ export async function extractMemoriesForUser(payload: {
   }
 
   return { extracted, deduped, accountId };
+}
+
+/** @deprecated Use extractMemoriesForAccount; kept for backwards compatibility. */
+export async function extractMemoriesForUser(payload: {
+  userId: string;
+  sessionId: string;
+  messages: Array<{ role: string; content: string }>;
+}): Promise<ExtractResult> {
+  const accountId = await resolveAccountIdFromUserId(payload.userId);
+  if (!accountId) return { extracted: 0, deduped: 0, accountId: null };
+  return extractMemoriesForAccount({ accountId, ...payload });
 }

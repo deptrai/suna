@@ -4,8 +4,8 @@ import { Database } from "bun:sqlite"
 import { ensureGlobalMemoryFiles, renderMergedMemoryContext, renderProjectContext, resolveEpsilonDir } from "./lib/paths"
 import { MEMORY_CONTEXT_MARKER, upsertMemoryContextAtPromptEnd, wrapInEpsilonSystemTags } from "./lib/message-transform"
 import { DB_PATH, STORAGE_BASE, buildSessionLineage, changeSummary, formatMessages, getEnv, searchSessions, shortTs, ttcCompress } from "./lib/session"
-import { lookupSessionOwner } from "./lib/session-owner-lookup"
-import { fetchAccountMemories, triggerExtraction } from "./lib/memory-client"
+import { clearSessionOwnerCache, lookupSessionOwner } from "./lib/session-owner-lookup"
+import { fetchAccountMemories, invalidateMemoryRenderCache, triggerExtraction } from "./lib/memory-client"
 
 const _projectPathCache = new Map<string, string | null>()
 
@@ -92,38 +92,48 @@ export const EpsilonSessionsPlugin: Plugin = async ({ client, directory }) => {
 								clearTimeout(t)
 								extractionTimers.delete(sid)
 							}
+							clearSessionOwnerCache(sid)
+							// Session owned by potentially many users; invalidate everyone — cheap
+							// in practice because cache is per-process and per-user-ID.
+							invalidateMemoryRenderCache()
 						}
 					}
 				} catch (err) {
 					console.error(`[epsilon-sessions] event hook failed: ${err}`)
 				}
 			},
-			"experimental.chat.messages.transform": async (_input: any, output: { messages: any[] }) => {
+			"experimental.chat.messages.transform": async (input: any, output: { messages: any[] }) => {
 				try {
+					// F5: derive sessionId per-call from transform input rather than
+					// closure state, which is fundamentally unsafe under concurrent sessions.
+					// Fall back to closure (event-driven) only when input has no session id.
+					const sid: string | null =
+						input?.sessionID ??
+						input?.session?.id ??
+						input?.session?.sessionID ??
+						currentSessionId
 					const parts: string[] = []
-					if (currentSessionId) {
-						// Wrap session context in epsilon_system tags so frontend strips it from UI
-						const sessionCtx = `<session_context>\nSession ID: ${currentSessionId}\n</session_context>`
+					if (sid) {
+						const sessionCtx = `<session_context>\nSession ID: ${sid}\n</session_context>`
 						parts.push(wrapInEpsilonSystemTags(sessionCtx, { type: "session-context", source: "epsilon-sessions" }))
 					}
 					const mergedMemory = renderMergedMemoryContext(import.meta.dir)
 					if (mergedMemory) {
-						// Wrap memory context in epsilon_system tags so frontend strips it from UI
 						const memCtx = `<memory>\n${mergedMemory}\n</memory>`
 						parts.push(wrapInEpsilonSystemTags(memCtx, { type: "memory-context", source: "epsilon-sessions" }))
 					}
-					if (currentSessionId) {
-						const userId = lookupSessionOwner(currentSessionId)
+					if (sid) {
+						const userId = lookupSessionOwner(sid)
 						if (userId) {
-							const accountMemory = await fetchAccountMemories(userId, currentSessionId)
+							const accountMemory = await fetchAccountMemories(userId, sid)
 							if (accountMemory) {
 								const memCtx = `<account_memory>\n${accountMemory}\n</account_memory>`
 								parts.push(wrapInEpsilonSystemTags(memCtx, { type: "account-memory", source: "epsilon-sessions" }))
 							}
 						}
 					}
-					if (currentSessionId) {
-						const projectPath = projectPathForSession(currentSessionId)
+					if (sid) {
+						const projectPath = projectPathForSession(sid)
 						if (projectPath) {
 							const projectCtx = renderProjectContext(projectPath)
 							if (projectCtx) {
@@ -136,7 +146,7 @@ export const EpsilonSessionsPlugin: Plugin = async ({ client, directory }) => {
 					upsertMemoryContextAtPromptEnd(
 						output.messages as any[],
 						`${MEMORY_CONTEXT_MARKER}\n${parts.join("\n\n")}`,
-						currentSessionId ?? undefined,
+						sid ?? undefined,
 					)
 				} catch (err) {
 					console.error(`[epsilon-sessions] messages.transform failed: ${err}`)

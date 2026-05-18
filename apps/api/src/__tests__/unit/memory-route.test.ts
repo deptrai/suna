@@ -11,15 +11,20 @@ let listedItems: any[] = [
 let updateCalls = 0;
 
 mock.module('../../router/services/memory-extraction', () => ({
+  extractMemoriesForAccount: async () => mockedExtractResult,
+  // Legacy alias kept for backwards-compat — route now imports *ForAccount only.
   extractMemoriesForUser: async () => mockedExtractResult,
 }));
 
 mock.module('../../router/services/memory-render', () => ({
+  renderMemoriesForAccount: async () => mockedRenderResult,
   renderMemoriesForUser: async () => ({ ...mockedRenderResult, accountId: mockedAccountId }),
 }));
 
 mock.module('../../router/services/memory-account-resolver', () => ({
   resolveAccountIdFromUserId: async () => mockedAccountId,
+  // Verifier was added as part of IDOR hardening — without this mock the route 403s.
+  verifyUserBelongsToAccount: async () => true,
 }));
 
 mock.module('../../shared/db', () => ({
@@ -31,8 +36,14 @@ mock.module('../../shared/db', () => ({
     },
     update: () => ({
       set: () => ({
-        where: async () => {
-          updateCalls += 1;
+        where: (_w: any) => {
+          // F19: DELETE /:id awaits .returning(); DELETE / awaits .where() directly.
+          // updateCalls counts whichever resolves first (then mutation tracked once).
+          let counted = false;
+          const incOnce = () => { if (!counted) { counted = true; updateCalls += 1; } };
+          const promise: any = Promise.resolve().then(incOnce);
+          promise.returning = async () => { incOnce(); return [{ id: 'm1' }]; };
+          return promise;
         },
       }),
     }),
