@@ -59,6 +59,9 @@ services:
       # Without these mounts, shadow strategies + rendered reports vanish on restart.
       - vibe-trading-shadow-accounts:/home/vibe/.vibe-trading/shadow_accounts
       - vibe-trading-shadow-reports:/home/vibe/.vibe-trading/shadow_reports
+      # 5.0.1 audit: backtester caches results under shadow_runs to avoid
+      # re-running expensive backtests on every render — must persist too.
+      - vibe-trading-shadow-runs:/home/vibe/.vibe-trading/shadow_runs
     depends_on:
       redis:
         condition: service_healthy
@@ -78,6 +81,15 @@ services:
       - ${SANDBOX_NETWORK:-sandbox-network}
     environment:
       - PYTHONPATH=/app/agent
+    # 5.0.1 audit: mcp_server can call extract_shadow_strategy /
+      # render_shadow_report tools — needs shadow volume parity with
+      # vibe-trading + worker, else MCP-created profiles vanish on restart.
+    volumes:
+      - vibe-trading-runs:/app/agent/runs
+      - vibe-trading-sessions:/app/agent/sessions
+      - vibe-trading-shadow-accounts:/home/vibe/.vibe-trading/shadow_accounts
+      - vibe-trading-shadow-reports:/home/vibe/.vibe-trading/shadow_reports
+      - vibe-trading-shadow-runs:/home/vibe/.vibe-trading/shadow_runs
     depends_on:
       vibe-trading:
         condition: service_started
@@ -109,6 +121,8 @@ services:
       # Story 5.0.1: worker also writes shadow state when running render jobs
       - vibe-trading-shadow-accounts:/home/vibe/.vibe-trading/shadow_accounts
       - vibe-trading-shadow-reports:/home/vibe/.vibe-trading/shadow_reports
+      # 5.0.1 audit: worker runs backtest jobs that read/write shadow_runs cache
+      - vibe-trading-shadow-runs:/home/vibe/.vibe-trading/shadow_runs
     restart: unless-stopped
     profiles: [backend, all]
     networks:
@@ -155,3 +169,6 @@ volumes:
   # Story 5.0.1 (audit 2026-05-18): shadow state persistence for Story 5.6 features
   vibe-trading-shadow-accounts:
   vibe-trading-shadow-reports:
+  # 5.0.1 audit: backtester result cache (storage.runs_dir()) — preserves
+  # expensive backtest computations across restarts.
+  vibe-trading-shadow-runs:

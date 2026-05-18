@@ -110,3 +110,72 @@ When any of these thresholds are sustained:
 
 Migration steps: provision separate VPS, deploy via WireGuard tunnel, update
 `VIBE_TRADING_INTERNAL_URL` in `apps/api/.env`. No code changes required.
+
+## Shadow Account Persistence (Story 5.0.1)
+
+Story 5.6 (Shadow Account / Swarm Teams UI) writes per-user state under
+`~/.vibe-trading/` inside the `vibe-trading*` containers. Without persistent
+volumes, that state vanishes on every container restart and Story 5.6 features
+silently break (404 on `GET /shadow-reports/:id`).
+
+### Volumes
+
+Three named volumes are declared in `scripts/compose/docker-compose.yml` and
+mounted on **all three** vibe-trading services (`vibe-trading`,
+`vibe-trading-worker`, `vibe-trading-mcp`):
+
+| Volume | Mount path | Purpose |
+|---|---|---|
+| `vibe-trading-shadow-accounts` | `/home/vibe/.vibe-trading/shadow_accounts` | Extracted shadow strategy JSON profiles |
+| `vibe-trading-shadow-reports` | `/home/vibe/.vibe-trading/shadow_reports` | Rendered HTML / PDF reports |
+| `vibe-trading-shadow-runs` | `/home/vibe/.vibe-trading/shadow_runs` | Backtester result cache (avoids re-running expensive backtests) |
+
+The container `USER` is `vibe` (see `Vibe-Trading/Dockerfile`), so `Path.home()`
+in Python resolves to `/home/vibe`. The Dockerfile pre-creates these
+directories and `chown`s them to `vibe:vibe` before the `USER vibe` directive
+so first-boot named-volume mounts inherit usable permissions (Docker copies
+the underlying directory permissions when initializing an empty named volume).
+
+### Apply (rolling deploy)
+
+```sh
+# Rebuild image to pick up Dockerfile mkdir+chown for /home/vibe/.vibe-trading
+docker compose build vibe-trading
+
+# Rolling restart — volumes are created on first attach
+docker compose up -d --force-recreate vibe-trading vibe-trading-worker vibe-trading-mcp
+
+# Verify mounts are active and writable by the vibe user
+docker exec vibe-trading sh -c 'ls -ld /home/vibe/.vibe-trading/shadow_*'
+docker exec vibe-trading sh -c 'echo test > /home/vibe/.vibe-trading/shadow_accounts/.write-probe && rm /home/vibe/.vibe-trading/shadow_accounts/.write-probe'
+```
+
+### Backup / restore
+
+```sh
+# Snapshot (single shadow volume)
+docker run --rm -v vibe-trading-shadow-accounts:/data -v $(pwd):/backup alpine \
+  tar czf /backup/shadow-accounts-$(date +%F).tgz -C /data .
+
+# Restore
+docker run --rm -v vibe-trading-shadow-accounts:/data -v $(pwd):/backup alpine \
+  tar xzf /backup/shadow-accounts-2026-05-18.tgz -C /data
+```
+
+Run nightly via cron / systemd timer. Shadow profiles are
+user-identity-level data — losing them means users lose their saved trading
+strategies and rendered reports.
+
+### Rollback
+
+Remove the three `vibe-trading-shadow-*` lines from `volumes:` (top-level) and
+from each service's `volumes:` block, then redeploy. Any shadow data already
+on disk (in the named volumes) survives `docker compose down` and can be
+re-attached by re-adding the mount lines later. Use `docker volume rm` only
+when intentionally abandoning the data.
+
+### Consumers
+
+- Story 5.6 — Shadow Account + Swarm Teams UI (frontend `/shadow-reports/:id` endpoint)
+- Vibe-Trading `extract_shadow_strategy` MCP tool (via `vibe-trading-mcp` SSE service)
+- Vibe-Trading `render_shadow_report` API and worker job

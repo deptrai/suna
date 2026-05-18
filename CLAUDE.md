@@ -120,3 +120,12 @@ Repo này lớn (3,642 indexed files / 83k functions). **Đừng `grep -r` hoặ
   5. Restart lại tiến trình backend (`bun run dev`).
 
   **Cấu trúc 4-layer token store** (Story 5.0.2 docs): `apps/api/.env INTERNAL_SERVICE_KEY` (A) ↔ DB `sandboxes.config.serviceKey` (B) ↔ container `/workspace/.secrets/.bootstrap-env.json` (C) ↔ container s6 env `/run/s6/container_environment/EPSILON_TOKEN` (D). Story 5.0.3 sẽ DB-canonical hóa (cloud) + static mount (local) để eliminate drift triggers.
+
+- **Shadow Account data loss khi tear-down vibe-trading containers** (Story 5.0.1): Shadow profiles + reports + backtest cache lưu trong 3 Docker named volumes (`vibe-trading-shadow-{accounts,reports,runs}`). `docker compose down` giữ nguyên data; chỉ `docker volume rm` mới xoá. Backup pattern (chi tiết tại [core/docker/README.md](core/docker/README.md#shadow-account-persistence-story-501)):
+
+  ```sh
+  docker run --rm -v vibe-trading-shadow-accounts:/data -v $(pwd):/backup alpine \
+    tar czf /backup/shadow-accounts-$(date +%F).tgz -C /data .
+  ```
+
+  Run nightly. Restore tương tự với `tar xzf`. Data này là per-user persistent state — mất là user mất chiến lược + báo cáo đã render.

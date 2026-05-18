@@ -2,6 +2,15 @@
 
 Items deferred from code reviews — pre-existing issues or hard policy calls that aren't actionable in the current change.
 
+## Deferred from: code review of 5-0-1-shadow-account-volume-hotfix (2026-05-18)
+
+- Non-atomic `Path.write_text` on shared shadow_accounts volume can corrupt JSON profiles when vibe-trading + worker write concurrently. Vibe-Trading `storage.py:68-73`. Pre-existing storage logic. Fix needs tmpfile+rename or `FileLock` — track as VT shadow-storage hardening.
+- `reporter.py:176` embeds `file://` URIs in HTML reports → broken when api_server delivers report over HTTP (PDF path via weasyprint works). Pre-existing reporter bug.
+- Worker `HOME` env var not pinned in compose `vibe-trading-worker` block → Celery subprocesses may resolve `Path.home()` to `/` or raise `RuntimeError`. Pre-existing infrastructure pattern; applies to all `Path.home()` callsites.
+- `find_by_journal_hash` glob+load in `storage.py:118-128` silently drops files on `JSONDecodeError/OSError` → returns `None` for valid prior profiles, triggering duplicate `extract_shadow_profile` runs. Pre-existing storage logic.
+- Volume name collision risk when `COMPOSE_PROJECT_NAME` is not pinned — volume namespace is derived from compose-file directory name. Applies to all volumes equally; first user-identity-level persistent data (shadow profiles) makes the risk more material. Track as compose-project-name pinning task.
+- No volume driver/backup policy on new volumes (or existing `vibe-trading-runs`, `redis-data`). Track as separate backup story.
+
 ## Deferred from: code review of 5-6-shadow-account-swarm-ui (2026-05-18)
 
 - `sessionStorage.setItem` calls in `shadow-account.utils.ts` + `swarm-teams.utils.ts` không có try/catch cho `QuotaExceededError`. Edge case rất hiếm; `session-chat.tsx` đã có retry loop hấp thụ một phần. Cần policy chung về client storage error handling.

@@ -1,8 +1,15 @@
 # Story 5.0.1: Shadow Account Volume Hotfix (Platform Infra)
 
-Status: review
+Status: done
 
 **Implementation log (audit 2026-05-18)**: Shadow volume mounts applied to [scripts/compose/docker-compose.yml](scripts/compose/docker-compose.yml) — added 2 named volumes (`vibe-trading-shadow-accounts`, `vibe-trading-shadow-reports`) + mounted at `/home/vibe/.vibe-trading/shadow_{accounts,reports}` in both `vibe-trading` and `vibe-trading-worker` services. Container user verified as `vibe` (HOME=/home/vibe) via `docker exec`. Restart required: `docker compose up -d vibe-trading vibe-trading-worker` to attach new volumes. Existing volumes unchanged (rolling deploy safe).
+
+**Code-review patches (2026-05-18 — /bmad-code-review)**: Scope extended from 2→3 volumes and 2→3 services after review surfaced silent-failure modes:
+- Added 3rd volume `vibe-trading-shadow-runs` mounted at `/home/vibe/.vibe-trading/shadow_runs` (backtester result cache) on all 3 vibe-trading services. Without it, every render re-runs the full backtest after restart.
+- Added full `volumes:` block to `vibe-trading-mcp` service (was missing entirely) — MCP transport could create profiles that vanished on restart.
+- Patched [Vibe-Trading/Dockerfile:40-44](Vibe-Trading/Dockerfile#L40) to `mkdir -p /home/vibe/.vibe-trading/{shadow_accounts,shadow_reports,shadow_runs}` and `chown -R vibe:vibe /home/vibe/.vibe-trading` before `USER vibe` — fixes first-boot fresh-volume permission failure (root-owned mount + non-root container user).
+- Added "Shadow Account Persistence" runbook section to [core/docker/README.md](core/docker/README.md#shadow-account-persistence-story-501) (AC4 requirement) with apply/backup/restore/rollback procedures.
+- Added Shadow data backup note to [CLAUDE.md](CLAUDE.md) Troubleshooting section. Rebuild required: `docker compose build vibe-trading && docker compose up -d --force-recreate vibe-trading vibe-trading-worker vibe-trading-mcp`.
 
 **Depends on**: [Story 5.0](5-0-vibe-trading-platform-foundation.md) done.
 **Blocks**: [Story 5.6](5-6-shadow-account-swarm-ui.md) — 5.6 cannot ship until this is merged.
@@ -180,3 +187,17 @@ so there is no existing shadow state to migrate. This is a clean slate — just 
 - [Story 5.6](5-6-shadow-account-swarm-ui.md) — consumer of these volumes
 - [VT shadow_reports path](Vibe-Trading/agent/api_server.py#L1665)
 - [VT Dockerfile vibe user](Vibe-Trading/Dockerfile#L40)
+
+### Review Findings (2026-05-18 — /bmad-code-review)
+
+- [x] [Review][Decision→Applied] `shadow_runs/` cache directory not mounted (HIGH) — Resolved: added 3rd volume + mount on vibe-trading, vibe-trading-worker, vibe-trading-mcp.
+- [x] [Review][Decision→Applied] `vibe-trading-mcp` service writes shadow state with NO volume mount (HIGH) — Resolved: added full volumes block to mcp service (5 mounts, parity with vibe-trading).
+- [x] [Review][Decision→Applied] Dockerfile does NOT pre-create + chown `/home/vibe/.vibe-trading/` (MED→CRIT first-boot) — Resolved: patched [Vibe-Trading/Dockerfile:40-44](Vibe-Trading/Dockerfile#L40) to mkdir + chown 3 subdirs before USER vibe.
+- [x] [Review][Patch→Applied] AC4/Task 3 — `core/docker/README.md` updated with full Shadow Account persistence section (apply/backup/restore/rollback). [core/docker/README.md](core/docker/README.md#shadow-account-persistence-story-501).
+- [x] [Review][Patch→Applied] Shadow Account backup/restore note added to [CLAUDE.md](CLAUDE.md) Troubleshooting section.
+- [x] [Review][Defer] Non-atomic `write_text` on shared shadow_accounts volume can corrupt JSON on concurrent writes [Vibe-Trading/agent/.../storage.py:68-73] — deferred, pre-existing storage logic, not caused by mount addition.
+- [x] [Review][Defer] [reporter.py:176](Vibe-Trading/agent/.../reporter.py#L176) embeds `file://` URIs in HTML → broken when api_server delivers report over HTTP — deferred, pre-existing reporter bug, unrelated to mount.
+- [x] [Review][Defer] Worker `HOME` env not pinned → Celery subprocesses may resolve `Path.home()` to `/` — deferred, pre-existing infrastructure pattern, applies to all `Path.home()` callsites.
+- [x] [Review][Defer] [storage.py:118-128] `find_by_journal_hash` glob+load loop swallows stale-file errors silently — deferred, pre-existing storage logic.
+- [x] [Review][Defer] Volume name collision risk if `COMPOSE_PROJECT_NAME` changes — deferred, applies to all volumes in compose file equally, not 5.0.1-specific.
+- [x] [Review][Defer] No volume driver/backup policy on new volumes — deferred, same posture as all existing volumes (`vibe-trading-runs`, `redis-data`), separate backup story.
