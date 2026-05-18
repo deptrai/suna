@@ -653,21 +653,6 @@ So that tôi có thể tìm kiếm các token thỏa mãn nhiều điều kiện
 **Then** bảng kết quả trả về các token pass filter, sắp xếp theo điểm Narrative
 **And** kết quả render dưới dạng Heatmap (Bản đồ nhiệt) để dễ visualize dòng tiền.
 
-
-
-### Story 3.1.1: Multi-dimensional Narrative Screener (Deep Dive)
-
-As a crypto investor,
-I want hệ thống có bộ lọc đa chiều kết hợp On-chain, Social và Financial Data,
-So that tôi có thể tìm kiếm các token thỏa mãn nhiều điều kiện phức tạp (e.g. Market Cap < 100M, Smart Money Inflow > 1M, P/S < 5).
-
-**Acceptance Criteria:**
-
-**Given** dữ liệu từ Nansen, Dune và TokenTerminal đã được index
-**When** user truy cập Screener UI hoặc gõ prompt cho Agent
-**Then** bảng kết quả trả về các token pass filter, sắp xếp theo điểm Narrative
-**And** kết quả render dưới dạng Heatmap (Bản đồ nhiệt) để dễ visualize dòng tiền.
-
 ### Story 3.2: TradingView Advanced Charting
 
 As a trader,
@@ -1242,6 +1227,8 @@ Xây dựng Browser Extension auto-detect token/contract khi browse crypto sites
 - **Story 6.1.0** (Advisory Risk Endpoint): retroactive prerequisite cho 6.1 — build anonymous `/v1/advisory/risk` endpoint. **MUST ship before 6.1.1.**
 - **Story 6.1.1** (Domain-Specific Token Detection): parser system cho DexScreener + CoinMarketCap không yêu cầu `$` prefix. Blocked on 6.1.0.
 - **Story 6.1.2, 6.1.3** *(backlog)*: Facebook và CoinGecko parsers.
+
+**Cross-epic dependency (added 2026-05-18, IR finding A4)**: Story 6.4 (Model Availability & Quota Guardrail) consumes the model availability API surface from **Story 8.3 (LLM Proxy & MaaS)**. Sequence: ship 8.3 first, then 6.4 can build the UI guardrail on top of the catalog endpoint. Filing 6.4 in Epic 6 instead of Epic 8 because the deliverable is UI/extension guardrail, not backend proxy logic.
 
 ### Story 6.1: Extension Core & Token Auto-Detection
 
