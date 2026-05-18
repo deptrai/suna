@@ -52,6 +52,7 @@ import { legacyApp } from './legacy';
 import { adminApp } from './admin';
 import { sandboxPoolAdminApp } from './platform/routes/sandbox-pool-admin';
 import { oauthApp } from './oauth';
+import { advisoryApp } from './advisory';
 
 function shellQuote(value: string): string {
   return `'${value.replace(/'/g, `"'"'`)}'`;
@@ -166,8 +167,8 @@ app.use('*', async (c, next) => {
   const method = c.req.method;
 
   // Propagate userId/accountId to request context (set by auth middleware)
-  const userId = c.get('userId');
-  const accountId = c.get('accountId');
+  const userId = (c as any).get?.('userId') as string | undefined;
+  const accountId = (c as any).get?.('accountId') as string | undefined;
   if (userId) setContextField('userId', userId);
   if (accountId) setContextField('accountId', accountId);
 
@@ -286,7 +287,7 @@ app.get('/api/v1/sync/status/:jobId', (c) => c.json({ status: 'completed', synce
 // GET /v1/accounts — returns user's accounts.
 // Dual-read: epsilon.account_members first, falls back to basejump.account_user.
 app.get('/v1/accounts', supabaseAuth, async (c: any) => {
-  const userId = c.get('userId') as string;
+  const userId = (c as any).get('userId') as string;
   const userEmail = c.get('userEmail') as string;
 
   const { eq } = await import('drizzle-orm');
@@ -369,7 +370,7 @@ app.get('/v1/accounts', supabaseAuth, async (c: any) => {
 app.get('/v1/user-roles', supabaseAuth, async (c: any) => {
   const { getPlatformRole } = await import('./shared/platform-roles');
 
-  const accountId = c.get('userId') as string;
+  const accountId = (c as any).get('userId') as string;
   const role = await getPlatformRole(accountId);
   const isAdmin = role === 'admin' || role === 'super_admin';
 
@@ -430,6 +431,7 @@ app.route('/v1/servers', serversApp);        // /v1/servers, /v1/servers/:id, /v
 
 app.use('/v1/queue/*', combinedAuth);
 app.route('/v1/queue', queueApp);            // /v1/queue/sessions/:id, /v1/queue/messages/:id, /v1/queue/all, /v1/queue/status
+app.route('/v1/advisory', advisoryApp);      // /v1/advisory/risk (public, no auth)
 
 // Public device-auth endpoints (no auth — CLI uses these)
 import { createDeviceAuthPublicRouter } from './tunnel/routes/device-auth';
@@ -1745,8 +1747,8 @@ export default {
 
       try {
         const upstream = ws.data.subprotocol
-          ? new WebSocket(ws.data.targetUrl, ws.data.subprotocol, { headers: ws.data.upstreamHeaders || {} } as any)
-          : new WebSocket(ws.data.targetUrl, { headers: ws.data.upstreamHeaders || {} } as any);
+          ? new (WebSocket as any)(ws.data.targetUrl, ws.data.subprotocol, { headers: ws.data.upstreamHeaders || {} })
+          : new (WebSocket as any)(ws.data.targetUrl, { headers: ws.data.upstreamHeaders || {} });
         ws.data.upstream = upstream;
 
         upstream.addEventListener('open', () => {
