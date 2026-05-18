@@ -27,6 +27,7 @@ import {
   getSandboxInitAttempts,
   stripSandboxInitFailureMetadata,
 } from './sandbox-init-state';
+import { getSandboxServiceKeyFromConfig } from '../../shared/sandbox-secrets';
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -211,7 +212,7 @@ async function pollSingleSandbox(sandbox: typeof sandboxes.$inferSelect): Promis
       const readiness = await probeJustAvpsSandboxReadiness({
         slug: (meta.justavpsSlug as string | undefined) || undefined,
         proxyToken: (meta.justavpsProxyToken as string | undefined) || undefined,
-        serviceKey: ((sandbox.config as Record<string, unknown> | null)?.serviceKey as string | undefined) || undefined,
+        serviceKey: getSandboxServiceKeyFromConfig(sandbox.config as Record<string, unknown> | null) || undefined,
         externalId: sandbox.externalId || undefined,
       });
 
@@ -269,7 +270,7 @@ async function pollSingleSandbox(sandbox: typeof sandboxes.$inferSelect): Promis
       // instead of localhost inside the sandbox. Fire-and-forget — non-critical.
       const slug = meta.justavpsSlug as string | undefined;
       const proxyToken = meta.justavpsProxyToken as string | undefined;
-      const serviceKey = ((sandbox.config as Record<string, unknown> | null)?.serviceKey as string | undefined) || '';
+      const serviceKey = getSandboxServiceKeyFromConfig(sandbox.config as Record<string, unknown> | null) || '';
       if (slug && proxyToken) {
         const proxyDomain = config.JUSTAVPS_PROXY_DOMAIN || 'epsilon.cloud';
         const publicBaseUrl = `https://8000--${slug}.${proxyDomain}?__proxy_token=${proxyToken}`;

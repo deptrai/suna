@@ -13,7 +13,17 @@ import * as pool from '../../pool';
 import { createSandbox, generateSandboxName } from './ensure-sandbox';
 import { createApiKey } from '../../repositories/api-keys';
 import { generateProvisioningKey, hashSecretKey } from '../../shared/crypto';
+import { setSandboxServiceKeyInConfig } from '../../shared/sandbox-secrets';
 const provisioningSubscriptions = new Set<string>();
+
+function withProvisioningKeyTtl(metadata: Record<string, unknown> | null | undefined): Record<string, unknown> {
+  const now = Date.now();
+  return {
+    ...((metadata as Record<string, unknown> | null) ?? {}),
+    provisioningKeyIssuedAt: new Date(now).toISOString(),
+    provisioningKeyExpiresAt: new Date(now + 24 * 60 * 60 * 1000).toISOString(),
+  };
+}
 
 /** Find sandbox by subscription ID — checks both column and metadata */
 async function findBySubscription(accountId: string, subscriptionId: string) {
@@ -104,8 +114,9 @@ export async function provisionSandboxFromCheckout(opts: {
               await tx
                 .update(sandboxes)
                 .set({
-                  config: { serviceKey: sandboxKey.secretKey },
+                  config: setSandboxServiceKeyInConfig(insertedRow.config as Record<string, unknown> | null, sandboxKey.secretKey),
                   provisioningKey: provisioningKeyHash,
+                  metadata: withProvisioningKeyTtl(insertedRow.metadata as Record<string, unknown> | null),
                   updatedAt: new Date(),
                 })
                 .where(eq(sandboxes.sandboxId, insertedRow.sandboxId));

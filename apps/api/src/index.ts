@@ -25,6 +25,7 @@ import { ensureLocalSandboxPublicBase } from './platform/services/local-public-b
 import { getSandboxBaseUrl, proxyToSandbox } from './sandbox-proxy/routes/local-preview';
 import { validateSecretKey } from './repositories/api-keys';
 import { isEpsilonToken } from './shared/crypto';
+import { getSandboxServiceKeyFromConfig, setSandboxServiceKeyInConfig } from './shared/sandbox-secrets';
 import { getSupabase } from './shared/supabase';
 import { verifySupabaseJwt } from './shared/jwt-verify';
 import { canAccessPreviewSandbox } from './shared/preview-ownership';
@@ -624,7 +625,7 @@ async function injectSandboxToken(sandboxId: string, accountId: string): Promise
 
   // ─── Resolve the token: reuse existing or create new ───────────────────
   const [sandbox] = await db.select().from(sandboxes).where(eq(sandboxes.sandboxId, sandboxId));
-  const existingServiceKey = (sandbox?.config as any)?.serviceKey as string | undefined;
+  const existingServiceKey = getSandboxServiceKeyFromConfig((sandbox?.config as Record<string, unknown> | null) ?? null) || undefined;
   let token: string;
 
   if (existingServiceKey) {
@@ -641,7 +642,7 @@ async function injectSandboxToken(sandboxId: string, accountId: string): Promise
       const newKey = await createApiKey({ sandboxId, accountId, title: 'Sandbox Token', type: 'sandbox' });
       token = newKey.secretKey;
       await db.update(sandboxes)
-        .set({ config: { serviceKey: token }, updatedAt: new Date() })
+        .set({ config: setSandboxServiceKeyInConfig((sandbox?.config as Record<string, unknown> | null) ?? null, token), updatedAt: new Date() })
         .where(eq(sandboxes.sandboxId, sandboxId));
     }
   } else {
@@ -650,7 +651,7 @@ async function injectSandboxToken(sandboxId: string, accountId: string): Promise
     const newKey = await createApiKey({ sandboxId, accountId, title: 'Sandbox Token', type: 'sandbox' });
     token = newKey.secretKey;
     await db.update(sandboxes)
-      .set({ config: { serviceKey: token }, updatedAt: new Date() })
+      .set({ config: setSandboxServiceKeyInConfig((sandbox?.config as Record<string, unknown> | null) ?? null, token), updatedAt: new Date() })
       .where(eq(sandboxes.sandboxId, sandboxId));
   }
 
@@ -1532,7 +1533,7 @@ export default {
             const meta = (sandbox.metadata || {}) as Record<string, unknown>;
             const slug = meta.justavpsSlug as string || '';
             let proxyToken = meta.justavpsProxyToken as string || '';
-            const svcKey = (sandbox.config as Record<string, unknown>)?.serviceKey as string || '';
+            const svcKey = getSandboxServiceKeyFromConfig((sandbox.config as Record<string, unknown> | null) ?? null) || '';
             const proxyDomain = config.JUSTAVPS_PROXY_DOMAIN;
             const cfProxyUrl = `https://${port}--${slug}.${proxyDomain}`;
 

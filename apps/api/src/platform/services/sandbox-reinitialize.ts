@@ -9,6 +9,7 @@ import {
   getSandboxMetadata,
   retrySandboxProvisionCreate,
 } from './sandbox-init-state';
+import { getSandboxServiceKeyFromConfig, setSandboxServiceKeyInConfig } from '../../shared/sandbox-secrets';
 
 export function shouldReprovisionFailedSandbox(
   provider: ProviderName,
@@ -36,7 +37,7 @@ export async function reprovisionFailedSandbox(opts: {
   const existingMeta = getSandboxMetadata(sandbox.metadata);
   const existingConfig = getSandboxMetadata(sandbox.config);
 
-  let serviceKey = typeof existingConfig.serviceKey === 'string' ? existingConfig.serviceKey : '';
+  let serviceKey = getSandboxServiceKeyFromConfig(existingConfig);
   if (!serviceKey) {
     const sandboxKey = await createApiKey({
       sandboxId: sandbox.sandboxId,
@@ -71,7 +72,7 @@ export async function reprovisionFailedSandbox(opts: {
             'server_creating',
             attempt === 1 ? 'Reinitializing workspace…' : `Retrying initialization (${attempt}/3)…`,
           ),
-          config: { ...existingConfig, serviceKey },
+          config: setSandboxServiceKeyInConfig(existingConfig, serviceKey),
           updatedAt: new Date(),
         })
         .where(eq(sandboxes.sandboxId, sandbox.sandboxId));
@@ -95,7 +96,7 @@ export async function reprovisionFailedSandbox(opts: {
       status: 'active',
       baseUrl: result.baseUrl,
       metadata: buildSandboxInitSuccessMetadata(existingMeta, result.metadata, attempts),
-      config: { ...existingConfig, serviceKey },
+      config: setSandboxServiceKeyInConfig(existingConfig, serviceKey),
       updatedAt: new Date(),
     })
     .where(eq(sandboxes.sandboxId, sandbox.sandboxId));

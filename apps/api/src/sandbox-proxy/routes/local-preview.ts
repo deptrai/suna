@@ -157,11 +157,23 @@ async function updateSandboxServiceKeyInDb(newKey: string, externalId?: string):
     const { db } = await import('../../shared/db');
     const { sandboxes } = await import('@epsilon/db');
     const { eq, sql } = await import('drizzle-orm');
-    await db
+    const { buildSandboxServiceKeyConfigPatch } = await import('../../shared/sandbox-secrets');
+    const patch = buildSandboxServiceKeyConfigPatch(newKey);
+    const updated = await db
       .update(sandboxes)
-      .set({ config: sql`jsonb_set(config, '{serviceKey}', ${JSON.stringify(newKey)}::jsonb)` as any })
-      .where(eq(sandboxes.externalId, targetExternalId));
+      .set({
+        config: sql`(COALESCE(${sandboxes.config}, '{}'::jsonb) - 'serviceKey') || ${JSON.stringify(patch)}::jsonb`,
+        updatedAt: new Date(),
+      } as any)
+      .where(eq(sandboxes.externalId, targetExternalId))
+      .returning({ sandboxId: sandboxes.sandboxId });
+    if (updated.length === 0) {
+      console.warn(`[LOCAL-PREVIEW] Could not refresh sandbox serviceKey in DB: no row for externalId=${targetExternalId}`);
+      return;
+    }
     invalidateProviderCache(targetExternalId);
+    const { invalidatePreviewServiceKeyCache } = await import('./preview');
+    invalidatePreviewServiceKeyCache(targetExternalId);
     console.log(`[LOCAL-PREVIEW] Refreshed sandbox serviceKey in DB + invalidated cache (externalId=${targetExternalId})`);
   } catch (err) {
     console.warn('[LOCAL-PREVIEW] Could not update sandbox serviceKey in DB:', (err as Error).message);

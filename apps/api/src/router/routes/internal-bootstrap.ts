@@ -3,13 +3,19 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { sandboxes } from '@epsilon/db';
 import { db } from '../../shared/db';
 import { hashSecretKey } from '../../shared/crypto';
+import { getSandboxServiceKeyFromConfig, setSandboxServiceKeyInConfig } from '../../shared/sandbox-secrets';
 
 export const internalBootstrap = new Hono();
 
 type RateEntry = { count: number; windowStartedAt: number };
+type InvalidEntry = { firstSeenAt: number; attempts: number; ips: Set<string> };
 const rateBySandbox = new Map<string, RateEntry>();
+const invalidBySandbox = new Map<string, InvalidEntry>();
 const RATE_LIMIT_PER_HOUR = 10;
 const RATE_WINDOW_MS = 60 * 60 * 1000;
+const INVALID_WINDOW_MS = 10 * 60 * 1000;
+const INVALID_ATTEMPT_THRESHOLD = 5;
+const INVALID_IP_THRESHOLD = 2;
 
 // Periodic eviction of stale rate-limit entries to bound memory growth
 // for sandboxes that were deleted or never call again. Runs every hour.
@@ -20,6 +26,9 @@ function startRateMapCleanup(): void {
     const cutoff = Date.now() - RATE_WINDOW_MS;
     for (const [key, entry] of rateBySandbox.entries()) {
       if (entry.windowStartedAt < cutoff) rateBySandbox.delete(key);
+    }
+    for (const [key, entry] of invalidBySandbox.entries()) {
+      if (entry.firstSeenAt < cutoff) invalidBySandbox.delete(key);
     }
   }, RATE_WINDOW_MS);
   if (typeof rateMapCleanupTimer.unref === 'function') rateMapCleanupTimer.unref();
@@ -67,6 +76,48 @@ function consumeRateLimit(sandboxId: string): boolean {
   return true;
 }
 
+function noteInvalidAttempt(sandboxId: string, ip: string): { suspicious: boolean; attempts: number; uniqueIps: number } {
+  const now = Date.now();
+  const current = invalidBySandbox.get(sandboxId);
+  if (!current || now - current.firstSeenAt > INVALID_WINDOW_MS) {
+    const next: InvalidEntry = { firstSeenAt: now, attempts: 1, ips: new Set(ip ? [ip] : []) };
+    invalidBySandbox.set(sandboxId, next);
+    return { suspicious: false, attempts: 1, uniqueIps: next.ips.size };
+  }
+  current.attempts += 1;
+  if (ip) current.ips.add(ip);
+  const suspicious = current.attempts >= INVALID_ATTEMPT_THRESHOLD
+    && (current.ips.size >= INVALID_IP_THRESHOLD || current.ips.size === 0);
+  return { suspicious, attempts: current.attempts, uniqueIps: current.ips.size };
+}
+
+export function validateProvisioningKeyExpiry(
+  metadata: Record<string, unknown> | null | undefined,
+  nowMs: number = Date.now(),
+): { ok: true } | { ok: false; error: string } {
+  const expiresAtRaw = metadata?.provisioningKeyExpiresAt;
+  if (typeof expiresAtRaw !== 'string') {
+    return { ok: false, error: 'provisioning key expiry missing' };
+  }
+  const expiresAtMs = Date.parse(expiresAtRaw);
+  if (!Number.isFinite(expiresAtMs)) {
+    return { ok: false, error: 'provisioning key expiry invalid' };
+  }
+  if (expiresAtMs <= nowMs) {
+    return { ok: false, error: 'provisioning key expired' };
+  }
+  return { ok: true };
+}
+
+export function __testNoteInvalidAttempt(sandboxId: string, ip: string): { suspicious: boolean; attempts: number; uniqueIps: number } {
+  return noteInvalidAttempt(sandboxId, ip);
+}
+
+export function __testClearBootstrapAttemptState(sandboxId: string): void {
+  rateBySandbox.delete(sandboxId);
+  invalidBySandbox.delete(sandboxId);
+}
+
 internalBootstrap.get('/bootstrap-token', async (c) => {
   const sandboxId = c.req.query('sandboxId')?.trim();
   if (!sandboxId) {
@@ -112,14 +163,47 @@ internalBootstrap.get('/bootstrap-token', async (c) => {
     return c.json({ error: 'sandbox not provisioned for canonical bootstrap' }, 428);
   }
 
-  const providedHash = hashSecretKey(rawToken);
-  if (providedHash !== sandbox.provisioningKey) {
-    return c.json({ error: 'invalid provisioning key' }, 401);
+  const meta = (sandbox.metadata as Record<string, unknown> | null) ?? {};
+  const expiry = validateProvisioningKeyExpiry(meta);
+  if (!expiry.ok) {
+    return c.json({ error: expiry.error }, 401);
   }
 
-  const serviceKey = (sandbox.config as Record<string, unknown> | null)?.serviceKey;
-  if (typeof serviceKey !== 'string' || !serviceKey.trim()) {
+  const providedHash = hashSecretKey(rawToken);
+  if (providedHash !== sandbox.provisioningKey) {
+    const verdict = noteInvalidAttempt(sandboxId, clientIp);
+    if (verdict.suspicious) {
+      await db
+        .update(sandboxes)
+        .set({
+          provisioningKey: null,
+          metadata: {
+            ...meta,
+            provisioningKeyInvalidatedAt: new Date().toISOString(),
+            provisioningKeyInvalidationReason: 'suspicious_bootstrap_pulls',
+          },
+          updatedAt: new Date(),
+        })
+        .where(eq(sandboxes.sandboxId, sandboxId));
+      console.warn(
+        `[bootstrap-token] invalidated provisioning key for sandbox=${sandboxId} due to suspicious pulls attempts=${verdict.attempts} uniqueIps=${verdict.uniqueIps}`,
+      );
+    }
+    return c.json({ error: 'invalid provisioning key' }, 401);
+  }
+  invalidBySandbox.delete(sandboxId);
+
+  const serviceKey = getSandboxServiceKeyFromConfig(sandbox.config as Record<string, unknown> | null);
+  if (!serviceKey.trim()) {
     return c.json({ error: 'serviceKey not configured' }, 500);
+  }
+
+  const cfg = (sandbox.config as Record<string, unknown> | null) ?? {};
+  if (typeof cfg.serviceKey === 'string' && typeof cfg.serviceKeyEnc !== 'string') {
+    db.update(sandboxes)
+      .set({ config: setSandboxServiceKeyInConfig(cfg, serviceKey), updatedAt: new Date() })
+      .where(eq(sandboxes.sandboxId, sandbox.sandboxId))
+      .catch(() => {});
   }
 
   console.log(`[bootstrap-token] sandbox=${sandbox.sandboxId} requested from ip=${clientIp || 'unknown'}`);

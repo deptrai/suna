@@ -4,6 +4,7 @@ import { db } from '../shared/db';
 import { createApiKey } from '../repositories/api-keys';
 import { config, SANDBOX_VERSION } from '../config';
 import { buildJustAVPSHostRecoveryCommand, isProxyTokenStale, refreshSandboxProxyToken } from '../platform/providers/justavps';
+import { setSandboxServiceKeyInConfig } from '../shared/sandbox-secrets';
 
 function getArg(flag: string): string | null {
   const exact = Bun.argv.find((arg) => arg === flag);
@@ -120,7 +121,7 @@ for (const row of filtered) {
 
     await db.update(sandboxes)
       .set({
-        config: { serviceKey: created.secretKey },
+        config: setSandboxServiceKeyInConfig(row.config as Record<string, unknown> | null, created.secretKey),
         metadata: freshMetadata,
         updatedAt: new Date(),
       })

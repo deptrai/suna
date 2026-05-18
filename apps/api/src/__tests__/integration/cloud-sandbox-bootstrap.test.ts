@@ -11,7 +11,7 @@ describe('story 5.0.3 cloud bootstrap integration contract', () => {
   });
 
   test('internal bootstrap endpoint returns canonical service key from DB config', () => {
-    expect(ROUTE_SOURCE).toContain('serviceKey = (sandbox.config as Record<string, unknown> | null)?.serviceKey;');
+    expect(ROUTE_SOURCE).toContain('getSandboxServiceKeyFromConfig');
     expect(ROUTE_SOURCE).toContain('return c.json({');
     expect(ROUTE_SOURCE).toContain('serviceKey,');
   });

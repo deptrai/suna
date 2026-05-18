@@ -180,6 +180,8 @@ const envSchema = z.object({
 
   // ── Internal Service Key (auto-generated if missing — never fails) ───────
   INTERNAL_SERVICE_KEY:        optStr,
+  SANDBOX_SERVICE_KEY_ENCRYPTION_SECRET: optStr,
+  SANDBOX_SERVICE_KEY_ENCRYPTION_KEY_ID: optStrDefault('default'),
 
   // ── Frontend (optional) ──────────────────────────────────────────────────
   FRONTEND_URL:                optUrl('http://localhost:3000'),
@@ -510,6 +512,8 @@ export const config = {
 
   // ─── API Key Hashing ──────────────────────────────────────────────────────
   API_KEY_SECRET: env.API_KEY_SECRET,
+  SANDBOX_SERVICE_KEY_ENCRYPTION_SECRET: env.SANDBOX_SERVICE_KEY_ENCRYPTION_SECRET,
+  SANDBOX_SERVICE_KEY_ENCRYPTION_KEY_ID: env.SANDBOX_SERVICE_KEY_ENCRYPTION_KEY_ID,
 
   // ─── Search Providers ──────────────────────────────────────────────────────
   TAVILY_API_URL: env.TAVILY_API_URL,

@@ -45,6 +45,7 @@ import { config } from './config'
 import { loadCanonicalToken } from './services/load-canonical-token'
 import { HealthResponse, PortsResponse } from './schemas/common'
 import { getTokenGraceState, isWithinGraceWindow } from './services/token-grace'
+import { createReauthEventStream, registerWsSink, unregisterWsSink } from './services/realtime-reauth'
 
 // ─── Crash protection ────────────────────────────────────────────────────────
 // Prevent unhandled errors from silently killing the process or leaving it
@@ -484,6 +485,16 @@ app.get('/epsilon/ports',
     return c.json({ ports: config.PORT_MAP })
   },
 )
+
+app.get('/epsilon/reauth/events', (c) => {
+  return new Response(createReauthEventStream(), {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    },
+  })
+})
 
 // Update check — /epsilon/update and /epsilon/update/status
 app.route('/epsilon/update', updateRouter)
@@ -952,6 +963,7 @@ export default {
      */
     open(ws: { data: WsProxyData; send: (data: any) => void; close: (code?: number, reason?: string) => void }) {
       activeConnections++
+      registerWsSink(ws)
       const { targetPort, targetPath, upstreamHeaders } = ws.data
       const upstreamUrl = `ws://127.0.0.1:${targetPort}${targetPath}`
 
@@ -1044,8 +1056,9 @@ export default {
     /**
      * Client disconnected — tear down upstream and all timers.
      */
-    close(ws: { data: WsProxyData }) {
+    close(ws: { data: WsProxyData; send: (data: any) => void; close: (code?: number, reason?: string) => void }) {
       activeConnections--
+      unregisterWsSink(ws)
       ws.data.closed = true
       clearWsTimers(ws.data)
       try { ws.data.upstream?.close() } catch {}

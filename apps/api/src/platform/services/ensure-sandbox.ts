@@ -3,6 +3,7 @@ import { sandboxes } from '@epsilon/db';
 import { db } from '../../shared/db';
 import { createApiKey } from '../../repositories/api-keys';
 import { generateProvisioningKey, hashSecretKey } from '../../shared/crypto';
+import { setSandboxServiceKeyInConfig } from '../../shared/sandbox-secrets';
 import {
   getProvider,
   getDefaultProviderName,
@@ -19,6 +20,15 @@ import {
   SANDBOX_INIT_MAX_ATTEMPTS,
 } from './sandbox-init-state';
 import { registerCreator as ensureSandboxCreatorMember } from '../../teams';
+
+function withProvisioningKeyTtl(metadata: Record<string, unknown> | null | undefined): Record<string, unknown> {
+  const now = Date.now();
+  return {
+    ...((metadata as Record<string, unknown> | null) ?? {}),
+    provisioningKeyIssuedAt: new Date(now).toISOString(),
+    provisioningKeyExpiresAt: new Date(now + 24 * 60 * 60 * 1000).toISOString(),
+  };
+}
 
 export interface EnsureSandboxResult {
   row: typeof sandboxes.$inferSelect;
@@ -165,8 +175,9 @@ async function tryClaimFromPool(
     await db
       .update(sandboxes)
       .set({
-        config: { serviceKey: sandboxKey.secretKey },
+        config: setSandboxServiceKeyInConfig(row.config as Record<string, unknown> | null, sandboxKey.secretKey),
         provisioningKey: provisioningKeyHash,
+        metadata: withProvisioningKeyTtl(row.metadata as Record<string, unknown> | null),
         updatedAt: new Date(),
       })
       .where(eq(sandboxes.sandboxId, row.sandboxId));
@@ -287,19 +298,20 @@ async function provisionAsync(
   createOpts: Parameters<ReturnType<typeof getProvider>['create']>[0],
 ): Promise<EnsureSandboxResult> {
   const firstStage = provider.provisioning.stages[0];
+  const initialMetadata = withProvisioningKeyTtl(buildSandboxInitAttemptMetadata(
+    sandbox.metadata as Record<string, unknown> | null,
+    1,
+    'provisioning',
+    firstStage?.id,
+    firstStage?.message,
+  ) as Record<string, unknown>);
 
   await db
     .update(sandboxes)
     .set({
-      config: { serviceKey },
+      config: setSandboxServiceKeyInConfig(sandbox.config as Record<string, unknown> | null, serviceKey),
       provisioningKey: provisioningKeyHash,
-      metadata: buildSandboxInitAttemptMetadata(
-        sandbox.metadata as Record<string, unknown> | null,
-        1,
-        'provisioning',
-        firstStage?.id,
-        firstStage?.message,
-      ),
+      metadata: initialMetadata,
       updatedAt: new Date(),
     })
     .where(eq(sandboxes.sandboxId, sandbox.sandboxId));
@@ -312,7 +324,7 @@ async function provisionAsync(
           .update(sandboxes)
           .set({
             metadata: buildSandboxInitAttemptMetadata(
-              sandbox.metadata as Record<string, unknown> | null,
+              initialMetadata,
               attempt,
               'retrying',
               firstStage?.id,
@@ -328,7 +340,7 @@ async function provisionAsync(
           .set({
             ...(willRetry ? { status: 'provisioning' as const } : { status: 'error' as const }),
             metadata: buildSandboxInitFailureMetadata(
-              sandbox.metadata as Record<string, unknown> | null,
+              initialMetadata,
               error,
               attempt,
               willRetry,
@@ -344,7 +356,7 @@ async function provisionAsync(
         externalId: result.externalId,
         baseUrl: result.baseUrl || '',
         metadata: buildSandboxInitSuccessMetadata(
-          sandbox.metadata as Record<string, unknown> | null,
+          initialMetadata,
           { ...result.metadata, provisioningStage: firstStage?.id },
           attempts,
         ),
@@ -405,13 +417,13 @@ async function provisionSync(
           externalId: result.externalId,
           status: 'active',
           baseUrl: result.baseUrl,
-          metadata: buildSandboxInitSuccessMetadata(
+          config: setSandboxServiceKeyInConfig(sandbox.config as Record<string, unknown> | null, serviceKey),
+          provisioningKey: provisioningKeyHash,
+          metadata: withProvisioningKeyTtl(buildSandboxInitSuccessMetadata(
             sandbox.metadata as Record<string, unknown> | null,
             result.metadata,
             attempts,
-          ),
-          config: { serviceKey },
-          provisioningKey: provisioningKeyHash,
+          ) as Record<string, unknown>),
           updatedAt: new Date(),
         })
         .where(eq(sandboxes.sandboxId, sandbox.sandboxId))

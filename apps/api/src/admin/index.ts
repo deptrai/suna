@@ -39,7 +39,9 @@ import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { execSync } from 'child_process';
 import { generateSandboxKeyPair, hashSecretKey } from '../shared/crypto';
+import { getSandboxServiceKeyFromConfig, setSandboxServiceKeyInConfig } from '../shared/sandbox-secrets';
 import { getProvider, type ProviderName } from '../platform/providers';
+import { handleAdminRotateSandboxToken } from '../router/routes/admin-rotate-sandbox-token';
 
 export const adminApp = new Hono<AppEnv>();
 
@@ -988,111 +990,7 @@ adminApp.get('/api/sandboxes/:id', async (c) => {
 
 /** POST /v1/admin/api/sandboxes/:id/rotate-token — rotate sandbox service key with grace semantics */
 adminApp.post('/api/sandboxes/:id/rotate-token', async (c) => {
-  try {
-    const sandboxId = c.req.param('id');
-    const body = await c.req.json().catch(() => ({}));
-    const reason = typeof body?.reason === 'string' && body.reason.trim()
-      ? body.reason.trim()
-      : 'manual';
-    const actorUserId = c.get('userId') as string | undefined;
-
-    const { db } = await import('../shared/db');
-    const { sandboxes, epsilonApiKeys } = await import('@epsilon/db');
-    const [sandbox] = await db
-      .select()
-      .from(sandboxes)
-      .where(eq(sandboxes.sandboxId, sandboxId))
-      .limit(1);
-    if (!sandbox) return c.json({ error: 'Sandbox not found' }, 404);
-
-    const oldServiceKey = ((sandbox.config as Record<string, unknown> | null)?.serviceKey as string | undefined) || '';
-    if (!oldServiceKey) return c.json({ error: 'Sandbox service key missing' }, 400);
-
-    const { publicKey, secretKey } = generateSandboxKeyPair();
-    const secretKeyHash = hashSecretKey(secretKey);
-    const oldPrefix = oldServiceKey.slice(0, 12);
-    const newPrefix = secretKey.slice(0, 12);
-
-    const [existingKey] = await db
-      .select()
-      .from(epsilonApiKeys)
-      .where(eq(epsilonApiKeys.sandboxId, sandboxId))
-      .orderBy(desc(epsilonApiKeys.createdAt))
-      .limit(1);
-
-    await db.transaction(async (tx) => {
-      if (existingKey?.status === 'active') {
-        await tx
-          .update(epsilonApiKeys)
-          .set({ status: 'revoked' })
-          .where(eq(epsilonApiKeys.keyId, existingKey.keyId));
-      }
-
-      await tx.insert(epsilonApiKeys).values({
-        sandboxId,
-        accountId: sandbox.accountId,
-        publicKey,
-        secretKeyHash,
-        title: 'Sandbox Token',
-        type: 'sandbox',
-      });
-
-      await tx
-        .update(sandboxes)
-        .set({
-          config: {
-            ...((sandbox.config as Record<string, unknown> | null) ?? {}),
-            serviceKey: secretKey,
-          },
-          updatedAt: new Date(),
-        })
-        .where(eq(sandboxes.sandboxId, sandboxId));
-    });
-
-    let pushed = false;
-    if (sandbox.externalId) {
-      try {
-        const provider = getProvider(sandbox.provider as ProviderName);
-        const endpoint = await provider.resolveEndpoint(sandbox.externalId);
-        const rotateRes = await fetch(`${endpoint.url}/env/rotate-token`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...endpoint.headers },
-          body: JSON.stringify({ token: secretKey }),
-          signal: AbortSignal.timeout(15_000),
-        });
-        pushed = rotateRes.ok;
-      } catch (err) {
-        console.warn('[admin] rotate sandbox token push failed:', err);
-      }
-    }
-
-    // Compute once, reuse for log + response so audit & client agree on the
-    // exact grace boundary. Drift reconciler will heal sandbox container if
-    // push failed — sandbox-side grace window only fires when push succeeds.
-    const acceptOldUntilIso = new Date(Date.now() + 30_000).toISOString();
-
-    console.log(JSON.stringify({
-      event: 'sandbox.token.rotated',
-      sandbox_id: sandboxId,
-      rotated_by_user_id: actorUserId ?? 'unknown',
-      old_key_prefix: oldPrefix,
-      new_key_prefix: newPrefix,
-      reason,
-      pushed,
-      accept_old_until: acceptOldUntilIso,
-      ts: new Date().toISOString(),
-    }));
-
-    return c.json({
-      ok: true,
-      sandboxId,
-      reason,
-      pushed,
-      acceptOldUntil: acceptOldUntilIso,
-    });
-  } catch (e: any) {
-    return c.json({ error: e?.message || String(e) }, 500);
-  }
+  return handleAdminRotateSandboxToken(c);
 });
 
 /** POST /v1/admin/api/sandboxes/:id/exec — run a shell command on the sandbox via JustAVPS daemon */

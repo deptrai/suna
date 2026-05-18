@@ -4,6 +4,7 @@ import { db } from '../shared/db';
 import { config } from '../config';
 import { generateSandboxKeyPair, hashSecretKey, isEpsilonToken } from '../shared/crypto';
 import { isProxyTokenStale, refreshSandboxProxyToken } from '../platform/providers/justavps';
+import { getSandboxServiceKeyFromConfig, setSandboxServiceKeyInConfig } from '../shared/sandbox-secrets';
 
 function getArg(flag: string): string | null {
   const exact = Bun.argv.find((arg) => arg === flag);
@@ -71,9 +72,7 @@ async function processRow(row: typeof sandboxes.$inferSelect) {
     const proxyToken = freshMetadata.justavpsProxyToken as string | undefined;
     if (!slug || !proxyToken) throw new Error('Missing proxy token or slug');
 
-    const currentServiceKey = typeof ((row.config as Record<string, unknown> | null) ?? {}).serviceKey === 'string'
-      ? String(((row.config as Record<string, unknown>).serviceKey))
-      : '';
+    const currentServiceKey = getSandboxServiceKeyFromConfig(row.config as Record<string, unknown> | null);
 
     if (currentServiceKey && await verifyWithToken(slug, proxyToken, currentServiceKey)) {
       skipped += 1;
@@ -139,7 +138,7 @@ async function processRow(row: typeof sandboxes.$inferSelect) {
     await db
       .update(sandboxes)
       .set({
-        config: { serviceKey: token },
+        config: setSandboxServiceKeyInConfig(row.config as Record<string, unknown> | null, token),
         metadata: freshMetadata,
         updatedAt: new Date(),
       })

@@ -9,6 +9,7 @@ import { getAuthToken } from './routes/auth';
 import { shareApp } from './routes/share';
 import { db } from '../shared/db';
 import { isProxyTokenStale, refreshSandboxProxyToken } from '../platform/providers/justavps';
+import { getSandboxServiceKeyFromConfig } from '../shared/sandbox-secrets';
 import { resolvePreviewUserContext } from '../shared/preview-ownership';
 import {
   encodeEpsilonUserContext,
@@ -190,7 +191,7 @@ export async function resolveProvider(externalId: string): Promise<{ provider: C
     const provider = sandbox.provider as CachedProviderName;
     const baseUrl = sandbox.baseUrl || '';
     const configJson = (sandbox.config || {}) as Record<string, unknown>;
-    const serviceKey = typeof configJson.serviceKey === 'string' ? configJson.serviceKey : '';
+    const serviceKey = getSandboxServiceKeyFromConfig(configJson);
     const metaJson = (sandbox.metadata || {}) as Record<string, unknown>;
     let proxyToken = typeof metaJson.justavpsProxyToken === 'string' ? metaJson.justavpsProxyToken : '';
     const slug = typeof metaJson.justavpsSlug === 'string' ? metaJson.justavpsSlug : '';

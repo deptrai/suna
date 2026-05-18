@@ -17,6 +17,7 @@ import { sandboxes, type Database } from '@epsilon/db';
 import { db as defaultDb } from '../../shared/db';
 import { createApiKey } from '../../repositories/api-keys';
 import { generateProvisioningKey, hashSecretKey } from '../../shared/crypto';
+import { setSandboxServiceKeyInConfig } from '../../shared/sandbox-secrets';
 import { supabaseAuth as authMiddleware } from '../../middleware/auth';
 import {
   getProvider as defaultGetProvider,
@@ -119,6 +120,15 @@ function serializeSandbox(
 
 function isManagedVpsProvider(providerName: ProviderName): boolean {
   return providerName === 'justavps';
+}
+
+function withProvisioningKeyTtl(metadata: Record<string, unknown> | null | undefined): Record<string, unknown> {
+  const now = Date.now();
+  return {
+    ...((metadata as Record<string, unknown> | null) ?? {}),
+    provisioningKeyIssuedAt: new Date(now).toISOString(),
+    provisioningKeyExpiresAt: new Date(now + 24 * 60 * 60 * 1000).toISOString(),
+  };
 }
 
 function getProviderDefaults() {
@@ -432,6 +442,17 @@ export function createCloudSandboxRouter(
       });
       const provisioningKey = generateProvisioningKey();
       const provisioningKeyHash = hashSecretKey(provisioningKey);
+      const provisioningMetadata = withProvisioningKeyTtl(sandbox.metadata as Record<string, unknown> | null);
+
+      await db
+        .update(sandboxes)
+        .set({
+          config: setSandboxServiceKeyInConfig(sandbox.config as Record<string, unknown> | null, sandboxKey.secretKey),
+          provisioningKey: provisioningKeyHash,
+          metadata: provisioningMetadata,
+          updatedAt: new Date(),
+        })
+        .where(eq(sandboxes.sandboxId, sandbox.sandboxId));
 
       // ── Try pool claim before provider.create() ──────────────────────────
       if (config.isPoolEnabled() && isManagedVpsProvider(providerName)) {
@@ -449,10 +470,10 @@ export function createCloudSandboxRouter(
                 status: 'active',
                 baseUrl: claimed.baseUrl,
                 metadata: {
-                  ...((sandbox.metadata as Record<string, unknown>) ?? {}),
+                  ...provisioningMetadata,
                   ...claimed.metadata,
                 },
-                config: { serviceKey: sandboxKey.secretKey },
+                config: setSandboxServiceKeyInConfig(sandbox.config as Record<string, unknown> | null, sandboxKey.secretKey),
                 provisioningKey: provisioningKeyHash,
                 updatedAt: new Date(),
               })
@@ -509,7 +530,7 @@ export function createCloudSandboxRouter(
                   .update(sandboxes)
                   .set({
                     metadata: buildSandboxInitAttemptMetadata(
-                      sandbox.metadata as Record<string, unknown> | null,
+                      provisioningMetadata,
                       attempt,
                       attempt === 1 ? 'provisioning' : 'retrying',
                       firstStage?.id,
@@ -525,7 +546,7 @@ export function createCloudSandboxRouter(
                   .set({
                     ...(willRetry ? { status: 'provisioning' as const } : { status: 'error' as const }),
                     metadata: buildSandboxInitFailureMetadata(
-                      sandbox.metadata as Record<string, unknown> | null,
+                      provisioningMetadata,
                       error,
                       attempt,
                       willRetry,
@@ -544,11 +565,11 @@ export function createCloudSandboxRouter(
                 status: 'active',
                 baseUrl: result.baseUrl,
                 metadata: buildSandboxInitSuccessMetadata(
-                  sandbox.metadata as Record<string, unknown> | null,
+                  provisioningMetadata,
                   result.metadata,
                   attempts,
                 ),
-                config: { serviceKey: sandboxKey.secretKey },
+                config: setSandboxServiceKeyInConfig(sandbox.config as Record<string, unknown> | null, sandboxKey.secretKey),
                 provisioningKey: provisioningKeyHash,
                 updatedAt: new Date(),
               })
@@ -632,7 +653,7 @@ export function createCloudSandboxRouter(
             .update(sandboxes)
             .set({
               metadata: buildSandboxInitAttemptMetadata(
-                sandbox.metadata as Record<string, unknown> | null,
+                provisioningMetadata,
                 attempt,
                 attempt === 1 ? 'provisioning' : 'retrying',
                 firstStage?.id,
@@ -648,7 +669,7 @@ export function createCloudSandboxRouter(
             .set({
               ...(willRetry ? { status: 'provisioning' as const } : { status: 'error' as const }),
               metadata: buildSandboxInitFailureMetadata(
-                sandbox.metadata as Record<string, unknown> | null,
+                provisioningMetadata,
                 error,
                 attempt,
                 willRetry,
@@ -669,11 +690,11 @@ export function createCloudSandboxRouter(
           status: 'active',
           baseUrl: result.baseUrl,
           metadata: buildSandboxInitSuccessMetadata(
-            sandbox.metadata as Record<string, unknown> | null,
+            provisioningMetadata,
             result.metadata,
             attempts,
           ),
-          config: { serviceKey: sandboxKey.secretKey },
+          config: setSandboxServiceKeyInConfig(sandbox.config as Record<string, unknown> | null, sandboxKey.secretKey),
           provisioningKey: provisioningKeyHash,
           updatedAt: new Date(),
         })

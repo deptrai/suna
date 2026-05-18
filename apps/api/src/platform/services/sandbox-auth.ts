@@ -2,6 +2,7 @@ import { and, eq, ne } from 'drizzle-orm';
 import { sandboxes } from '@epsilon/db';
 import { db } from '../../shared/db';
 import { config } from '../../config';
+import { getSandboxServiceKeyFromConfig } from '../../shared/sandbox-secrets';
 
 export function getAuthCandidates(primary?: string): string[] {
   return Array.from(new Set([
@@ -18,7 +19,7 @@ export async function getSandboxServiceKeyByExternalId(externalId: string): Prom
     .limit(1);
 
   const configJson = (row?.config || {}) as Record<string, unknown>;
-  return typeof configJson.serviceKey === 'string' ? configJson.serviceKey : '';
+  return getSandboxServiceKeyFromConfig(configJson);
 }
 
 export async function getLocalSandboxServiceKey(): Promise<string> {

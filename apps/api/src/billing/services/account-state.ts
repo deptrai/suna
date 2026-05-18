@@ -15,6 +15,7 @@ import { getCreditSummary } from './credits';
 import { getAutoTopupSettings } from './auto-topup';
 import { isPlatformAdmin } from '../../shared/platform-roles';
 import { config } from '../../config';
+import { getSandboxServiceKeyFromConfig } from '../../shared/sandbox-secrets';
 import type {
   AccountStateResponse,
   ScheduledChange,
@@ -127,7 +128,7 @@ export async function buildMinimalAccountState(accountId: string): Promise<Accou
     });
 
     const serviceKey = sandboxRows
-      .map((row: any) => (row.config as Record<string, unknown> | null)?.serviceKey)
+      .map((row: any) => getSandboxServiceKeyFromConfig(row.config as Record<string, unknown> | null))
       .find((value: unknown): value is string => typeof value === 'string' && value.length > 0)
       ?? null;
     yoloUsage = await getYoloUsage(serviceKey);

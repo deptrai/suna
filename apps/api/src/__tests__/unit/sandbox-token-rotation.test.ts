@@ -8,7 +8,7 @@ import * as path from 'path';
 // for consistency. End-to-end behavioral coverage lives in Story 5.0.4 chaos
 // suite (rotate then immediately call sandbox with old token).
 
-const SOURCE_PATH = path.resolve(process.cwd(), 'src/admin/index.ts');
+const SOURCE_PATH = path.resolve(process.cwd(), 'src/router/routes/admin-rotate-sandbox-token.ts');
 const SOURCE = fs.readFileSync(SOURCE_PATH, 'utf8');
 
 describe('story 5.0.3 sandbox token rotation grace contract (AC4)', () => {
@@ -30,8 +30,10 @@ describe('story 5.0.3 sandbox token rotation grace contract (AC4)', () => {
     expect(SOURCE).toContain('rotated_by_user_id');
   });
 
-  test('rotate route pushes new token to sandbox (best-effort)', () => {
+  test('rotate route pushes new token to sandbox before DB commit (fail-closed on push failure)', () => {
     expect(SOURCE).toContain('/env/rotate-token');
-    expect(SOURCE).toContain('pushed = rotateRes.ok');
+    expect(SOURCE).toContain('Failed to push token to sandbox; DB token was not rotated');
+    expect(SOURCE).toContain('return c.json({');
+    expect(SOURCE).toContain('}, 502);');
   });
 });

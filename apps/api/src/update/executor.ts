@@ -4,6 +4,7 @@ import { db } from '../shared/db';
 import { config } from '../config';
 import { getProvider, type ProviderName, type SandboxProvider } from '../platform/providers';
 import { JustAVPSProvider } from '../platform/providers/justavps';
+import { getSandboxServiceKeyFromConfig } from '../shared/sandbox-secrets';
 import { setPhase, clearUpdateStatus } from './status';
 import { isUpdateCancellationRequested } from './status';
 import {
@@ -302,7 +303,7 @@ export async function executeUpdate(sandboxId: string, targetVersion: string): P
     await writeContainerConfig(endpoint, updatedConfig);
 
     // ── Re-inject env so updated sandboxes get latest platform vars (e.g. YOLO) ──
-    const serviceKey = (row.config as Record<string, unknown>)?.serviceKey as string || '';
+    const serviceKey = getSandboxServiceKeyFromConfig((row.config as Record<string, unknown> | null) ?? null) || '';
     if (serviceKey) {
       try {
         const { inject } = await import('../pool/env-injector');

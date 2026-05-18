@@ -9,6 +9,7 @@ import { eq } from 'drizzle-orm';
 import { sandboxes } from '@epsilon/db';
 import { getDaytona } from '../../shared/daytona';
 import { db } from '../../shared/db';
+import { getSandboxServiceKeyFromConfig } from '../../shared/sandbox-secrets';
 import { config, SANDBOX_VERSION } from '../../config';
 import type {
   SandboxProvider,
@@ -216,7 +217,7 @@ export class DaytonaProvider implements SandboxProvider {
         .from(sandboxes)
         .where(eq(sandboxes.externalId, externalId))
         .limit(1);
-      const serviceKey = (row?.config as Record<string, unknown>)?.serviceKey as string | undefined;
+      const serviceKey = getSandboxServiceKeyFromConfig((row?.config as Record<string, unknown> | null) ?? null) || undefined;
       if (serviceKey) {
         headers['Authorization'] = `Bearer ${serviceKey}`;
       }

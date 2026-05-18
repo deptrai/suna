@@ -88,6 +88,12 @@ export type AppEnv = {
   Variables: {
     userId: string;
     userEmail: string;
+    accountId?: string;
+    'advisory.request_id'?: string;
+    'advisory.cache_key'?: string;
+    'advisory.rate_limited_stale'?: boolean;
+    'advisory.stale_payload'?: unknown;
+    'advisory.rate_limit'?: { ip?: string; key?: string; remaining?: number; resetEpochSec?: number };
   };
 };
 
@@ -410,4 +416,3 @@ export interface CodeValidatorResponse {
   disclaimer: string;
   cost: number;
 }
-

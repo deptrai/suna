@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { sandboxes } from '@epsilon/db';
 import { db } from '../../shared/db';
+import { getSandboxServiceKeyFromConfig } from '../../shared/sandbox-secrets';
 import { config, SANDBOX_VERSION } from '../../config';
 import { execOnHost } from '../../update/exec';
 import { JUSTAVPS_SERVICE_NAME } from '../../update/container-config';
@@ -759,7 +760,7 @@ export class JustAVPSProvider implements SandboxProvider {
     }
 
     // Service key for core/epsilon-master auth
-    const serviceKey = (row?.config as Record<string, unknown>)?.serviceKey as string | undefined;
+    const serviceKey = getSandboxServiceKeyFromConfig((row?.config as Record<string, unknown> | null) ?? null) || undefined;
     if (serviceKey) {
       headers['Authorization'] = `Bearer ${serviceKey}`;
     } else if (config.INTERNAL_SERVICE_KEY) {

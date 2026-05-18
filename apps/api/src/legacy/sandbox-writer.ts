@@ -4,6 +4,7 @@ import { db } from '../shared/db';
 import { getSandboxBaseUrl } from '../sandbox-proxy/routes/local-preview';
 import { getDaytona, isDaytonaConfigured } from '../shared/daytona';
 import { config } from '../config';
+import { getSandboxServiceKeyFromConfig } from '../shared/sandbox-secrets';
 import type { TransformedSession, TransformedMessage, TransformedPart } from './types';
 
 export async function writeSessionToSandbox(
@@ -112,7 +113,7 @@ export async function resolveSandboxEndpoint(externalId: string): Promise<{ base
 
     if (sandbox) {
       const configJson = (sandbox.config || {}) as Record<string, unknown>;
-      const serviceKey = typeof configJson.serviceKey === 'string' ? configJson.serviceKey : '';
+      const serviceKey = getSandboxServiceKeyFromConfig(configJson);
 
       if (sandbox.provider === 'daytona' && isDaytonaConfigured()) {
         try {

@@ -5,6 +5,7 @@ import { existsSync, readFileSync, readdirSync } from 'fs'
 import { SecretStore } from '../services/secret-store'
 import { syncSecretToAuth } from '../services/auth-sync'
 import { startTokenGraceWindow } from '../services/token-grace'
+import { broadcastReauthSignal } from '../services/realtime-reauth'
 import {
   ErrorResponse,
   UnauthorizedResponse,
@@ -264,6 +265,11 @@ envRouter.post('/rotate-token',
       // Grace window: allow old token briefly for in-flight requests.
       if (oldToken && oldToken !== newToken) {
         startTokenGraceWindow(oldToken, 30_000)
+      }
+
+      const reauthDelivered = broadcastReauthSignal()
+      if (reauthDelivered > 0) {
+        console.log(`[ENV API] broadcasted reauth signal to ${reauthDelivered} websocket client(s)`)
       }
 
       // Restart OpenCode to pick up the new token

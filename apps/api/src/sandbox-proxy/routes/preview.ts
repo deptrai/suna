@@ -5,6 +5,7 @@ import { sandboxes, sandboxMembers } from '@epsilon/db';
 import { getDaytona } from '../../shared/daytona';
 import { db } from '../../shared/db';
 import { config } from '../../config';
+import { getSandboxServiceKeyFromConfig } from '../../shared/sandbox-secrets';
 import {
   canAccessPreviewSandbox,
   resolvePreviewUserContext,
@@ -52,6 +53,10 @@ function setCachedServiceKey(sandboxId: string, key: string | null) {
   serviceKeyCache.set(sandboxId, { key, expiresAt: Date.now() + CACHE_TTL_MS });
 }
 
+export function invalidatePreviewServiceKeyCache(sandboxId: string): void {
+  serviceKeyCache.delete(sandboxId);
+}
+
 function getCachedPreviewLink(sandboxId: string, port: number): PreviewLinkEntry | null {
   const key = `${sandboxId}:${port}`;
   const entry = previewLinkCache.get(key);
@@ -97,7 +102,7 @@ async function resolveServiceKey(sandboxId: string): Promise<string | null> {
       .where(eq(sandboxes.externalId, sandboxId))
       .limit(1);
 
-    const key = (row?.config as Record<string, unknown>)?.serviceKey as string | null ?? null;
+    const key = getSandboxServiceKeyFromConfig((row?.config as Record<string, unknown> | null) ?? null) || null;
     setCachedServiceKey(sandboxId, key);
     return key;
   } catch {

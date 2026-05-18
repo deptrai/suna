@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { sandboxes } from '@epsilon/db';
 import { db } from '../../shared/db';
 import { config } from '../../config';
+import { getSandboxServiceKeyFromConfig } from '../../shared/sandbox-secrets';
 
 const INTERVAL_MS = 60_000;
 let timer: ReturnType<typeof setInterval> | null = null;
@@ -9,7 +10,7 @@ let running = false;
 
 function getServiceKeyFromConfig(value: unknown): string {
   const cfg = (value as Record<string, unknown> | null) || null;
-  return typeof cfg?.serviceKey === 'string' ? cfg.serviceKey : '';
+  return getSandboxServiceKeyFromConfig(cfg);
 }
 
 function buildHeaders(serviceKey: string, metadata: Record<string, unknown> | null): Record<string, string> {

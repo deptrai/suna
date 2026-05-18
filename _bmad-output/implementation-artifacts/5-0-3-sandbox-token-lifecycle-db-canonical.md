@@ -1,6 +1,6 @@
 # Story 5.0.3: Sandbox Token Lifecycle — DB-Canonical Migration
 
-Status: in-progress (post-review 2026-05-18 — 19 patches applied; Task 6.4 + 7.x deferred per spec)
+Status: done (post-review follow-up 2026-05-18 — patch findings applied, focused tests green; Task 6.4 + 7.x deferred per spec)
 
 **Epic:** 5 — Backtesting Sandbox
 **Type:** P1 architectural migration (deferred from 5.0.2 hotfix)
@@ -366,3 +366,19 @@ apps/api/src/__tests__/integration/cloud-sandbox-bootstrap.test.ts    (NEW — A
 - `prev.length === a.length` always-true guard (Blind F5) — folded into the MAJOR "dedupe grace logic" patch above.
 
 
+### Review Findings (2026-05-18 — bmad-code-review follow-up after defer implementation)
+
+> 3 review layers ran (Blind Hunter, Edge Case Hunter, Acceptance Auditor). Edge Case Hunter returned markdown instead of the expected JSON array; parsed best-effort. Source legend: `B`=Blind, `E`=Edge, `A`=Auditor.
+
+- [x] [Review][Patch][BLOCK] Encryption-at-rest scope accepted — keep encrypted canonical storage in 5.0.3, but patch the contract drift with explicit encrypted canonical format, migration fallback, missed read/write paths, and key-rotation/decrypt-failure handling. Sources: B+E+A. [apps/api/src/shared/sandbox-secrets.ts:4]
+
+- [x] [Review][Patch][BLOCK] Admin rotation commits the new DB key before the sandbox accepts it; endpoint resolution then authenticates `/env/rotate-token` with the new token and still returns `ok: true` if push fails. Sources: B+E+A. [apps/api/src/router/routes/admin-rotate-sandbox-token.ts:57]
+- [x] [Review][Patch][BLOCK] Admin rotation does not trigger the required reconcile-now path or emit `sandbox.token.rotated` to the existing in-memory pub/sub; it only writes a console audit log. Sources: A. [apps/api/src/router/routes/admin-rotate-sandbox-token.ts:85]
+- [x] [Review][Patch][MAJOR] Re-auth signalling is incomplete and unsafe: only proxied WebSockets are registered, SSE is not covered, and every arbitrary proxied WS receives an unsolicited JSON control payload. Sources: E+A. [core/epsilon-master/src/index.ts:954]
+- [x] [Review][Patch][MAJOR] Service-key caches are not invalidated after rotation, so proxy paths can keep using the old token for up to 5 minutes while sandbox grace is only 30 seconds. Sources: E. [apps/api/src/sandbox-proxy/index.ts:97]
+- [x] [Review][Patch][MAJOR] Rotation revokes only the latest sandbox API key row; multiple active old keys or concurrent rotations can remain valid because validation accepts any active matching hash. Sources: E. [apps/api/src/router/routes/admin-rotate-sandbox-token.ts:33]
+- [x] [Review][Patch][MAJOR] Provisioning-key TTL can be erased by later metadata writes built from a stale sandbox snapshot, and bootstrap fails open when expiry is missing or invalid. Sources: E. [apps/api/src/platform/services/ensure-sandbox.ts:325]
+- [x] [Review][Patch][MAJOR] Failed-sandbox reprovision still reads and writes plaintext `config.serviceKey`, so encrypted-only rows are treated as missing a key and can be downgraded back to plaintext. Sources: E. [apps/api/src/platform/services/sandbox-reinitialize.ts:39]
+- [x] [Review][Patch][MAJOR] Local preview service-key repair switched to read-modify-write of the whole JSON config, which can clobber concurrent config changes and logs success even when no sandbox row matched. Sources: B+E. [apps/api/src/sandbox-proxy/routes/local-preview.ts:161]
+- [x] [Review][Patch][MEDIUM] Invalid provisioning-attempt tracking requires multiple unique IPs and is never cleared on successful bootstrap, so unknown-IP deployments never trip abuse invalidation while stale failures can poison a later legitimate sandbox. Sources: E. [apps/api/src/router/routes/internal-bootstrap.ts:79]
+- [x] [Review][Patch][MEDIUM] Rotation/bootstrap tests are source-string checks, not behavioral tests for DB transaction order, push failure, cache invalidation, pub/sub/SSE signalling, TTL enforcement, or reprovision migration. Sources: B+A. [apps/api/src/__tests__/unit/admin-rotate-sandbox-token.test.ts:5]
