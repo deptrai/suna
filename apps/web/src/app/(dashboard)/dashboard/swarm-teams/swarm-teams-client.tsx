@@ -56,7 +56,7 @@ export function SwarmTeamsClient() {
 
       <div className="rounded-xl border border-border/50 bg-muted/30 p-4 text-sm">
         Some swarm presets require your OpenAI key. Configure it in{' '}
-        <a href="/dashboard/settings" className="underline">Settings → AI Keys</a>.
+        <a href="/settings/api-keys" className="underline">Settings → AI Keys</a>.
       </div>
 
       {blocked ? (

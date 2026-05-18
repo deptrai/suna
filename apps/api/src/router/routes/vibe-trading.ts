@@ -10,7 +10,7 @@ import {
   VibeTradingNotFoundError,
   VibeTradingDownstreamError,
 } from '../services/vibe-trading';
-import { checkCredits, deductToolCredits } from '../services/billing';
+import { checkCredits, deductToolCredits, resolveAccountTier } from '../services/billing';
 import { claimOrAssertShadowOwnership, ShadowOwnershipError } from '../services/shadow-ownership';
 import { config, getToolCost } from '../../config';
 import type { AppContext } from '../../types';
@@ -136,6 +136,15 @@ vibeTrading.get('/runs/:jobId', async (c) => {
 vibeTrading.get('/shadow-reports/:shadowId', async (c) => {
   const accountId = c.get('accountId');
   if (!accountId) throw new HTTPException(401, { message: 'Unauthorized' });
+
+  // Story 5.0.2 audit Q2 (2026-05-18): shadow_id is only 32 bits (8 hex chars)
+  // — brute-forceable from a Tier 1 sandbox. Gate at Tier 2+ as defense in depth.
+  // TODO: when shadow accounts get DB-backed ownership tracking (future story),
+  // add `WHERE owner_account_id = ?` check to scope reports to their owner.
+  const tier = await resolveAccountTier(accountId);
+  if (tier !== 'tier2' && tier !== 'tier3') {
+    throw new HTTPException(403, { message: 'Tier 2 required for Shadow Account reports' });
+  }
 
   const shadowId = c.req.param('shadowId');
   if (!SHADOW_ID_RE.test(shadowId)) {

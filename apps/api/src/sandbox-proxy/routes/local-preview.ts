@@ -17,6 +17,10 @@ import { config } from '../../config';
 import { execSync } from 'child_process';
 import { buildCanonicalSandboxAuthCommand } from '../../platform/services/sandbox-auth';
 import { invalidateProviderCache } from '..';
+// Story 5.0.2: EPSILON_USER_CONTEXT_HEADER name + buildSignedUserContextHeader for
+// re-sign on drift reconcile. buildSignedUserContextHeader uses dynamic import to
+// avoid circular dependency with `..` (index.ts imports proxyToSandbox from here).
+import { EPSILON_USER_CONTEXT_HEADER } from '../../shared/epsilon-user-context';
 
 const EPSILON_MASTER_PORT = 8000;
 const FETCH_TIMEOUT_MS = 30_000;
@@ -159,6 +163,98 @@ async function updateSandboxServiceKeyInDb(newKey: string): Promise<void> {
   }
 }
 
+// ─── Story 5.0.2: filesystem .env sync for local dev (Task 5 / AC4) ─────────
+/**
+ * After a successful drift reconcile or 401 retry, push the corrected key into
+ * apps/api/.env INTERNAL_SERVICE_KEY so subsequent backend restarts use the
+ * correct value. Gated by config.isLocal() — in cloud mode, secrets manager
+ * owns the canonical key and we must not corrupt deployment config.
+ *
+ * Atomic write via tmp file + rename to prevent partial writes.
+ */
+async function syncInternalServiceKeyToEnvFile(newKey: string): Promise<void> {
+  if (!config.isLocal()) return;
+  try {
+    const path = await import('path');
+    const fs = await import('fs');
+
+    // Resolve apps/api/.env path: env var override → derived from cwd
+    const envPath = process.env.EPSILON_API_ENV_FILE ?? path.resolve(process.cwd(), '.env');
+    if (!fs.existsSync(envPath)) {
+      console.warn(`[reconcile] .env not found at ${envPath} — skipping sync`);
+      return;
+    }
+
+    const existing = fs.readFileSync(envPath, 'utf8');
+    const KEY_LINE_RE = /^INTERNAL_SERVICE_KEY=.*$/m;
+    let next: string;
+    if (KEY_LINE_RE.test(existing)) {
+      next = existing.replace(KEY_LINE_RE, `INTERNAL_SERVICE_KEY=${newKey}`);
+    } else {
+      next = existing.replace(/\s*$/, '') + `\nINTERNAL_SERVICE_KEY=${newKey}\n`;
+    }
+    if (next === existing) return; // no-op when key already matches
+
+    const tmpPath = `${envPath}.tmp-${process.pid}`;
+    fs.writeFileSync(tmpPath, next, { mode: 0o600 });
+    fs.renameSync(tmpPath, envPath);
+    console.log(`[reconcile] .env INTERNAL_SERVICE_KEY synced to ${newKey.slice(0, 16)}…; restart backend to fully apply`);
+  } catch (err) {
+    console.warn('[reconcile] Failed to sync INTERNAL_SERVICE_KEY into .env:', (err as Error).message);
+  }
+}
+
+// ─── Story 5.0.2: drift reconcile + circuit breaker (Task 3 / AC2) ──────────
+/**
+ * Per-sandbox circuit breaker. If reconcile failed within the cool-off window,
+ * skip further reconcile attempts for that sandbox until window expires —
+ * prevents retry storms under sustained drift (e.g. container unreachable).
+ */
+const DRIFT_COOLOFF_MS = 30_000;
+const driftCircuit = new Map<string, { failedAt: number }>();
+
+function isCircuitTripped(sandboxId: string): boolean {
+  const entry = driftCircuit.get(sandboxId);
+  if (!entry) return false;
+  if (Date.now() - entry.failedAt > DRIFT_COOLOFF_MS) {
+    driftCircuit.delete(sandboxId);
+    return false;
+  }
+  return true;
+}
+
+function tripCircuit(sandboxId: string): void {
+  driftCircuit.set(sandboxId, { failedAt: Date.now() });
+}
+
+function clearCircuit(sandboxId: string): void {
+  driftCircuit.delete(sandboxId);
+}
+
+/**
+ * Reconcile after detecting drift: read container truth, push to DB + cache +
+ * .env. Returns the new key if reconcile produced an actual change worth retrying,
+ * or null if no actual drift (false alarm — corruption/expired but DB matches
+ * container).
+ */
+async function reconcileSandboxToken(sandboxId: string, currentDbKey: string): Promise<string | null> {
+  const containerKey = readContainerBootstrapKey();
+  if (!containerKey) {
+    console.warn(`[reconcile] sandbox=${sandboxId} could not read container bootstrap; circuit tripped`);
+    tripCircuit(sandboxId);
+    return null;
+  }
+  if (containerKey === currentDbKey) {
+    // No actual drift — drift header was a false alarm (e.g. token corrupted in transit).
+    // No point retrying with the same key; clear circuit and let the original anonymous
+    // response pass through.
+    return null;
+  }
+  await updateSandboxServiceKeyInDb(containerKey);
+  await syncInternalServiceKeyToEnvFile(containerKey);
+  return containerKey;
+}
+
 const STRIP_REQUEST_HEADERS = new Set([
   'host',
   'authorization',
@@ -282,6 +378,101 @@ export async function proxyToSandbox(
     return out;
   }
 
+  // ─── Story 5.0.2 AC2: drift detection + sync retry ───────────────────────
+  // epsilon-master sets X-Epsilon-Token-Drift when HMAC verification fails.
+  // We reconcile (read container truth, update DB) + re-sign the user-context
+  // header + retry the upstream fetch ONCE. Circuit breaker prevents retry
+  // storms under sustained drift.
+  const driftHeader = response.headers.get('X-Epsilon-Token-Drift');
+  if (driftHeader && !baseUrlOverride && !isCircuitTripped(sandboxId) && serviceKey) {
+    console.log(`[reconcile] sandbox=${sandboxId} drift detected (${driftHeader}); attempting reconcile + sync retry`);
+    const oldPrefix = serviceKey.slice(0, 16);
+    const newKey = await reconcileSandboxToken(sandboxId, serviceKey).catch((err) => {
+      console.warn(`[reconcile] sandbox=${sandboxId} reconcile threw:`, (err as Error).message);
+      return null;
+    });
+
+    if (newKey) {
+      // Reconcile produced a new key — re-sign + retry ONCE.
+      // The original X-Epsilon-User-Context header is signed with the OLD key
+      // (HMAC fails), but its base64-encoded PAYLOAD is still readable. Extract
+      // userId from there so the re-sign preserves identity. For local-dev, the
+      // payload will contain `userId: 'local-dev-admin'`.
+      let userIdForSign: string | undefined;
+      try {
+        const originalCtx = headers.get(EPSILON_USER_CONTEXT_HEADER) ?? extraHeaders?.[EPSILON_USER_CONTEXT_HEADER];
+        if (originalCtx) {
+          const [payloadB64] = originalCtx.split('.');
+          if (payloadB64) {
+            const padded = payloadB64 + '='.repeat((4 - payloadB64.length % 4) % 4);
+            const json = Buffer.from(padded.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8');
+            const decoded = JSON.parse(json);
+            if (typeof decoded?.userId === 'string') userIdForSign = decoded.userId;
+          }
+        }
+      } catch {
+        // payload unreadable; leave userIdForSign undefined → degrades to anonymous on retry
+      }
+      const signMod = await import('..');
+      const reSigned = await signMod.buildSignedUserContextHeader(sandboxId, userIdForSign, newKey);
+
+      const retryHeaders = new Headers(headers);
+      retryHeaders.set('Authorization', `Bearer ${newKey}`);
+      const userCtx = reSigned[EPSILON_USER_CONTEXT_HEADER];
+      if (userCtx) retryHeaders.set(EPSILON_USER_CONTEXT_HEADER, userCtx);
+      else retryHeaders.delete(EPSILON_USER_CONTEXT_HEADER);
+
+      const retryController = new AbortController();
+      const retryTimer = setTimeout(() => retryController.abort(), FETCH_TIMEOUT_MS);
+      let retryResponse: Response;
+      try {
+        retryResponse = await fetch(targetUrl, {
+          method,
+          headers: retryHeaders,
+          body: incomingBody,
+          signal: retryController.signal,
+          // @ts-ignore
+          decompress: false,
+          redirect: 'manual',
+        });
+      } catch (err) {
+        console.warn(`[reconcile] sandbox=${sandboxId} retry fetch failed:`, (err as Error).message);
+        tripCircuit(sandboxId);
+        clearTimeout(retryTimer);
+        // Fall through to return original response (anonymous but at least responded)
+        const outHeaders = sanitizeResponseHeaders(response.headers);
+        if (origin) {
+          outHeaders.set('Access-Control-Allow-Origin', origin);
+          outHeaders.set('Access-Control-Allow-Credentials', 'true');
+        }
+        return new Response(response.body, { status: response.status, statusText: response.statusText, headers: outHeaders });
+      }
+      clearTimeout(retryTimer);
+
+      const retryDriftHeader = retryResponse.headers.get('X-Epsilon-Token-Drift');
+      if (retryDriftHeader) {
+        // Retry STILL had drift — trip circuit, return retry response as-is.
+        console.warn(`[reconcile] sandbox=${sandboxId} retry still has drift; tripping circuit for ${DRIFT_COOLOFF_MS}ms`);
+        tripCircuit(sandboxId);
+      } else {
+        console.log(`[reconcile] sandbox=${sandboxId} drift resolved (DB ${oldPrefix}… → container ${newKey.slice(0, 16)}…); retry status=${retryResponse.status}`);
+        clearCircuit(sandboxId);
+      }
+
+      const outHeaders = sanitizeResponseHeaders(retryResponse.headers);
+      if (origin) {
+        outHeaders.set('Access-Control-Allow-Origin', origin);
+        outHeaders.set('Access-Control-Allow-Credentials', 'true');
+      }
+      return new Response(retryResponse.body, { status: retryResponse.status, statusText: retryResponse.statusText, headers: outHeaders });
+    }
+    // newKey === null: either container unreachable (circuit already tripped) or
+    // false alarm (container == DB). Fall through to return original response.
+  } else if (!driftHeader) {
+    // Successful verification → clear circuit if it was set.
+    clearCircuit(sandboxId);
+  }
+
   // On 401 from sandbox: service-key mismatch. Two failure modes:
   //   (a) Container env files have key X but our cached serviceKey is Y.
   //       Pushing Y into the s6 env via trySyncServiceKey only helps the
@@ -318,6 +509,9 @@ export async function proxyToSandbox(
         // Retry succeeded — push the working key back into the DB +
         // invalidate the provider cache so subsequent requests use it.
         void updateSandboxServiceKeyInDb(containerKey).catch(() => {});
+        // Story 5.0.2 AC4: also push to apps/api/.env so backend restarts pick it up
+        // (gated by config.isLocal() internally).
+        void syncInternalServiceKeyToEnvFile(containerKey).catch(() => {});
       }
       const out = sanitizeResponseHeaders(retryResponse.headers);
       if (origin) {

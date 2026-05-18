@@ -15,7 +15,9 @@ import {
   EPSILON_USER_CONTEXT_HEADER,
 } from '../shared/epsilon-user-context';
 
-async function buildSignedUserContextHeader(
+// Exported for Story 5.0.2 reconcile-and-retry: local-preview.ts must re-sign
+// the user-context header with a refreshed key when drift is detected.
+export async function buildSignedUserContextHeader(
   sandboxId: string,
   userId: string | undefined,
   serviceKey: string | undefined,

@@ -59,38 +59,94 @@ export async function provisionSandboxFromCheckout(opts: {
         console.log(`[sandbox-provisioner] Pool grab: ${claimed ? 'CLAIMED ' + claimed.externalId : 'empty'}`);
 
         if (claimed) {
+          const claim = claimed; // local binding so TS retains narrowing inside async callback
           const name = await generateSandboxName(accountId);
-          const [row] = await db
-            .insert(sandboxes)
-            .values({
-              accountId,
-              name,
-              provider: claimed.poolSandbox.provider,
-              externalId: claimed.externalId,
-              status: 'active',
-              baseUrl: claimed.baseUrl,
-              config: {},
-              metadata: claimed.metadata,
-              isIncluded: false,
-            })
-            .returning();
+          // Story 5.0.2 AC3: atomic provision — wrap DB insert/update + pool inject
+          // in a transaction. If pool.injectEnv throws (container unreachable, env
+          // file write failed), the DB row is rolled back so we don't leak a
+          // half-provisioned sandbox row that has a serviceKey the container
+          // doesn't know about.
+          let provisioned: { row: typeof sandboxes.$inferSelect; sandboxKey: string } | null = null;
+          try {
+            provisioned = await db.transaction(async (tx) => {
+              const [insertedRow] = await tx
+                .insert(sandboxes)
+                .values({
+                  accountId,
+                  name,
+                  provider: claim.poolSandbox.provider,
+                  externalId: claim.externalId,
+                  status: 'active',
+                  baseUrl: claim.baseUrl,
+                  config: {},
+                  metadata: claim.metadata,
+                  isIncluded: false,
+                })
+                .returning();
 
-          const sandboxKey = await createApiKey({
-            sandboxId: row.sandboxId,
-            accountId,
-            title: 'Sandbox Token',
-            type: 'sandbox',
-          });
+              const sandboxKey = await createApiKey({
+                sandboxId: insertedRow.sandboxId,
+                accountId,
+                title: 'Sandbox Token',
+                type: 'sandbox',
+              });
 
-          await db
-            .update(sandboxes)
-            .set({ config: { serviceKey: sandboxKey.secretKey }, updatedAt: new Date() })
-            .where(eq(sandboxes.sandboxId, row.sandboxId));
+              await tx
+                .update(sandboxes)
+                .set({ config: { serviceKey: sandboxKey.secretKey }, updatedAt: new Date() })
+                .where(eq(sandboxes.sandboxId, insertedRow.sandboxId));
 
-          await pool.injectEnv(claimed, sandboxKey.secretKey);
+              // pool.injectEnv inside the transaction: if it throws, Drizzle rolls
+              // back DB writes. Re-fetch the updated row so we return the version
+              // with serviceKey populated.
+              await pool.injectEnv(claim, sandboxKey.secretKey);
 
-          console.log(`[sandbox-provisioner] Claimed from pool: ${row.sandboxId} (ext: ${claimed.externalId})`);
-          return { row, created: true };
+              const [refreshedRow] = await tx
+                .select()
+                .from(sandboxes)
+                .where(eq(sandboxes.sandboxId, insertedRow.sandboxId));
+
+              return { row: refreshedRow, sandboxKey: sandboxKey.secretKey };
+            });
+          } catch (provisionErr) {
+            const errMsg = provisionErr instanceof Error ? provisionErr.message : String(provisionErr);
+            console.error(`[sandbox-provisioner] Atomic provision failed (rolled back DB write): ${errMsg}`);
+            // Mark sandbox row outside the rolled-back transaction so operators
+            // can see the failure in admin UI. Use a fresh insert (the rolled-back
+            // row never persisted).
+            try {
+              await db.insert(sandboxes).values({
+                accountId,
+                name: `${name}-provision-failed`,
+                provider: claim.poolSandbox.provider,
+                externalId: claim.externalId,
+                status: 'error',
+                baseUrl: claim.baseUrl,
+                config: {},
+                metadata: {
+                  ...((claim.metadata as Record<string, unknown>) ?? {}),
+                  error: `token_provision_partial: ${errMsg}`,
+                  failedAt: new Date().toISOString(),
+                },
+                isIncluded: false,
+              });
+            } catch (markErr) {
+              console.error('[sandbox-provisioner] Could not record error row:', markErr);
+            }
+            // Release pool slot back to ready state so capacity isn't leaked.
+            // Pool inventory has no explicit "release back" — destroy the orphan
+            // and let the pool refiller create a replacement.
+            try {
+              await pool.inventory.destroyOne(claim.poolSandbox);
+              console.log(`[sandbox-provisioner] Destroyed orphaned pool sandbox after partial-provision failure: ${claim.externalId}`);
+            } catch (cleanupErr) {
+              console.error(`[sandbox-provisioner] Failed to destroy orphaned pool sandbox ${claim.externalId}:`, cleanupErr);
+            }
+            throw provisionErr;
+          }
+
+          console.log(`[sandbox-provisioner] Claimed from pool atomically: ${provisioned.row.sandboxId} (ext: ${claim.externalId})`);
+          return { row: provisioned.row, created: true };
         }
       } catch (err) {
         console.warn('[sandbox-provisioner] Pool claim failed, falling back:', err);
