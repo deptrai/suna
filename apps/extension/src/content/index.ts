@@ -1,5 +1,8 @@
-// content/index.ts
 import { getCanonicalBaseUrl } from '../lib/canonical';
+import { wrapHighlight } from './highlight';
+import { getActiveParser } from './parsers/registry';
+import type { DomainParser } from './parsers/types';
+import { onRouteChange } from './spa-nav';
 
 const TOKEN_REGEX = /(?:\$([A-Za-z0-9]{2,10}))|\b(?:0x[a-fA-F0-9]{40})\b|\b(?:[1-9A-HJ-NP-Za-km-z]{43,44})\b/g;
 
@@ -20,7 +23,6 @@ const escapeHtml = (unsafe: string) =>
   unsafe.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 
 function init() {
-  // Dedup guard — prevents multiple injections on SPA re-navigation
   if (document.getElementById('chainlens-shadow-host')) return;
 
   const hostElement = document.createElement('div');
@@ -164,6 +166,11 @@ function init() {
     }, 200);
   }
 
+  const handlers = {
+    onMouseEnter: handleMouseEnter,
+    onMouseLeave: handleMouseLeave,
+  };
+
   function highlightNodes(roots: Node[]) {
     for (const root of roots) {
       const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
@@ -198,59 +205,95 @@ function init() {
           if (match.index > lastIndex) {
             fragment.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
           }
-          const span = document.createElement('span');
-          span.className = 'chainlens-token-highlight';
-          span.textContent = match[0];
-          // For `$TICKER` matches, group 1 captures the bare ticker (e.g. "BTC").
-          // For 0x/Solana matches, group 1 is undefined and we use the full match.
-          // Strip leading `$` defensively so advisory API and deep-link URLs receive a clean token.
-          span.dataset.token = match[1] ?? match[0].replace(/^\$/, '');
-          span.addEventListener('mouseenter', handleMouseEnter);
-          span.addEventListener('mouseleave', handleMouseLeave);
-          fragment.appendChild(span);
+
+          const tokenText = document.createTextNode(match[0]);
+          fragment.appendChild(tokenText);
+          wrapHighlight(tokenText, match[1] ?? match[0], handlers);
           lastIndex = match.index + match[0].length;
         }
 
         if (lastIndex < text.length) {
           fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
         }
+
         parent.replaceChild(fragment, node);
       }
     }
   }
 
-  function scanAndHighlightTokens() {
-    if (scanning) return;
-    scanning = true;
-    try {
-      highlightNodes([document.body]);
-    } finally {
-      scanning = false;
-    }
-  }
-
-  setTimeout(scanAndHighlightTokens, 500);
-
-  const observer = new MutationObserver((mutations) => {
-    if (scanning) return;
-    const addedNodes: Node[] = [];
-    for (const mutation of mutations) {
-      for (const node of mutation.addedNodes) {
-        if (node.nodeType === Node.ELEMENT_NODE || node.nodeType === Node.TEXT_NODE) {
-          addedNodes.push(node);
-        }
+  function runDomainParser(parser: DomainParser) {
+    function execute(root: HTMLElement) {
+      const extracted = parser.extract(root);
+      for (const item of extracted) {
+        if (item.element.closest('.chainlens-token-highlight')) continue;
+        wrapHighlight(item.element, item.token, handlers);
       }
     }
-    if (addedNodes.length === 0) return;
-    scanning = true;
-    try {
-      highlightNodes(addedNodes);
-    } finally {
-      scanning = false;
-    }
-  });
 
-  observer.observe(document.body, { childList: true, subtree: true });
+    const run = () => {
+      if (scanning) return;
+      scanning = true;
+      try {
+        execute(document.body);
+      } finally {
+        scanning = false;
+      }
+    };
+
+    setTimeout(run, 500);
+
+    const observerTarget = parser.observeTarget?.() ?? document.body;
+    if (observerTarget) {
+      const observer = new MutationObserver(() => run());
+      observer.observe(observerTarget, { childList: true, subtree: true });
+    }
+
+    onRouteChange(() => {
+      setTimeout(run, 100);
+    });
+  }
+
+  function runGenericRegexPath() {
+    function scanAndHighlightTokens() {
+      if (scanning) return;
+      scanning = true;
+      try {
+        highlightNodes([document.body]);
+      } finally {
+        scanning = false;
+      }
+    }
+
+    setTimeout(scanAndHighlightTokens, 500);
+
+    const observer = new MutationObserver((mutations) => {
+      if (scanning) return;
+      const addedNodes: Node[] = [];
+      for (const mutation of mutations) {
+        for (const node of mutation.addedNodes) {
+          if (node.nodeType === Node.ELEMENT_NODE || node.nodeType === Node.TEXT_NODE) {
+            addedNodes.push(node);
+          }
+        }
+      }
+      if (addedNodes.length === 0) return;
+      scanning = true;
+      try {
+        highlightNodes(addedNodes);
+      } finally {
+        scanning = false;
+      }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  const parser = getActiveParser();
+  if (parser) {
+    runDomainParser(parser);
+  } else {
+    runGenericRegexPath();
+  }
 }
 
 if (document.body) {
