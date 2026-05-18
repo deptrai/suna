@@ -36,6 +36,8 @@ lastEdited: '2026-05-18'
 editHistory:
   - date: '2026-05-18'
     changes: 'Aligned DeFiLlama requirements with self-host provider boundary, hybrid fallback, and unchanged Epic 1/2 tool contracts.'
+  - date: '2026-05-18'
+    changes: 'Added backend-owned model availability/quota requirements, FE disable-hide behavior, measurable reliability targets, and a dedicated Functional Requirements section.'
 ---
 
 # Product Requirements Document - chainlens
@@ -90,6 +92,7 @@ Chainlens (Chain = Blockchain + Lens = Soi dữ liệu) định vị là một n
   - **Backtest Sandbox Visualizer (Tier 2):** Trình soạn thảo Monaco Editor cho phép code/sửa chiến lược giao dịch. Các thẻ KPI (Sharpe Ratio, Max Drawdown) và Equity Curve Chart so sánh với Benchmark.
 - **Data Integrations:** Xây dựng các Agent chuyên biệt kết nối dữ liệu Crypto (DeFiLlama, Nansen, Dune, Token Terminal) và Non-crypto (Perplexity AI) thông qua API nội bộ của Chainlens. Agent/OpenCode tool không gọi trực tiếp provider bên thứ ba hoặc self-host data service; backend chịu trách nhiệm chọn provider, chuẩn hóa response, cache, billing, fallback, và bảo vệ API keys.
 - **DeFiLlama Provider Boundary:** Toàn bộ dữ liệu DeFiLlama phải đi qua một lớp provider phía backend với 4 mode vận hành: `public`, `pro`, `selfhost`, `hybrid`. `selfhost` chỉ hợp lệ khi Chainlens tự chạy selected DefiLlama adapters, tự gọi RPC, và lưu metric snapshots riêng; không tạo service trung gian nếu service đó chỉ proxy `api.llama.fi` hoặc `pro-api.llama.fi`. Mode migration mặc định là `hybrid`: thử self-host trước cho protocol/category được hỗ trợ, fallback public/pro khi lỗi.
+- **Model Availability & Quota Signaling (LLM Catalog):** Hệ thống phải cung cấp trạng thái model theo tài khoản ở API nội bộ (available/unavailable + reason code). Model picker trên frontend/extension phải tiêu thụ trạng thái này để disable hoặc ẩn model không khả dụng, ngăn người dùng chọn model sẽ fail do hết quota hoặc provider tạm ngưng.
 - **Vibe Trading Platform Integration (Tier 2):** Tích hợp toàn bộ Vibe-Trading research toolkit — không chỉ backtest. Cung cấp cho Tier 2 agent truy cập:
   - **Backtesting Engine:** Kết nối Celery-backed backtest với Monaco Editor UI (Sharpe/Drawdown/Equity Curve visualization). Tích hợp qua HTTP + SSE streaming cho Backtest Sandbox Visualizer.
   - **Research Toolkit (21 MCP tools):** Market data (6 sources: yfinance/OKX/Tushare/AKShare/CCXT), options pricing (Black-Scholes + Greeks), chart pattern recognition, factor analysis (IC/IR), 72 finance skill methodologies.
@@ -174,7 +177,21 @@ Bởi vì Chainlens hoạt động trong không gian Crypto/Web3, hệ thống p
 - **Self-Host Scope:** DeFiLlama self-host chỉ thay thế các metric mà service tự tính được từ selected adapters và RPC. Nó không tự động thay thế Nansen smart-money labels, Dune arbitrary analytics, Token Terminal DAU/developer activity, hoặc Pro-only risk data nếu service chưa implement tương đương.
 - **Data Isolation:** Nếu self-host service dùng chung PostgreSQL instance với Chainlens, nó phải dùng database/schema và DB user riêng. Chainlens ưu tiên đọc qua HTTP API thay vì query trực tiếp bảng nội bộ của self-host service.
 
-## 7. Non-Functional Requirements (Yêu cầu Phi chức năng)
+### 6.6. LLM Model Availability Boundary
+- **Backend Authoritative Policy:** Availability/quota entitlement của model là policy ở backend và được publish qua API nội bộ theo account scope; frontend/extension không tự suy đoán bằng metadata local.
+- **Stable UX Contract:** Khi model chuyển sang unavailable, UI phải chặn chọn ngay ở model picker và gợi ý model thay thế khả dụng tương đương.
+- **Reason Codes for Routing:** API availability state phải kèm reason codes chuẩn hóa (ví dụ quota_exceeded, provider_unhealthy, plan_not_entitled) để frontend hiển thị trạng thái nhất quán và traceable.
+- **No Secret Leakage:** Thông điệp availability gửi ra client không được chứa API key, provider raw error, hoặc thông tin nhạy cảm vận hành.
+
+## 7. Functional Requirements
+
+- **FR-7.1 (Model Availability State):** Người dùng có thể xem danh sách model theo trạng thái khả dụng của tài khoản hiện tại; mỗi model phải có trạng thái `available` hoặc `unavailable` kèm reason code chuẩn hóa.
+- **FR-7.2 (Selection Guardrail):** Người dùng không thể chọn model đang `unavailable` trong model picker; UI phải disable/ẩn model này trước khi gửi request chạy tác vụ.
+- **FR-7.3 (Fallback Guidance):** Khi model đang dùng trở thành `unavailable`, hệ thống phải hiển thị ít nhất một model thay thế khả dụng cùng nhóm năng lực (chat/code/reasoning) để người dùng chuyển nhanh.
+- **FR-7.4 (Server-Enforced Entitlement):** Hệ thống phải từ chối request dùng model không còn entitlement ở backend, trả response có reason code nhất quán với catalog availability.
+- **FR-7.5 (Cross-Surface Consistency):** Cùng một account và thời điểm, trạng thái availability của model phải nhất quán giữa web app và browser extension.
+
+## 8. Non-Functional Requirements (Yêu cầu Phi chức năng)
 
 ### 7.1. Performance & Latency (Hiệu suất & Độ trễ)
 - **Time-to-First-Byte (TTFB) cho AI Chat:** Độ trễ từ khi User gửi câu hỏi đến khi AI trả về token đầu tiên (streaming) phải **< 2 giây**.
@@ -213,8 +230,10 @@ Bởi vì Chainlens hoạt động trong không gian Crypto/Web3, hệ thống p
 - **Distributed Tracing & Metrics (NFR-O1):** API PHẢI export traces và metrics qua OpenTelemetry Protocol (OTLP). Key metrics: `sandbox.provision.duration_ms` (histogram, label: success/fail), `sandbox.provision.attempts_total` (counter), HTTP request duration (auto-instrumented). *→ Story 8.5 Sprint 3*
 - **Stable Tunnel URL (NFR-O2):** `EPSILON_URL` (cloudflared bridge sandbox→API) PHẢI trỏ vào permanent URL (named Cloudflare Tunnel), không phải quick-tunnel URL thay đổi khi restart. *→ Story 8.5 Sprint 3*
 - **Multi-Replica Safe Dedup (NFR-O3):** Sandbox provisioning deduplication PHẢI work khi API scale lên 2+ replicas. Implementation: Postgres advisory lock thay in-memory `Set<string>`. *→ Story 8.5 Sprint 3*
+- **Model Availability Freshness (NFR-O4):** Trạng thái availability/quota của model hiển thị trên UI phải được đồng bộ với backend trong tối đa 30 giây kể từ khi backend đổi trạng thái.
+- **Unavailable Selection Failure Rate (NFR-O5):** Sau rollout guardrail, tỷ lệ request thất bại do user chọn model unavailable phải dưới 0.5% tổng request model-selection mỗi ngày.
 
-## 8. Out of Scope (Ngoài Phạm vi Dự án)
+## 9. Out of Scope (Ngoài Phạm vi Dự án)
 
 Để tránh tình trạng "phình to" yêu cầu (Scope Creep) và giữ vững định vị của sản phẩm, Chainlens sẽ **KHÔNG** làm những việc sau:
 
@@ -223,7 +242,7 @@ Bởi vì Chainlens hoạt động trong không gian Crypto/Web3, hệ thống p
 3. **Không xây dựng Blockchain hay Layer 2 riêng:** Sản phẩm tập trung vào Data Intelligence và LLM Application. Việc tạo mạng lưới blockchain riêng là không cần thiết ở giai đoạn này và gây phân tán nguồn lực.
 4. **Không tư vấn đầu tư tài chính trực tiếp (Financial Advice):** Mọi kết quả phân tích từ AI là báo cáo kỹ thuật và rủi ro dựa trên dữ liệu on-chain/smart contract. Chainlens không đưa ra các lời khuyên dạng "Buy/Sell", luôn có Disclaimer rõ ràng.
 
-## 9. Roadmap & Milestones (Lộ trình Phát hành)
+## 10. Roadmap & Milestones (Lộ trình Phát hành)
 
 Để đảm bảo dự án ra mắt nhanh chóng và kiểm chứng được mô hình kinh doanh, Chainlens sẽ được triển khai theo các giai đoạn sau:
 

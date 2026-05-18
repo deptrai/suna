@@ -2265,3 +2265,29 @@ Architectural default: build the provider boundary first, then choose `public`, 
 | Epic 1/2 tool contracts remain stable | Routes normalize provider responses before returning JSON |
 
 ---
+
+## 14. Model Availability and Quota Guardrail Addendum (2026-05-18)
+
+### 14.1. Decision Summary
+
+- Backend là nguồn sự thật duy nhất cho availability/quota entitlement theo account.
+- Web UI và browser extension phải tiêu thụ state này để disable/hide model unavailable.
+- Lỗi do chọn model unavailable được xem là reliability concern và phải được giảm bằng guardrail sớm tại picker.
+
+### 14.2. Boundary and Contract
+
+- `apps/api` publish model availability catalog với status/reason code chuẩn hóa (ví dụ: `quota_exceeded`, `provider_unhealthy`, `plan_not_entitled`).
+- `apps/web` và extension model picker render trực tiếp theo contract này, không tự suy đoán bằng metadata local.
+- Khi entitlement đổi sau thời điểm list, execution endpoint vẫn reject bằng reason code cùng family để bảo toàn tính nhất quán.
+
+### 14.3. Consistency and Reliability Targets
+
+- Cross-surface consistency: cùng account/cùng thời điểm phải thấy trạng thái model tương đương giữa web và extension.
+- Freshness target: thay đổi availability từ backend phải phản ánh lên UI trong tối đa 30 giây.
+- SLO target: tỷ lệ thất bại do user chọn model unavailable dưới 0.5% tổng model-selection requests/ngày sau rollout.
+
+### 14.4. Rationale
+
+- Policy quota/entitlement/provider-health nằm đúng ở backend nơi billing và provider state đã tập trung.
+- Loại bỏ heuristic FE cho "free model live/quota" giúp giảm fail muộn ở runtime.
+- Phù hợp nguyên tắc hiện có: backend-owned auth/billing/fallback; frontend là presentation + guardrail.

@@ -3,8 +3,8 @@ stepsCompleted: [1, 2, 3]
 inputDocuments:
   - _bmad-output/planning-artifacts/prd.md
   - _bmad-output/planning-artifacts/architecture.md
-  - _bmad-output/planning-artifacts/fe-performance-upgrade-plan.md
-lastUpdated: '2026-05-17'
+  - _bmad-output/planning-artifacts/ux-design-specification-v1.md
+lastUpdated: '2026-05-18'
 ---
 # Chainlens - Epic Breakdown
 
@@ -48,6 +48,11 @@ FR22: Zero-Data-Leakage for Tier 3 — outbound telemetry bị chặn hoàn toà
 FR23: MMOMarket Account Linking (SSO) — liên kết tài khoản MMOMarket vào Chainlens bằng OAuth2
 FR24: Product Publishing (One-Click Publish) — Publish Agent sang MMOMarket với cấu hình giá, loại (Rent/Sell) và bảo hành
 FR25: Webhook Order Lifecycle — xử lý Payment_Confirmed, Access_Granted, Dispute_Raised (Auto-Clone code hoặc cấp Execution-Role)
+FR26: Model Availability State — API nội bộ cung cấp trạng thái model theo account (available/unavailable + reason code chuẩn hóa)
+FR27: Selection Guardrail — UI/Extension không cho chọn model unavailable (disable/hide trước khi thực thi)
+FR28: Fallback Guidance — khi model đang dùng unavailable, hiển thị model thay thế khả dụng cùng nhóm năng lực
+FR29: Server-Enforced Entitlement — backend từ chối request model không còn entitlement với reason code nhất quán
+FR30: Cross-Surface Consistency — trạng thái availability model nhất quán giữa web app và browser extension
 
 ### NonFunctional Requirements
 
@@ -63,6 +68,8 @@ NFR9: Strict Rate Limiting cho Tier 1 (Free) theo IP + Account để chặn reso
 NFR10: Sandbox Isolation (Tier 2) — no outbound network; chỉ kết nối Vibe Trading API nội bộ; chống C2C
 NFR11: AI Report & Code Accuracy > 80%
 NFR12: Non-custodial — tuyệt đối không lưu Private Key hoặc seed phrase của user
+NFR13: Model availability freshness <= 30 giây từ lúc backend đổi trạng thái đến lúc UI phản ánh
+NFR14: Tỷ lệ fail do chọn model unavailable < 0.5% tổng model-selection requests/ngày sau rollout
 
 ### Additional Requirements
 
@@ -79,7 +86,11 @@ AR8: Feature addition sequence chuẩn: DB schema → Shared types → API route
 
 ### UX Design Requirements
 
-_(Không áp dụng — UX Design Spec là file cũ, excluded theo yêu cầu)_
+UX-DR1: Tooltip extension phải hiển thị theo state-based transition (Ambient Thin Glass ↔ Alert Frosted Tint) với animation mượt.
+UX-DR2: Progressive disclosure cho dữ liệu rủi ro và điều hướng "Expand" sang full app, tránh overload trong tooltip.
+UX-DR3: Trust score badge và risk states phải có màu semantic nhất quán (Critical/Warning/Safe) trên cả web + extension.
+UX-DR4: Accessibility WCAG 2.1 AA cho text trên nền glass (đảm bảo contrast động + fallback khi giảm motion).
+UX-DR5: Extension UI phải cô lập style bằng Shadow DOM để tránh CSS host page ghi đè.
 
 ### FR Coverage Map
 
@@ -110,8 +121,13 @@ _(Không áp dụng — UX Design Spec là file cũ, excluded theo yêu cầu)_
 | FR23 (MMOMarket Account Linking)           | Epic 9 |
 | FR24 (One-Click Publish)                   | Epic 9 |
 | FR25 (Webhook Order Lifecycle)             | Epic 9 |
+| FR26 (Model Availability State)            | Epic 6 |
+| FR27 (Selection Guardrail)                 | Epic 6 |
+| FR28 (Fallback Guidance)                   | Epic 6 |
+| FR29 (Server-Enforced Entitlement)         | Epic 6 |
+| FR30 (Cross-Surface Consistency)           | Epic 6 |
 
-NFR1–NFR12: áp dụng cross-cutting cho tất cả Epics.
+NFR1–NFR14: áp dụng cross-cutting cho tất cả Epics.
 AR1–AR8: constraints kiến trúc áp dụng cho từng story trong mọi Epic.
 
 **FE Upgrade Requirements (Epic 11):**
@@ -1216,8 +1232,8 @@ so that I don't need to re-explain my context every time I start a new conversat
 
 Xây dựng Browser Extension auto-detect token/contract khi browse crypto sites, sync với web account, risk tooltips, nút Expand mở full app.
 
-**FRs:** FR4
-**NFRs:** NFR9
+**FRs:** FR4, FR26, FR27, FR28, FR29, FR30
+**NFRs:** NFR9, NFR13, NFR14
 **ARs:** AR1, AR8
 
 **NFR8 carve-out**: Browser Extension tooltip detection được exempt khỏi NFR8 (Atomic Credit Deduction) — tooltip là free awareness feature cho mọi tier kể cả Free, không trừ credit. Decision date: 2026-05-11. Abuse mitigation: IP rate limit + aggressive cache (xem Story 6.1.0). Các endpoint khác trong Chainlens vẫn enforce NFR8 nghiêm ngặt.
@@ -1285,6 +1301,29 @@ So that extension biết tokens tôi đang theo dõi và highlight chúng ưu ti
 **When** extension cố fetch data
 **Then** extension fallback về cached data từ lần fetch gần nhất
 **And** tooltip hiển thị "Offline — dữ liệu có thể lỗi thời"
+
+### Story 6.4: Model Availability & Quota Guardrail (Web + Extension)
+
+As a Chainlens user chọn model để chat/phân tích,
+I want model picker trên web và extension chỉ cho chọn model còn khả dụng theo quyền tài khoản hiện tại,
+So that tôi không bị fail runtime do quota hết hoặc provider tạm unavailable.
+
+**Acceptance Criteria:**
+
+**Given** API catalog trả trạng thái model theo account với `available|unavailable` và reason code chuẩn hóa
+**When** model picker render trên web hoặc extension
+**Then** model unavailable bị disable/ẩn trước khi user gửi request
+**And** UI hiển thị trạng thái rõ ràng, không lộ chi tiết nhạy cảm provider/internal errors
+
+**Given** model đang chọn trở thành unavailable trong khi user đang thao tác
+**When** UI đồng bộ trạng thái mới từ backend
+**Then** UI cập nhật trong tối đa 30 giây
+**And** hiển thị ít nhất 1 model thay thế khả dụng cùng nhóm năng lực
+
+**Given** entitlement đổi sau thời điểm list model
+**When** user vẫn cố gửi request với model không còn entitlement
+**Then** backend từ chối request bằng reason code nhất quán với catalog state
+**And** tỷ lệ lỗi do chọn model unavailable được theo dõi và giữ dưới 0.5% model-selection requests/ngày sau rollout
 
 ## Epic 7: Credit Economy & Tokenomics
 
