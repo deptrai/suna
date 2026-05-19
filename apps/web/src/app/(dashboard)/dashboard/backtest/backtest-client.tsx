@@ -1,6 +1,8 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 
 const BacktestStrategyEditorClient = dynamic(
   () =>
@@ -9,8 +11,16 @@ const BacktestStrategyEditorClient = dynamic(
     })),
   { ssr: false },
 );
+const MultiBacktestStrategyEditorClient = dynamic(
+  () =>
+    import('@/components/backtest/multi-strategy-editor').then((m) => ({
+      default: m.MultiBacktestStrategyEditorClient,
+    })),
+  { ssr: false },
+);
 
 export function BacktestClient() {
+  const [isMulti, setIsMulti] = useState(false);
   // TODO(Epic 7): add Tier 2 gate once subscription_tier infrastructure ships
   return (
     <div className="container max-w-5xl py-8 space-y-6 animate-in fade-in zoom-in duration-500 ease-out">
@@ -21,9 +31,14 @@ export function BacktestClient() {
         <p className="text-muted-foreground text-lg">
           Design and run trading strategy backtests with historical data.
         </p>
+        <div>
+          <Button variant="outline" size="sm" onClick={() => setIsMulti((v) => !v)}>
+            {isMulti ? 'Single Strategy' : 'Multi Strategy'}
+          </Button>
+        </div>
       </div>
 
-      <BacktestStrategyEditorClient />
+      {isMulti ? <MultiBacktestStrategyEditorClient /> : <BacktestStrategyEditorClient />}
     </div>
   );
 }

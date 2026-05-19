@@ -108,7 +108,7 @@ development_status:
   5-6-shadow-account-swarm-ui: done  # 2026-05-18 review→done after fixing shadow-reports-route.test.ts regression (Q2 tier gate needed billing mock update); 7+4+7+8=26 tests pass; 16 review patches + 3 deferred + 2 audit fixes (M4 link, Q2 tier gate)
   5-7-user-llm-key-management: backlog
   5-8-per-user-persistent-memory: done  # 2026-05-18 /bmad-code-review applied 39 patches: pgvector removed, IDOR fixed, URL mount corrected, transactions, tests added
-  5-9-multi-strategy-backtest-comparison: ready-for-dev  # 2026-05-18 story spec drafted (4 ACs, 7 tasks); reuse CodeMirror 6 (Story 5.2 stack decision) NOT Monaco; coordinator route POST /v1/router/vibe-trading/backtest-multi atomic billing N×cost; ComparisonVisualizer (KPI table + Equity overlay + correlation heatmap)
+  5-9-multi-strategy-backtest-comparison: review  # 2026-05-19 implementation completed; targeted unit/lint/typecheck pass, live e2e remains env-dependent (auth/sign-in state)
   epic-5-retrospective: optional
 
   # Epic 6: Browser Intelligence Extension

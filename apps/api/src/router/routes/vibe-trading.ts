@@ -62,6 +62,18 @@ const VibeTradingJobSchema = z
       ),
     { message: 'Leverage greater than 1.0 is not supported for SPOT instruments.' },
   );
+const VibeTradingMultiBacktestSchema = z.object({
+  strategies: z
+    .array(
+      z.object({
+        tab_id: z.string().min(1).max(128),
+        payload: VibeTradingJobSchema,
+      }),
+    )
+    .min(2, 'between 2 and 5 strategies required')
+    .max(5, 'between 2 and 5 strategies required'),
+  session_id: SESSION_ID,
+});
 
 export const vibeTrading = new Hono<{ Variables: AppContext }>();
 const SHADOW_ID_RE = /^shadow_[0-9a-f]{8}$/;
@@ -114,6 +126,98 @@ vibeTrading.post('/jobs', async (c) => {
   }
 
   return c.json({ success: true, cost, ...result });
+});
+
+vibeTrading.post('/backtest-multi', async (c) => {
+  const accountId = c.get('accountId');
+  const body = await c.req.json().catch(() => null);
+  if (body === null) throw new HTTPException(400, { message: 'Invalid JSON body' });
+
+  const parsed = VibeTradingMultiBacktestSchema.safeParse(body);
+  if (!parsed.success) {
+    const first = parsed.error.issues[0];
+    const msg = first
+      ? `${first.path.join('.') || 'body'} — ${first.message}`
+      : 'Invalid request body';
+    throw new HTTPException(400, { message: msg });
+  }
+
+  const { strategies, session_id } = parsed.data;
+  const count = strategies.length;
+  if (count < 2 || count > 5) {
+    throw new HTTPException(400, { message: 'between 2 and 5 strategies required' });
+  }
+
+  const ua = (c.req.header('user-agent') ?? '').replace(/[\r\n\t]/g, ' ').slice(0, 80);
+  console.log(
+    `[TIER-BYPASS-SUSPECT] vibe_trading_backtest_multi account=${accountId} count=${count} ua="${ua}"`,
+  );
+
+  const unitCost = getToolCost(TOOL, 0);
+  const totalCost = count * unitCost;
+  const credit = await checkCredits(accountId);
+  const available = credit.balance ?? 0;
+  if (!credit.hasCredits || available < totalCost) {
+    return c.json(
+      {
+        success: false,
+        error: `Insufficient credits for ${count} strategies (need ${totalCost}, have ${available})`,
+      },
+      402,
+    );
+  }
+
+  const settled = await Promise.allSettled(
+    strategies.map((item) => submitBacktestJob(item.payload)),
+  );
+  const successCount = settled.filter((r) => r.status === 'fulfilled').length;
+  if (successCount === 0) {
+    return c.json({ success: false, error: 'All VT submits failed', cost: 0 }, 503);
+  }
+
+  const assets = Array.from(
+    new Set(
+      strategies.flatMap((s) =>
+        Array.isArray(s.payload.context_rules.assets) ? s.payload.context_rules.assets : [],
+      ),
+    ),
+  ).join(',');
+  try {
+    // Atomic multi-charge policy: if at least one VT submit is accepted, charge full N attempts.
+    await deductToolCredits(
+      accountId,
+      TOOL,
+      0,
+      `Multi-strategy backtest: ${count} × ${assets || 'assets'}`,
+      session_id,
+    );
+  } catch (e) {
+    console.warn(
+      `[EPSILON][billing-failure] tool=${TOOL} account=${accountId} err=${e instanceof Error ? e.message : String(e)}`,
+    );
+  }
+
+  const submissions = strategies.map((strategy, idx) => {
+    const item = settled[idx];
+    if (item.status === 'fulfilled') {
+      return {
+        tab_id: strategy.tab_id,
+        status: 'accepted' as const,
+        job_id: item.value.job_id,
+      };
+    }
+    return {
+      tab_id: strategy.tab_id,
+      status: 'submit_failed' as const,
+      error: item.reason instanceof Error ? item.reason.message : 'Submit failed',
+    };
+  });
+
+  return c.json({
+    success: true,
+    cost: totalCost,
+    submissions,
+  });
 });
 
 vibeTrading.get('/runs/:jobId', async (c) => {

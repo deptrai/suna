@@ -9,6 +9,19 @@ export interface SubmitResponse {
   job_id: string;
   run_id?: string;
 }
+export interface MultiSubmitItem {
+  tab_id: string;
+  status: 'accepted' | 'submit_failed';
+  job_id?: string;
+  run_id?: string;
+  error?: string;
+}
+
+export interface MultiSubmitResponse {
+  success: true;
+  cost: number;
+  submissions: MultiSubmitItem[];
+}
 
 export interface RunResponse {
   success: true;
@@ -36,6 +49,13 @@ function isSubmitResponse(value: unknown): value is SubmitResponse {
   if (!value || typeof value !== 'object') return false;
   const v = value as Record<string, unknown>;
   return v.success === true && typeof v.job_id === 'string' && v.job_id.length > 0;
+}
+
+function isMultiSubmitResponse(value: unknown): value is MultiSubmitResponse {
+  if (!value || typeof value !== 'object') return false;
+  const v = value as Record<string, unknown>;
+  if (v.success !== true || !Array.isArray(v.submissions)) return false;
+  return true;
 }
 
 async function safeJson(res: Response): Promise<Record<string, unknown>> {
@@ -86,6 +106,54 @@ export async function submitBacktest(
 
   const data = await safeJson(res);
   if (!isSubmitResponse(data)) {
+    throw new BacktestError(500, 'Malformed response from backend');
+  }
+  return data;
+}
+
+export async function submitBacktestMulti(
+  strategies: Array<{ tab_id: string; payload: Record<string, unknown> }>,
+  signal?: AbortSignal,
+): Promise<MultiSubmitResponse> {
+  const baseUrl = getEnv().BACKEND_URL;
+  const res = await authenticatedFetch(`${baseUrl}/router/vibe-trading/backtest-multi`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ strategies }),
+    signal,
+  });
+
+  if (res.status === 401) {
+    if (process.env.NODE_ENV === 'development') {
+      return {
+        success: true,
+        cost: 0,
+        submissions: strategies.map((s, idx) => ({
+          tab_id: s.tab_id,
+          status: 'accepted',
+          job_id: `mock-job-${idx + 1}`,
+          run_id: `mock-run-${idx + 1}`,
+        })),
+      };
+    }
+    throw new BacktestError(401, 'Unauthorized');
+  }
+  if (res.status === 402) throw new BacktestError(402, 'Insufficient credits');
+  if (res.status === 403) throw new BacktestError(403, 'Service not available');
+
+  if (!res.ok) {
+    const body = await safeJson(res);
+    if (res.status === 503) {
+      throw new BacktestError(503, extractMessage(body, 'Service unavailable'));
+    }
+    if (res.status >= 500) {
+      throw new BacktestError(500, extractMessage(body, `Upstream error (${res.status})`));
+    }
+    throw new BacktestError(400, extractMessage(body, 'Validation failed'));
+  }
+
+  const data = await safeJson(res);
+  if (!isMultiSubmitResponse(data)) {
     throw new BacktestError(500, 'Malformed response from backend');
   }
   return data;
