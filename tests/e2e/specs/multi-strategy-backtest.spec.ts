@@ -13,6 +13,12 @@ test.describe('Multi strategy backtest', () => {
       data: { email: ownerEmail, password: ownerPassword },
     });
     expect([200, 409]).toContain(bootstrapRes.status());
+    let loginEmail = ownerEmail;
+    if (bootstrapRes.status() === 409) {
+      const body = await bootstrapRes.json().catch(() => ({})) as { error?: string };
+      const match = (body.error ?? '').match(/\(([^)]+)\)/);
+      if (match?.[1]) loginEmail = match[1];
+    }
 
     await page.context().clearCookies();
     await page.goto('/auth', { waitUntil: 'domcontentloaded', timeout: 120_000 });
@@ -24,7 +30,7 @@ test.describe('Multi strategy backtest', () => {
       await page.locator('div.fixed.inset-0.cursor-pointer').first().click({ force: true });
     }
     await expect(signInHeading).toBeVisible({ timeout: 30_000 });
-    await page.locator('input[name="email"]').fill(ownerEmail);
+    await page.locator('input[name="email"]').fill(loginEmail);
     await page.locator('input[name="password"]').fill(ownerPassword);
     await page.getByRole('button', { name: /sign in/i }).click();
 
@@ -36,7 +42,29 @@ test.describe('Multi strategy backtest', () => {
       });
     }
 
-    await page.goto('/dashboard/backtest', { waitUntil: 'domcontentloaded', timeout: 120_000 });
+    const cookies = await page.context().cookies();
+    const activeInstance = cookies.find((c) => c.name === 'epsilon-active-instance')?.value;
+    const backtestPath = activeInstance
+      ? `/instances/${encodeURIComponent(activeInstance)}/dashboard/backtest`
+      : '/dashboard/backtest';
+
+    await Promise.allSettled([
+      page.goto(backtestPath, { waitUntil: 'commit', timeout: 120_000 }),
+      page.waitForURL(/\/dashboard\/backtest/, { timeout: 120_000 }),
+    ]);
+    const relockScreen = page.getByText('Click or press Enter to sign in');
+    if (await relockScreen.isVisible({ timeout: 5_000 }).catch(() => false)) {
+      await page.locator('div.fixed.inset-0.cursor-pointer').first().click({ force: true });
+      if (await signInHeading.isVisible({ timeout: 10_000 }).catch(() => false)) {
+        await page.locator('input[name="email"]').fill(loginEmail);
+        await page.locator('input[name="password"]').fill(ownerPassword);
+        await page.getByRole('button', { name: /sign in/i }).click();
+        await Promise.allSettled([
+          page.goto(backtestPath, { waitUntil: 'commit', timeout: 120_000 }),
+          page.waitForURL(/\/dashboard\/backtest/, { timeout: 120_000 }),
+        ]);
+      }
+    }
     await expect(page.getByRole('heading', { name: /Backtest Strategy/i })).toBeVisible({ timeout: 30_000 });
 
     await page.getByRole('button', { name: /multi strategy/i }).click();
