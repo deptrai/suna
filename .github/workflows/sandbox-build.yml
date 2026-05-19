@@ -2,7 +2,8 @@ name: Sandbox Image Build
 
 # Builds the thin sandbox image (Dockerfile): epsilon-master source + bun install.
 # Inherits from ghcr.io/deptrai/computer:base-latest.
-# Tag: next-<sha7>. Build time ~5-8 min.
+# Tag: next-<sha7>. Pushes to both GHCR and Docker Hub (epsilonaicrypto/computer).
+# Build time ~5-8 min.
 #
 # Triggers:
 #   - Path filter: epsilon-master source, scripts, s6 services, Dockerfile changed on main
@@ -12,7 +13,7 @@ name: Sandbox Image Build
 
 on:
   push:
-    branches: [main]
+    branches: [main, feat/rename-chainlens-epsilon]
     paths:
       - 'core/epsilon-master/**'
       - 'core/s6-services/**'
@@ -46,7 +47,8 @@ jobs:
       contents: read
       packages: write
     outputs:
-      image_tag: ${{ steps.tags.outputs.tag_sha }}
+      ghcr_tag: ${{ steps.tags.outputs.ghcr_tag }}
+      dh_tag: ${{ steps.tags.outputs.dh_tag }}
       sha7: ${{ steps.tags.outputs.sha7 }}
 
     steps:
@@ -66,13 +68,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_PAT }}
 
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Compute tags
         id: tags
         run: |
           SHA7=$(git rev-parse --short HEAD)
           BASE="${{ inputs.base_tag || 'base-latest' }}"
           echo "sha7=$SHA7" >> "$GITHUB_OUTPUT"
-          echo "tag_sha=ghcr.io/deptrai/computer:next-$SHA7" >> "$GITHUB_OUTPUT"
+          echo "ghcr_tag=ghcr.io/deptrai/computer:next-$SHA7" >> "$GITHUB_OUTPUT"
+          echo "dh_tag=epsilonaicrypto/computer:next-$SHA7" >> "$GITHUB_OUTPUT"
           echo "base_image=ghcr.io/deptrai/computer:$BASE" >> "$GITHUB_OUTPUT"
           echo "Building next-$SHA7 from base $BASE"
 
@@ -100,7 +109,9 @@ jobs:
           build-args: |
             BASE_IMAGE=${{ steps.tags.outputs.base_image }}
             SANDBOX_VERSION=${{ github.sha }}
-          tags: ${{ steps.tags.outputs.tag_sha }}
+          tags: |
+            ${{ steps.tags.outputs.ghcr_tag }}
+            ${{ steps.tags.outputs.dh_tag }}
           cache-from: type=registry,ref=ghcr.io/deptrai/computer:stable
           cache-to: type=inline
 
@@ -108,7 +119,8 @@ jobs:
         if: always()
         run: |
           echo "## Sandbox Thin Build" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Tag: \`next-${{ steps.tags.outputs.sha7 }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- GHCR: \`next-${{ steps.tags.outputs.sha7 }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Docker Hub: \`epsilonaicrypto/computer:next-${{ steps.tags.outputs.sha7 }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- Base: \`${{ steps.tags.outputs.base_image }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- Circuit breaker locked: ${{ steps.cb.outputs.locked }}" >> "$GITHUB_STEP_SUMMARY"
 
@@ -129,8 +141,9 @@ jobs:
               workflow_id: 'sandbox-smoke.yml',
               ref: context.ref,
               inputs: {
-                image_tag: '${{ needs.build-thin.outputs.image_tag }}',
+                dh_tag: '${{ needs.build-thin.outputs.dh_tag }}',
+                ghcr_tag: '${{ needs.build-thin.outputs.ghcr_tag }}',
                 sha7: '${{ needs.build-thin.outputs.sha7 }}'
               }
             });
-            console.log('Smoke workflow dispatched for ${{ needs.build-thin.outputs.image_tag }}');
+            console.log('Smoke workflow dispatched for ${{ needs.build-thin.outputs.dh_tag }}');
