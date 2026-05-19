@@ -156,7 +156,24 @@ EPSILON_URL=https://api.yourdomain.com/v1/router
 
 # CORS
 CORS_ALLOWED_ORIGINS=https://yourdomain.com
+
+# Browser Proxy (Story 8.7) — BẮT BUỘC trong cloud mode
+# Daytona sandbox không reach được internet trực tiếp (Envoy egress allowlist).
+# CONNECT proxy bridges sandbox browser/curl traffic qua VPS API.
+BROWSER_PROXY_SECRET=<sinh bằng: openssl rand -base64 32 | tr -d "/+=" | head -c 32>
+BROWSER_PROXY_PUBLIC_URL=http://<VPS_IP>:8009    # IP phải trùng DAYTONA_NETWORK_ALLOW_LIST
+# BROWSER_PROXY_PORT=8009                         # mặc định, đổi nếu xung đột port
+# BROWSER_PROXY_ALLOWED_PORTS=80,443              # mặc định
+# BROWSER_PROXY_MAX_CONN_PER_IP=50                # mặc định
 ```
+
+**Ops sau khi update env**:
+1. Dokploy: thêm port mapping `8009:8009` cho apps/api service
+2. VPS firewall: allow inbound TCP `:8009` từ internet (sandbox IPs không cố định)
+3. Redeploy apps/api
+4. Test từ external: `curl -x "http://epsilon:$BROWSER_PROXY_SECRET@<VPS_IP>:8009" https://example.com` → 200
+5. Sandbox image phải bao gồm `stable-2` trở lên (có `--proxy-server` arg trong `svc-chromium-persistent/run`)
+6. Secret rotation runbook: [docs/runbooks/browser-proxy-rotation.md](runbooks/browser-proxy-rotation.md)
 
 ### 4. Cấu hình Frontend env
 

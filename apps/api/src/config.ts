@@ -143,6 +143,15 @@ const envSchema = z.object({
   DAYTONA_RESOURCE_DISK:       optInt(20),
   DAYTONA_KEEP_FAILED_SANDBOX: optBoolFalse,
 
+  // ── Browser Proxy (cloud mode: routes sandbox outbound through API) ─────
+  // Daytona's Envoy allows egress only to DAYTONA_NETWORK_ALLOW_LIST IPs.
+  // This CONNECT proxy bridges sandbox browser/curl traffic to the public internet.
+  BROWSER_PROXY_PORT:            optInt(8009),
+  BROWSER_PROXY_SECRET:          optStr,                      // URL-safe charset only: [A-Za-z0-9_-]
+  BROWSER_PROXY_PUBLIC_URL:      optStr,                      // e.g. "http://167.172.66.16:8009" — what sandboxes connect to
+  BROWSER_PROXY_ALLOWED_PORTS:   optStrDefault('80,443'),
+  BROWSER_PROXY_MAX_CONN_PER_IP: optInt(50),
+
   // ── JustAVPS — Sandbox provisioning via JustAVPS API (conditional: required if justavps provider enabled) ──
   JUSTAVPS_API_URL:                   optStrDefault('http://localhost:3001'),
   JUSTAVPS_API_KEY:                   optStr,
@@ -437,6 +446,20 @@ function validateEnv(): z.infer<typeof envSchema> {
     }
   }
 
+  // ── Conditional: Browser Proxy — required in cloud mode ──────────────────
+  // The CONNECT proxy bridges Daytona sandbox outbound (Chromium, curl) to internet
+  // because Daytona's Envoy egress allowlist only permits the API VPS IP.
+  if ((raw as any).ENV_MODE === 'cloud') {
+    if (!raw.BROWSER_PROXY_SECRET) {
+      issues.push({ var: 'BROWSER_PROXY_SECRET', message: 'Required in cloud mode — agent-browser will fail without proxy auth. Generate: openssl rand -base64 32 | tr -d "/+=" | head -c 32', level: 'error' });
+    } else if (/[@:/+=]/.test(raw.BROWSER_PROXY_SECRET)) {
+      issues.push({ var: 'BROWSER_PROXY_SECRET', message: 'Must be URL-safe (base64url charset: [A-Za-z0-9_-]). Generate: openssl rand -base64 32 | tr -d "/+=" | head -c 32', level: 'error' });
+    }
+    if (!raw.BROWSER_PROXY_PUBLIC_URL) {
+      issues.push({ var: 'BROWSER_PROXY_PUBLIC_URL', message: 'Required in cloud mode — sandbox needs to know the public proxy URL (e.g. http://167.172.66.16:8009)', level: 'error' });
+    }
+  }
+
   // ── Warnings (non-fatal but worth knowing) ─────────────────────────────
   if (!raw.OPENROUTER_API_KEY) {
     issues.push({ var: 'OPENROUTER_API_KEY', message: 'Not set — primary LLM route will fail with silent 401 errors', level: 'warn' });
@@ -578,6 +601,13 @@ export const config = {
   DAYTONA_RESOURCE_MEMORY: env.DAYTONA_RESOURCE_MEMORY,
   DAYTONA_RESOURCE_DISK: env.DAYTONA_RESOURCE_DISK,
   DAYTONA_KEEP_FAILED_SANDBOX: env.DAYTONA_KEEP_FAILED_SANDBOX,
+
+  // ─── Browser Proxy (Story 8.7 — sandbox egress CONNECT proxy) ────────────
+  BROWSER_PROXY_PORT: env.BROWSER_PROXY_PORT,
+  BROWSER_PROXY_SECRET: env.BROWSER_PROXY_SECRET,
+  BROWSER_PROXY_PUBLIC_URL: env.BROWSER_PROXY_PUBLIC_URL,
+  BROWSER_PROXY_ALLOWED_PORTS: env.BROWSER_PROXY_ALLOWED_PORTS,
+  BROWSER_PROXY_MAX_CONN_PER_IP: env.BROWSER_PROXY_MAX_CONN_PER_IP,
 
   // ─── JustAVPS (VPS Sandbox provisioning via JustAVPS) ────────────────────
   JUSTAVPS_API_URL: env.JUSTAVPS_API_URL,

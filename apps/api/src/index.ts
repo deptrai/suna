@@ -56,6 +56,36 @@ import { sandboxPoolAdminApp } from './platform/routes/sandbox-pool-admin';
 import { oauthApp } from './oauth';
 import { advisoryApp } from './advisory';
 import { internalBootstrap } from './router/routes/internal-bootstrap';
+import { startBrowserProxy } from './browser-proxy';
+
+// Story 8.7 — sandbox egress CONNECT proxy. Cloud-only: bridges Daytona sandbox
+// browser/curl traffic to the public internet (Daytona Envoy blocks direct egress).
+let browserProxyServer: ReturnType<typeof startBrowserProxy> | null = null;
+function startBrowserProxyIfCloud() {
+  if (browserProxyServer) return;
+  if (config.ENV_MODE !== 'cloud') return;
+  if (!config.BROWSER_PROXY_SECRET) {
+    console.log('[browser-proxy] disabled — BROWSER_PROXY_SECRET not set');
+    return;
+  }
+  const allowedPorts = new Set(
+    String(config.BROWSER_PROXY_ALLOWED_PORTS)
+      .split(',')
+      .map((s) => parseInt(s.trim(), 10))
+      .filter(Number.isFinite),
+  );
+  browserProxyServer = startBrowserProxy({
+    port: config.BROWSER_PROXY_PORT,
+    authSecret: config.BROWSER_PROXY_SECRET,
+    allowedPorts,
+    maxConnPerIp: config.BROWSER_PROXY_MAX_CONN_PER_IP,
+  });
+}
+function stopBrowserProxy() {
+  if (!browserProxyServer) return;
+  browserProxyServer.close(() => console.log('[browser-proxy] closed'));
+  browserProxyServer = null;
+}
 
 function shellQuote(value: string): string {
   return `'${value.replace(/'/g, `"'"'`)}'`;
@@ -1094,6 +1124,7 @@ function startBackgroundServices() {
   startAutoReplenish();
   startInviteCleanup(appDb);
   startSandboxTokenDriftReconciler();
+  startBrowserProxyIfCloud();
 }
 
 // Ensure DB schema exists before starting services that depend on it.
@@ -1150,6 +1181,7 @@ async function shutdown(signal: string) {
   stopProvisionPoller();
   stopSandboxTokenDriftReconciler();
   stopSandboxAutoUpdateLoop();
+  stopBrowserProxy();
   stopAutoReplenish();
   stopAccessControlCache();
   stopInviteCleanup();

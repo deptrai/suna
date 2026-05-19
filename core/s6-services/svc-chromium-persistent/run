@@ -25,6 +25,15 @@ for i in $(seq 1 60); do
   sleep 1
 done
 
+# Story 8.7 — Route browser traffic through Epsilon API CONNECT proxy when running
+# in Daytona cloud mode. AGENT_BROWSER_PROXY_URL is creds-free; agent-browser reads
+# AGENT_BROWSER_PROXY_AUTH separately for the 407 auth challenge.
+PROXY_ARGS=()
+if [ -n "${AGENT_BROWSER_PROXY_URL:-}" ]; then
+  PROXY_ARGS=(--proxy-server="${AGENT_BROWSER_PROXY_URL}")
+  echo "[chromium-persistent] Using browser proxy: ${AGENT_BROWSER_PROXY_URL}"
+fi
+
 if [ "$(id -u)" -eq 0 ]; then
   exec s6-setuidgid abc env \
     DISPLAY=:1 \
@@ -42,6 +51,7 @@ if [ "$(id -u)" -eq 0 ]; then
       --disable-blink-features=AutomationControlled \
       --disable-features=VizDisplayCompositor \
       --start-maximized \
+      "${PROXY_ARGS[@]}" \
       about:blank
 fi
 
@@ -61,4 +71,5 @@ exec env \
     --disable-blink-features=AutomationControlled \
     --disable-features=VizDisplayCompositor \
     --start-maximized \
+    "${PROXY_ARGS[@]}" \
     about:blank

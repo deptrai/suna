@@ -55,6 +55,16 @@ export class DaytonaProvider implements SandboxProvider {
     const sandboxApiBase = config.EPSILON_URL.replace(/\/v1\/router\/?$/, '');
     const routerBase = `${sandboxApiBase}/v1/router`;
 
+    // Story 8.7 — Browser proxy URL (creds-free for Chromium --proxy-server, plus
+    // creds-embedded variant for HTTP_PROXY env which curl/agent-browser respect).
+    // BROWSER_PROXY_PUBLIC_URL is explicit (not derived from EPSILON_URL) because
+    // EPSILON_URL may point to a Cloudflare Tunnel domain that won't expose port 8009.
+    const proxyPublicUrl = config.BROWSER_PROXY_PUBLIC_URL || '';
+    const proxyAuth = config.BROWSER_PROXY_SECRET ? `epsilon:${config.BROWSER_PROXY_SECRET}` : '';
+    const proxyUrlWithCreds = proxyPublicUrl && proxyAuth
+      ? proxyPublicUrl.replace(/^(https?:\/\/)/, `$1${proxyAuth}@`)
+      : '';
+
     // Whitelist the API server IP so Daytona's Envoy proxy allows outbound TLS
     // connections from the sandbox back to our API. Set DAYTONA_NETWORK_ALLOW_LIST
     // to a comma-separated CIDR list (e.g. "167.172.66.16/32") in the API env.
@@ -89,6 +99,16 @@ export class DaytonaProvider implements SandboxProvider {
         ...(config.OPENROUTER_API_KEY ? { OPENROUTER_API_KEY: config.OPENROUTER_API_KEY } : {}),
         ...(config.GEMINI_API_KEY ? { GEMINI_API_KEY: config.GEMINI_API_KEY } : {}),
         ...(config.XAI_API_KEY ? { XAI_API_KEY: config.XAI_API_KEY } : {}),
+        // Story 8.7 — Route all sandbox outbound traffic through the Epsilon API
+        // CONNECT proxy. Daytona Envoy blocks direct egress to arbitrary internet IPs;
+        // this proxy is reachable via the whitelisted API VPS IP and bridges to the web.
+        ...(proxyUrlWithCreds ? {
+          HTTP_PROXY:                proxyUrlWithCreds,
+          HTTPS_PROXY:               proxyUrlWithCreds,
+          AGENT_BROWSER_PROXY_URL:   proxyPublicUrl,      // creds-free for Chromium --proxy-server
+          AGENT_BROWSER_PROXY_AUTH:  proxyAuth,           // creds for agent-browser auth challenge
+          NO_PROXY:                  'localhost,127.0.0.1,::1',
+        } : {}),
         ...opts.envVars,
       },
       autoStopInterval: 15,

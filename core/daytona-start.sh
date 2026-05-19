@@ -44,12 +44,20 @@ done
 # OpenCode runtime wrapper reads these files even when s6 itself is not PID 1.
 env | while IFS='=' read -r key value; do
   case "$key" in
-    EPSILON*|INTERNAL_SERVICE_KEY|TUNNEL*|OPENAI*|ANTHROPIC*|GEMINI*|GROQ*|XAI*|TAVILY*|FIRECRAWL*|SECRET_FILE_PATH|SALT_FILE_PATH|ENCRYPTION_KEY_PATH|OPENCODE_*|AUTH_JSON_PATH)
+    EPSILON*|INTERNAL_SERVICE_KEY|TUNNEL*|OPENAI*|ANTHROPIC*|GEMINI*|GROQ*|XAI*|TAVILY*|FIRECRAWL*|SECRET_FILE_PATH|SALT_FILE_PATH|ENCRYPTION_KEY_PATH|OPENCODE_*|AUTH_JSON_PATH|HTTP_PROXY|HTTPS_PROXY|NO_PROXY|AGENT_BROWSER_PROXY_URL|AGENT_BROWSER_PROXY_AUTH)
       printf '%s' "$value" > "/run/s6/container_environment/$key"
       ;;
   esac
 done
 chown -R abc:users /run/s6/container_environment /workspace "$EPSILON_PERSISTENT_ROOT" 2>/dev/null || true
+
+# Story 8.7 — If browser proxy env was injected at provision time, force Chromium
+# restart so svc-chromium-persistent picks up AGENT_BROWSER_PROXY_URL on its next
+# start (s6 auto-restarts the service). Defensive: no-op if env not set or process
+# absent. Safe in steady state because Chromium auto-restart is fast (~2s).
+if [ -n "${AGENT_BROWSER_PROXY_URL:-}" ]; then
+  pkill -f "chromium-browser.*--remote-debugging-port=9222" 2>/dev/null || true
+fi
 
 log "starting epsilon-master on port 8000 (with auto-restart on crash)"
 # Export runtime vars so s6-setuidgid inherits the full environment (including
