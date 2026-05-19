@@ -172,8 +172,8 @@ jobs:
             -d '{"command":"setsid bash -c '\''nohup /usr/local/bin/epsilon-daytona-start > /tmp/eds.log 2>&1 < /dev/null &'\''","timeout":10}' \
             || echo "Warning: bootstrap trigger returned non-zero (may already be starting)"
 
-          echo "Waiting up to 90s for epsilon-master to become ready..."
-          DEADLINE=$((SECONDS + 90))
+          echo "Waiting up to 120s for epsilon-master to become ready..."
+          DEADLINE=$((SECONDS + 120))
           while [ $SECONDS -lt $DEADLINE ]; do
             HEALTH=$(curl -sf -X POST \
               -H "Authorization: Bearer $DAYTONA_API_KEY" \
@@ -185,9 +185,33 @@ jobs:
               echo "epsilon-master ready (${SECONDS}s)"
               break
             fi
-            echo "Waiting for epsilon-master... (${SECONDS}s)"
+            echo "Waiting for epsilon-master... (${SECONDS}s) health=$HEALTH"
             sleep 10
           done
+
+          echo "=== Bootstrap log ==="
+          curl -sf -X POST \
+            -H "Authorization: Bearer $DAYTONA_API_KEY" \
+            -H "Content-Type: application/json" \
+            "$TOOLBOX/process/execute" \
+            -d '{"command":"tail -50 /tmp/eds.log 2>/dev/null || echo \"(no log)\"","timeout":10}' \
+            | jq -r '.result // .output // ""' || true
+
+          echo "=== epsilon-master process ==="
+          curl -sf -X POST \
+            -H "Authorization: Bearer $DAYTONA_API_KEY" \
+            -H "Content-Type: application/json" \
+            "$TOOLBOX/process/execute" \
+            -d '{"command":"pgrep -fa epsilon-master | head -5 || echo none","timeout":5}' \
+            | jq -r '.result // .output // ""' || true
+
+          echo "=== raw health response ==="
+          curl -sf -X POST \
+            -H "Authorization: Bearer $DAYTONA_API_KEY" \
+            -H "Content-Type: application/json" \
+            "$TOOLBOX/process/execute" \
+            -d '{"command":"curl -sv http://localhost:8000/epsilon/health 2>&1 || echo FAIL","timeout":10}' \
+            | jq -r '.result // .output // ""' || true
 
       - name: Run smoke checks
         id: smoke
