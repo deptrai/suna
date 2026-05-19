@@ -33,7 +33,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-19 (Story 8.7 sandbox egress browser proxy spec'd from production incident — Winston architect-reviewed plan v2)
+last_updated: 2026-05-19 (Story 5.5.1 review → done — code-review applied 60/60 patches across 4 layers + Decision A ownership filter; 37 unit tests pass; all critical/high/medium/low review findings closed)
 project: chainlens
 project_key: NOKEY
 tracking_system: file-system
@@ -103,7 +103,7 @@ development_status:
   5-3-backtest-results-visualizer: done
   5-4-contextual-backtest-integration: done
   5-5-vibe-trading-mcp-proxy: done
-  5-5-1-vibe-trading-swarm-async-execution: review  # 2026-05-19 dev complete: start_swarm/cancel_swarm MCP tools (VT) + proxy 410 + ownership map + finalize billing (apps/api) + OpenCode wrapper (epsilon-master) + UI tool view (apps/web) + 23 new unit tests + 3 E2E specs scaffolded
+  5-5-1-vibe-trading-swarm-async-execution: done  # 2026-05-19 code-review applied 60/60 patches across MCP server / proxy / OpenCode wrapper / UI; Decision A ownership filter (SwarmRun.account_id + server-side list_runs filter); 37 unit tests pass (26 proxy + 11 wrapper); zero patches deferred — all critical/high/medium/low review findings closed
   5-6-shadow-account-swarm-ui: done  # 2026-05-18 review→done after fixing shadow-reports-route.test.ts regression (Q2 tier gate needed billing mock update); 7+4+7+8=26 tests pass; 16 review patches + 3 deferred + 2 audit fixes (M4 link, Q2 tier gate)
   5-7-user-llm-key-management: backlog
   5-8-per-user-persistent-memory: done  # 2026-05-18 /bmad-code-review applied 39 patches: pgvector removed, IDOR fixed, URL mount corrected, transactions, tests added
@@ -140,7 +140,7 @@ development_status:
   8-4-zero-data-leakage-enforcement-tier-3: backlog
   8-5-production-grade-platform-reliability: ready-for-dev
   # 8-6 reserved for "Load testing + accuracy benchmark suite" (Story 8.5 IR finding m5) — not yet created
-  8-7-sandbox-egress-browser-proxy: ready-for-dev  # 2026-05-19: production incident — agent-browser ERR_CONNECTION_RESET, plan v2 hardened (SSRF + port whitelist + conn cap + log)
+  8-7-sandbox-egress-browser-proxy: review  # 2026-05-19: SHIPPED to prod — apps/api port 8009 CONNECT proxy live + Dokploy port row persisted; sandbox image daytona-fix-11 pushed; DAYTONA_NETWORK_ALLOW_LIST=167.172.66.16/32; 7 hardening checks pass (SSRF/port/auth). Pending: user verify agent-browser end-to-end in new sandbox
   epic-8-retrospective: optional
 
   # ─── Phase 1 Addendum — FE Performance ───

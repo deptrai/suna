@@ -1,6 +1,12 @@
 # Story 8.7: Sandbox Egress Browser Proxy
 
-Status: ready-for-dev
+Status: review
+
+<!-- 2026-05-19: shipped to production via Dokploy. API proxy port 8009 publicly verified (200 OK in 65ms);
+     all 7 hardening checks pass (SSRF private-ip-literal, port_blocked, auth_fail). Sandbox image
+     epsilonaicrypto/computer:daytona-fix-11 pushed to Docker Hub. DAYTONA_SNAPSHOT updated.
+     Existing sandboxes (provisioned before deploy) still need recreation to pick up new image + proxy env. -->
+
 
 <!-- Spec'd 2026-05-19. Triggered by production incident: agent-browser ERR_CONNECTION_RESET on all outbound HTTPS.
      Plan: .claude/plans/hay-doc-promt-agent-bubbly-quail.md (v2 — hardened, Winston reviewed)
