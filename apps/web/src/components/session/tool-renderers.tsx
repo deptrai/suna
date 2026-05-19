@@ -403,7 +403,7 @@ function InlineServicePreview({ url, label }: { url: string; label?: string }) {
 // Tool Registry
 // ============================================================================
 
-interface ToolProps {
+export interface ToolProps {
   part: ToolPart;
   sessionId?: string;
   defaultOpen?: boolean;
@@ -416,7 +416,7 @@ interface ToolProps {
   ) => void;
 }
 
-type ToolComponent = ComponentType<ToolProps>;
+export type ToolComponent = ComponentType<ToolProps>;
 
 const registry = new Map<string, ToolComponent>();
 
@@ -8921,3 +8921,7 @@ ToolRegistry.register('simulate-transaction', OcTxSimulationTool);
 // Story 5.5.1 — async swarm wrapper. Component takes ToolProps directly (no adapter).
 ToolRegistry.register('vibe_trading_swarm', OcVibeTradingSwarmToolView);
 ToolRegistry.register('vibe-trading-swarm', OcVibeTradingSwarmToolView);
+// Defensive variants — OpenCode runtime may namespace tool names with the
+// oc_ / oc- prefix (parity with other oc_* tools). Story 5.5.1 review L6.
+ToolRegistry.register('oc_vibe_trading_swarm', OcVibeTradingSwarmToolView);
+ToolRegistry.register('oc-vibe-trading-swarm', OcVibeTradingSwarmToolView);

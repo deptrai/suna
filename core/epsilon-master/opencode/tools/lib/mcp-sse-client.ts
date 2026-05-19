@@ -114,6 +114,12 @@ export class McpSseClient {
   private async _doConnect(): Promise<void> {
     const ready = new Promise<void>((resolveReady, rejectReady) => {
       const connectTimer = setTimeout(() => {
+        // Abort the SSE fetch so the IIFE doesn't keep the GET open as a
+        // zombie until the wrapper finally calls close().
+        // (Story 5.5.1 review finding M2 for OpenCode wrapper.)
+        try {
+          this.sseAbort.abort();
+        } catch { /* already aborted */ }
         rejectReady(new Error(`MCP SSE handshake timed out after ${this.opts.connectTimeoutMs}ms`));
       }, this.opts.connectTimeoutMs);
 
@@ -140,11 +146,15 @@ export class McpSseClient {
 
         const reader = resp.body.pipeThrough(new TextDecoderStream()).getReader();
         let buffer = '';
+        let cleanClose = false;
 
         try {
           while (true) {
             const { value, done } = await reader.read();
-            if (done) break;
+            if (done) {
+              cleanClose = true;
+              break;
+            }
             buffer += value;
 
             // SSE events terminate on a blank line — either `\r\n\r\n` (most
@@ -169,6 +179,23 @@ export class McpSseClient {
         } catch (e) {
           // Stream closed unexpectedly — reject all pending calls.
           this._failAllPending(new Error(`MCP SSE stream closed: ${(e as Error).message}`));
+        } finally {
+          // Always release reader and lock the underlying body. Without this,
+          // an early `close()` could leave the reader holding the stream
+          // until GC. (Story 5.5.1 review finding M1 for OpenCode wrapper.)
+          try {
+            await reader.cancel();
+          } catch { /* already cancelled */ }
+          try {
+            reader.releaseLock();
+          } catch { /* already released */ }
+          // Clean server-close (done=true without exception) also leaves any
+          // in-flight callTool() requests stranded. Notify them so they
+          // surface the error fast instead of timing out 15s later.
+          // (Story 5.5.1 review finding C1.)
+          if (cleanClose && this.pending.size > 0) {
+            this._failAllPending(new Error('MCP SSE stream closed by server'));
+          }
         }
       })();
     });
@@ -231,16 +258,27 @@ export class McpSseClient {
     // The proxy rewrites the path to include the proxy prefix; the data field
     // looks like `/v1/router/vibe-trading-mcp/messages/?session_id=XYZ`. We
     // build an absolute URL using baseUrl's origin.
-    try {
-      const u = new URL(this.opts.baseUrl);
-      return `${u.origin}${raw.startsWith('/') ? raw : `/${raw}`}`;
-    } catch {
-      return raw;
-    }
+    //
+    // SECURITY: if baseUrl is malformed we MUST NOT fall back to the raw
+    // server-controlled string — an attacker who compromised the upstream
+    // could redirect every subsequent POST to an exfiltration host with
+    // valid Authorization headers. (Story 5.5.1 review finding C2.)
+    const u = new URL(this.opts.baseUrl);
+    return `${u.origin}${raw.startsWith('/') ? raw : `/${raw}`}`;
   }
 
-  /** Invoke an MCP tool. Returns the tool's raw text result (typically JSON). */
-  async callTool(name: string, args: Record<string, unknown>): Promise<string> {
+  /** Invoke an MCP tool. Returns the tool's raw text result (typically JSON).
+   *
+   * @param cancelSignal Optional caller-provided AbortSignal — when fired, the
+   *   in-flight POST aborts immediately so the caller can react to user
+   *   cancellation without waiting for the 15s call timeout to elapse.
+   *   (Story 5.5.1 review finding H2 — wrapper-level abort latency.)
+   */
+  async callTool(
+    name: string,
+    args: Record<string, unknown>,
+    cancelSignal?: AbortSignal,
+  ): Promise<string> {
     await this.connect();
     if (!this.sessionEndpoint) {
       throw new Error('MCP session not established');
@@ -259,7 +297,31 @@ export class McpSseClient {
         reject(new Error(`MCP tools/call ${name} timed out after ${this.opts.callTimeoutMs}ms`));
       }, this.opts.callTimeoutMs);
       this.pending.set(id, { resolve, reject, timer });
+      // Reject early on caller cancellation so the pending entry is cleaned
+      // up and the resolve loop won't double-resolve once the SSE response
+      // (if any) eventually arrives.
+      if (cancelSignal) {
+        const onAbort = () => {
+          this.pending.delete(id);
+          clearTimeout(timer);
+          reject(new Error(`MCP tools/call ${name} aborted by caller`));
+        };
+        if (cancelSignal.aborted) {
+          onAbort();
+        } else {
+          cancelSignal.addEventListener('abort', onAbort, { once: true });
+        }
+      }
     });
+
+    // Combine the per-call timeout signal with the optional caller-provided
+    // cancel signal so a fire-and-forget abort tears down the in-flight POST.
+    const timeoutSignal = AbortSignal.timeout(this.opts.callTimeoutMs);
+    const combinedSignal = cancelSignal
+      ? (typeof (AbortSignal as { any?: (s: AbortSignal[]) => AbortSignal }).any === 'function'
+          ? (AbortSignal as unknown as { any: (s: AbortSignal[]) => AbortSignal }).any([timeoutSignal, cancelSignal])
+          : timeoutSignal)
+      : timeoutSignal;
 
     const postResp = await this.opts.fetchImpl(this.sessionEndpoint, {
       method: 'POST',
@@ -268,7 +330,7 @@ export class McpSseClient {
         Authorization: `Bearer ${this.opts.token}`,
       },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(this.opts.callTimeoutMs),
+      signal: combinedSignal,
     });
 
     // FastMCP returns 202 immediately; result arrives via SSE.

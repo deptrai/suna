@@ -41,14 +41,18 @@ mock.module('../lib/mcp-sse-client', () => ({
   },
 }));
 
-import vibeTradingSwarm from '../vibe_trading_swarm';
+import vibeTradingSwarm, { __testHooks } from '../vibe_trading_swarm';
 
-/** Make `sleep` resolve instantly so the 5s poll cadence doesn't slow tests. */
+/**
+ * Make `sleep` resolve instantly via the wrapper's injectable hook so the 5s
+ * poll cadence doesn't slow tests. Returns a restore function. Replaces the
+ * earlier globalThis.setTimeout patch — that approach was unsafe under
+ * parallel test execution (Story 5.5.1 review finding M6).
+ */
 function speedUpSleep() {
-  const originalTimeout = globalThis.setTimeout;
-  globalThis.setTimeout = ((cb: () => void, _ms?: number) =>
-    originalTimeout(cb, 0)) as unknown as typeof setTimeout;
-  return () => { globalThis.setTimeout = originalTimeout; };
+  const original = __testHooks.sleep;
+  __testHooks.sleep = () => Promise.resolve();
+  return () => { __testHooks.sleep = original; };
 }
 
 const VALID_ARGS = {
@@ -141,23 +145,19 @@ describe('vibe_trading_swarm wrapper (Story 5.5.1)', () => {
   });
 
   test('[P0] missing EPSILON_TOKEN returns failure early without MCP call', async () => {
-    // Re-mock get-env to return undefined for the token
-    mock.module('../lib/get-env', () => ({
-      getEnv: (key: string) => (key === 'EPSILON_API_URL' ? 'http://test' : undefined),
-    }));
-    // Re-import to pick up the new mock
-    const { default: tool2 } = await import('../vibe_trading_swarm');
-    const out = await tool2.execute(VALID_ARGS, {} as never);
-    const text = typeof out === 'string' ? out : out.output;
-    expect(text).toContain('EPSILON_TOKEN not set');
-    // Restore mock for subsequent tests in the same file
-    mock.module('../lib/get-env', () => ({
-      getEnv: (key: string) => {
-        if (key === 'EPSILON_TOKEN') return 'test-token';
-        if (key === 'EPSILON_API_URL') return 'http://epsilon-api:8008';
-        return undefined;
-      },
-    }));
+    // Inject a getEnv that returns undefined for EPSILON_TOKEN. The injectable
+    // hook is reliable across re-runs (Bun's `mock.module` cache is not).
+    // (Story 5.5.1 review finding M5.)
+    const origGetEnv = __testHooks.getEnv;
+    __testHooks.getEnv = (key: string) =>
+      key === 'EPSILON_API_URL' ? 'http://test' : undefined;
+    try {
+      const out = await vibeTradingSwarm.execute(VALID_ARGS, {} as never);
+      const text = typeof out === 'string' ? out : out.output;
+      expect(text).toContain('EPSILON_TOKEN not set');
+    } finally {
+      __testHooks.getEnv = origGetEnv;
+    }
   });
 
   test('[P0] get_swarm_status transient error keeps polling and eventually succeeds', async () => {
@@ -174,6 +174,121 @@ describe('vibe_trading_swarm wrapper (Story 5.5.1)', () => {
       const out = await vibeTradingSwarm.execute(VALID_ARGS, {} as never);
       const text = typeof out === 'string' ? out : out.output;
       expect(text).toContain('OK');
+    } finally {
+      restoreSleep();
+    }
+  });
+
+  // ── Story 5.5.1 review patches — additional terminal-path coverage ──────
+
+  test('[P0] status=failed returns inline failure without calling get_run_result', async () => {
+    const restoreSleep = speedUpSleep();
+    try {
+      script = {
+        start_swarm: [JSON.stringify({ run_id: 'run-fail', preset: 'p', status: 'started' })],
+        get_swarm_status: [
+          JSON.stringify({ status: 'running', tasks: [{ status: 'running' }] }),
+          JSON.stringify({ status: 'failed', tasks: [{ status: 'failed' }] }),
+        ],
+      };
+      const out = await vibeTradingSwarm.execute(VALID_ARGS, {} as never);
+      const text = typeof out === 'string' ? out : out.output;
+      expect(text).toContain('failed');
+      expect(text).toContain('run-fail');
+      // Wrapper must NOT call get_run_result on failed runs (P26 / H3).
+      expect(calls.some((c) => c.tool === 'get_run_result')).toBe(false);
+    } finally {
+      restoreSleep();
+    }
+  });
+
+  test('[P0] MCP-level status=error (run not found) breaks the poll loop immediately', async () => {
+    const restoreSleep = speedUpSleep();
+    try {
+      script = {
+        start_swarm: [JSON.stringify({ run_id: 'run-x', preset: 'p', status: 'started' })],
+        get_swarm_status: [
+          JSON.stringify({ status: 'error', error: 'Run run-x not found' }),
+        ],
+      };
+      const out = await vibeTradingSwarm.execute(VALID_ARGS, {} as never);
+      const text = typeof out === 'string' ? out : out.output;
+      expect(text).toContain('not accessible');
+      expect(text).toContain('Run run-x not found');
+      // Only one status poll before the wrapper exits (no infinite loop).
+      expect(calls.filter((c) => c.tool === 'get_swarm_status')).toHaveLength(1);
+    } finally {
+      restoreSleep();
+    }
+  });
+
+  test('[P0] 30-min client timeout fires cancel_swarm and returns timeout error', async () => {
+    // Shrink the wrapper's max-poll budget so the timeout path fires after a
+    // few iterations, without waiting 30 minutes. Combined with a real (short)
+    // sleep so wall-clock advances past the budget — speedUpSleep would
+    // exhaust the script too fast and hit the consecutive-error path instead.
+    const origMax = __testHooks.maxPollDurationMs;
+    const origSleep = __testHooks.sleep;
+    __testHooks.maxPollDurationMs = 30; // ms
+    __testHooks.sleep = (_ms) => new Promise<void>((r) => setTimeout(r, 15)); // 15ms per iteration
+    try {
+      script = {
+        start_swarm: [JSON.stringify({ run_id: 'run-slow', preset: 'p', status: 'started' })],
+        // Status never reaches terminal — every poll says still running.
+        get_swarm_status: Array.from({ length: 50 }, () =>
+          JSON.stringify({ status: 'running', tasks: [{ status: 'running' }] }),
+        ),
+        cancel_swarm: [JSON.stringify({ status: 'cancelling', run_id: 'run-slow' })],
+      };
+      const out = await vibeTradingSwarm.execute(VALID_ARGS, {} as never);
+      const text = typeof out === 'string' ? out : out.output;
+      expect(text).toContain('timed out');
+      expect(text).toContain('run-slow');
+      // Cancel must have fired so server-side compute stops.
+      expect(calls.some((c) => c.tool === 'cancel_swarm')).toBe(true);
+    } finally {
+      __testHooks.maxPollDurationMs = origMax;
+      __testHooks.sleep = origSleep;
+    }
+  });
+
+  test('[P0] consecutive get_swarm_status errors hit retry limit and surface error', async () => {
+    const restoreSleep = speedUpSleep();
+    try {
+      script = {
+        start_swarm: [JSON.stringify({ run_id: 'run-flaky', preset: 'p', status: 'started' })],
+        // 6 throws in a row exceeds MAX_CONSECUTIVE_STATUS_ERRORS=5.
+        get_swarm_status: [
+          'THROW:proxy 500',
+          'THROW:proxy 500',
+          'THROW:proxy 500',
+          'THROW:proxy 500',
+          'THROW:proxy 500',
+          'THROW:proxy 500',
+        ],
+      };
+      const out = await vibeTradingSwarm.execute(VALID_ARGS, {} as never);
+      const text = typeof out === 'string' ? out : out.output;
+      expect(text).toMatch(/polling failed/i);
+      expect(text).toContain('run-flaky');
+    } finally {
+      restoreSleep();
+    }
+  });
+
+  test('[P0] 4xx error (403 ownership-violation) breaks poll immediately', async () => {
+    const restoreSleep = speedUpSleep();
+    try {
+      script = {
+        start_swarm: [JSON.stringify({ run_id: 'run-403', preset: 'p', status: 'started' })],
+        get_swarm_status: ['THROW:proxy returned status 403'],
+      };
+      const out = await vibeTradingSwarm.execute(VALID_ARGS, {} as never);
+      const text = typeof out === 'string' ? out : out.output;
+      expect(text).toContain('access denied');
+      expect(text).toContain('run-403');
+      // Single status call, no retry — 4xx is permanent (P24 / H1).
+      expect(calls.filter((c) => c.tool === 'get_swarm_status')).toHaveLength(1);
     } finally {
       restoreSleep();
     }

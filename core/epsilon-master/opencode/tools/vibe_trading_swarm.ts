@@ -24,7 +24,20 @@ const MAX_POLL_DURATION_MS = 30 * 60 * 1000; // 30 min
 const SSE_CONNECT_TIMEOUT_MS = 8_000;
 const TOOLS_CALL_TIMEOUT_MS = 15_000;
 
-const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+// Mutable hooks for tests to inject deterministic implementations without
+// monkey-patching globalThis or relying on Bun's `mock.module` cache
+// (which is unreliable across re-imports — Story 5.5.1 review findings
+// M5 + M6).
+export const __testHooks: {
+  sleep: (ms: number) => Promise<void>;
+  maxPollDurationMs: number;
+  getEnv: (key: string) => string | undefined;
+} = {
+  sleep: (ms: number) => new Promise<void>((r) => setTimeout(r, ms)),
+  maxPollDurationMs: MAX_POLL_DURATION_MS,
+  getEnv: (key: string) => getEnv(key),
+};
+const sleep = (ms: number) => __testHooks.sleep(ms);
 
 interface StartResult {
   run_id?: string;
@@ -56,8 +69,8 @@ export default tool({
       .describe('Required variables for the preset, e.g. {"target": "AAPL.US", "market": "US"}.'),
   },
   async execute({ preset, variables }, ctx) {
-    const epsilonToken = getEnv("EPSILON_TOKEN");
-    const epsilonApiUrl = getEnv("EPSILON_API_URL");
+    const epsilonToken = __testHooks.getEnv("EPSILON_TOKEN");
+    const epsilonApiUrl = __testHooks.getEnv("EPSILON_API_URL");
     if (!epsilonToken) return JSON.stringify({ success: false, error: "EPSILON_TOKEN not set." });
     if (!epsilonApiUrl) return JSON.stringify({ success: false, error: "EPSILON_API_URL not set." });
 
@@ -77,7 +90,7 @@ export default tool({
       // ── Step 1: start the swarm (single fire-and-forget call) ──────────
       let startRaw: string;
       try {
-        startRaw = await client.callTool("start_swarm", { preset_name: preset, variables });
+        startRaw = await client.callTool("start_swarm", { preset_name: preset, variables }, ctx?.abort);
       } catch (e) {
         return JSON.stringify({
           success: false,
@@ -95,7 +108,7 @@ export default tool({
         });
       }
 
-      if (start.status !== "started" || typeof start.run_id !== "string") {
+      if (start.status !== "started" || typeof start.run_id !== "string" || start.run_id.length === 0) {
         return JSON.stringify({
           success: false,
           error: start.error ?? `start_swarm did not succeed: ${startRaw.slice(0, 200)}`,
@@ -103,11 +116,17 @@ export default tool({
       }
 
       runId = start.run_id;
-      progress.push(`▶️ Swarm started: ${preset} (run_id: ${runId.slice(0, 8)}...)`);
+      // Sanitize preset value before splicing into progress — prevents a
+      // malicious caller from injecting `\n=== END ===\n` and tricking the
+      // UI parser. (Story 5.5.1 review finding L4 / Blind#13.)
+      const safePreset = String(preset).replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 60);
+      progress.push(`▶️ Swarm started: ${safePreset} (run_id: ${runId.slice(0, 8)}...)`);
 
       // ── Step 2: poll status until terminal ──────────────────────────────
       let lastDone = -1;
-      while (Date.now() - startTime < MAX_POLL_DURATION_MS) {
+      let consecutiveStatusErrors = 0;
+      const MAX_CONSECUTIVE_STATUS_ERRORS = 5;
+      while (Date.now() - startTime < __testHooks.maxPollDurationMs) {
         // Cooperative cancel — fire cancel_swarm and exit if the user aborted.
         if (ctx?.abort?.aborted) {
           await client.callTool("cancel_swarm", { run_id: runId }).catch(() => undefined);
@@ -121,9 +140,29 @@ export default tool({
 
         let statusRaw: string;
         try {
-          statusRaw = await client.callTool("get_swarm_status", { run_id: runId });
-        } catch {
-          // Transient — keep polling until the 30 min budget expires.
+          statusRaw = await client.callTool("get_swarm_status", { run_id: runId }, ctx?.abort);
+          consecutiveStatusErrors = 0;
+        } catch (e) {
+          // Inspect the error class — a 403/401/410 means the proxy permanently
+          // rejected this caller (ownership lost after restart, deprecated, etc).
+          // Don't silently retry for 30 minutes (Story 5.5.1 review finding H1).
+          const msg = (e as Error).message ?? "";
+          if (/(\b|status[= ])(401|403|410)\b/.test(msg)) {
+            return [
+              ...progress,
+              "",
+              `❌ Swarm access denied: ${msg.slice(0, 200)}. run_id=${runId}`,
+            ].join("\n");
+          }
+          consecutiveStatusErrors++;
+          if (consecutiveStatusErrors >= MAX_CONSECUTIVE_STATUS_ERRORS) {
+            return [
+              ...progress,
+              "",
+              `❌ Swarm status polling failed ${consecutiveStatusErrors} times in a row; aborting. Last error: ${msg.slice(0, 200)}. run_id=${runId}`,
+            ].join("\n");
+          }
+          // Transient — keep polling.
           continue;
         }
 
@@ -132,6 +171,17 @@ export default tool({
           status = JSON.parse(statusRaw) as StatusResult;
         } catch {
           continue;
+        }
+
+        // MCP-level errors surface as {status: "error", error: "..."} (e.g.
+        // run not found after server restart). These are terminal — don't
+        // poll forever (Story 5.5.1 review finding C3).
+        if ((status as { status?: string; error?: string }).status === "error") {
+          return [
+            ...progress,
+            "",
+            `❌ Swarm not accessible: ${(status as { error?: string }).error ?? "unknown error"}. run_id=${runId}`,
+          ].join("\n");
         }
 
         const tasks = status.tasks ?? [];
@@ -143,10 +193,21 @@ export default tool({
         }
 
         if (status.status === "completed" || status.status === "failed" || status.status === "cancelled") {
-          // ── Step 3: fetch final result ──────────────────────────────────
+          // Failed/cancelled — return the run summary inline; no need to
+          // fetch get_run_result (which would trigger the proxy's finalize
+          // billing check; harmless but wasted call). (Story 5.5.1 review H3.)
+          if (status.status !== "completed") {
+            return [
+              ...progress,
+              "",
+              `❌ Swarm ${status.status}. run_id=${runId}`,
+            ].join("\n");
+          }
+
+          // ── Step 3: fetch final result (only for completed runs) ────────
           let resultRaw: string;
           try {
-            resultRaw = await client.callTool("get_run_result", { run_id: runId });
+            resultRaw = await client.callTool("get_run_result", { run_id: runId }, ctx?.abort);
           } catch (e) {
             return [
               ...progress,
@@ -164,10 +225,12 @@ export default tool({
 
           const report =
             result.final_report ?? `Swarm ${result.status ?? "unknown"} — no report produced`;
+          // Use an unambiguous separator that markdown horizontal rules cannot
+          // collide with (Story 5.5.1 review finding H1 / Blind#5).
           return [
             ...progress,
             "",
-            "---",
+            "=== SWARM REPORT ===",
             "",
             report,
           ].join("\n");

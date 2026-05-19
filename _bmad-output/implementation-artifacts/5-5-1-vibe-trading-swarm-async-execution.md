@@ -1,6 +1,6 @@
 # Story 5.5.1: Vibe-Trading Swarm — Async Execution Pattern
 
-Status: review
+Status: done
 
 **Epic:** 5 — Vibe-Trading Platform
 **Type:** P1 architectural defect follow-up to Story 5.5
@@ -402,7 +402,112 @@ Gate behind `CI_CHAOS_ENABLED=true` per Story 5.0.4/5.0.5 pattern. Skip on PR bu
 - [x] 7.3 Update `core/epsilon-master/opencode/tools/README.md` MCP tools section
 - [x] 7.4 Update `CLAUDE.md` Vibe-Trading section: document the async swarm pattern as canonical
 
-## Dev Notes
+### Review Findings (2026-05-19, `/bmad-code-review`)
+
+Three parallel adversarial reviewers (Blind Hunter / Edge Case Hunter / Acceptance Auditor) across 4 chunks. 62 findings after dedup.
+
+#### Decision Needed (1)
+
+- [x] **[Review][Decision] RESOLVED 2026-05-19 → Option (A): MCP server-side `account_id` filter.** Add `account_id` field to `SwarmRun` model; `start_swarm` / `list_runs` / `get_swarm_status` / `get_run_result` / `cancel_swarm` accept + enforce `account_id` parameter. Proxy forwards `accountId` as JSON-RPC arg. Defense-in-depth: both proxy `runOwnership` Map AND MCP server check ownership. ~80 LOC across both layers. Promoted to patches `P_OWN_A1..A6` (added to Critical batch below).
+
+#### Patches (53) — fixes are unambiguous, ready to apply
+
+**Critical (18 — includes Option A ownership patches)**
+
+- [x] [Review][Patch] **[P_OWN_A1]** Add `account_id: Optional[str] = None` field to `SwarmRun` model [`Vibe-Trading/agent/src/swarm/models.py`]
+- [x] [Review][Patch] **[P_OWN_A2]** `SwarmRuntime.start_run()` accepts + persists `account_id` to SwarmRun [`Vibe-Trading/agent/src/swarm/runtime.py:72-122`]
+- [x] [Review][Patch] **[P_OWN_A3]** `start_swarm` MCP tool accepts `account_id` parameter; pass through to start_run [`Vibe-Trading/agent/mcp_server.py:539-550`]
+- [x] [Review][Patch] **[P_OWN_A4]** `list_runs(account_id=...)` filters server-side; `get_swarm_status` / `get_run_result` / `cancel_swarm` accept + enforce `account_id` (403-equivalent JSON error on mismatch) [`Vibe-Trading/agent/mcp_server.py:652,669,782`]
+- [x] [Review][Patch] **[P_OWN_A5]** apps/api proxy forwards `accountId` as `account_id` JSON-RPC arg to all 5 ownership-aware MCP tools [`apps/api/src/router/routes/vibe-trading-mcp.ts`]
+- [x] [Review][Patch] **[P_OWN_A6]** Cross-account isolation test: account B's `list_runs` MUST NOT return account A's runs even after proxy restart [`apps/api/src/__tests__/unit/vibe-trading-swarm-async.test.ts` + Python test]
+- [x] [Review][Patch] Add `threading.Lock` to `_get_swarm_runtime()` singleton race [`Vibe-Trading/agent/mcp_server.py:504-515`]
+- [x] [Review][Patch] Validate `preset_name` via `list_presets()` before `runtime.start_run()` (AC1 Task 1.3) [`Vibe-Trading/agent/mcp_server.py:539-550`]
+- [x] [Review][Patch] Sanitize `preset_name` against path traversal (regex `^[A-Za-z0-9_-]+$`) [`Vibe-Trading/agent/mcp_server.py:539`]
+- [x] [Review][Patch] Widen SSE `session_id` regex from `[a-f0-9]+` to `[\w-]+` (UUID-safe) [`apps/api/src/router/routes/vibe-trading-mcp.ts:140`]
+- [x] [Review][Patch] Set `finalized=true` on cancel_swarm `status==cancelled` response (prevent race-finalize-bill) [`apps/api/src/router/routes/vibe-trading-mcp.ts:313-334`]
+- [x] [Review][Patch] Set `finalized=true` on `status==failed` to seal flag (prevent failed→completed re-bill) [`apps/api/src/router/routes/vibe-trading-mcp.ts:313-334`]
+- [x] [Review][Patch] Call `_failAllPending` on SSE clean close (done=true exits without notifying pending) [`core/epsilon-master/opencode/tools/lib/mcp-sse-client.ts:147`]
+- [x] [Review][Patch] Remove `_resolveEndpoint` catch fallback returning `raw` (server-controlled URL exfil risk) [`core/epsilon-master/opencode/tools/lib/mcp-sse-client.ts:237-238`]
+- [x] [Review][Patch] Add `status==='error'` to wrapper terminal check (infinite poll on run-not-found) [`core/epsilon-master/opencode/tools/vibe_trading_swarm.ts:145`]
+- [x] [Review][Patch] Fix `apiBase()` → `apiBase` (string constant, not function) [`tests/e2e/specs/swarm-resume-after-api-restart.spec.ts:50,69,96,...`] **BLOCKER**
+- [x] [Review][Patch] Wrap docker kill+start in `try/finally` (cleanup on assertion failure) [`tests/e2e/specs/swarm-resume-after-api-restart.spec.ts:89-91`]
+- [x] [Review][Patch] Add `rehypeSanitize` to `ReactMarkdown` (XSS via tool output) [`apps/web/src/components/thread/tool-views/opencode/OcVibeTradingSwarmToolView.tsx:176`]
+
+**High (12)**
+
+- [x] [Review][Patch] Update `cancel_swarm` docstring to match post-completion error behavior [`Vibe-Trading/agent/mcp_server.py:574-590`]
+- [x] [Review][Patch] Assert `final_status == "cancelled"` in cancel roundtrip test [`Vibe-Trading/agent/tests/test_async_swarm_mcp_tools.py:138`]
+- [x] [Review][Patch] Add `@pytest.fixture(autouse=True)` to reset `_swarm_runtime_singleton` between tests [`Vibe-Trading/agent/tests/test_async_swarm_mcp_tools.py`]
+- [x] [Review][Patch] Catch `FileExistsError + OSError` in `start_swarm` exception handler [`Vibe-Trading/agent/mcp_server.py:539-550`]
+- [x] [Review][Patch] Add "deposit billed once on retry" test case (AC6 missing) [`apps/api/src/__tests__/unit/vibe-trading-swarm-async.test.ts`]
+- [x] [Review][Patch] Add 30-min timeout test case (AC6 missing) [`core/epsilon-master/opencode/tools/__tests__/vibe_trading_swarm.test.ts`]
+- [x] [Review][Patch] Add 3 missing wrapper test paths (failed / error / timeout) [`core/epsilon-master/opencode/tools/__tests__/vibe_trading_swarm.test.ts`]
+- [x] [Review][Patch] Wire `ctx.abort` to `McpSseClient.callTool` fetch AbortSignal (20s latency fix) [`core/epsilon-master/opencode/tools/vibe_trading_swarm.ts:112` + `mcp-sse-client.ts`]
+- [x] [Review][Patch] Inspect 4xx in `get_swarm_status` catch, break on auth errors (don't silently retry 30 min) [`core/epsilon-master/opencode/tools/vibe_trading_swarm.ts:122-128`]
+- [x] [Review][Patch] Gate `get_run_result` behind `status==='completed'` only (skip for failed/cancelled) [`core/epsilon-master/opencode/tools/vibe_trading_swarm.ts:145-149`]
+- [x] [Review][Patch] Read `part.state.raw ?? part.state.output` so live progress renders during running state [`apps/web/src/components/thread/tool-views/opencode/OcVibeTradingSwarmToolView.tsx:106`]
+- [x] [Review][Patch] Rename `\n---\n` separator to unambiguous marker (e.g. `=== SWARM REPORT ===`) — markdown HR collision [`vibe_trading_swarm.ts` + `OcVibeTradingSwarmToolView.tsx:55-57`]
+
+**Medium (18)**
+
+- [x] [Review][Patch] Add cancel-incompat warning in `run_swarm` deprecation note [`Vibe-Trading/agent/mcp_server.py:454`]
+- [x] [Review][Patch] Periodic sweeper for `runOwnership` Map TTL eviction (memory leak) [`apps/api/src/router/routes/vibe-trading-mcp.ts:22-32`]
+- [x] [Review][Patch] Line-buffer SSE chunks across `transform` calls (partial JSON drops) [`apps/api/src/router/routes/vibe-trading-mcp.ts:133`]
+- [x] [Review][Patch] Size cap (10MB) on `parseToolResult` / `resp.text` (OOM protection) [`apps/api/src/router/routes/vibe-trading-mcp.ts:82,278`]
+- [x] [Review][Patch] Skip start_swarm deposit billing when `parseToolResult` fails (no run_id captured = user charged for inaccessible run) [`apps/api/src/router/routes/vibe-trading-mcp.ts:272-278`]
+- [x] [Review][Patch] Warn log when start_swarm SSE missing `session_id` (silent ownership-seed failure observable) [`apps/api/src/router/routes/vibe-trading-mcp.ts:244-253`]
+- [x] [Review][Patch] Sanitize upstream errors unconditionally (not just `application/json`) [`apps/api/src/router/routes/vibe-trading-mcp.ts:305-311`]
+- [x] [Review][Patch] Release SSE reader on close + call reader.cancel() [`core/epsilon-master/opencode/tools/lib/mcp-sse-client.ts:141,292-296`]
+- [x] [Review][Patch] Abort SSE fetch when `connectTimer` fires (zombie request prevention) [`core/epsilon-master/opencode/tools/lib/mcp-sse-client.ts:115-120`]
+- [x] [Review][Patch] Rewrite `mock.module` test or refactor `getEnv` to injectable (Bun module cache may bypass mock) [`core/epsilon-master/opencode/tools/__tests__/vibe_trading_swarm.test.ts:145-161`]
+- [x] [Review][Patch] Replace `speedUpSleep` globalThis patching with injectable `sleep` import [`core/epsilon-master/opencode/tools/__tests__/vibe_trading_swarm.test.ts:48-51`]
+- [x] [Review][Patch] Add auth setup to E2E specs (currently redirect to /auth/, will fail) [`tests/e2e/specs/swarm-async-roundtrip.spec.ts`, `swarm-cancel.spec.ts`]
+- [x] [Review][Patch] Parse `list_runs` response body + assert run_id present (chaos step 4 currently unverified) [`tests/e2e/specs/swarm-resume-after-api-restart.spec.ts:108-115`]
+- [x] [Review][Patch] Add `vibe-trading-mcp-proxy-extended.test.ts` to fast-tier in `.github/workflows/test.yml` (P0 410 regression only in informational tier) [`.github/workflows/test.yml`]
+- [x] [Review][Patch] Replace `[data-tool="vibe_trading_swarm"]` selector — attribute doesn't exist in DOM [`tests/e2e/specs/swarm-async-roundtrip.spec.ts:73-75`]
+- [x] [Review][Patch] Use canonical `ToolProps` from `tool-renderers.tsx` (local interface narrower, latent trap) [`OcVibeTradingSwarmToolView.tsx:96-100`]
+- [x] [Review][Patch] Drop `.catch(() => ({default: () => null}))` on `ShadowAccountPage` lazy import (silent failure) [`apps/web/src/components/tabs/page-tab-content.tsx:112-116`]
+- [x] [Review][Patch] Replace XPath ancestor selector with `data-testid="preset-card"` (Tailwind class collision risk) [`swarm-async-roundtrip.spec.ts:34`, `swarm-cancel.spec.ts:33`]
+
+**Low (11)**
+
+- [x] [Review][Patch] Replace `as any` cast with `StatusCode` type on resp.status [`apps/api/src/router/routes/vibe-trading-mcp.ts:309`]
+- [x] [Review][Patch] Update misleading config comment on `vt_mcp_run_swarm` (entry doesn't bill — proxy 410 first) [`apps/api/src/config.ts:1008-1011`]
+- [x] [Review][Patch] Add backoff + retry limit (e.g. 5 consecutive errors) before continuing poll [`core/epsilon-master/opencode/tools/vibe_trading_swarm.ts:122-128`]
+- [x] [Review][Patch] Sanitize `preset` value in progress lines (prompt injection via "\\n---\\n" fake separator) [`vibe_trading_swarm.ts:106`]
+- [x] [Review][Patch] Remove `run_swarm` from tier 2 permission frontmatter allow-list (or document why kept) [`core/epsilon-master/opencode/agents/chainlens-tier2.md`]
+- [x] [Review][Patch] Update "low-level MCP trio" docs to note ownership prerequisite [`core/epsilon-master/opencode/agents/chainlens-tier2.md`]
+- [x] [Review][Patch] Add Task 3.0 research findings note to Dev Agent Record [this story file]
+- [x] [Review][Patch] Update CLAUDE.md "Before pushing" with 3 new fast-tier test files [`CLAUDE.md`]
+- [x] [Review][Patch] Rename chaos test title to remove "bills exactly once" until billing assertion exists [`tests/e2e/specs/swarm-resume-after-api-restart.spec.ts`]
+- [x] [Review][Patch] Remove `findLast?.` optional chaining + fallback dead code (ES2023 available) [`OcVibeTradingSwarmToolView.tsx:114-115`]
+- [x] [Review][Patch] Use stable React key (composite of `line.raw` + index) instead of `key={i}` [`OcVibeTradingSwarmToolView.tsx:161`]
+- [x] [Review][Patch] Register `oc_vibe_trading_swarm` + `oc-vibe-trading-swarm` prefix variants in ToolRegistry [`apps/web/src/components/session/tool-renderers.tsx`]
+
+#### Deferred (11) — tracked in deferred-work.md
+
+- [x] [Review][Defer] Prompt injection via `variables` dict values (OWASP LLM01, cross-cutting; 5.6 already deferred class-of-attack)
+- [x] [Review][Defer] Multi-`apps/api`-worker process double-billing (architectural — needs Redis-backed finalize lock)
+- [x] [Review][Defer] Tool-specific HTTP timeouts (cancel 30s too long; operational tuning)
+- [x] [Review][Defer] SSE rewriter ownership-seed test coverage (integration-tier scope, separate)
+- [x] [Review][Defer] `mcp-sse-client.ts` own unit tests (extracted lib, separate test scope)
+- [x] [Review][Defer] `cancel_swarm` fire-and-forget no confirmation (acceptable per AC5b design — server-side cancellation is async)
+- [x] [Review][Defer] Vibe-Trading tests hit real disk + LLM, no mocks (test-infra change, separate scope)
+- [x] [Review][Defer] `factor_analysis` 5 issues (CSV cleanup, TOCTOU dir, broad except, codes DoS, date validation) — pre-existing, not Story 5.5.1 scope
+- [x] [Review][Defer] Task 4.4 Stop button on swarm-teams page row (Story 5.6 page has no in-flight row UI; deviation accepted; tracked separately)
+- [x] [Review][Defer] Cancel spec billing assertion (matches existing chaos billing follow-up in deferred-work)
+- [x] [Review][Defer] Out-of-scope sidebar/tabs changes untested (legitimate bug fixes; separate test scope)
+
+#### Dismissed (6) — noise / cosmetic / false positive
+
+- Sunset date 31 not 30 days (intentional same-day-of-month)
+- Spec AC1 still lists obsolete `account_id` (already documented in spec change log)
+- Tier-ordering test name cosmetic
+- Emoji `▶️` variation selector theoretical fragility (terminals preserve VS-16)
+- `findLast` browser compat (modern browser target acceptable)
+- `vt_mcp_run_swarm` config entry kept (historical accounting, comment patched separately)
+
+
 
 ### Why preserve `run_swarm` instead of deleting it
 

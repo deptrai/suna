@@ -243,9 +243,13 @@ Fetch OHLCV across 6 sources (auto-detect by symbol format):
   final report. 6-15 min runtime. **Requires user's OpenAI key** (Settings → AI Keys). If user
   hasn't configured it, tell them: "Configure your OpenAI key in Settings → AI Keys to use
   Swarm Teams. LLM costs are billed by OpenAI directly." This is the recommended entry point.
-- `start_swarm`, `get_swarm_status`, `get_run_result`, `cancel_swarm` — low-level MCP trio
-  (use only if you need to interleave swarm runs with other work).
-- `list_runs` — monitor recent runs.
+- `start_swarm`, `get_swarm_status`, `get_run_result`, `cancel_swarm` — low-level MCP trio.
+  Use only if you need to interleave swarm runs with other work. **Ownership note:** these
+  tools require the run_id to have been seeded by the proxy's in-memory ownership map
+  (populated when `start_swarm` succeeds through the proxy). After an `apps/api` restart
+  the map is cleared — call `list_runs` first to re-hydrate ownership before polling
+  status / result. Cross-account `run_id` access returns 403.
+- `list_runs` — monitor recent runs (server-side filtered to your account).
 - `run_swarm` — **DEPRECATED 2026-05-19** (Story 5.5.1). Proxy returns 410 Gone. Sunset:
   2026-06-19. Do NOT call.
 

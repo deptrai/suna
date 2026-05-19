@@ -1035,13 +1035,16 @@ export const TOOL_PRICING: Record<string, ToolPricing> = {
   vt_mcp_write_file:              { baseCost: 0,    perResultCost: 0, markupMultiplier: 1.0 },
   vt_mcp_read_file:               { baseCost: 0,    perResultCost: 0, markupMultiplier: 1.0 },
   vt_mcp_list_swarm_presets:      { baseCost: 0,    perResultCost: 0, markupMultiplier: 1.0 },
-  // run_swarm is DEPRECATED (Story 5.5.1) — proxy returns 410 Gone for any
-  // tools/call. Entry kept so direct sandbox bypass (test rigs) still bills
-  // correctly; production path never reaches it.
+  // run_swarm is DEPRECATED (Story 5.5.1) — proxy returns 410 Gone BEFORE
+  // billing fires, so this entry never deducts from the production path.
+  // Kept only for historical accounting / direct-to-MCP bypass (which would
+  // also bypass proxy billing entirely). Plan to remove with the Q3 sunset
+  // story (`run_swarm` body deletion).
   vt_mcp_run_swarm:               { baseCost: 0.25, perResultCost: 0, markupMultiplier: 1.0 },
   // Async swarm pricing (Story 5.5.1): deposit on start + finalize on completion.
   // Total successful run = 0.05 + 0.20 = 0.25 credits (parity with run_swarm).
   // Failed/cancelled run = 0.05 deposit only.
+  // MUST remain 0 — fired automatically by wrapper on abort/timeout, not user-initiated.
   vt_mcp_start_swarm:             { baseCost: 0.05, perResultCost: 0, markupMultiplier: 1.0 },
   vt_mcp_run_swarm_finalize:      { baseCost: 0.20, perResultCost: 0, markupMultiplier: 1.0 },
   vt_mcp_cancel_swarm:            { baseCost: 0,    perResultCost: 0, markupMultiplier: 1.0 },

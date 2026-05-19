@@ -110,7 +110,8 @@ jobs:
             src/__tests__/unit/sandbox-token-rotation.test.ts \
             src/__tests__/unit/sandbox-provisioner-rollback.test.ts \
             src/__tests__/unit/vibe-trading-swarm-async.test.ts \
-            src/__tests__/unit/swarm-finalize-billing.test.ts
+            src/__tests__/unit/swarm-finalize-billing.test.ts \
+            src/__tests__/unit/vibe-trading-mcp-proxy-extended.test.ts
 
       - name: Unit tests — epsilon-master (fast tier)
         run: |
@@ -126,7 +127,7 @@ jobs:
         run: |
           echo "### Fast tier result" >> "$GITHUB_STEP_SUMMARY"
           echo "- TypeScript: apps/api + epsilon-master" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Unit tests: 12 files (Story 5.5.1 added 3: vibe-trading-swarm-async, swarm-finalize-billing, vibe_trading_swarm)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Unit tests: 13 files (Story 5.5.1 added 4: vibe-trading-swarm-async, swarm-finalize-billing, vibe-trading-mcp-proxy-extended, vibe_trading_swarm)" >> "$GITHUB_STEP_SUMMARY"
           echo "See [ci-baseline-failures.md](docs/runbooks/ci-baseline-failures.md) for full baseline." >> "$GITHUB_STEP_SUMMARY"
 
   test-full-unit:

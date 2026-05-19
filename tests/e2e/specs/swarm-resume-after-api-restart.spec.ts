@@ -43,11 +43,15 @@ test.describe('vibe_trading_swarm — chaos: apps/api restart (Story 5.5.1 AC7)'
 
   test.setTimeout(10 * 60 * 1000);
 
-  test('run survives apps/api restart and finalize bills exactly once', async ({ request }) => {
+  // Test title intentionally describes structural recovery only; the billing
+  // "exactly once" claim is verified informally (second get_run_result returns
+  // 200) and the full credit_transactions assertion is tracked in
+  // deferred-work.md (chaos billing assertion follow-up).
+  test('run survives apps/api restart and is re-pollable post-recovery', async ({ request }) => {
     const token = await getAccessToken();
 
     // ── Step 1: start_swarm via proxy ─────────────────────────────────────
-    const startResp = await request.post(`${apiBase()}/router/vibe-trading-mcp/messages`, {
+    const startResp = await request.post(`${apiBase}/router/vibe-trading-mcp/messages`, {
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       data: mcpToolCall('start_swarm', {
         preset_name: SMALL_PRESET,
@@ -66,7 +70,7 @@ test.describe('vibe_trading_swarm — chaos: apps/api restart (Story 5.5.1 AC7)'
     const pollDeadline = Date.now() + 5 * 60_000;
     let observed = 0;
     while (Date.now() < pollDeadline) {
-      const statusResp = await request.post(`${apiBase()}/router/vibe-trading-mcp/messages`, {
+      const statusResp = await request.post(`${apiBase}/router/vibe-trading-mcp/messages`, {
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         data: mcpToolCall('get_swarm_status', { run_id: runId }),
       });
@@ -86,38 +90,60 @@ test.describe('vibe_trading_swarm — chaos: apps/api restart (Story 5.5.1 AC7)'
     expect(observed).toBeGreaterThanOrEqual(2);
 
     // ── Step 3: kill apps/api, wait 10s, restart ──────────────────────────
-    execSync(`docker kill ${API_CONTAINER}`);
-    await new Promise((r) => setTimeout(r, 10_000));
-    execSync(`docker start ${API_CONTAINER}`);
-    // Wait for /health to respond.
-    let healthy = false;
-    for (let i = 0; i < 60; i++) {
-      try {
-        const h = await request.get(`${apiBase()}/health`);
-        if (h.ok()) {
-          healthy = true;
-          break;
+    // Wrap the kill+start pair so an assertion failure mid-test does NOT
+    // leave the API container dead — would poison subsequent CI runs on the
+    // same self-hosted runner. (Story 5.5.1 review finding C2.)
+    let containerKilled = false;
+    try {
+      execSync(`docker kill ${API_CONTAINER}`);
+      containerKilled = true;
+      await new Promise((r) => setTimeout(r, 10_000));
+      execSync(`docker start ${API_CONTAINER}`);
+      containerKilled = false;
+      // Wait for /health to respond.
+      let healthy = false;
+      for (let i = 0; i < 60; i++) {
+        try {
+          const h = await request.get(`${apiBase}/health`);
+          if (h.ok()) {
+            healthy = true;
+            break;
+          }
+        } catch {
+          /* keep waiting */
         }
-      } catch {
-        /* keep waiting */
+        await new Promise((r) => setTimeout(r, 1_000));
       }
-      await new Promise((r) => setTimeout(r, 1_000));
+      expect(healthy).toBe(true);
+    } finally {
+      if (containerKilled) {
+        try { execSync(`docker start ${API_CONTAINER}`); } catch { /* best-effort */ }
+      }
     }
-    expect(healthy).toBe(true);
 
     // ── Step 4: re-hydrate ownership via list_runs (in-memory map cleared) ─
     const reauthToken = await getAccessToken();
-    const listResp = await request.post(`${apiBase()}/router/vibe-trading-mcp/messages`, {
+    const listResp = await request.post(`${apiBase}/router/vibe-trading-mcp/messages`, {
       headers: { Authorization: `Bearer ${reauthToken}`, 'Content-Type': 'application/json' },
       data: mcpToolCall('list_runs', { limit: 20 }),
     });
     expect(listResp.status()).toBe(200);
 
+    // Verify the response actually contains our run_id — without this, a
+    // silent re-hydration failure would manifest as a 403 in Step 5 with no
+    // clear cause. (Story 5.5.1 review finding H3 for Chunk 4.)
+    const listBody = await listResp.json();
+    const listText = listBody?.result?.content?.[0]?.text;
+    const listResults = JSON.parse(typeof listText === 'string' ? listText : '[]');
+    expect(Array.isArray(listResults)).toBe(true);
+    const ownedIds = (listResults as Array<{ run_id?: string }>).map((r) => r.run_id);
+    expect(ownedIds).toContain(runId);
+
     // ── Step 5: continue polling to completion ────────────────────────────
     const completionDeadline = Date.now() + 5 * 60_000;
     let finalStatus = '';
     while (Date.now() < completionDeadline) {
-      const r = await request.post(`${apiBase()}/router/vibe-trading-mcp/messages`, {
+      const r = await request.post(`${apiBase}/router/vibe-trading-mcp/messages`, {
         headers: { Authorization: `Bearer ${reauthToken}`, 'Content-Type': 'application/json' },
         data: mcpToolCall('get_swarm_status', { run_id: runId }),
       });
@@ -131,14 +157,14 @@ test.describe('vibe_trading_swarm — chaos: apps/api restart (Story 5.5.1 AC7)'
     expect(['completed', 'failed']).toContain(finalStatus);
 
     // ── Step 6: fetch final result; finalize bills once ───────────────────
-    const resultResp = await request.post(`${apiBase()}/router/vibe-trading-mcp/messages`, {
+    const resultResp = await request.post(`${apiBase}/router/vibe-trading-mcp/messages`, {
       headers: { Authorization: `Bearer ${reauthToken}`, 'Content-Type': 'application/json' },
       data: mcpToolCall('get_run_result', { run_id: runId }),
     });
     expect(resultResp.status()).toBe(200);
 
     // Second fetch should NOT double-bill (idempotent finalize flag).
-    const resultResp2 = await request.post(`${apiBase()}/router/vibe-trading-mcp/messages`, {
+    const resultResp2 = await request.post(`${apiBase}/router/vibe-trading-mcp/messages`, {
       headers: { Authorization: `Bearer ${reauthToken}`, 'Content-Type': 'application/json' },
       data: mcpToolCall('get_run_result', { run_id: runId }),
     });

@@ -264,6 +264,28 @@ describe('vibe-trading-mcp — async swarm pattern (Story 5.5.1)', () => {
     expect(res.status).toBe(200);
   });
 
+  test('[P0] start_swarm deposit billed ONCE per successful retry attempt', async () => {
+    // Two sequential start_swarm calls (caller retry pattern), each gets its
+    // own run_id + status=started. Expect exactly 2 deposit deducts — neither
+    // double-billed nor silently collapsed. Story 5.5.1 AC6 spec row.
+    globalThis.fetch = makeFetch({
+      ok: true,
+      body: fastMcpEnvelope({ run_id: 'run-retry-1', preset: 'x', status: 'started' }),
+    });
+    const r1 = await app.request(toolCallRequest('start_swarm', { preset_name: 'x', variables: {} }));
+    expect(r1.status).toBe(200);
+
+    globalThis.fetch = makeFetch({
+      ok: true,
+      body: fastMcpEnvelope({ run_id: 'run-retry-2', preset: 'x', status: 'started' }),
+    });
+    const r2 = await app.request(toolCallRequest('start_swarm', { preset_name: 'x', variables: {} }));
+    expect(r2.status).toBe(200);
+
+    const deposits = deductCalls.filter((c) => c.toolName === 'vt_mcp_start_swarm');
+    expect(deposits).toHaveLength(2);
+  });
+
   test('[P0] list_runs does NOT overwrite existing ownership (cannot steal)', async () => {
     // A starts run-aa
     globalThis.fetch = makeFetch({

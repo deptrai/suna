@@ -137,14 +137,18 @@ cd apps/api && bun test \
   src/__tests__/unit/sandbox-drift-reconciler.test.ts \
   src/__tests__/unit/admin-rotate-sandbox-token.test.ts \
   src/__tests__/unit/sandbox-token-rotation.test.ts \
-  src/__tests__/unit/sandbox-provisioner-rollback.test.ts
+  src/__tests__/unit/sandbox-provisioner-rollback.test.ts \
+  src/__tests__/unit/vibe-trading-swarm-async.test.ts \
+  src/__tests__/unit/swarm-finalize-billing.test.ts \
+  src/__tests__/unit/vibe-trading-mcp-proxy-extended.test.ts
 
 # epsilon-master
 cd core/epsilon-master && bun test \
   src/services/__tests__/load-canonical-token.test.ts \
   src/services/__tests__/token-grace.test.ts \
   src/services/__tests__/realtime-reauth.test.ts \
-  tests/unit/verify-fail-closed.test.ts
+  tests/unit/verify-fail-closed.test.ts \
+  opencode/tools/__tests__/vibe_trading_swarm.test.ts
 ```
 
 **Baseline failures:** See [docs/runbooks/ci-baseline-failures.md](docs/runbooks/ci-baseline-failures.md) for categorized list + triage guide.

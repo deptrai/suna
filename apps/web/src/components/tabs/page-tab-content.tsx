@@ -112,7 +112,7 @@ const SwarmTeamsPage = lazy(() =>
 const ShadowAccountPage = lazy(() =>
 	import('@/app/(dashboard)/dashboard/shadow-account/shadow-account-client').then((m) => ({
 		default: m.ShadowAccountClient,
-	})).catch(() => ({ default: () => null })),
+	})),
 );
 
 const DiscoverPage = lazy(() =>

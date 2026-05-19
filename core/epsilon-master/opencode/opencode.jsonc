@@ -7,7 +7,12 @@
   "autoupdate": false,
   "disabled_providers": [],
   "default_agent": "general",
-  "model": "anthropic/claude-haiku-4-5-20251001",
+  // OpenCode Zen "Qwen3.6 Plus Free" — bundled with OpenCode runtime, no API key
+  // required. Chosen over anthropic/claude-haiku-4-5-20251001 because we don't
+  // ship an ANTHROPIC_API_KEY in the local sandbox env (it would 401 with
+  // "x-api-key header is required" on every chat). Users can still pick any
+  // model from the chat composer dropdown — this only sets the initial default.
+  "model": "opencode/qwen3.6-plus-free",
   // Shared system prompt base — always injected into every agent session.
   // Agent-specific persona/loop/rules live in ./agents/<name>.md.
   "instructions": ["./epsilon-system.md"],
