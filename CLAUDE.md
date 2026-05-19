@@ -160,6 +160,24 @@ cd core/epsilon-master && bun test \
 - Story 3.4 (Token Detail Page) — backlog
 
 ## Troubleshooting / Known Issues
+
+- **"Workspace offline" / Sandbox idle wake không bootstrap** (Story 8.7 incident 2026-05-19):
+  - **Root cause**: Daytona PID 1 = `daytona sleep infinity` — sau auto-archive (30 min idle) + wake, container start nhưng `epsilon-daytona-start` không tự run. Daytona báo `state=started` nhưng `epsilon-master` không tồn tại → UI shows "Workspace offline".
+  - **Fix shipped**: [`daytona.ts ensureRunning()`](apps/api/src/platform/providers/daytona.ts) giờ health-check `/epsilon/health` sau wake; nếu fail → re-trigger `startRuntime()` bootstrap automatically.
+  - **Manual recovery** (nếu code chưa deploy hoặc edge case): SSH VPS, dùng Daytona toolbox proxy trigger bootstrap:
+    ```bash
+    TOK=$DAYTONA_API_KEY; SBID=<sandbox-external-id>
+    curl -X POST -H "Authorization: Bearer $TOK" -H "Content-Type: application/json" \
+      "https://proxy.app-eu.daytona.io/toolbox/$SBID/process/execute" \
+      -d '{"command":"setsid bash -c '\''nohup /usr/local/bin/epsilon-daytona-start > /tmp/eds.log 2>&1 < /dev/null &'\''", "timeout":10}'
+    # Verify after 30s: curl ... -d '{"command":"curl -s http://localhost:8000/epsilon/health","timeout":10}'
+    ```
+
+- **NEVER set `DAYTONA_NETWORK_ALLOW_LIST` without `DAYTONA_NETWORK_ALLOW_LIST_CONFIRMED=true`** (Story 8.7 incident root cause):
+  - Setting first var alone DISABLES Daytona default whitelist → sandbox lose AI providers + `*.trycloudflare.com` (EPSILON_URL) access → bootstrap fail → workspace offline.
+  - Code-level guard ([daytona.ts](apps/api/src/platform/providers/daytona.ts)): refuses to apply unless confirmation flag set.
+  - Full context: [docs/production-deploy-guide.md → "DAYTONA_NETWORK_ALLOW_LIST block AI providers"](docs/production-deploy-guide.md).
+
 - **Backend API "Cannot connect to API" / 401 Unauthorized / memory không inject vào AI**: Story 5.0.3 chuyển sang canonical token lifecycle:
   - Cloud: DB `epsilon.sandboxes.config.serviceKey` là source of truth; sandbox pull qua `/v1/internal/bootstrap-token`.
   - Local Docker: source of truth là `apps/api/.env INTERNAL_SERVICE_KEY` và bind mount readonly `secrets/sandbox-token.txt -> /run/s6/container_environment/EPSILON_TOKEN`.

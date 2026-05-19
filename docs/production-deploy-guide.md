@@ -157,23 +157,23 @@ EPSILON_URL=https://api.yourdomain.com/v1/router
 # CORS
 CORS_ALLOWED_ORIGINS=https://yourdomain.com
 
-# Browser Proxy (Story 8.7) — BẮT BUỘC trong cloud mode
-# Daytona sandbox không reach được internet trực tiếp (Envoy egress allowlist).
-# CONNECT proxy bridges sandbox browser/curl traffic qua VPS API.
-BROWSER_PROXY_SECRET=<sinh bằng: openssl rand -base64 32 | tr -d "/+=" | head -c 32>
-BROWSER_PROXY_PUBLIC_URL=http://<VPS_IP>:8009    # IP phải trùng DAYTONA_NETWORK_ALLOW_LIST
-# BROWSER_PROXY_PORT=8009                         # mặc định, đổi nếu xung đột port
-# BROWSER_PROXY_ALLOWED_PORTS=80,443              # mặc định
-# BROWSER_PROXY_MAX_CONN_PER_IP=50                # mặc định
+# Browser Proxy (Story 8.7) — DISABLED in production (2026-05-19 incident)
+# Reason: sandbox cannot reach VPS:8009 without DAYTONA_NETWORK_ALLOW_LIST, but that
+# var disables Daytona default whitelist → AI providers + EPSILON_URL tunnel blocked.
+# Cloudflare quick tunnel doesn't support HTTP CONNECT method either (CF edge returns 400).
+# Browser proxy code in apps/api stays (port 8009 listener) but DON'T inject HTTP_PROXY into
+# sandbox env. agent-browser remains broken in cloud mode until proper solution ships.
+# Local docker dev mode unaffected — sandbox + API on same Docker network.
+BROWSER_PROXY_SECRET=<set if running local proxy testing — see browser-proxy.ts>
+# BROWSER_PROXY_PUBLIC_URL=                       # DO NOT SET in cloud mode (see above)
+# BROWSER_PROXY_PORT=8009                         # mặc định
 ```
 
-**Ops sau khi update env**:
-1. Dokploy: thêm port mapping `8009:8009` cho apps/api service
-2. VPS firewall: allow inbound TCP `:8009` từ internet (sandbox IPs không cố định)
-3. Redeploy apps/api
-4. Test từ external: `curl -x "http://epsilon:$BROWSER_PROXY_SECRET@<VPS_IP>:8009" https://example.com` → 200
-5. Sandbox image phải bao gồm `stable-2` trở lên (có `--proxy-server` arg trong `svc-chromium-persistent/run`)
-6. Secret rotation runbook: [docs/runbooks/browser-proxy-rotation.md](runbooks/browser-proxy-rotation.md)
+**Future work**: solving browser proxy egress in Daytona cloud requires either:
+- (a) Daytona Tier upgrade that supports named tunnels + WARP-based TCP routing
+- (b) Custom SOCKS5-over-WebSocket service running inside sandbox image, with WS bridge through `*.trycloudflare.com` (allowed by default)
+- (c) Migrate to JustAVPS provider which doesn't have egress restrictions
+Tracked separately — Story 8.7 closed without browser proxy active in production.
 
 ### 4. Cấu hình Frontend env
 
@@ -802,13 +802,17 @@ curl -sS -m 8 https://<tunnel-url>/v1/health  # → 200
 
 Verified 2026-05-18: chat response OK với `epsilon/gpt-4o-mini`, latency ~3s từ POST message tới response complete. Watchdog tested với cloudflared restart → URL drift detected trong ~30s → Dokploy patched + redeployed automatically.
 
-### `DAYTONA_NETWORK_ALLOW_LIST` block AI providers
+### `DAYTONA_NETWORK_ALLOW_LIST` block AI providers (2026-05-19 incident)
 
-**KHÔNG set** `DAYTONA_NETWORK_ALLOW_LIST` trừ khi bạn hiểu rõ Daytona Tier 1/2 firewall.
+**KHÔNG set** `DAYTONA_NETWORK_ALLOW_LIST` trừ khi bạn ĐỒNG THỜI set `DAYTONA_NETWORK_ALLOW_LIST_CONFIRMED=true`.
 
-Daytona free/paid tier mặc định whitelist các AI provider known (`api.anthropic.com`, `api.openai.com`, `openrouter.ai`, ...). Khi set `networkAllowList`, Daytona Envoy CHUYỂN sang allow-list explicit và **disable** whitelist mặc định → tất cả call ra AI provider bị TLS reset. Triệu chứng: chat trả 200 nhưng opencode không response (silent fail từ AI SDK).
+Daytona free/paid tier mặc định whitelist các AI provider known (`api.anthropic.com`, `api.openai.com`, `openrouter.ai`, ...) **và** Cloudflare quick tunnel subdomain (`*.trycloudflare.com`). Khi set `networkAllowList`, Daytona Envoy CHUYỂN sang allow-list explicit và **disable** whitelist mặc định → tất cả call ra AI provider + EPSILON_URL tunnel bị TLS reset → epsilon-master bootstrap fail → **"Workspace offline"**.
 
-Provider code ([daytona.ts](apps/api/src/platform/providers/daytona.ts)) **không pass** `networkAllowList` vào `daytona.create()` — comment trong code giải thích lý do. Nếu bạn thấy env này còn trong Dokploy, REMOVE nó.
+**2026-05-19 incident**: Story 8.7 (browser proxy) tự set `DAYTONA_NETWORK_ALLOW_LIST=167.172.66.16/32` để sandbox reach proxy port 8009. Hậu quả: production sandbox của user lập tức offline khi Daytona archive + wake. Recovery: remove env var + manual bootstrap re-trigger.
+
+**Code-level guard** ([daytona.ts](apps/api/src/platform/providers/daytona.ts)): kể từ commit 2026-05-19, `DAYTONA_NETWORK_ALLOW_LIST` chỉ được pass vào `daytona.create()` khi `DAYTONA_NETWORK_ALLOW_LIST_CONFIRMED=true`. Nếu chỉ set first var, code log error + IGNORE để fail-safe.
+
+Nếu THỰC SỰ cần whitelist (e.g. air-gapped tenant với danh sách CIDR đầy đủ AI providers + Cloudflare IPs), phải set CẢ HAI vars.
 
 ### Vibe-Trading 403 từ epsilon-api
 

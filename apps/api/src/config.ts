@@ -138,6 +138,10 @@ const envSchema = z.object({
   DAYTONA_TARGET:              optStr,
   DAYTONA_SNAPSHOT:            optStr,
   DAYTONA_NETWORK_ALLOW_LIST:  optStr,
+  // 2026-05-19 incident guard: setting DAYTONA_NETWORK_ALLOW_LIST disables Daytona default
+  // whitelist (AI providers + *.trycloudflare.com) → sandboxes go offline. Must explicitly
+  // confirm to opt-in. See docs/production-deploy-guide.md.
+  DAYTONA_NETWORK_ALLOW_LIST_CONFIRMED: optBoolFalse,
   DAYTONA_RESOURCE_CPU:        optInt(2),
   DAYTONA_RESOURCE_MEMORY:     optInt(4),
   DAYTONA_RESOURCE_DISK:       optInt(20),
@@ -597,6 +601,7 @@ export const config = {
   DAYTONA_TARGET: env.DAYTONA_TARGET,
   DAYTONA_SNAPSHOT: env.DAYTONA_SNAPSHOT || `epsilon-sandbox-v${SANDBOX_VERSION}`,
   DAYTONA_NETWORK_ALLOW_LIST: env.DAYTONA_NETWORK_ALLOW_LIST || undefined,
+  DAYTONA_NETWORK_ALLOW_LIST_CONFIRMED: env.DAYTONA_NETWORK_ALLOW_LIST_CONFIRMED,
   DAYTONA_RESOURCE_CPU: env.DAYTONA_RESOURCE_CPU,
   DAYTONA_RESOURCE_MEMORY: env.DAYTONA_RESOURCE_MEMORY,
   DAYTONA_RESOURCE_DISK: env.DAYTONA_RESOURCE_DISK,

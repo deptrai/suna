@@ -68,7 +68,27 @@ export class DaytonaProvider implements SandboxProvider {
     // Whitelist the API server IP so Daytona's Envoy proxy allows outbound TLS
     // connections from the sandbox back to our API. Set DAYTONA_NETWORK_ALLOW_LIST
     // to a comma-separated CIDR list (e.g. "167.172.66.16/32") in the API env.
-    const networkAllowList = config.DAYTONA_NETWORK_ALLOW_LIST || undefined;
+    //
+    // ⚠️  2026-05-19 INCIDENT (Story 8.7 hotfix): Setting this WITHOUT explicit
+    // confirmation breaks production. Daytona REPLACES the default whitelist
+    // (api.anthropic.com, openai.com, *.trycloudflare.com, …) with this list →
+    // sandboxes lose AI provider access AND can't reach EPSILON_URL tunnel →
+    // bootstrap fails → "Workspace offline".
+    //
+    // We refuse to apply networkAllowList unless DAYTONA_NETWORK_ALLOW_LIST_CONFIRMED=true
+    // so future misconfigurations fail-safe.
+    let networkAllowList: string | undefined = config.DAYTONA_NETWORK_ALLOW_LIST || undefined;
+    if (networkAllowList && !config.DAYTONA_NETWORK_ALLOW_LIST_CONFIRMED) {
+      console.error(
+        '[DAYTONA] ❌ DAYTONA_NETWORK_ALLOW_LIST is set but DAYTONA_NETWORK_ALLOW_LIST_CONFIRMED=false.\n' +
+        '  This var DISABLES Daytona default whitelist (AI providers + Cloudflare tunnels).\n' +
+        '  Sandboxes will FAIL to reach EPSILON_URL and AI providers unless those IPs are in the list.\n' +
+        '  See: docs/production-deploy-guide.md → "DAYTONA_NETWORK_ALLOW_LIST block AI providers".\n' +
+        '  To opt-in: set DAYTONA_NETWORK_ALLOW_LIST_CONFIRMED=true.\n' +
+        '  IGNORING DAYTONA_NETWORK_ALLOW_LIST for safety.',
+      );
+      networkAllowList = undefined;
+    }
     const resources = {
       cpu: config.DAYTONA_RESOURCE_CPU,
       memory: config.DAYTONA_RESOURCE_MEMORY,
@@ -250,9 +270,62 @@ export class DaytonaProvider implements SandboxProvider {
 
   async ensureRunning(externalId: string): Promise<void> {
     const status = await this.getStatus(externalId);
-    if (status === 'running') return;
-    console.log(`[DAYTONA] Sandbox ${externalId} is ${status}, waking up...`);
-    await this.start(externalId);
+    if (status !== 'running') {
+      console.log(`[DAYTONA] Sandbox ${externalId} is ${status}, waking up...`);
+      await this.start(externalId);
+    }
+
+    // 2026-05-19 incident: Daytona PID 1 is `daytona sleep infinity` — bootstrap
+    // (`epsilon-daytona-start` → `bun epsilon-master`) does NOT auto-run after wake
+    // from archive. Without this re-trigger, sandboxes silently show "Workspace offline"
+    // even though Daytona reports `state=started`. Story 8.5 AC12 / Story 8.7 incident.
+    const daytona = getDaytona();
+    const sandbox = await daytona.get(externalId);
+    const endpoint = await this.resolveEndpoint(externalId);
+    const healthy = await this.quickHealthCheck(endpoint.url, endpoint.headers);
+    if (!healthy) {
+      console.log(`[DAYTONA] Sandbox ${externalId} container running but runtime not responding — re-triggering bootstrap`);
+      await this.startRuntime(sandbox);
+      const ready = await this.waitForRuntimeReadyShort(sandbox, endpoint.url, endpoint.headers);
+      if (!ready) {
+        throw new Error(`Sandbox ${externalId} bootstrap failed after wake — runtime not ready`);
+      }
+      console.log(`[DAYTONA] Sandbox ${externalId} runtime ready after re-bootstrap`);
+    }
+  }
+
+  private async quickHealthCheck(url: string, headers: Record<string, string>): Promise<boolean> {
+    try {
+      const res = await fetch(`${url}/epsilon/health`, {
+        headers,
+        signal: AbortSignal.timeout(5000),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  private async waitForRuntimeReadyShort(
+    sandbox: any,
+    url: string,
+    headers: Record<string, string>,
+  ): Promise<boolean> {
+    const intervalMs = 10000;
+    const maxAttempts = 12;
+    for (let i = 0; i < maxAttempts; i++) {
+      await new Promise((r) => setTimeout(r, intervalMs));
+      try {
+        const res = await fetch(`${url}/epsilon/health`, {
+          headers,
+          signal: AbortSignal.timeout(8000),
+        });
+        if (res.ok) return true;
+      } catch {
+        /* keep polling */
+      }
+    }
+    return false;
   }
 
   private async resolvePreviewEndpoint(
