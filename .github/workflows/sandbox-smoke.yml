@@ -213,6 +213,19 @@ jobs:
         run: |
           bash scripts/ci-circuit-breaker.sh record-pass "${{ inputs.sha7 }}"
 
+      - name: Notify Telegram (promote success)
+        if: env.TELEGRAM_BOT_TOKEN != '' && env.TELEGRAM_CHAT_ID != ''
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          MSG="✅ *Sandbox promoted* to \`stable\`%0A"
+          MSG+="SHA: \`${{ inputs.sha7 }}\`%0A"
+          MSG+="Smoke: all 5 checks PASSED%0A"
+          MSG+="Dokploy DAYTONA_SNAPSHOT patched + API redeploy triggered"
+          curl -sf "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${TELEGRAM_CHAT_ID}&parse_mode=Markdown&text=${MSG}" > /dev/null
+
       - name: Summary
         run: |
           echo "## Auto-Promote: PASSED ✅" >> "$GITHUB_STEP_SUMMARY"
@@ -231,6 +244,21 @@ jobs:
       - name: Record circuit breaker failure
         run: |
           bash scripts/ci-circuit-breaker.sh record-fail "${{ inputs.sha7 }}"
+      - name: Notify Telegram (smoke fail)
+        if: env.TELEGRAM_BOT_TOKEN != '' && env.TELEGRAM_CHAT_ID != ''
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          CB_STATUS=$(bash scripts/ci-circuit-breaker.sh status | grep '^consecutive_failures=' | cut -d= -f2 || echo '?')
+          MSG="❌ *Sandbox smoke FAILED* for \`${{ inputs.sha7 }}\`%0A"
+          MSG+="Image: \`${{ inputs.image_tag }}\`%0A"
+          MSG+="Consecutive failures: ${CB_STATUS}/$((3))%0A"
+          if [ "${CB_STATUS}" = "3" ]; then
+            MSG+="⚠️ Circuit breaker LOCKED — run unlock-promote.yml after investigation"
+          fi
+          curl -sf "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${TELEGRAM_CHAT_ID}&parse_mode=Markdown&text=${MSG}" > /dev/null
       - name: Summary
         run: |
           echo "## Auto-Promote: FAILED ❌" >> "$GITHUB_STEP_SUMMARY"

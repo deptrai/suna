@@ -125,7 +125,14 @@ Bất kỳ MCP tool nào có runtime >30s **PHẢI** dùng async start/poll/fina
 
 **Branch protection:** Only `test-fast` is a required status check on `main`.
 
-**GitHub secrets required:** `GH_PAT` — Personal Access Token with `repo` scope, needed for private `Vibe-Trading` submodule checkout in CI. Set in repo Settings → Secrets.
+**GitHub secrets required:**
+- `GH_PAT` — PAT with `repo` scope (private `Vibe-Trading` submodule checkout)
+- `GHCR_PAT` — PAT with `packages:write` scope for `ghcr.io/deptrai/computer` (Story 8.6 sandbox CI)
+- `DAYTONA_API_KEY` — Daytona API key (sandbox smoke tests)
+- `DOKPLOY_API_TOKEN` + `DOKPLOY_API_URL` — Dokploy API for auto-promote patch (optional, skips if unset)
+- `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` — CI notifications (optional, skips if unset)
+
+**Sandbox image CI (Story 8.6):** Three-workflow pipeline — `sandbox-base.yml` (slow base layer, ~monthly), `sandbox-build.yml` (thin layer on every epsilon-master push, ~5-8 min), `sandbox-smoke.yml` (real Daytona sandbox smoke + auto-promote to `:stable`). Self-hosted runner required (label: `sandbox-builder`). Setup: `docs/runbooks/sandbox-ci-setup.md`.
 
 **E2E scope in CI:** `test-e2e.yml` only runs `sandbox-token-drift-recovery.spec.ts` (sandbox-only stack). Specs 01-07 + market/widgets require full self-hosted stack — run locally or set `CI_FULL_STACK=true` on a self-hosted runner.
 
