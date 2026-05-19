@@ -37,8 +37,10 @@ interface ServiceKeyEntry {
 
 const previewLinkCache = new Map<string, PreviewLinkEntry>();
 const serviceKeyCache = new Map<string, ServiceKeyEntry>();
+const bootstrapRecoveryCooldown = new Map<string, number>();
 
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const BOOTSTRAP_RECOVERY_COOLDOWN_MS = 2 * 60 * 1000; // 2 minutes
 
 function getCachedServiceKey(sandboxId: string): string | null | undefined {
   const entry = serviceKeyCache.get(sandboxId);
@@ -55,6 +57,25 @@ function setCachedServiceKey(sandboxId: string, key: string | null) {
 
 export function invalidatePreviewServiceKeyCache(sandboxId: string): void {
   serviceKeyCache.delete(sandboxId);
+}
+
+async function triggerBootstrapRecovery(sandboxId: string, port: number): Promise<void> {
+  const last = bootstrapRecoveryCooldown.get(sandboxId);
+  if (last && Date.now() - last < BOOTSTRAP_RECOVERY_COOLDOWN_MS) {
+    console.log(`[PREVIEW] Bootstrap recovery for ${sandboxId} skipped (cooldown active, next in ${Math.ceil((last + BOOTSTRAP_RECOVERY_COOLDOWN_MS - Date.now()) / 1000)}s)`);
+    return;
+  }
+  bootstrapRecoveryCooldown.set(sandboxId, Date.now());
+  try {
+    console.warn(`[PREVIEW] Sandbox ${sandboxId} returning persistent 502 — epsilon-master likely dead after API restart; triggering ensureRunning`);
+    const { DaytonaProvider } = await import('../../platform/providers/daytona');
+    const provider = new DaytonaProvider();
+    await provider.ensureRunning(sandboxId);
+    previewLinkCache.delete(`${sandboxId}:${port}`);
+    console.log(`[PREVIEW] Sandbox ${sandboxId} bootstrap recovery complete — next proxy request should succeed`);
+  } catch (e) {
+    console.error(`[PREVIEW] Bootstrap recovery failed for ${sandboxId}:`, e);
+  }
 }
 
 function getCachedPreviewLink(sandboxId: string, port: number): PreviewLinkEntry | null {
@@ -294,15 +315,25 @@ export async function proxyToDaytona(
       //   503 — sandbox service temporarily unavailable
       // Detect all and retry with auto-wake so the user doesn't see errors
       // during the boot window (typically 10-30s after provisioning).
-      if ((upstream.status === 502 || upstream.status === 503) && attempt < MAX_RETRIES) {
-        // Port not ready yet — sandbox is booting. Retry without wake
-        // (the sandbox container is already running, just port 8000 isn't up).
-        console.warn(
-          `[PREVIEW] Sandbox ${sandboxId}:${port} returned ${upstream.status} (port not ready, attempt ${attempt + 1}/${MAX_RETRIES + 1})`
-        );
-        previewLinkCache.delete(`${sandboxId}:${port}`);
-        await new Promise((r) => setTimeout(r, RETRY_DELAYS_MS[attempt]));
-        continue;
+      if (upstream.status === 502 || upstream.status === 503) {
+        if (attempt < MAX_RETRIES) {
+          // Port not ready yet — sandbox is booting. Retry without wake
+          // (the sandbox container is already running, just port 8000 isn't up).
+          console.warn(
+            `[PREVIEW] Sandbox ${sandboxId}:${port} returned ${upstream.status} (port not ready, attempt ${attempt + 1}/${MAX_RETRIES + 1})`
+          );
+          previewLinkCache.delete(`${sandboxId}:${port}`);
+          await new Promise((r) => setTimeout(r, RETRY_DELAYS_MS[attempt]));
+          continue;
+        }
+        // All retries exhausted with 502/503. If wakeTriggered is false, the sandbox
+        // is "running" in Daytona but epsilon-master is not responding — this happens
+        // when the API container restarts and the WS connection drops, causing
+        // epsilon-master to exit. Trigger ensureRunning() async so the next request
+        // recovers without requiring manual bootstrap.
+        if (!wakeTriggered) {
+          void triggerBootstrapRecovery(sandboxId, port).catch(() => {});
+        }
       }
 
       if (upstream.status === 400 && attempt < MAX_RETRIES) {
