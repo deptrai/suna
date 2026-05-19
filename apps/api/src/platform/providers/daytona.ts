@@ -55,15 +55,12 @@ export class DaytonaProvider implements SandboxProvider {
     const sandboxApiBase = config.EPSILON_URL.replace(/\/v1\/router\/?$/, '');
     const routerBase = `${sandboxApiBase}/v1/router`;
 
-    // Story 8.7 — Browser proxy URL (creds-free for Chromium --proxy-server, plus
-    // creds-embedded variant for HTTP_PROXY env which curl/agent-browser respect).
-    // BROWSER_PROXY_PUBLIC_URL is explicit (not derived from EPSILON_URL) because
-    // EPSILON_URL may point to a Cloudflare Tunnel domain that won't expose port 8009.
-    const proxyPublicUrl = config.BROWSER_PROXY_PUBLIC_URL || '';
-    const proxyAuth = config.BROWSER_PROXY_SECRET ? `epsilon:${config.BROWSER_PROXY_SECRET}` : '';
-    const proxyUrlWithCreds = proxyPublicUrl && proxyAuth
-      ? proxyPublicUrl.replace(/^(https?:\/\/)/, `$1${proxyAuth}@`)
-      : '';
+    // Story 8.7 — Browser proxy via local CONNECT proxy (ws-proxy-client).
+    // ws-proxy-client listens on 127.0.0.1:3128 inside the sandbox and tunnels
+    // each CONNECT request over WebSocket to /v1/proxy/ws on EPSILON_API_URL
+    // (a Cloudflare tunnel URL that Daytona Envoy already whitelists).
+    // This avoids the need for DAYTONA_NETWORK_ALLOW_LIST or a raw VPS IP.
+    const LOCAL_PROXY = 'http://127.0.0.1:3128';
 
     // Whitelist the API server IP so Daytona's Envoy proxy allows outbound TLS
     // connections from the sandbox back to our API. Set DAYTONA_NETWORK_ALLOW_LIST
@@ -119,16 +116,12 @@ export class DaytonaProvider implements SandboxProvider {
         ...(config.OPENROUTER_API_KEY ? { OPENROUTER_API_KEY: config.OPENROUTER_API_KEY } : {}),
         ...(config.GEMINI_API_KEY ? { GEMINI_API_KEY: config.GEMINI_API_KEY } : {}),
         ...(config.XAI_API_KEY ? { XAI_API_KEY: config.XAI_API_KEY } : {}),
-        // Story 8.7 — Route all sandbox outbound traffic through the Epsilon API
-        // CONNECT proxy. Daytona Envoy blocks direct egress to arbitrary internet IPs;
-        // this proxy is reachable via the whitelisted API VPS IP and bridges to the web.
-        ...(proxyUrlWithCreds ? {
-          HTTP_PROXY:                proxyUrlWithCreds,
-          HTTPS_PROXY:               proxyUrlWithCreds,
-          AGENT_BROWSER_PROXY_URL:   proxyPublicUrl,      // creds-free for Chromium --proxy-server
-          AGENT_BROWSER_PROXY_AUTH:  proxyAuth,           // creds for agent-browser auth challenge
-          NO_PROXY:                  'localhost,127.0.0.1,::1',
-        } : {}),
+        // Story 8.7 — Route outbound traffic through local ws-proxy-client (port 3128).
+        // ws-proxy-client tunnels each CONNECT over WebSocket to EPSILON_API_URL/v1/proxy/ws.
+        HTTP_PROXY:              LOCAL_PROXY,
+        HTTPS_PROXY:             LOCAL_PROXY,
+        AGENT_BROWSER_PROXY_URL: LOCAL_PROXY,  // creds-free for Chromium --proxy-server
+        NO_PROXY:                'localhost,127.0.0.1,::1',
         ...opts.envVars,
       },
       autoStopInterval: 15,

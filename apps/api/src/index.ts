@@ -28,6 +28,13 @@ import { isEpsilonToken } from './shared/crypto';
 import { getSandboxServiceKeyFromConfig, setSandboxServiceKeyInConfig } from './shared/sandbox-secrets';
 import { getSupabase } from './shared/supabase';
 import { verifySupabaseJwt } from './shared/jwt-verify';
+import {
+  validateWsTunnelRequest,
+  onWsTunnelOpen,
+  onWsTunnelMessage,
+  onWsTunnelClose,
+  type WsTunnelData,
+} from './proxy-ws-tunnel';
 import { canAccessPreviewSandbox } from './shared/preview-ownership';
 import { setupApp } from './setup';
 import { providersApp } from './providers/routes';
@@ -1735,6 +1742,32 @@ export default {
       }
     }
 
+    // ── WebSocket TCP tunnel (browser proxy for Daytona sandboxes) ────────────
+    // Sandbox-side ws-proxy-client connects here and tunnels HTTP CONNECT traffic
+    // over WS so Chromium/curl can reach arbitrary internet endpoints without
+    // Daytona Envoy blocking direct egress.
+    // URL: /v1/proxy/ws?token=<INTERNAL_SERVICE_KEY>&host=<host>&port=<port>
+    if (isWsUpgrade && url.pathname === '/v1/proxy/ws') {
+      const validation = validateWsTunnelRequest(req);
+      if (!validation.ok) {
+        return new Response(JSON.stringify({ error: validation.error }), {
+          status: validation.status,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      const success = server.upgrade(req, {
+        data: {
+          type: 'ws-tcp-tunnel',
+          host: validation.host,
+          port: validation.port,
+          socket: null,
+          buffered: [],
+          closed: false,
+        } satisfies WsTunnelData,
+      });
+      if (success) return undefined;
+    }
+
     // ── VT SSE bypass: handle /v1/router/vibe-trading/runs/:jobId/stream ──
     // Hono's CORS middleware mutates c.res.headers after next(), which causes
     // Bun to abort the ReadableStream body after the first flush. We intercept
@@ -1769,6 +1802,11 @@ export default {
     open(ws: { data: any; send: (data: any) => void; close: (code?: number, reason?: string) => void }) {
       if (ws.data?.type === 'tunnel-agent') {
         tunnelWsHandlers.onOpen(ws.data.tunnelId, ws as any);
+        return;
+      }
+
+      if (ws.data?.type === 'ws-tcp-tunnel') {
+        onWsTunnelOpen(ws);
         return;
       }
 
@@ -1828,6 +1866,11 @@ export default {
         return;
       }
 
+      if (ws.data?.type === 'ws-tcp-tunnel') {
+        onWsTunnelMessage(ws, message);
+        return;
+      }
+
       resetIdleTimer(ws);
       const upstream = ws.data.upstream;
       if (upstream && upstream.readyState === WebSocket.OPEN) {
@@ -1847,6 +1890,11 @@ export default {
     close(ws: { data: any }) {
       if (ws.data?.type === 'tunnel-agent') {
         tunnelWsHandlers.onClose(ws.data.tunnelId);
+        return;
+      }
+
+      if (ws.data?.type === 'ws-tcp-tunnel') {
+        onWsTunnelClose(ws);
         return;
       }
 

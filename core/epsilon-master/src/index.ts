@@ -175,6 +175,15 @@ if (process.env.EPSILON_DISABLE_CORE_SUPERVISOR !== 'true') {
   )
 }
 
+// Start local CONNECT proxy for browser egress (Daytona sandbox mode only).
+// Listens on 127.0.0.1:3128 and tunnels CONNECT requests over WebSocket to
+// EPSILON_API_URL/v1/proxy/ws so Chromium/curl can reach arbitrary internet IPs
+// without hitting Daytona Envoy's egress block.
+if (process.env.ENV_MODE === 'cloud') {
+  const { startWsProxyClient } = await import('./ws-proxy-client')
+  startWsProxyClient()
+}
+
 // Cron scheduling + webhook routing handled by unified triggers plugin.
 // TriggerManager starts cron jobs from .epsilon/triggers.yaml + DB on boot —
 // but the plugin is project-scoped and opencode only loads it after the
