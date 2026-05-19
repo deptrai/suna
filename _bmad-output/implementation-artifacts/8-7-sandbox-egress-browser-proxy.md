@@ -1,15 +1,22 @@
 # Story 8.7: Sandbox Egress Browser Proxy
 
-Status: review
+Status: done-with-caveat
 
 <!-- 2026-05-19: shipped to production via Dokploy. API proxy port 8009 publicly verified (200 OK in 65ms);
      all 7 hardening checks pass (SSRF private-ip-literal, port_blocked, auth_fail). Sandbox image
      epsilonaicrypto/computer:daytona-fix-11 pushed to Docker Hub. DAYTONA_SNAPSHOT updated.
      Existing sandboxes (provisioned before deploy) still need recreation to pick up new image + proxy env. -->
 
+<!-- 2026-05-19 INCIDENT + ROLLBACK: DAYTONA_NETWORK_ALLOW_LIST=167.172.66.16/32 caused "Workspace offline"
+     after sandbox auto-archive. Root cause: env var disables Daytona default whitelist (AI providers +
+     *.trycloudflare.com). Browser proxy via raw VPS IP is fundamentally incompatible with Daytona Envoy.
+     Rollback: removed DAYTONA_NETWORK_ALLOW_LIST + BROWSER_PROXY_PUBLIC_URL from Dokploy env.
+     Hotfix commit 2930b7b732: ensureRunning() bootstrap re-trigger + DAYTONA_NETWORK_ALLOW_LIST guard.
+     AC1-AC5 (browser proxy code) remain deployed but inert. AC4 env injection disabled (no PUBLIC_URL).
+     Agent-browser cloud egress DEFERRED — needs new approach (see v2 Backlog). -->
 
 <!-- Spec'd 2026-05-19. Triggered by production incident: agent-browser ERR_CONNECTION_RESET on all outbound HTTPS.
-     Plan: .claude/plans/hay-doc-promt-agent-bubbly-quail.md (v2 — hardened, Winston reviewed)
+     Plan: .claude/plans/hay-doc-promt-agent-bubbly-quail.md (v2 → v3 after incident)
      Sibling: Story 8.5 (production reliability), reuses same VPS proxy pattern. -->
 
 ## Story
@@ -168,6 +175,62 @@ Defer khỏi 8.7, đưa vào sprint sau:
 
 ---
 
+## Postmortem — 2026-05-19 Production Incident
+
+**Severity**: P1 — User workspace offline ~35 minutes.
+
+### Timeline (UTC)
+| Time | Event |
+|------|-------|
+| ~03:30 | Story 8.7 deploy: `DAYTONA_NETWORK_ALLOW_LIST=167.172.66.16/32` + `BROWSER_PROXY_PUBLIC_URL=http://167.172.66.16:8009` set in Dokploy |
+| ~04:45 | Production sandbox `384f9903` auto-archived (30 min idle threshold) |
+| ~05:11 | User reopened workspace → Daytona container started but epsilon-daytona-start did NOT auto-run |
+| ~05:11 | `ensureRunning()` called `start()` but did NOT re-trigger bootstrap → workspace shows "Workspace offline" |
+| ~05:30 | Root cause identified: `DAYTONA_NETWORK_ALLOW_LIST` disables Daytona default whitelist; sandbox lost access to AI providers + `*.trycloudflare.com` |
+| ~05:45 | Recovery: env vars removed from Dokploy; manual bootstrap via Daytona toolbox proxy |
+| ~06:00 | User sandbox online; hotfix commit `2930b7b732` written |
+| ~06:30 | Hotfix pushed + Dokploy redeploy triggered |
+
+### Root Cause
+
+**Primary**: `DAYTONA_NETWORK_ALLOW_LIST` replaces Daytona's default whitelist entirely when set. The default whitelist includes AI providers AND `*.trycloudflare.com` (EPSILON_URL tunnel). Setting it to `167.172.66.16/32` alone → sandbox couldn't reach EPSILON_URL → bootstrap failed → workspace offline.
+
+**Contributing**: `ensureRunning()` in `daytona.ts` only called `start()` after archive wake, never re-triggered `startRuntime()` bootstrap. Sandbox was "running" at Daytona level but `epsilon-master` was dead.
+
+**Fundamental limitation**: Browser proxy via raw VPS IP requires `DAYTONA_NETWORK_ALLOW_LIST` (to reach `167.172.66.16:8009`), but setting that var kills AI provider access. CF Quick Tunnel (`*.trycloudflare.com`) doesn't support HTTP CONNECT. These constraints are incompatible — the Story 8.7 architecture was flawed at the egress level.
+
+### What Worked
+
+- ✅ Browser proxy server code (AC1-AC2) — SSRF/port/auth hardening correct; code quality sound
+- ✅ Sandbox image `daytona-fix-11` — s6 env injection, Chromium proxy arg all correct
+- ✅ Manual recovery via Daytona toolbox proxy (`setsid bash -c '...'`) worked cleanly
+- ✅ `ensureRunning()` fix (hotfix) — health-check + bootstrap re-trigger now prevents recurrence
+
+### What Failed
+
+- ❌ Architecture assumption: assumed `DAYTONA_NETWORK_ALLOW_LIST` was additive, not exclusive
+- ❌ No pre-deploy test: should have verified sandbox reaches EPSILON_URL before deploying with new `networkAllowList`
+- ❌ No staged rollout: changed egress policy on production without a canary sandbox first
+
+### Lessons Learned
+
+1. **`DAYTONA_NETWORK_ALLOW_LIST` is exclusive, not additive** — always include ALL needed CIDRs or don't set it
+2. **Test network reachability before deploying egress changes** — canary sandbox → verify EPSILON_URL reachable → then fleet
+3. **`ensureRunning()` must health-check, not just `start()`** — "container running" ≠ "runtime ready"
+4. **Browser egress via VPS CONNECT is incompatible with Daytona Envoy constraints** — need different approach
+
+### Agent-Browser Egress: Deferred Approaches
+
+The original ERR_CONNECTION_RESET problem (agent-browser can't reach internet) remains unresolved. Viable next approaches:
+
+1. **SOCKS-over-WebSocket via existing CF tunnel** — proxy CONNECT traffic through the `*.trycloudflare.com` tunnel (WebSocket upgrade, SOCKS5 wrapped). Complex but avoids egress allowlist.
+2. **JustAVPS sandbox provider** — if Daytona egress policy is too restrictive, migrate to provider with open egress.
+3. **Daytona Tier upgrade** — request Daytona support for broader CIDR whitelist that includes all needed IPs.
+4. **Tool-level proxy** — route `agent-browser` scraping through API proxy routes (`/v1/router/firecrawl`, `/v1/router/tavily`) instead of direct browser.
+
+---
+
 ## Spec Revision Notes
 
 - **2026-05-19 Initial**: Story created from approved plan v2 sau Winston architect review. Plan v1 (initial 6-file change) đã được upgrade thành v2 với full hardening (SSRF, port whitelist, conn cap, log, explicit public URL config) trước khi tạo story này.
+- **2026-05-19 Incident**: Status updated `review` → `done-with-caveat`. Postmortem added. Browser proxy code shipped but inert (env injection disabled). ensureRunning() fix (hotfix) is the net-positive contribution. Agent-browser cloud egress deferred to new story.

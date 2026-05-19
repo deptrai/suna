@@ -450,17 +450,16 @@ function validateEnv(): z.infer<typeof envSchema> {
     }
   }
 
-  // ── Conditional: Browser Proxy — required in cloud mode ──────────────────
-  // The CONNECT proxy bridges Daytona sandbox outbound (Chromium, curl) to internet
-  // because Daytona's Envoy egress allowlist only permits the API VPS IP.
-  if ((raw as any).ENV_MODE === 'cloud') {
-    if (!raw.BROWSER_PROXY_SECRET) {
-      issues.push({ var: 'BROWSER_PROXY_SECRET', message: 'Required in cloud mode — agent-browser will fail without proxy auth. Generate: openssl rand -base64 32 | tr -d "/+=" | head -c 32', level: 'error' });
-    } else if (/[@:/+=]/.test(raw.BROWSER_PROXY_SECRET)) {
+  // ── Conditional: Browser Proxy — optional, but consistent if enabled ─────
+  // Browser proxy (port 8009) is DISABLED in production after Story 8.7 incident:
+  // DAYTONA_NETWORK_ALLOW_LIST disables Daytona default whitelist → workspace offline.
+  // Proxy code remains deployed but inert. Enable only with a new story + proper approach.
+  if (raw.BROWSER_PROXY_SECRET) {
+    if (/[@:/+=]/.test(raw.BROWSER_PROXY_SECRET)) {
       issues.push({ var: 'BROWSER_PROXY_SECRET', message: 'Must be URL-safe (base64url charset: [A-Za-z0-9_-]). Generate: openssl rand -base64 32 | tr -d "/+=" | head -c 32', level: 'error' });
     }
     if (!raw.BROWSER_PROXY_PUBLIC_URL) {
-      issues.push({ var: 'BROWSER_PROXY_PUBLIC_URL', message: 'Required in cloud mode — sandbox needs to know the public proxy URL (e.g. http://167.172.66.16:8009)', level: 'error' });
+      issues.push({ var: 'BROWSER_PROXY_PUBLIC_URL', message: 'BROWSER_PROXY_SECRET is set but PUBLIC_URL is missing — proxy will listen on port 8009 but no sandbox will receive the URL (inert mode). Set PUBLIC_URL to enable sandbox injection.', level: 'warn' });
     }
   }
 

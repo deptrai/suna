@@ -141,7 +141,7 @@ development_status:
   8-4-zero-data-leakage-enforcement-tier-3: backlog
   8-5-production-grade-platform-reliability: ready-for-dev
   # 8-6 reserved for "Load testing + accuracy benchmark suite" (Story 8.5 IR finding m5) — not yet created
-  8-7-sandbox-egress-browser-proxy: review  # 2026-05-19: SHIPPED to prod — apps/api port 8009 CONNECT proxy live + Dokploy port row persisted; sandbox image daytona-fix-11 pushed; DAYTONA_NETWORK_ALLOW_LIST=167.172.66.16/32; 7 hardening checks pass (SSRF/port/auth). Pending: user verify agent-browser end-to-end in new sandbox
+  8-7-sandbox-egress-browser-proxy: done-with-caveat  # 2026-05-19: P1 incident — DAYTONA_NETWORK_ALLOW_LIST disabled Daytona default whitelist → workspace offline. Hotfix 2930b7b732: ensureRunning() health-check + bootstrap re-trigger; DAYTONA_NETWORK_ALLOW_LIST guard. Browser proxy code shipped but inert (env injection disabled). Agent-browser cloud egress DEFERRED — incompatible with Daytona Envoy constraints. See postmortem in story spec.
   epic-8-retrospective: optional
 
   # ─── Phase 1 Addendum — FE Performance ───
