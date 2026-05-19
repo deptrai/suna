@@ -341,11 +341,12 @@ jobs:
             exit 0
           fi
 
-          CURRENT_ENV=$(curl -sf \
+          CURRENT_ENV=$(curl -sf --noproxy '*' --connect-timeout 15 \
             -H "x-api-key: $DOKPLOY_API_TOKEN" \
             -H "Content-Type: application/json" \
             "$DOKPLOY_API_URL/application.one?applicationId=$APP_ID" \
-            | jq -r '.env // ""')
+            | jq -r '.env // ""') \
+            || { echo "::error::Failed to fetch current env from Dokploy (curl exit $?)"; exit 1; }
 
           NEW_ENV=$(echo "$CURRENT_ENV" \
             | sed "s|^DAYTONA_SNAPSHOT=.*|DAYTONA_SNAPSHOT=$NEW_SNAPSHOT|")
@@ -354,21 +355,23 @@ jobs:
             NEW_ENV="$NEW_ENV"$'\n'"DAYTONA_SNAPSHOT=$NEW_SNAPSHOT"
           fi
 
-          curl -sf -X POST \
+          curl -sf --noproxy '*' --connect-timeout 15 -X POST \
             -H "x-api-key: $DOKPLOY_API_TOKEN" \
             -H "Content-Type: application/json" \
             "$DOKPLOY_API_URL/application.saveEnvironment" \
-            -d "$(jq -n --arg id "$APP_ID" --arg env "$NEW_ENV" '{applicationId: $id, env: $env}')"
+            -d "$(jq -n --arg id "$APP_ID" --arg env "$NEW_ENV" '{applicationId: $id, env: $env}')" \
+            || { echo "::error::Failed to save env to Dokploy (curl exit $?)"; exit 1; }
 
           echo "Dokploy env patched: DAYTONA_SNAPSHOT=$NEW_SNAPSHOT"
 
-          curl -sf -X POST \
+          curl -sf --noproxy '*' --connect-timeout 15 -X POST \
             -H "x-api-key: $DOKPLOY_API_TOKEN" \
             -H "Content-Type: application/json" \
             "$DOKPLOY_API_URL/application.redeploy" \
             -d "$(jq -n --arg id "$APP_ID" \
               --arg title "Auto-promote: sandbox stable → ${{ inputs.sha7 }}" \
-              '{applicationId: $id, title: $title}')"
+              '{applicationId: $id, title: $title}')" \
+            || { echo "::error::Failed to trigger redeploy via Dokploy (curl exit $?)"; exit 1; }
 
           echo "API redeploy triggered"
 
