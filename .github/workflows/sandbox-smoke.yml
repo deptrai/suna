@@ -122,7 +122,8 @@ jobs:
             -d "{
               \"snapshot\": \"$SNAP_NAME\",
               \"resources\": { \"cpu\": 2, \"memory\": 4, \"disk\": 10 },
-              \"labels\": { \"purpose\": \"smoke-test\", \"sha7\": \"${{ inputs.sha7 }}\" }
+              \"labels\": { \"purpose\": \"smoke-test\", \"sha7\": \"${{ inputs.sha7 }}\" },
+              \"envVars\": { \"ENV_MODE\": \"cloud\" }
             }") || { echo "Failed to provision sandbox: $RESP"; exit 1; }
 
           SANDBOX_ID=$(echo "$RESP" | jq -r '.id // empty')
