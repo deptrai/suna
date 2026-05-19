@@ -33,7 +33,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-19 (Story 5.5.1 review → done — code-review applied 60/60 patches across 4 layers + Decision A ownership filter; 37 unit tests pass; all critical/high/medium/low review findings closed)
+last_updated: 2026-05-19 (Story 5.5.2 spec drafted — follow-up to 5.5.1 LLM swap to claude-haiku-4-5 via v98store + worker prompt tune; ready for /bmad-code-review adversarial pass)
 project: chainlens
 project_key: NOKEY
 tracking_system: file-system
@@ -104,6 +104,7 @@ development_status:
   5-4-contextual-backtest-integration: done
   5-5-vibe-trading-mcp-proxy: done
   5-5-1-vibe-trading-swarm-async-execution: done  # 2026-05-19 code-review applied 60/60 patches across MCP server / proxy / OpenCode wrapper / UI; Decision A ownership filter (SwarmRun.account_id + server-side list_runs filter); 37 unit tests pass (26 proxy + 11 wrapper); zero patches deferred — all critical/high/medium/low review findings closed
+  5-5-2-vibe-trading-claude-tuning: in-progress  # 2026-05-19 code-review patch pass applied for prompt/test/env findings; AC3 multi-preset verification + AC4 token sanity + local pytest environment validation still pending
   5-6-shadow-account-swarm-ui: done  # 2026-05-18 review→done after fixing shadow-reports-route.test.ts regression (Q2 tier gate needed billing mock update); 7+4+7+8=26 tests pass; 16 review patches + 3 deferred + 2 audit fixes (M4 link, Q2 tier gate)
   5-7-user-llm-key-management: backlog
   5-8-per-user-persistent-memory: done  # 2026-05-18 /bmad-code-review applied 39 patches: pgvector removed, IDOR fixed, URL mount corrected, transactions, tests added
