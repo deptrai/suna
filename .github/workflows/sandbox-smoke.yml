@@ -122,8 +122,7 @@ jobs:
             -d "{
               \"snapshot\": \"$SNAP_NAME\",
               \"resources\": { \"cpu\": 2, \"memory\": 4, \"disk\": 10 },
-              \"labels\": { \"purpose\": \"smoke-test\", \"sha7\": \"${{ inputs.sha7 }}\" },
-              \"envVars\": { \"ENV_MODE\": \"cloud\" }
+              \"labels\": { \"purpose\": \"smoke-test\", \"sha7\": \"${{ inputs.sha7 }}\" }
             }") || { echo "Failed to provision sandbox: $RESP"; exit 1; }
 
           SANDBOX_ID=$(echo "$RESP" | jq -r '.id // empty')
@@ -165,12 +164,12 @@ jobs:
         run: |
           SBID="${{ steps.provision.outputs.sandbox_id }}"
           TOOLBOX="https://proxy.app-eu.daytona.io/toolbox/$SBID"
-          echo "Triggering epsilon-daytona-start bootstrap..."
+          echo "Triggering epsilon-daytona-start bootstrap (ENV_MODE=cloud)..."
           curl -sf -X POST \
             -H "Authorization: Bearer $DAYTONA_API_KEY" \
             -H "Content-Type: application/json" \
             "$TOOLBOX/process/execute" \
-            -d '{"command":"setsid bash -c '\''nohup /usr/local/bin/epsilon-daytona-start > /tmp/eds.log 2>&1 < /dev/null &'\''","timeout":10}' \
+            -d '{"command":"setsid bash -c '\''nohup env ENV_MODE=cloud /usr/local/bin/epsilon-daytona-start > /tmp/eds.log 2>&1 < /dev/null &'\''","timeout":10}' \
             || echo "Warning: bootstrap trigger returned non-zero (may already be starting)"
 
           echo "Waiting up to 120s for epsilon-master to become ready..."
