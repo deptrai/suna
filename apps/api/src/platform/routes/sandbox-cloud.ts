@@ -1011,8 +1011,9 @@ export function createCloudSandboxRouter(
         }
       }
 
-      // Start
-      await provider.start(sandbox.externalId);
+      // Start — use ensureRunning() which health-checks + re-triggers bootstrap if needed
+      // (fixes: Daytona container starts but epsilon-daytona-start doesn't auto-run after archive wake)
+      await provider.ensureRunning(sandbox.externalId);
 
       await db
         .update(sandboxes)
