@@ -1,0 +1,239 @@
+name: Sandbox Smoke + Auto-Promote
+
+# Smoke-tests a newly built thin image against a real Daytona sandbox.
+# On pass: retags next-<sha7> → stable on GHCR + patches Dokploy DAYTONA_SNAPSHOT + redeploys API.
+# On fail: records failure in circuit breaker state file.
+#
+# Triggered by sandbox-build.yml (workflow_dispatch) after every successful thin build.
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Full GHCR image tag to test (e.g. ghcr.io/deptrai/computer:next-abc1234)'
+        required: true
+      sha7:
+        description: 'Short git SHA (7 chars) for state tracking'
+        required: true
+
+concurrency:
+  group: sandbox-smoke
+  cancel-in-progress: false  # don't cancel in-flight smoke tests
+
+jobs:
+  smoke:
+    name: Smoke test ${{ inputs.sha7 }}
+    runs-on: [self-hosted, sandbox-builder]
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      passed: ${{ steps.smoke.outputs.passed }}
+      sandbox_id: ${{ steps.provision.outputs.sandbox_id }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Circuit breaker check
+        id: cb
+        run: |
+          bash scripts/ci-circuit-breaker.sh status || CB_EXIT=$?
+          LOCKED=$(bash scripts/ci-circuit-breaker.sh status | grep '^locked=' | cut -d= -f2)
+          echo "locked=$LOCKED" >> "$GITHUB_OUTPUT"
+          if [ "$LOCKED" = "true" ]; then
+            echo "::error::Circuit breaker is LOCKED. Run workflow unlock-promote.yml to reset."
+            exit 1
+          fi
+
+      - name: Provision smoke sandbox
+        id: provision
+        env:
+          DAYTONA_API_KEY: ${{ secrets.DAYTONA_API_KEY }}
+        run: |
+          echo "Provisioning smoke sandbox with image: ${{ inputs.image_tag }}"
+          RESP=$(curl -sf -X POST \
+            -H "Authorization: Bearer $DAYTONA_API_KEY" \
+            -H "Content-Type: application/json" \
+            "https://app.daytona.io/api/sandbox" \
+            -d '{
+              "snapshot": "${{ inputs.image_tag }}",
+              "resources": { "cpu": 2, "memory": 4, "disk": 10 },
+              "labels": { "purpose": "smoke-test", "sha7": "${{ inputs.sha7 }}" }
+            }') || { echo "Failed to provision sandbox"; exit 1; }
+
+          SANDBOX_ID=$(echo "$RESP" | jq -r '.id // empty')
+          EXTERNAL_ID=$(echo "$RESP" | jq -r '.externalId // .id // empty')
+          if [ -z "$EXTERNAL_ID" ]; then
+            echo "Sandbox ID missing from response: $RESP"
+            exit 1
+          fi
+          echo "sandbox_id=$EXTERNAL_ID" >> "$GITHUB_OUTPUT"
+          echo "sandbox_db_id=$SANDBOX_ID" >> "$GITHUB_OUTPUT"
+          echo "Sandbox provisioned: $EXTERNAL_ID"
+
+      - name: Wait for sandbox ready
+        env:
+          DAYTONA_API_KEY: ${{ secrets.DAYTONA_API_KEY }}
+        run: |
+          SBID="${{ steps.provision.outputs.sandbox_id }}"
+          DEADLINE=$((SECONDS + 300))
+          while [ $SECONDS -lt $DEADLINE ]; do
+            STATUS=$(curl -sf \
+              -H "Authorization: Bearer $DAYTONA_API_KEY" \
+              "https://app.daytona.io/api/sandbox/$SBID" \
+              | jq -r '.state // .status // "unknown"')
+            echo "Sandbox state: $STATUS (${SECONDS}s)"
+            if [ "$STATUS" = "started" ] || [ "$STATUS" = "running" ]; then
+              echo "Sandbox ready — waiting 30s for epsilon-master bootstrap"
+              sleep 30
+              break
+            fi
+            if [ "$STATUS" = "error" ] || [ "$STATUS" = "failed" ]; then
+              echo "Sandbox failed to start: $STATUS"
+              exit 1
+            fi
+            sleep 10
+          done
+
+      - name: Run smoke checks
+        id: smoke
+        env:
+          DAYTONA_API_KEY: ${{ secrets.DAYTONA_API_KEY }}
+        run: |
+          SBID="${{ steps.provision.outputs.sandbox_id }}"
+          chmod +x scripts/smoke-sandbox.sh
+          if bash scripts/smoke-sandbox.sh "$SBID"; then
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::All smoke checks PASSED for ${{ inputs.sha7 }}"
+          else
+            echo "passed=false" >> "$GITHUB_OUTPUT"
+            echo "::error::Smoke checks FAILED for ${{ inputs.sha7 }}"
+          fi
+
+      - name: Cleanup smoke sandbox
+        if: always() && steps.provision.outputs.sandbox_id
+        env:
+          DAYTONA_API_KEY: ${{ secrets.DAYTONA_API_KEY }}
+        run: |
+          curl -sf -X DELETE \
+            -H "Authorization: Bearer $DAYTONA_API_KEY" \
+            "https://app.daytona.io/api/sandbox/${{ steps.provision.outputs.sandbox_id }}" \
+            || echo "Warning: failed to delete smoke sandbox (will auto-expire)"
+
+  promote:
+    name: Auto-promote to stable
+    needs: smoke
+    if: needs.smoke.outputs.passed == 'true'
+    runs-on: [self-hosted, sandbox-builder]
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_PAT }}
+
+      - name: Retag next → stable
+        run: |
+          docker pull ${{ inputs.image_tag }}
+          docker tag ${{ inputs.image_tag }} ghcr.io/deptrai/computer:stable
+          docker push ghcr.io/deptrai/computer:stable
+          echo "Promoted ${{ inputs.image_tag }} → ghcr.io/deptrai/computer:stable"
+
+      - name: Write stable tag to state
+        run: |
+          mkdir -p /var/lib/sandbox-ci
+          echo "${{ inputs.image_tag }}" > /var/lib/sandbox-ci/current-stable-tag
+          echo "${{ inputs.sha7 }}" > /var/lib/sandbox-ci/current-stable-sha7
+
+      - name: Patch Dokploy DAYTONA_SNAPSHOT + redeploy API
+        env:
+          DOKPLOY_API_TOKEN: ${{ secrets.DOKPLOY_API_TOKEN }}
+          DOKPLOY_API_URL: ${{ secrets.DOKPLOY_API_URL }}
+        run: |
+          APP_ID="SESgs1lTKXGJz0YMXmoxs"
+          NEW_SNAPSHOT="ghcr.io/deptrai/computer:stable"
+
+          if [ -z "$DOKPLOY_API_TOKEN" ] || [ -z "$DOKPLOY_API_URL" ]; then
+            echo "::warning::DOKPLOY_API_TOKEN or DOKPLOY_API_URL not set — skipping Dokploy patch"
+            echo "Manual step: update DAYTONA_SNAPSHOT=$NEW_SNAPSHOT in Dokploy env for app $APP_ID"
+            exit 0
+          fi
+
+          # Fetch current env, replace DAYTONA_SNAPSHOT line
+          CURRENT_ENV=$(curl -sf \
+            -H "Authorization: Bearer $DOKPLOY_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            "$DOKPLOY_API_URL/api/application.one?applicationId=$APP_ID" \
+            | jq -r '.env // ""')
+
+          NEW_ENV=$(echo "$CURRENT_ENV" \
+            | sed "s|^DAYTONA_SNAPSHOT=.*|DAYTONA_SNAPSHOT=$NEW_SNAPSHOT|")
+
+          # If DAYTONA_SNAPSHOT not present, append it
+          if ! echo "$NEW_ENV" | grep -q "^DAYTONA_SNAPSHOT="; then
+            NEW_ENV="$NEW_ENV"$'\n'"DAYTONA_SNAPSHOT=$NEW_SNAPSHOT"
+          fi
+
+          # Update env
+          curl -sf -X POST \
+            -H "Authorization: Bearer $DOKPLOY_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            "$DOKPLOY_API_URL/api/application.update" \
+            -d "$(jq -n --arg id "$APP_ID" --arg env "$NEW_ENV" '{applicationId: $id, env: $env}')"
+
+          echo "Dokploy env patched: DAYTONA_SNAPSHOT=$NEW_SNAPSHOT"
+
+          # Trigger redeploy
+          curl -sf -X POST \
+            -H "Authorization: Bearer $DOKPLOY_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            "$DOKPLOY_API_URL/api/application.redeploy" \
+            -d "$(jq -n --arg id "$APP_ID" \
+              --arg title "Auto-promote: sandbox stable → ${{ inputs.sha7 }}" \
+              '{applicationId: $id, title: $title}')"
+
+          echo "API redeploy triggered"
+
+      - name: Record circuit breaker pass
+        run: |
+          bash scripts/ci-circuit-breaker.sh record-pass "${{ inputs.sha7 }}"
+
+      - name: Summary
+        run: |
+          echo "## Auto-Promote: PASSED ✅" >> "$GITHUB_STEP_SUMMARY"
+          echo "- SHA: \`${{ inputs.sha7 }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Stable tag: \`ghcr.io/deptrai/computer:stable\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Dokploy DAYTONA_SNAPSHOT updated" >> "$GITHUB_STEP_SUMMARY"
+
+  on-smoke-fail:
+    name: Record failure
+    needs: smoke
+    if: needs.smoke.outputs.passed == 'false' || failure()
+    runs-on: [self-hosted, sandbox-builder]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Record circuit breaker failure
+        run: |
+          bash scripts/ci-circuit-breaker.sh record-fail "${{ inputs.sha7 }}"
+      - name: Summary
+        run: |
+          echo "## Auto-Promote: FAILED ❌" >> "$GITHUB_STEP_SUMMARY"
+          echo "- SHA: \`${{ inputs.sha7 }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Image: \`${{ inputs.image_tag }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Run \`sandbox-rollback.yml\` to revert or \`unlock-promote.yml\` after 3 failures" >> "$GITHUB_STEP_SUMMARY"

@@ -140,8 +140,9 @@ development_status:
   8-3-1-llm-proxy-bidirectional-fallback: ready-for-dev
   8-4-zero-data-leakage-enforcement-tier-3: backlog
   8-5-production-grade-platform-reliability: ready-for-dev
-  # 8-6 reserved for "Load testing + accuracy benchmark suite" (Story 8.5 IR finding m5) — not yet created
+  8-6-production-devops-and-sandbox-image-cicd: ready-for-dev  # 2026-05-19: comprehensive DevOps reference (Part A: done items) + sandbox image CI/CD automation (Part B: 12 ACs). User-confirmed decisions: self-hosted GH runner on prod VPS, GHCR consolidation, auto-promote with circuit breaker. Effort ~2.5 days.
   8-7-sandbox-egress-browser-proxy: done-with-caveat  # 2026-05-19: P1 incident — DAYTONA_NETWORK_ALLOW_LIST disabled Daytona default whitelist → workspace offline. Hotfix 2930b7b732: ensureRunning() health-check + bootstrap re-trigger; DAYTONA_NETWORK_ALLOW_LIST guard. Browser proxy code shipped but inert (env injection disabled). Agent-browser cloud egress DEFERRED — incompatible with Daytona Envoy constraints. See postmortem in story spec.
+  # 8-9 reserved for "Load testing + accuracy benchmark suite" (Story 8.5 IR finding m5) — was 8-6, renumbered when 8-6 claimed for DevOps pipeline
   epic-8-retrospective: optional
 
   # ─── Phase 1 Addendum — FE Performance ───

@@ -1,0 +1,123 @@
+name: Sandbox Rollback
+
+# Rolls back DAYTONA_SNAPSHOT to a specific image tag.
+# Retags the target sha → stable and patches Dokploy + redeploys API.
+#
+# Use when:
+#   - A bad image was auto-promoted to stable
+#   - Smoke test passed but production issues discovered after deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_sha7:
+        description: 'Short SHA (sha7) of the image to roll back to (from promote-history.json)'
+        required: true
+      reason:
+        description: 'Reason for rollback (for audit log)'
+        required: true
+
+jobs:
+  rollback:
+    name: Rollback to ${{ inputs.target_sha7 }}
+    runs-on: [self-hosted, sandbox-builder]
+    timeout-minutes: 10
+    permissions:
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Validate target image exists on GHCR
+        env:
+          GHCR_PAT: ${{ secrets.GHCR_PAT }}
+        run: |
+          TARGET="ghcr.io/deptrai/computer:next-${{ inputs.target_sha7 }}"
+          echo "Checking $TARGET ..."
+          # Attempt manifest inspect (no full pull)
+          docker manifest inspect "$TARGET" 2>/dev/null \
+            || { echo "::error::Image $TARGET not found on GHCR. Cannot rollback."; exit 1; }
+          echo "Image found: $TARGET"
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_PAT }}
+
+      - name: Retag target → stable
+        run: |
+          TARGET="ghcr.io/deptrai/computer:next-${{ inputs.target_sha7 }}"
+          docker pull "$TARGET"
+          docker tag "$TARGET" ghcr.io/deptrai/computer:stable
+          docker push ghcr.io/deptrai/computer:stable
+          echo "Rolled back: $TARGET → ghcr.io/deptrai/computer:stable"
+
+      - name: Update state file
+        run: |
+          mkdir -p /var/lib/sandbox-ci
+          echo "ghcr.io/deptrai/computer:next-${{ inputs.target_sha7 }}" > /var/lib/sandbox-ci/current-stable-tag
+          echo "${{ inputs.target_sha7 }}" > /var/lib/sandbox-ci/current-stable-sha7
+          NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          # Append rollback event to history
+          STATE_FILE=/var/lib/sandbox-ci/promote-history.json
+          if [ -f "$STATE_FILE" ]; then
+            jq --arg sha "${{ inputs.target_sha7 }}" --arg ts "$NOW" \
+               --arg reason "${{ inputs.reason }}" '
+              .history = ([{ sha7: $sha, status: "rollback", reason: $reason, ts: $ts }] + .history)[0:20]
+            ' "$STATE_FILE" > "${STATE_FILE}.tmp" && mv "${STATE_FILE}.tmp" "$STATE_FILE"
+          fi
+
+      - name: Patch Dokploy DAYTONA_SNAPSHOT + redeploy
+        env:
+          DOKPLOY_API_TOKEN: ${{ secrets.DOKPLOY_API_TOKEN }}
+          DOKPLOY_API_URL: ${{ secrets.DOKPLOY_API_URL }}
+        run: |
+          APP_ID="SESgs1lTKXGJz0YMXmoxs"
+          NEW_SNAPSHOT="ghcr.io/deptrai/computer:stable"
+
+          if [ -z "$DOKPLOY_API_TOKEN" ] || [ -z "$DOKPLOY_API_URL" ]; then
+            echo "::warning::DOKPLOY_API_TOKEN or DOKPLOY_API_URL not set — skipping Dokploy patch"
+            echo "Manual step: update DAYTONA_SNAPSHOT=$NEW_SNAPSHOT in Dokploy env for app $APP_ID"
+            exit 0
+          fi
+
+          CURRENT_ENV=$(curl -sf \
+            -H "Authorization: Bearer $DOKPLOY_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            "$DOKPLOY_API_URL/api/application.one?applicationId=$APP_ID" \
+            | jq -r '.env // ""')
+
+          NEW_ENV=$(echo "$CURRENT_ENV" \
+            | sed "s|^DAYTONA_SNAPSHOT=.*|DAYTONA_SNAPSHOT=$NEW_SNAPSHOT|")
+
+          if ! echo "$NEW_ENV" | grep -q "^DAYTONA_SNAPSHOT="; then
+            NEW_ENV="$NEW_ENV"$'\n'"DAYTONA_SNAPSHOT=$NEW_SNAPSHOT"
+          fi
+
+          curl -sf -X POST \
+            -H "Authorization: Bearer $DOKPLOY_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            "$DOKPLOY_API_URL/api/application.update" \
+            -d "$(jq -n --arg id "$APP_ID" --arg env "$NEW_ENV" '{applicationId: $id, env: $env}')"
+
+          curl -sf -X POST \
+            -H "Authorization: Bearer $DOKPLOY_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            "$DOKPLOY_API_URL/api/application.redeploy" \
+            -d "$(jq -n --arg id "$APP_ID" \
+              --arg title "Rollback to ${{ inputs.target_sha7 }}: ${{ inputs.reason }}" \
+              '{applicationId: $id, title: $title}')"
+
+          echo "Dokploy patched and redeploy triggered"
+
+      - name: Summary
+        run: |
+          echo "## Rollback Complete ↩️" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Target: \`next-${{ inputs.target_sha7 }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Reason: ${{ inputs.reason }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- New stable: \`ghcr.io/deptrai/computer:stable\`" >> "$GITHUB_STEP_SUMMARY"

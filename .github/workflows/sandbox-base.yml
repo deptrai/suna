@@ -1,0 +1,94 @@
+name: Sandbox Base Image
+
+# Builds the slow-change base layer (Dockerfile.base): OS packages, Python libs,
+# npm globals, Docker DinD. Tag: base-<sha7>. Rebuild time ~20-25 min.
+#
+# Triggers:
+#   - Path filter: core/docker/Dockerfile.base changed on main
+#   - workflow_dispatch: manual rebuild (e.g. after LSS/bun/lss version bumps)
+#
+# Self-hosted runner required: GitHub-hosted Ubuntu has 14GB disk;
+# sandbox base image is ~10-15GB uncompressed. Runner label: sandbox-builder.
+# Setup: see docs/runbooks/sandbox-ci-setup.md
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'core/docker/Dockerfile.base'
+      - 'LICENSE'
+  workflow_dispatch:
+    inputs:
+      push_latest:
+        description: 'Also push base-latest tag'
+        type: boolean
+        default: true
+
+concurrency:
+  group: sandbox-base
+  cancel-in-progress: false
+
+jobs:
+  build-base:
+    name: Build base image
+    runs-on: [self-hosted, sandbox-builder]
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}
+          submodules: recursive
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_PAT }}
+
+      - name: Compute tags
+        id: tags
+        run: |
+          SHA7=$(git rev-parse --short HEAD)
+          echo "sha7=$SHA7" >> "$GITHUB_OUTPUT"
+          echo "tag_sha=ghcr.io/deptrai/computer:base-$SHA7" >> "$GITHUB_OUTPUT"
+          echo "tag_latest=ghcr.io/deptrai/computer:base-latest" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push base image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: core/docker/Dockerfile.base
+          push: true
+          tags: |
+            ${{ steps.tags.outputs.tag_sha }}
+            ${{ (github.event_name == 'workflow_dispatch' && inputs.push_latest) && steps.tags.outputs.tag_latest || '' }}
+          cache-from: type=registry,ref=ghcr.io/deptrai/computer:base-latest
+          cache-to: type=inline
+
+      - name: Push base-latest on main push
+        if: github.event_name == 'push'
+        run: |
+          docker tag ${{ steps.tags.outputs.tag_sha }} ${{ steps.tags.outputs.tag_latest }}
+          docker push ${{ steps.tags.outputs.tag_latest }}
+
+      - name: Write base-sha to state
+        run: |
+          mkdir -p /var/lib/sandbox-ci
+          echo "${{ steps.tags.outputs.sha7 }}" > /var/lib/sandbox-ci/current-base-sha
+          echo "base-sha=${{ steps.tags.outputs.sha7 }}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Sandbox Base Build" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Tag: \`base-${{ steps.tags.outputs.sha7 }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Status: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"

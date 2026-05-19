@@ -1,0 +1,28 @@
+name: Unlock Promote Circuit Breaker
+
+# Manually unlocks the circuit breaker after 3 consecutive smoke failures.
+# Only use after investigating the root cause.
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Why is this safe to unlock? (required for audit)'
+        required: true
+
+jobs:
+  unlock:
+    name: Unlock circuit breaker
+    runs-on: [self-hosted, sandbox-builder]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Unlock
+        run: |
+          bash scripts/ci-circuit-breaker.sh unlock
+          echo "Circuit breaker unlocked. Reason: ${{ inputs.reason }}"
+      - name: Summary
+        run: |
+          echo "## Circuit Breaker Unlocked 🔓" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Reason: ${{ inputs.reason }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Unlocked by: ${{ github.actor }}" >> "$GITHUB_STEP_SUMMARY"

@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1.7
 #
-# epsilon/computer — sandbox image
+# epsilon/computer — sandbox thin image (fast rebuild on every push)
 #
-# ONE image. Everything baked at build time. No OTA, no npm, no symlinks.
-# Updates = pull new image + recreate container.
+# Inherits OS/tools/libs from Dockerfile.base (~monthly rebuild, ~20-25 min).
+# This file: epsilon-master source + bun install + global CLIs (~5-8 min).
 #
 # ┌─────────────────────────────────────────────────────────────────────────┐
 # │                      PERSISTENCE CONTRACT                              │
@@ -19,263 +19,22 @@
 # │        secrets at boot via 97-secrets-to-s6-env.sh.                    │
 # └─────────────────────────────────────────────────────────────────────────┘
 #
-# Container layout:
-#   PERSISTENT (/workspace/ volume):
-#     .secrets/                    Encrypted secrets, salt, encryption key
-#     .local/share/opencode/       OpenCode state (sessions, SQLite DBs)
-#     .local/bin/, .local/lib/     User pip packages
-#     .npm-global/                 User npm -g packages
-#     .opencode/                   OpenCode config (skills, agents from marketplace)
-#     .epsilon/                     Epsilon state, package manifests
-#     .lss/                        LSS search index
-#     .browser-profile/            Chromium profile
-#     .cache/opencode/             OpenCode runtime cache
-#     .git/                        Workspace git repo
-#     *                            User code, projects, files
-#
-#   EPHEMERAL (/ephemeral/ — shipped runtime, replaced on update):
-#     /ephemeral/epsilon-master/    Hono server, OpenCode config, channels, triggers
-#     /ephemeral/metadata/         Version metadata, service spec, changelog
-#     /ephemeral/agent-browser-viewer/ Browser viewer HTML
-#     /ephemeral/services/         Service scripts
-#     /ephemeral/startup.sh        Container entrypoint
-#
-#   THIRD-PARTY (/opt/ — baked at build, not user-modifiable):
-#     /opt/bun/                    Bun runtime
+# Build cmd (run from repo root):
+#   docker build -f core/docker/Dockerfile \
+#     --build-arg BASE_IMAGE=ghcr.io/deptrai/computer:base-latest \
+#     --build-arg SANDBOX_VERSION=$(git describe --tags --always) \
+#     -t ghcr.io/deptrai/computer:next-$(git rev-parse --short HEAD) .
 #
 
-# ── Stage 1: Known-good Docker-in-Docker toolchain ──────────────────────────
-# The Ubuntu webtop base currently ships Docker 29 / containerd 2.2, which
-# fails to start nested containers in this sandbox with:
-#   failed to adjust OOM score for shim: open /proc/<pid>/oom_score_adj: no
-#   such file or directory
-# The official docker:dind 28.x stack works reliably in the same environment,
-# so we vendor its daemon/runtime binaries into the Ubuntu desktop image.
-FROM docker:28-dind AS docker-dind-bins
-
-# ── Main image ───────────────────────────────────────────────────────────────
-FROM lscr.io/linuxserver/webtop:ubuntu-xfce
+ARG BASE_IMAGE=ghcr.io/deptrai/computer:base-latest
+FROM ${BASE_IMAGE}
 
 ARG SANDBOX_VERSION=0.0.0-dev
-ARG DEBIAN_FRONTEND=noninteractive
 
 # Global binary versions — pinned here, bumped manually
 ARG OPENCODE_VERSION=1.14.28
 ARG AGENT_BROWSER_VERSION=0.19.0
 ARG OCX_VERSION=2.0.0
-
-# ── License ──────────────────────────────────────────────────────────────────
-COPY LICENSE /LICENSE
-
-# ── Skill/runtime requirement inventory ──────────────────────────────────────
-# The skill tree under core/epsilon-master/opencode/skills/ currently references
-# or strongly implies the following baked-in runtime surface:
-#   - Baseline CLIs: bash, bun, curl, git, gh, jq, docker cli, ripgrep,
-#     rsync, ssh, unzip, uv, node/npm, python3/pip
-#   - Document/PDF stack: pandoc, soffice/libreoffice, poppler (pdftotext,
-#     pdftoppm, pdfimages), qpdf, tesseract, imagemagick, texlive/bibtex
-#   - Media/browser stack: ffmpeg/ffprobe, chromium, Playwright runtimes
-#   - Research/utilities: whois (domain-research), git/gh (coding-and-data)
-#   - Font coverage: fontconfig + Latin/CJK/emoji families for PDF/browser
-#     rendering consistency across PDF/docx/pptx/website skills
-#   - Python libs: pypdf, pdfplumber, reportlab, pypdfium2, PyPDF2,
-#     pdf2image, pytesseract, PyMuPDF, openpyxl, python-pptx, lxml, Pillow,
-#     pdf2docx, docx2pdf, python-docx, markitdown[pptx], numpy, pandas,
-#     matplotlib, seaborn, playwright, youtube-transcript-api, rembg,
-#     onnxruntime, fastapi[standard]
-#   - Node globals used directly by skills/tests: pptxgenjs, docx, pdf-lib,
-#     playwright, react, react-dom, react-icons, sharp, appium
-#   - Host-only deps intentionally NOT baked here: Xcode/iOS simulator stack,
-#     agent-click on the user's macOS machine via Agent Tunnel
-#
-# Keep this inventory close to the install blocks so Dockerfile/package drift is
-# easy to audit when skills add new runtime assumptions.
-
-# ── OS packages ──────────────────────────────────────────────────────────────
-RUN find /etc/apt -type f \( -name '*.list' -o -name '*.sources' \) -exec sed -i \
-        -e 's|http://ports.ubuntu.com/ubuntu-ports|https://ports.ubuntu.com/ubuntu-ports|g' \
-        -e 's|http://archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' \
-        -e 's|http://security.ubuntu.com/ubuntu|https://security.ubuntu.com/ubuntu|g' \
-        {} +
-
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        bash-completion \
-        build-essential \
-        ca-certificates \
-        curl \
-        ffmpeg \
-        fontconfig \
-        fonts-dejavu-core \
-        fonts-liberation \
-        fonts-noto-cjk \
-        fonts-noto-color-emoji \
-        fonts-noto-core \
-        fuse-overlayfs \
-        gh \
-        git \
-        iptables \
-        jq \
-        libffi-dev \
-        libxml2-dev \
-        libxslt1-dev \
-        nodejs \
-        openssh-server \
-        python3-dev \
-        python3-pip \
-        python3-venv \
-        ripgrep \
-        rsync \
-        unzip \
-        whois \
-    && rm -rf /var/lib/apt/lists/*
-
-# ── Skill system dependencies ────────────────────────────────────────────────
-# Tools referenced by skills in opencode/skills/GENERAL-KNOWLEDGE-WORKER/
-# and opencode/skills/EPSILON-system/. Installed here so they're baked into
-# the image rather than downloaded at runtime.
-# poppler-utils: pdftotext, pdftoppm, pdfimages (pdf skill)
-# qpdf: PDF merge/split/encrypt/repair (pdf skill)
-# pandoc: docx↔md conversion, track-changes (docx skill)
-# libreoffice: headless convert, recalc, render (docx/xlsx/pptx skills)
-# tesseract-ocr: OCR engine for pytesseract (pdf skill)
-# ffmpeg: media processing (remotion, media skills)
-# imagemagick: crop/inspect rendered pages during PDF form work
-# texlive: pdflatex + bibtex (paper-creator skill)
-# *-dev: build deps for Pillow, pdf2image (pptx, pdf, logo-creator)
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        imagemagick \
-        libfreetype6-dev \
-        libjpeg-dev \
-        libreoffice \
-        libopenjp2-7-dev \
-        libtiff-dev \
-        pandoc \
-        poppler-utils \
-        qpdf \
-        texlive \
-        texlive-bibtex-extra \
-        texlive-latex-recommended \
-        tesseract-ocr \
-        tesseract-ocr-eng \
-        zlib1g-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# ── Bun runtime ───────────────────────────────────────────────────────────────
-ENV BUN_INSTALL=/opt/bun
-RUN for i in 1 2 3; do curl -fsSL https://bun.sh/install | bash && break || sleep 5; done \
-    && test -x /opt/bun/bin/bun \
-    && ln -sf /opt/bun/bin/bun /usr/local/bin/bun
-RUN mkdir -p /opt/bun/install/cache && chown -R abc:abc /opt/bun
-
-# ── uv (Python package runner) ───────────────────────────────────────────────
-RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh
-
-# ── lss — Local Semantic Search CLI ──────────────────────────────────────────
-# Provides `lss` (search) and `lss-sync` (file watcher) commands.
-# Explicitly use the base image's virtualenv pip to ensure binaries land in
-# /lsiopy/bin/ (which is in PATH) and not in some user-local dir.
-ARG LSS_VERSION=0.5.5
-RUN /lsiopy/bin/pip install --no-cache-dir "local-semantic-search==${LSS_VERSION}" \
-    && test -x /lsiopy/bin/lss \
-    && /lsiopy/bin/lss --version
-
-# ── Skill Python packages ────────────────────────────────────────────────────
-# All pip packages referenced by skill scripts and SKILL.md documentation.
-# Installed into /lsiopy/ (base image virtualenv, in PATH) so they're
-# available to all Python invocations without user-install at runtime.
-#
-# Group 1: Document processing (pdf, docx, pptx, xlsx skills)
-# Group 2: Data science / visualization (visualization, xlsx skills)
-# Group 3: Media / AI (logo-creator, presentations, media skills)
-# Group 4: App/server tooling (fastapi-sdk skill)
-# PDF: pypdf pdfplumber reportlab pypdfium2 PyPDF2 pdf2image pytesseract PyMuPDF
-# Office: openpyxl python-pptx lxml Pillow pdf2docx docx2pdf markitdown[pptx]
-# Data science: numpy pandas matplotlib seaborn
-# Presentations/logo: playwright (uses system chromium via PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH)
-# YouTube: youtube-transcript-api
-RUN /lsiopy/bin/pip install --no-cache-dir \
-    pypdf pdfplumber reportlab pypdfium2 PyPDF2 pdf2image pytesseract \
-    openpyxl python-pptx python-docx lxml Pillow pdf2docx docx2pdf "markitdown[pptx]" \
-    numpy pandas matplotlib seaborn \
-    playwright youtube-transcript-api "fastapi[standard]" \
-    && echo "[docker] Skill Python packages installed." \
-    && /lsiopy/bin/pip install --no-cache-dir PyMuPDF 2>/dev/null \
-    && echo "[docker] PyMuPDF installed." \
-    || echo "[docker] WARN: PyMuPDF skipped. PDF skills use pypdf/pdfplumber instead."
-
-# Optional heavy packages — rembg + onnxruntime for logo background removal.
-# If they fail to build on the current arch, the skill falls back to Replicate API.
-RUN /lsiopy/bin/pip install --no-cache-dir rembg onnxruntime 2>/dev/null \
-    && echo "[docker] rembg + onnxruntime installed." \
-    || echo "[docker] WARN: rembg/onnxruntime skipped. Logo bg removal will use Replicate API."
-
-# ── Skill npm global packages ────────────────────────────────────────────────
-# Node packages used by pptx (deck creation), docx/pdf (document creation),
-# browser E2E checks, and the pptx icon rendering pipeline.
-RUN PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm install -g --no-audit --no-fund \
-    pptxgenjs \
-    docx \
-    pdf-lib \
-    playwright \
-    appium \
-    react react-dom react-icons \
-    sharp \
-    && echo "[docker] Skill npm packages installed."
-
-# ── Workspace (PERSISTENT zone — Docker volume) ─────────────────────────────
-# Everything in /workspace/ survives container recreate/update.
-# The Docker volume is mounted here. This is the ONLY persistent storage.
-RUN mkdir -p /workspace/.browser-profile \
-    /workspace/.lss /workspace/.cache/opencode /workspace/presentations \
-    /workspace/.local/share/opencode /workspace/.local/share/opencode/log \
-    /workspace/.local/share/opencode/storage /workspace/.local/share/opencode/snapshot \
-    /workspace/.XDG /workspace/.config \
-    /workspace/.epsilon \
-    /workspace/.secrets \
-    /workspace/.opencode /workspace/.opencode/skills \
-    /workspace/.local/bin \
-    /workspace/.npm-global/bin \
-    /workspace/.npm-global/lib \
-    && chmod 700 /workspace/.secrets \
-    # Bake .gitignore so these dirs are always excluded from git snapshots.
-    # epsilon-env-setup.sh commits this in the initial workspace commit.
-    && printf '%s\n' \
-        '# epsilon/opencode internal dirs — excluded from agent snapshots' \
-        '.local/share/opencode/' \
-        '.cache/' \
-        '.config/' \
-        '.opencode/' \
-        '.epsilon/' \
-        '.epsilon-state/' \
-        '.secrets/' \
-        '.browser-profile/' \
-        '.agent-browser/' \
-        '.lss/' \
-        '.ocx/' \
-        '.XDG/' \
-        '.bun/' \
-        '.npm-global/' \
-        '.npm/' \
-        '.dbus/' \
-        '.pki/' \
-        '.ssh/' \
-        'ssl/' \
-        'opencode' \
-        > /workspace/.gitignore \
-    && chown -R abc:abc /workspace \
-    && rm -rf /config \
-    && ln -s /workspace /config \
-    && git config --system --add safe.directory '*' \
-    && echo "abc ALL=(root) NOPASSWD: /usr/bin/s6-svc, /bin/s6-svc, /usr/sbin/s6-svc, /usr/bin/s6-rc, /bin/s6-rc" >> /etc/sudoers
-WORKDIR /workspace
-ENV EPSILON_WORKSPACE=/workspace
-
-# NOTE: Persistent package ENVs (PYTHONUSERBASE, PIP_USER, NPM_CONFIG_PREFIX)
-# are set AFTER the build step — see "Runtime persistence" section below.
-# Setting them here would redirect build-time `npm install -g` into /workspace/
-# which gets overlaid by the Docker volume at runtime, losing the binaries.
 
 # ── Services (s6-rc.d longrun) ──────────────────────────────────────────────
 COPY core/s6-services/ /etc/s6-overlay/s6-rc.d/
@@ -316,23 +75,6 @@ RUN chmod +x /usr/local/bin/epsilon-opencode-state
 # needs to run `docker ...` commands early in the boot sequence.
 COPY core/scripts/docker-wait-ready /usr/local/bin/docker-wait-ready
 RUN chmod +x /usr/local/bin/docker-wait-ready
-
-# ── Pre-create /var/lib/docker so the named volume mounts cleanly ───────────
-# dockerd uses this as its data-root. Compose mounts a named volume here so
-# the storage lives on the host's native filesystem (required for overlay2).
-RUN mkdir -p /var/lib/docker /etc/docker
-
-# ── Known-good Docker/Containerd toolchain (from official docker:dind) ─────
-COPY --from=docker-dind-bins /usr/local/bin/containerd /usr/local/bin/containerd
-COPY --from=docker-dind-bins /usr/local/bin/containerd-shim-runc-v2 /usr/local/bin/containerd-shim-runc-v2
-COPY --from=docker-dind-bins /usr/local/bin/ctr /usr/local/bin/ctr
-COPY --from=docker-dind-bins /usr/local/bin/docker /usr/local/bin/docker
-COPY --from=docker-dind-bins /usr/local/bin/docker-compose /usr/local/bin/docker-compose
-COPY --from=docker-dind-bins /usr/local/bin/docker-init /usr/local/bin/docker-init
-COPY --from=docker-dind-bins /usr/local/bin/docker-proxy /usr/local/bin/docker-proxy
-COPY --from=docker-dind-bins /usr/local/bin/dockerd /usr/local/bin/dockerd
-COPY --from=docker-dind-bins /usr/local/bin/runc /usr/local/bin/runc
-COPY --from=docker-dind-bins /usr/local/libexec/docker/cli-plugins/ /usr/local/libexec/docker/cli-plugins/
 
 # ── E2E test scripts ────────────────────────────────────────────────────────
 COPY core/tests/ /ephemeral/tests/
