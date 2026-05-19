@@ -139,7 +139,7 @@ ALLOWED_SANDBOX_PROVIDERS=daytona
 DAYTONA_API_KEY=<daytona-api-key>
 DAYTONA_SERVER_URL=https://app.daytona.io/api
 DAYTONA_TARGET=eu                       # QUAN TRỌNG: dùng "eu" (us region không available)
-DAYTONA_SNAPSHOT=epsilonaicrypto/computer:daytona-bootstrap  # Image sandbox — phải có cả egress fix + daytona-start.sh (xem section "Daytona sandbox lifecycle")
+DAYTONA_SNAPSHOT=epsilonaicrypto/computer:stable  # Image sandbox — CI auto-promote sau mỗi thin build pass smoke (Story 8.6). Xem section "Build sandbox image".
 
 # LLM (ít nhất 1 provider)
 OPENROUTER_API_KEY=<key>
@@ -373,7 +373,21 @@ gh workflow run release.yml --repo deptrai/chainlens \
 
 Sandbox image được build từ `core/docker/Dockerfile` và push lên Docker Hub (`epsilonaicrypto/computer`).
 
-### KHUYẾN NGHỊ: Build trên server prod, KHÔNG build trên máy local
+### Story 8.6 — Automated CI/CD pipeline (CANONICAL từ 2026-05-19)
+
+Mọi thay đổi trong `core/epsilon-master/**`, `core/init-scripts/**`, `core/daytona-start.sh`, hoặc `core/docker/Dockerfile` khi push lên `main` sẽ tự động:
+
+1. **`sandbox-build.yml`** — build thin image trên self-hosted runner (label `sandbox-builder`), push `epsilonaicrypto/computer:next-<sha7>` lên Docker Hub + GHCR (5-8 phút)
+2. **`sandbox-smoke.yml`** — provision sandbox Daytona thật, bootstrap epsilon-master, chạy 5 smoke checks. Nếu pass → tag lại thành `:stable`, register Daytona snapshot `computer-stable`, patch `DAYTONA_SNAPSHOT` trong Dokploy + redeploy API tự động
+3. **Circuit breaker** — sau 3 consecutive failures, pipeline lock. Unlock: `bash scripts/ci-circuit-breaker.sh unlock` trên VPS runner
+
+**Self-hosted runner** phải có label `sandbox-builder` và chạy trên server có Docker + Docker Hub credentials (`epsilonaicrypto` org). Setup: `docs/runbooks/sandbox-ci-setup.md`.
+
+**GitHub secrets cần thiết:** `GH_PAT`, `GHCR_PAT`, `DAYTONA_API_KEY`, `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`, `DOKPLOY_API_TOKEN`, `DOKPLOY_API_URL` (optional: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`).
+
+> **KHÔNG cần manual build** cho đa số thay đổi. Chỉ cần push → CI lo phần còn lại, bao gồm cả update `DAYTONA_SNAPSHOT` production.
+
+### KHUYẾN NGHỊ: Build thủ công trên server prod (khi CI không dùng được)
 
 **Lý do:**
 - Image rất nặng (~4-5GB sau khi nén multi-arch). Mạng VN không đủ ổn định để push lên Docker Hub — sẽ bị **502 Bad Gateway / 400 Bad Request** sau 30-60 phút và mất hết công sức build.
@@ -626,15 +640,24 @@ curl -X DELETE -H "Authorization: Bearer $DAYTONA_API_KEY" "https://app.daytona.
 
 ### Image tag strategy
 
-Tag mới mỗi lần fix (`daytona-bootstrap`, `daytona-fix-1`, …) thay vì overwrite — Daytona Cloud có cache image theo digest, tag mới buộc pull layer mới. KHÔNG dùng tag `latest` cho production.
+| Tag | Nguồn | Mục đích |
+|---|---|---|
+| `next-<sha7>` | CI thin build mỗi push | Candidate — chưa verified |
+| `stable` | CI auto-promote sau smoke pass | **Production tag** — `DAYTONA_SNAPSHOT` trỏ vào đây |
+| `base-<date>` | CI base build (~monthly) | Layer nặng (apt/tools), ít thay đổi |
+| `daytona-fix-N` | Manual thin patch (legacy) | Không dùng nữa từ Story 8.6 |
+
+KHÔNG dùng tag `latest` cho production — digest không thay đổi khi tag bị overwrite trên cùng digest.
 
 Bake fix vào image (`core/daytona-start.sh`, init scripts) HOẶC fix trong API code (`daytona.ts`). Nếu fix nằm hoàn toàn ở API code, KHÔNG cần rebuild image — chỉ redeploy API.
 
-### Verified working state (2026-05-15)
+### Verified working state (2026-05-19, Story 8.6)
 
 Sau khi áp dụng đầy đủ:
-- `epsilonaicrypto/computer:daytona-bootstrap` — image với egress fix + daytona-start.sh
-- API commit `b1c05b935f` — `setsid bash -c` detach pattern
+- `epsilonaicrypto/computer:stable` — auto-promoted từ CI smoke pass sha7 `0028b4c`
+- Smoke checks: 5/5 pass (epsilon health, opencode, bun, epsilon-master HTTP, agent-browser)
+- `DAYTONA_SNAPSHOT=epsilonaicrypto/computer:stable` trong Dokploy production
+- CI bootstrap pattern: `env ENV_MODE=cloud /usr/local/bin/epsilon-daytona-start` (via toolbox proxy với `setsid`)
 
 End-to-end provisioning hoàn tất trong **1 attempt** (~30-40s):
 1. `POST /v1/agent/initiate` → DB row created, `status=provisioning`
