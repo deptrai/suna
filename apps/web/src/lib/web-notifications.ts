@@ -229,7 +229,7 @@ export function sendWebNotification(
     try {
       notification = new Notification(payload.title, {
         body: payload.body,
-        icon: '/favicon.png',
+        icon: '/epsilon-symbol.svg',
         tag: payload.tag,
         // Auto-close after 8 seconds
         requireInteraction: false,

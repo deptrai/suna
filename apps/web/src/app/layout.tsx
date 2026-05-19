@@ -91,10 +91,9 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: '/favicon.png', sizes: '32x32' },
-      { url: '/favicon-light.png', sizes: '32x32', media: '(prefers-color-scheme: dark)' },
+      { url: '/epsilon-symbol.svg', type: 'image/svg+xml' },
     ],
-    shortcut: '/favicon.png',
+    shortcut: '/epsilon-symbol.svg',
     apple: [{ url: '/logo_black.png', sizes: '180x180' }],
   },
   manifest: '/manifest.json',
@@ -228,7 +227,7 @@ export default async function RootLayout({
               name: siteMetadata.name,
               alternateName: ['Epsilon', 'Epsilon AI', 'Epsilon – The Autonomous Company Operating System'],
               url: siteMetadata.url,
-              logo: `${siteMetadata.url}/favicon.png`,
+              logo: `${siteMetadata.url}/epsilon-symbol.svg`,
               description: siteMetadata.description,
               foundingDate: '2024',
               sameAs: [
