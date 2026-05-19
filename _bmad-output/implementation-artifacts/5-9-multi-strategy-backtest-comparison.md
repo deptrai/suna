@@ -10,6 +10,12 @@ Status: ready-for-dev
 **FRs:** N/A. **NFRs:** NFR3 (sandbox timeout budget), NFR8 (atomic credit deduction).
 **Estimated effort:** 2-3 days. **Owner:** TBD.
 
+## Implementation Reality Check (2026-05-19)
+
+- Story 5.9 is still at spec stage; no AC implementation code is present yet in `apps/api`/`apps/web`.
+- Commit `cc17cc03be` has an implementation-style message but does **not** include 5.9 feature code. It only updates docs artifacts and one unrelated UI link change in `apps/web/src/app/(dashboard)/dashboard/swarm-teams/swarm-teams-client.tsx` (`<a>` -> `next/link`).
+- Therefore this story remains `ready-for-dev` and all Tasks 1-7 below stay unchecked.
+
 ## ⚠️ Stack Decision (READ FIRST — same as Story 5.2)
 
 **Spec epic viết "Monaco editor multi-tab" nhưng implementation phải dùng CodeMirror 6** — Story 5.2 đã document chi tiết tại [5-2-backtest-strategy-editor-monaco-editor.md §Stack Decision](5-2-backtest-strategy-editor-monaco-editor.md). Reuse `<CodeEditor>` từ [apps/web/src/components/file-editors/code-editor.tsx](apps/web/src/components/file-editors/code-editor.tsx). KHÔNG add Monaco.
@@ -392,5 +398,7 @@ Recent epic-5 commits confirm patterns:
 ### Debug Log References
 
 ### Completion Notes List
+
+- 2026-05-19 audit: verified commit `cc17cc03be` does not contain `backtest-multi` route/client/visualizer/tests implementation. No Story 5.9 AC code shipped yet.
 
 ### File List
