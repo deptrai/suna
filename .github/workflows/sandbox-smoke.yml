@@ -148,14 +148,44 @@ jobs:
               | jq -r '.state // .status // "unknown"')
             echo "Sandbox state: $STATUS (${SECONDS}s)"
             if [ "$STATUS" = "started" ] || [ "$STATUS" = "running" ]; then
-              echo "Sandbox ready — waiting 30s for epsilon-master bootstrap"
-              sleep 30
+              echo "Sandbox container ready"
               break
             fi
             if [ "$STATUS" = "error" ] || [ "$STATUS" = "failed" ]; then
               echo "Sandbox failed to start: $STATUS"
               exit 1
             fi
+            sleep 10
+          done
+
+      - name: Bootstrap epsilon-master
+        env:
+          DAYTONA_API_KEY: ${{ secrets.DAYTONA_API_KEY }}
+        run: |
+          SBID="${{ steps.provision.outputs.sandbox_id }}"
+          TOOLBOX="https://proxy.app-eu.daytona.io/toolbox/$SBID"
+          echo "Triggering epsilon-daytona-start bootstrap..."
+          curl -sf -X POST \
+            -H "Authorization: Bearer $DAYTONA_API_KEY" \
+            -H "Content-Type: application/json" \
+            "$TOOLBOX/process/execute" \
+            -d '{"command":"setsid bash -c '\''nohup /usr/local/bin/epsilon-daytona-start > /tmp/eds.log 2>&1 < /dev/null &'\''","timeout":10}' \
+            || echo "Warning: bootstrap trigger returned non-zero (may already be starting)"
+
+          echo "Waiting up to 90s for epsilon-master to become ready..."
+          DEADLINE=$((SECONDS + 90))
+          while [ $SECONDS -lt $DEADLINE ]; do
+            HEALTH=$(curl -sf -X POST \
+              -H "Authorization: Bearer $DAYTONA_API_KEY" \
+              -H "Content-Type: application/json" \
+              "$TOOLBOX/process/execute" \
+              -d '{"command":"curl -sf http://localhost:8000/epsilon/health","timeout":5}' \
+              2>/dev/null | jq -r '.result // .output // ""' 2>/dev/null || echo "")
+            if echo "$HEALTH" | grep -q "runtimeReady"; then
+              echo "epsilon-master ready (${SECONDS}s)"
+              break
+            fi
+            echo "Waiting for epsilon-master... (${SECONDS}s)"
             sleep 10
           done
 
