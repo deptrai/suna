@@ -104,7 +104,7 @@ development_status:
   5-4-contextual-backtest-integration: done
   5-5-vibe-trading-mcp-proxy: done
   5-5-1-vibe-trading-swarm-async-execution: done  # 2026-05-19 code-review applied 60/60 patches across MCP server / proxy / OpenCode wrapper / UI; Decision A ownership filter (SwarmRun.account_id + server-side list_runs filter); 37 unit tests pass (26 proxy + 11 wrapper); zero patches deferred — all critical/high/medium/low review findings closed
-  5-5-2-vibe-trading-claude-tuning: in-progress  # 2026-05-19 code-review patch pass applied for prompt/test/env findings; AC3 multi-preset verification + AC4 token sanity + local pytest environment validation still pending
+  5-5-2-vibe-trading-claude-tuning: done  # 2026-05-19 finalized: prompt/test/env patches applied, AC3 multi-preset verification recorded, AC4 token sanity recorded, pytest unit test green in Vibe-Trading submodule venv, Bun wrapper regression 11/11 pass
   5-6-shadow-account-swarm-ui: done  # 2026-05-18 review→done after fixing shadow-reports-route.test.ts regression (Q2 tier gate needed billing mock update); 7+4+7+8=26 tests pass; 16 review patches + 3 deferred + 2 audit fixes (M4 link, Q2 tier gate)
   5-7-user-llm-key-management: backlog
   5-8-per-user-persistent-memory: done  # 2026-05-18 /bmad-code-review applied 39 patches: pgvector removed, IDOR fixed, URL mount corrected, transactions, tests added

@@ -1,6 +1,6 @@
 # Story 5.5.2: Vibe-Trading Swarm — Claude Haiku 4.5 LLM switch + prompt tuning
 
-Status: in-progress
+Status: done
 
 **Epic:** 5 — Vibe-Trading Platform
 **Type:** P2 LLM-provider migration + behavioral prompt tune (follow-up to 5.5.1)
@@ -167,9 +167,9 @@ left to do, write `report.md` via `write_file` — that IS your final tool call.
 ### Task 4 — Regression test + AC5 validation
 
 - [x] 4.1 Create `Vibe-Trading/agent/tests/test_worker_prompt.py` with 3 assertions per AC5. (Done 2026-05-19.)
-- [ ] 4.2 Run `pytest -m unit Vibe-Trading/agent/tests/test_worker_prompt.py` — expect green. (Blocked locally: `python3 -m pytest` module missing.)
+- [x] 4.2 Run `pytest -m unit Vibe-Trading/agent/tests/test_worker_prompt.py` — green via `cd Vibe-Trading && venv/bin/python -m pytest -m unit agent/tests/test_worker_prompt.py` (2026-05-19, 1 passed).
 - [x] 4.3 Run existing wrapper tests `cd core/epsilon-master && bun test opencode/tools/__tests__/vibe_trading_swarm.test.ts` — expect 11/11 still green. (Done 2026-05-19: 11/11 pass.)
-- [ ] 4.4 Add `Vibe-Trading/agent/tests/test_worker_prompt.py` to CI fast-tier — append to [`.github/workflows/test.yml`](.github/workflows/test.yml) under the appropriate Python tier (if exists) OR document why it lives in submodule-only suite.
+- [x] 4.4 CI decision documented: keep `test_worker_prompt.py` in Vibe-Trading submodule pytest suite (not root fast-tier). Root CI fast-tier is Bun/TS-only; adding full Python dependency bootstrap for a single submodule unit test would materially increase required-job runtime. Validation is executed in submodule venv + local regression run.
 
 ### Review Findings
 
@@ -242,17 +242,17 @@ Only the exact dated id works. If v98store later supports aliases, switching is 
 
 ## Change Log
 
-- **2026-05-19** — Story created post-Story-5.5.1-deploy. Tasks 1 + 2 already shipped in the same session as a hotfix to unblock browser E2E test. Tasks 3 + 4 + ACs to be validated.
+- **2026-05-19** — Story created post-Story-5.5.1-deploy. Tasks 1 + 2 shipped as hotfix; Tasks 3 + 4 completed; status moved to `done`.
 
 ## Dev Agent Record
 
 ### Completion Notes
 
-- Task 1 + Task 2 landed before this spec was drafted (hotfix path). Re-validating against AC criteria post-facto.
+- Task 1 + Task 2 landed before this spec was drafted (hotfix path), and AC validation is now completed.
 - Hotfix evidence:
   - Pre-fix run `swarm-20260519-042757-5e5ce7bc`: bull_advocate `worker_incomplete` (1 iter, no tool calls, plan-only response of 2160 chars).
   - Post-fix run `swarm-20260519-045721-7ef35bd1`: bull_advocate completed (120 events, 3 load_skill calls in iter 0 + write_file in iter 1).
-- Tasks 3 + 4 + AC3/AC4/AC5 verification TBD.
+- Task 3 verification complete (3 presets completed); AC4 token sanity recorded; AC5 tests verified (`pytest` unit test green, Bun wrapper regression 11/11 green).
 
 ### File List
 
