@@ -687,6 +687,69 @@ DELETE FROM epsilon.sandboxes WHERE status='error' AND external_id='';
 ```
 Click "Get started" lại trên UI sẽ trigger provisioning mới.
 
+### Sandbox trả 502 sau khi API container restart (epsilon-master chết mid-session)
+
+**Triệu chứng:** Sandbox đang hoạt động bình thường, sau đó API container restart (deploy mới, crash, OOM). Sau restart, mọi request vào sandbox đều trả 502 hoặc "Workspace offline" — dù Daytona báo `state=started` (không phải `archived`).
+
+**Root cause:** Khi API container restart, WebSocket connection đến epsilon-master bị drop. epsilon-master trong một số phiên bản tự exit khi mất WS. Sandbox container vẫn running ở Daytona, port 8000 không có process nào listen → proxy trả 502. Đây KHÔNG phải archive-wake scenario nên flow `wakeSandbox()` không trigger.
+
+**Auto-recovery (kể từ commit `60e6e18558`, 2026-05-19):**
+
+Preview proxy ([preview.ts](apps/api/src/sandbox-proxy/routes/preview.ts)) tự detect sau 3 retries (15s):
+1. Proxy thấy 3 lần 502 liên tiếp + Daytona chưa báo "no IP / no runner" (`wakeTriggered=false`)
+2. → Fire `triggerBootstrapRecovery()` async (không block request hiện tại)
+3. → Gọi `DaytonaProvider.ensureRunning()` → health-check `/epsilon/health` → re-trigger `epsilon-daytona-start` bootstrap nếu dead
+4. → Request tiếp theo (~30-90s sau) sẽ thành công, không cần can thiệp tay
+
+**Trong apps/api log khi auto-recovery fire:**
+```
+[PREVIEW] Sandbox <id>:8000 returned 502 (port not ready, attempt 1/4)
+[PREVIEW] Sandbox <id>:8000 returned 502 (port not ready, attempt 2/4)
+[PREVIEW] Sandbox <id>:8000 returned 502 (port not ready, attempt 3/4)
+[PREVIEW] Sandbox <id> returning persistent 502 — epsilon-master likely dead after API restart; triggering ensureRunning
+[DAYTONA] Sandbox <id> container running but runtime not responding — re-triggering bootstrap
+[DAYTONA] Sandbox <id> runtime ready after re-bootstrap
+[PREVIEW] Sandbox <id> bootstrap recovery complete — next proxy request should succeed
+```
+
+**Cooldown:** 2 phút per sandbox — nếu frontend đang poll liên tục, chỉ fire 1 lần mỗi 2 phút để tránh retry storm.
+
+**Manual recovery (nếu cần ngay lập tức, không đợi auto):**
+```bash
+TOK=$DAYTONA_API_KEY; SBID=<sandbox-external-id>
+curl -X POST -H "Authorization: Bearer $TOK" -H "Content-Type: application/json" \
+  "https://proxy.app-eu.daytona.io/toolbox/$SBID/process/execute" \
+  -d '{"command":"setsid bash -c '\''nohup /usr/local/bin/epsilon-daytona-start > /tmp/eds.log 2>&1 < /dev/null &'\''", "timeout":10}'
+# Verify sau 30s:
+curl -X POST -H "Authorization: Bearer $TOK" -H "Content-Type: application/json" \
+  "https://proxy.app-eu.daytona.io/toolbox/$SBID/process/execute" \
+  -d '{"command":"curl -s http://localhost:8000/epsilon/health","timeout":10}'
+```
+
+---
+
+### Sandbox trả 502 sau archive+wake (Daytona idle timeout)
+
+**Triệu chứng:** Sandbox bị Daytona auto-archive sau 30 phút idle. User mở lại → sandbox container start nhưng UI vẫn "Workspace offline" hoặc timeout.
+
+**Root cause:** Daytona PID 1 = `daytona sleep infinity` — ENTRYPOINT bị bypass, `epsilon-daytona-start` không tự run sau wake. Sandbox "running" nhưng port 8000 trống.
+
+**Auto-recovery (kể từ commit `46c94afbf3`, 2026-05-19):**
+
+Restart route ([sandbox-cloud.ts](apps/api/src/platform/routes/sandbox-cloud.ts)) dùng `provider.ensureRunning()` thay vì `provider.start()`. `ensureRunning()` sau khi wake sẽ:
+1. Health-check `GET /epsilon/health` (timeout 5s)
+2. Nếu fail → re-trigger `startRuntime()` bootstrap (`setsid bash -c '...'` qua toolbox proxy)
+3. Poll `/epsilon/health` mỗi 10s, tối đa 12 lần (2 phút) cho đến khi ready
+
+**Trong apps/api log khi wake trigger:**
+```
+[DAYTONA] Sandbox <id> is archived, waking up...
+[DAYTONA] Sandbox <id> container running but runtime not responding — re-triggering bootstrap
+[DAYTONA] Sandbox <id> runtime ready after re-bootstrap
+```
+
+---
+
 ### `INTERNAL_SERVICE_KEY` mismatch (auto-gen drift sau redeploy)
 
 **Triệu chứng:** Frontend báo "Cannot connect to API", hoặc các call vào sandbox proxy trả 401 sau khi redeploy API. Sandbox cũ vẫn hoạt động trước đó, đột nhiên ngưng.
