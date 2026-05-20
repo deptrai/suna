@@ -149,7 +149,7 @@ development_status:
 
   # Epic 11: Frontend Performance & Platform Upgrade
   epic-11: in-progress
-  11-1-nextjs-16-react-19-upgrade: done  # 2026-05-20: next@16.2.6 + react@19.2.6 + @sentry/nextjs@10.53.1; 7 forwardRef → function component; build pass; 248/248 tests pass
+  11-1-nextjs-16-react-19-upgrade: done  # 2026-05-20: next@16.2.6 + react@19.2.6; code review fixed 7 forwardRef migrations (AC3), pnpm.overrides v19, @next/third-parties@16, tsconfig orphan alias, cmdk@1.1.1, react-day-picker@9 + calendar.tsx v9 API; fumadocs pinned v15 (zod v4 blocker deferred)
   11-2-bundle-splitting-heavy-libraries: backlog
   11-3-loading-states-route-skeletons: backlog
   11-4-react-compiler-performance-validation: backlog
