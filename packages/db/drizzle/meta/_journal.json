@@ -50,6 +50,13 @@
       "when": 1747612800000,
       "tag": "0006_entity_wallet_labels",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1747785600000,
+      "tag": "0013_token_economy_foundation",
+      "breakpoints": true
     }
   ]
 }

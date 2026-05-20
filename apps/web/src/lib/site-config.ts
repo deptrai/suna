@@ -5,7 +5,8 @@ export const siteConfig = {
       { id: 1, name: 'OS', href: '/' },
       { id: 2, name: 'About', href: '/about' },
       { id: 3, name: 'Careers', href: '/careers' },
-      // { id: 4, name: 'Partnerships', href: '/partnerships' },
+      { id: 4, name: 'Pricing', href: '/pricing' },
+      // { id: 5, name: 'Partnerships', href: '/partnerships' },
     ],
   },
   hero: {

@@ -105,7 +105,10 @@ export interface TierConfig {
   monthlyPrice: number;
   yearlyPrice: number;
   monthlyCredits: number;
+  monthlyTokenGrant?: number;
   canPurchaseCredits: boolean;
+  canPurchaseTopup?: boolean;
+  stripeMonthlyPriceId?: string | null;
   models: string[];
   dailyCreditConfig: DailyCreditConfig | null;
   hidden: boolean;

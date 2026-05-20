@@ -98,8 +98,15 @@ billingApp.post('/setup/initialize', async (c: any) => {
     });
   }
 
+  // Initial token grant for free tier (token economy).
+  if (subscriptionStatus === 'initialized' && currentTier === 'free') {
+    const { grantSubscriptionTokensFromStripePeriod } = await import('./services/token-grants');
+    const latest = await getCreditAccount(accountId);
+    await grantSubscriptionTokensFromStripePeriod(accountId, 'free', latest?.stripeSubscriptionId ?? null);
+  }
+
   // ── Step 2: Sandbox provisioning (only for paid plans) ────────────────
-  // Free users: no sandbox — they connect their own (BYOC).
+  // Free tier has sandbox quota support; provisioning flow remains unchanged in this story.
   // Paid users: machine creation is handled explicitly via the checkout / create-machine flow.
   let sandboxStatus: 'created' | 'exists' | 'provisioning' | 'skipped' | 'failed' = 'skipped';
 
@@ -154,6 +161,16 @@ if (config.EPSILON_BILLING_INTERNAL_ENABLED) {
       console.error('[BillingApp] Yearly rotation interval error:', err);
     }
   }, YEARLY_ROTATION_INTERVAL_MS);
+
+  const TIER1_MONTHLY_RESET_INTERVAL_MS = 24 * 60 * 60 * 1000;
+  setInterval(async () => {
+    try {
+      const { resetExpiredTier1Tokens } = await import('./cron/tier1-monthly-reset');
+      await resetExpiredTier1Tokens();
+    } catch (err) {
+      console.error('[BillingApp] Tier1 monthly reset interval error:', err);
+    }
+  }, TIER1_MONTHLY_RESET_INTERVAL_MS);
 }
 
 export { billingApp, accountDeletionApp };

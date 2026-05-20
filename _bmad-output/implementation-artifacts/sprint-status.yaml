@@ -1,5 +1,5 @@
 # generated: 2026-05-09
-# last_updated: 2026-05-18 (Epic 6 progress: advisory route foundation shipped, extension path aligned)
+# last_updated: 2026-05-21 (Story 7.1 moved to review via bmad-dev-story)
 # project: chainlensnlens
 # project_key: NOKEY
 # tracking_system: file-system
@@ -33,7 +33,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-21 (Story 5.9 review complete, 5.9.1 created as ready-for-dev for AC7 discoverability)
+last_updated: 2026-05-21 (Story 7.1 moved to review via bmad-dev-story)
 project: chainlens
 project_key: NOKEY
 tracking_system: file-system
@@ -109,7 +109,7 @@ development_status:
   5-7-user-llm-key-management: backlog
   5-8-per-user-persistent-memory: done  # 2026-05-18 /bmad-code-review applied 39 patches: pgvector removed, IDOR fixed, URL mount corrected, transactions, tests added
   5-9-multi-strategy-backtest-comparison: done  # 2026-05-21 /bmad-code-review applied 19 patches (refund-on-all-fail, equity_curve Array guard, submit_failed UX, tab_id sanitize, runIdRef cancel token, sync stream registration, a11y, etc); AC7 deferred to 5.9.1
-  5-9-1-backtest-discoverability: ready-for-dev  # 2026-05-21 scope split from 5.9 AC7 — nav surface + ?mode= deeplink + chat CTA + stale BYOK copy audit
+  5-9-1-conversational-multi-backtest: in-progress  # 2026-05-21 agent-driven chat flow; architect review (Winston) passed second pass — AC5 resolved as Zustand store + pure helper, tier gate split (tier1 propose / tier2 run), LLM Phase 2 gated behind 10/min rate-limit, session_id required, hook-extraction safety net mandated
   epic-5-retrospective: optional
 
   # Epic 6: Browser Intelligence Extension
@@ -127,8 +127,8 @@ development_status:
   # ─── Phase 2 — Tokenomics & Enterprise ───
 
   # Epic 7: Credit Economy & Tokenomics
-  epic-7: backlog
-  7-1-internal-credits-system: backlog
+  epic-7: in-progress
+  7-1-internal-credits-system: review
   7-2-clens-token-smart-contract: backlog
   7-3-affiliate-and-airdrop-reward-system: backlog
   epic-7-retrospective: optional

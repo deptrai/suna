@@ -1,4 +1,6 @@
 import Stripe from 'stripe';
+import { sql } from 'drizzle-orm';
+import { creditAccounts } from '@epsilon/db';
 import { getStripe } from '../../shared/stripe';
 import { config } from '../../config';
 import { WebhookError } from '../../errors';
@@ -24,6 +26,7 @@ import { grantMachineBonusOnce, getStripeMachineBonusKey } from './machine-bonus
 import { cancelFreeSubscriptionForUpgrade } from './subscriptions';
 import { AUTO_TOPUP_DEFAULT_AMOUNT, AUTO_TOPUP_DEFAULT_THRESHOLD } from '@epsilon/shared';
 import { resolveAccountId } from '../../shared/resolve-account';
+import { grantSubscriptionTokensFromStripePeriod } from './token-grants';
 
 // ─── Stripe Webhook Processing ──────────────────────────────────────────────
 
@@ -72,6 +75,12 @@ export async function processStripeWebhook(rawBody: string, signature: string) {
     case 'invoice.paid':
       await handleInvoicePaid(event.data.object as Stripe.Invoice);
       break;
+    case 'invoice.payment_succeeded':
+      await handleInvoicePaid(event.data.object as Stripe.Invoice);
+      break;
+    case 'payment_intent.succeeded':
+      await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent);
+      break;
 
     case 'invoice.payment_failed':
       await handleInvoiceFailed(event.data.object as Stripe.Invoice);
@@ -101,7 +110,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     return;
   }
 
-  if (session.mode === 'payment') {
+  if (session.mode === 'payment' && session.metadata?.type !== 'topup') {
     await handleCreditPurchase(session, accountId);
     return;
   }
@@ -139,7 +148,7 @@ async function handleCreditPurchase(session: Stripe.Checkout.Session, accountId:
 }
 
 async function handleSubscriptionCheckout(session: Stripe.Checkout.Session, accountId: string) {
-  const tierKey = session.metadata?.tier_key;
+  const tierKey = session.metadata?.target_tier ?? session.metadata?.tier_key;
   if (!tierKey) return;
 
   const subscriptionId = typeof session.subscription === 'string'
@@ -166,6 +175,7 @@ async function handleSubscriptionCheckout(session: Stripe.Checkout.Session, acco
     autoTopupThreshold: String(AUTO_TOPUP_DEFAULT_THRESHOLD),
     autoTopupAmount: String(AUTO_TOPUP_DEFAULT_AMOUNT),
   });
+  await grantSubscriptionTokensFromStripePeriod(accountId, tierKey, subscriptionId);
 
   // Grant tier credits if applicable (credits system, separate from instances)
   if (tier.monthlyCredits > 0) {
@@ -412,9 +422,23 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
     lastProcessedInvoiceId: invoice.id,
     lastGrantDate: new Date().toISOString(),
     nextCreditGrant,
+    subscriptionCycleEnd: new Date(subscription.current_period_end * 1000).toISOString(),
   });
+  await grantSubscriptionTokensFromStripePeriod(accountId, tierName, subscription.id);
 
   console.log(`[Webhook] Renewal processed: ${credits} credits for ${accountId}`);
+}
+
+async function handlePaymentIntentSucceeded(intent: Stripe.PaymentIntent) {
+  if (intent.metadata?.type !== 'topup') return;
+  const accountId = intent.metadata?.account_id;
+  const topupTokens = Number(intent.metadata?.topup_tokens ?? 0);
+  if (!accountId || topupTokens <= 0) return;
+
+  await updateCreditAccount(accountId, {
+    topupTokens: sql`${creditAccounts.topupTokens} + ${topupTokens}`,
+  } as any);
+  console.log(`[TOKEN] accountId=${accountId} topup: added ${topupTokens} topup_tokens`);
 }
 
 async function applyScheduledDowngrade(accountId: string, targetTier: string, account: any) {

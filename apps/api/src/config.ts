@@ -128,6 +128,8 @@ const envSchema = z.object({
   // ── Billing — Stripe (optional, only for cloud billing) ──────────────────
   STRIPE_SECRET_KEY:           optStr,
   STRIPE_WEBHOOK_SECRET:       optStr,
+  STRIPE_PRICE_TIER2_MONTHLY:  optStr,
+  STRIPE_PRICE_TIER3_MONTHLY:  optStr,
 
   // ── Billing — RevenueCat (optional) ──────────────────────────────────────
   REVENUECAT_WEBHOOK_SECRET:   optStr,
@@ -246,6 +248,16 @@ const envSchema = z.object({
 
   // ─── Redis (BullMQ) ────────────────────────────────────────────────────────
   REDIS_URL:                   optStrDefault('redis://localhost:6379'),
+  TOKEN_MULTIPLIER_FREE:               optFloat(1.0),
+  TOKEN_MULTIPLIER_FREE_THINKING:      optFloat(1.5),
+  TOKEN_MULTIPLIER_PREMIUM:            optFloat(4.0),
+  TOKEN_MULTIPLIER_PREMIUM_THINKING:   optFloat(6.0),
+  FREE_MODEL_POOL:                     optStr,
+  PREMIUM_MODEL_POOL:                  optStr,
+  TIER1_MONTHLY_TOKENS:                optInt(10_000_000),
+  TIER2_MONTHLY_TOKENS:                optInt(200_000_000),
+  TIER3_MONTHLY_TOKENS:                optInt(1_500_000_000),
+  TOPUP_TOKEN_UNIT_PRICE_CENTS:        optInt(5),
 
   // ─── Discover Feed Worker ─────────────────────────────────────────────────
   DISCOVER_WORKER_ENABLED:     optBoolFalse,
@@ -599,6 +611,8 @@ export const config = {
   // ─── Stripe (Billing) ─────────────────────────────────────────────────────
   STRIPE_SECRET_KEY: env.STRIPE_SECRET_KEY,
   STRIPE_WEBHOOK_SECRET: env.STRIPE_WEBHOOK_SECRET,
+  STRIPE_PRICE_TIER2_MONTHLY: env.STRIPE_PRICE_TIER2_MONTHLY,
+  STRIPE_PRICE_TIER3_MONTHLY: env.STRIPE_PRICE_TIER3_MONTHLY,
 
   // ─── RevenueCat (Billing) ─────────────────────────────────────────────────
   REVENUECAT_WEBHOOK_SECRET: env.REVENUECAT_WEBHOOK_SECRET,
@@ -747,6 +761,16 @@ export const config = {
 
   // ─── Redis (BullMQ) ────────────────────────────────────────────────────────
   REDIS_URL: env.REDIS_URL,
+  TOKEN_MULTIPLIER_FREE: env.TOKEN_MULTIPLIER_FREE,
+  TOKEN_MULTIPLIER_FREE_THINKING: env.TOKEN_MULTIPLIER_FREE_THINKING,
+  TOKEN_MULTIPLIER_PREMIUM: env.TOKEN_MULTIPLIER_PREMIUM,
+  TOKEN_MULTIPLIER_PREMIUM_THINKING: env.TOKEN_MULTIPLIER_PREMIUM_THINKING,
+  FREE_MODEL_POOL: env.FREE_MODEL_POOL,
+  PREMIUM_MODEL_POOL: env.PREMIUM_MODEL_POOL,
+  TIER1_MONTHLY_TOKENS: env.TIER1_MONTHLY_TOKENS,
+  TIER2_MONTHLY_TOKENS: env.TIER2_MONTHLY_TOKENS,
+  TIER3_MONTHLY_TOKENS: env.TIER3_MONTHLY_TOKENS,
+  TOPUP_TOKEN_UNIT_PRICE_CENTS: env.TOPUP_TOKEN_UNIT_PRICE_CENTS,
 
   // ─── Discover Feed Worker ─────────────────────────────────────────────────
   DISCOVER_WORKER_ENABLED: env.DISCOVER_WORKER_ENABLED,
