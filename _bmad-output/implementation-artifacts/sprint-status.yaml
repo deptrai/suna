@@ -33,7 +33,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-19 (Story 5.5.2 spec drafted — follow-up to 5.5.1 LLM swap to claude-haiku-4-5 via v98store + worker prompt tune; ready for /bmad-code-review adversarial pass)
+last_updated: 2026-05-20 (Story 11.1 implementation completed in worktree; upgraded Next.js 16 + React 19 and moved to review)
 project: chainlens
 project_key: NOKEY
 tracking_system: file-system
@@ -149,7 +149,7 @@ development_status:
 
   # Epic 11: Frontend Performance & Platform Upgrade
   epic-11: backlog
-  11-1-nextjs-16-react-19-upgrade: backlog
+  11-1-nextjs-16-react-19-upgrade: review
   11-2-bundle-splitting-heavy-libraries: backlog
   11-3-loading-states-route-skeletons: backlog
   11-4-react-compiler-performance-validation: backlog
