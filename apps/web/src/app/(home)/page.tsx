@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { useState, useCallback, useEffect } from 'react';
 import { BackgroundAALChecker } from '@/components/auth/background-aal-checker';
 import { WallpaperBackground } from '@/components/ui/wallpaper-background';
-import { ArrowRight, Check, Copy, Globe, Smartphone, Bot, Sparkles, Terminal, Zap, RefreshCw, Brain, GitFork, Blocks, Shield, LineChart, Database, Cpu } from 'lucide-react';
+import { ArrowRight, Globe, Bot, Sparkles, Terminal, Shield, LineChart, Database, Cpu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { trackCtaSignup } from '@/lib/analytics/gtm';
 import { motion, useScroll, useTransform } from 'framer-motion';
@@ -84,8 +84,8 @@ export default function Home() {
           >
             <div className="flex-1 flex items-center justify-center pt-40 pointer-events-none">
               <h1 className="text-4xl sm:text-5xl md:text-6xl font-medium tracking-tight text-foreground text-center">
-                Crypto Intelligence &amp;<br />
-                <span className="text-muted-foreground">Algorithmic Strategy Platform</span>
+                Chainlens for Web3 Research &amp; Trading<br />
+                <span className="text-muted-foreground">Free signals. Premium backtests. Private enterprise deployment.</span>
               </h1>
             </div>
             <div className="relative z-[1] pb-8 px-4 flex flex-col items-center gap-6">
@@ -94,7 +94,7 @@ export default function Home() {
                 className="h-12 px-8 text-sm rounded-full transition-colors"
                 onClick={handleLaunch}
               >
-                Launch Your Epsilon<ArrowRight className="ml-1.5 size-3.5" />
+                Launch Chainlens<ArrowRight className="ml-1.5 size-3.5" />
               </Button>
               <motion.div
                 className="mt-3"
@@ -127,42 +127,42 @@ export default function Home() {
         <section className="max-w-3xl mx-auto px-6 py-10 sm:py-14">
           <Reveal>
           <p className="text-2xl sm:text-3xl md:text-4xl font-medium text-foreground leading-snug tracking-tight">
-            AI Advisory. Automated Code Gen. Risk Validation.
+            One platform, three clear tiers.
           </p>
           </Reveal>
           <Reveal delay={0.1}>
           <p className="mt-3 text-base sm:text-lg text-muted-foreground leading-relaxed max-w-2xl">
-            Chainlens is an enterprise-grade platform built natively for Web3. It provides investors and quants with powerful tools to generate insights, run automated backtesting, and monitor crypto markets in real time without compromising privacy.
+            Chainlens is a crypto-native intelligence platform for investors, quants, and teams. We combine AI research, market data workers, and secure execution so users can move from idea to validated strategy faster.
           </p>
           </Reveal>
           <Reveal delay={0.15}>
           <p className="mt-3 text-base sm:text-lg text-muted-foreground leading-relaxed max-w-2xl">
-            Whether you&apos;re hunting for alpha in our community-driven AI News hub, deploying trading bots in an isolated Sandbox, or running our Tier 3 Enterprise Local LLM for absolute confidentiality, Chainlens scales with you. Powered by a continuous Data Flywheel and Epsilon agents, it turns raw on-chain data into actionable strategies.
+            Tier 1 gives free users live AI risk alerts and discovery insights. Tier 2 unlocks Vibe-Trading backtesting and advanced research tools in isolated sandboxes. Tier 3 adds on-prem/private deployment with local LLM support for zero-data-leakage workflows.
           </p>
           </Reveal>
         </section>
 
-        {/* ═══════════════ THE ADVANTAGE ═══════════════ */}
+        {/* ═══════════════ TIER MODEL ═══════════════ */}
         <section className="max-w-3xl mx-auto px-6 py-10 sm:py-14">
           <Reveal>
           <h2 className="text-2xl sm:text-3xl font-medium tracking-tight text-foreground mb-2">
-            The Advantage
+            3-Tier Experience
           </h2>
           </Reveal>
           <Reveal delay={0.1}>
           <p className="text-sm text-muted-foreground leading-relaxed max-w-2xl mb-2">
-            Chainlens isn&apos;t just another generic AI. It&apos;s packed with crypto-native workflows and backed by decentralized RAG data to give you the ultimate edge.
+            A simple progression model from discovery to execution to institutional privacy.
           </p>
           </Reveal>
           <Reveal delay={0.15}>
           <div className="flex flex-col gap-4 mt-6">
             {[
-              { icon: <Globe className="size-4" />, title: 'AI-Generated News & Discover', desc: 'Real-time aggregated intelligence and early warning risk alerts, updated by our 24/7 background data workers and community interactions.' },
-              { icon: <LineChart className="size-4" />, title: 'Automated Backtesting Sandbox', desc: 'A secure MicroVM environment with a Monaco Editor for coding, testing, and visualizing trading strategies against historical market data.' },
-              { icon: <Shield className="size-4" />, title: 'Enterprise Zero-Data-Leakage', desc: 'Tier 3 customers can deploy Chainlens directly on their infrastructure with Local LLM support, ensuring strategies and research are entirely private.' },
-              { icon: <Database className="size-4" />, title: 'Data Flywheel', desc: 'Community queries enrich our shared RAG database, continuously fine-tuning the insights available to all users across the platform.' },
-              { icon: <Bot className="size-4" />, title: 'Crypto-Native Tools', desc: 'Built-in integrations with top data providers (DeFiLlama, Nansen, Dune), multi-chain support, and smart contract risk analysis.' },
-              { icon: <Cpu className="size-4" />, title: 'Epsilon Agents', desc: 'Deploy specialized Epsilon agents to monitor markets, generate strategy code, or alert you on specific on-chain movements.' },
+              { icon: <Globe className="size-4" />, title: 'Tier 1 — Free Intelligence', desc: 'AI-generated Discover feed, contract/token risk snapshots, and early alerts driven by background data workers.' },
+              { icon: <LineChart className="size-4" />, title: 'Tier 2 — Premium Execution', desc: 'Vibe-Trading toolkit, backtest sandbox visualizer, and advanced strategy validation with measurable KPIs.' },
+              { icon: <Shield className="size-4" />, title: 'Tier 3 — Enterprise Privacy', desc: 'Deploy in your own environment with local LLM options and strict data boundary controls for sensitive strategies.' },
+              { icon: <Database className="size-4" />, title: 'Continuous Data Flywheel', desc: 'Worker pipelines continuously enrich crypto context so insights stay fresh across all tiers.' },
+              { icon: <Bot className="size-4" />, title: 'Crypto-Native AI Tools', desc: 'Integrated research workflows for on-chain risk, protocol metrics, market monitoring, and strategy ideation.' },
+              { icon: <Cpu className="size-4" />, title: 'Agent-First Workflow', desc: 'From quick advisory prompts to multi-step trading analysis loops in one unified product experience.' },
             ].map(({ icon, title, desc }) => (
               <div key={title} className="flex items-start gap-3">
                 <div className="mt-0.5 flex items-center justify-center size-7 rounded-lg bg-foreground/[0.06] border border-foreground/[0.1] text-foreground/80 shrink-0">
@@ -187,7 +187,7 @@ export default function Home() {
           </Reveal>
           <Reveal delay={0.1}>
           <p className="text-base text-muted-foreground leading-relaxed max-w-2xl mb-8">
-            Access insights, customize your agents, and backtest your strategies.
+            Move from detection to validated execution in three steps.
           </p>
           </Reveal>
 
@@ -197,10 +197,10 @@ export default function Home() {
             <div>
               <div className="flex items-center gap-3 mb-2">
                 <span className="text-[13px] font-mono text-muted-foreground">/01</span>
-                <span className="text-sm font-semibold text-foreground">Gain Intelligence</span>
+                <span className="text-sm font-semibold text-foreground">Detect &amp; Research</span>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed mb-4 max-w-xl">
-                Start by browsing the Discover page or interacting with the AI Chat Widgets. Our Epsilon agents process high-fidelity data from multiple chains to provide you with smart contract risk badges, token info, and early warnings.
+                Start with Discover and AI widgets to monitor token, protocol, and market risks. Chainlens aggregates multi-source crypto data into concise, actionable intelligence.
               </p>
               <div className="flex flex-wrap gap-2">
                 <IntegrationPill icon={<Sparkles className="size-4 text-foreground" />} name="AI Chat" />
@@ -214,21 +214,21 @@ export default function Home() {
             <div>
               <div className="flex items-center gap-3 mb-2">
                 <span className="text-[13px] font-mono text-muted-foreground">/02</span>
-                <span className="text-sm font-semibold text-foreground">Backtest Strategies</span>
+                <span className="text-sm font-semibold text-foreground">Build &amp; Backtest</span>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed mb-4 max-w-xl">
-                Use your Internal Credits to spin up a secure Sandbox. Let the Epsilon agents generate trading code, visualize the equity curve, and analyze KPIs like Sharpe Ratio and Max Drawdown against the benchmark.
+                Use the premium sandbox to iterate on strategy code, run multi-strategy backtests, and review outcomes with KPI-driven visual outputs before any live execution.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <ConfigCard
                   icon={<Terminal className="size-4 text-foreground" />}
                   title="Generative UI"
-                  desc="Interactive widgets and components stream directly into your chat, providing rich visual feedback."
+                  desc="Interactive widgets stream analysis, metrics, and tool outputs directly inside your workflow."
                 />
                 <ConfigCard
-                  icon={<Zap className="size-4 text-foreground" />}
-                  title="MicroVM Sandbox"
-                  desc="Run complex code safely with isolated network access and sub-second startup times."
+                  icon={<Terminal className="size-4 text-foreground" />}
+                  title="Vibe Sandbox"
+                  desc="Isolated environment for safe strategy testing and repeatable validation cycles."
                 />
               </div>
             </div>
@@ -239,10 +239,10 @@ export default function Home() {
             <div>
               <div className="flex items-center gap-3 mb-2">
                 <span className="text-[13px] font-mono text-muted-foreground">/03</span>
-                <span className="text-sm font-semibold text-foreground">Scale to Enterprise</span>
+                <span className="text-sm font-semibold text-foreground">Scale Privately</span>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed mb-4 max-w-xl">
-                For funds and institutions, upgrade to Tier 3. Deploy the platform on-premise with Local LLM integration. Benefit from the global RAG data flywheel while keeping your own strategies strictly confidential.
+                For funds and teams, deploy with enterprise controls and optional local LLMs so research, code, and strategy operations remain under your own governance boundary.
               </p>
             </div>
             </Reveal>
@@ -265,7 +265,7 @@ export default function Home() {
             className="px-5 text-xs rounded-full font-medium"
             onClick={handleLaunch}
           >
-            Launch Platform<ArrowRight className="ml-1.5 size-3" />
+            Launch Chainlens<ArrowRight className="ml-1.5 size-3" />
           </Button>
         </div>
       </div>
