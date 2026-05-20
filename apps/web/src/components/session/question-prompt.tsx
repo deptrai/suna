@@ -83,11 +83,9 @@ interface QuestionPromptProps {
 // Component
 // ---------------------------------------------------------------------------
 
-export const QuestionPrompt = React.forwardRef<QuestionPromptHandle, QuestionPromptProps>(
-	function QuestionPrompt(
-		{ request, onReply, onReject, onActionChange },
-		ref,
-	) {
+export function QuestionPrompt({
+	request, onReply, onReject, onActionChange, ref,
+}: QuestionPromptProps & { ref?: React.Ref<QuestionPromptHandle> }) {
 	const questions = request.questions;
 	const isSingle = questions.length === 1 && !questions[0].multiple;
 
@@ -455,4 +453,4 @@ export const QuestionPrompt = React.forwardRef<QuestionPromptHandle, QuestionPro
 				</div>
 		</div>
 	);
-});
+}

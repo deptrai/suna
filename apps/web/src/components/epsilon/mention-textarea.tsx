@@ -13,7 +13,6 @@
  */
 
 import {
-  forwardRef,
   useCallback,
   useImperativeHandle,
   useMemo,
@@ -21,6 +20,7 @@ import {
   useState,
   type ChangeEvent,
   type KeyboardEvent,
+  type Ref,
   type TextareaHTMLAttributes,
   type UIEvent,
 } from 'react';
@@ -231,11 +231,10 @@ export interface MentionTextareaProps
   userAvatarUrl?: string | null;
 }
 
-export const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaProps>(
-  function MentionTextarea(
-    { value, onChange, agents, userHandle, userAvatarUrl, onKeyDown, className, ...textareaProps },
-    forwardedRef,
-  ) {
+export function MentionTextarea(
+  { value, onChange, agents, userHandle, userAvatarUrl, onKeyDown, className, ref: forwardedRef, ...textareaProps }:
+  MentionTextareaProps & { ref?: Ref<HTMLTextAreaElement> },
+) {
     const innerRef = useRef<HTMLTextAreaElement>(null);
     useImperativeHandle(forwardedRef, () => innerRef.current!);
 
@@ -456,5 +455,4 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaPr
         )}
       </div>
     );
-  },
-);
+}

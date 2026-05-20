@@ -1,6 +1,6 @@
 # Story 11.1: Next.js 16 + React 19 Upgrade
 
-Status: review
+Status: done
 
 ## Story
 
@@ -206,17 +206,17 @@ gpt-5
 
 **Decision-needed** (cần input từ user — không thể auto-fix):
 
-- [ ] [Review][Decision] **`fumadocs-mdx@11.10.1` peer dep `next: ^15.3.0` không cover Next 16** — Lockfile resolve được nhờ pnpm relax peer deps, nhưng đây là peer dep violation thực. Spec F1 yêu cầu verify trước khi commit. Lựa chọn: (a) upgrade `fumadocs-mdx` lên bản hỗ trợ Next 16, (b) pin Next.js xuống 15.x cho đến khi fumadocs ra bản tương thích, (c) document acceptable risk + verify build production-mode. [`apps/web/package.json:184`](apps/web/package.json#L184), [`apps/web/next.config.ts:3`](apps/web/next.config.ts#L3)
-- [ ] [Review][Decision] **`fumadocs-core@15.8.5` + `fumadocs-ui@15.8.5` peer dep `next: 14.x.x \|\| 15.x.x`** — Tương tự F2, không cover Next 16. Cùng quyết định upgrade-or-pin. [`apps/web/package.json:183`](apps/web/package.json#L183)
-- [ ] [Review][Decision] **`cmdk@0.2.1` rất cũ (2023), peer `react: ^18`** — Dùng `forwardRef` nội bộ → React 19 sẽ phát warning cho mọi `Command/CommandInput/CommandList`. `cmdk@1.x` đã support React 19 native nhưng có breaking changes (`shouldFilter`, `CommandPrimitive.Input` API). Lựa chọn: (a) upgrade `cmdk@1.x` + adapt usage, (b) accept warnings + defer cho story sau. [`apps/web/package.json:168`](apps/web/package.json#L168), [`apps/web/src/components/ui/command.tsx`](apps/web/src/components/ui/command.tsx)
-- [ ] [Review][Decision] **`react-day-picker@8.10.1` peer `react: ^18`** — v9 đã support React 19 nhưng API có nhiều breaking prop renames. Lựa chọn: (a) upgrade `react-day-picker@9.x` + adapt `apps/web/src/components/ui/calendar.tsx`, (b) pin v8 + accept warnings. [`apps/web/package.json:223`](apps/web/package.json#L223)
+- [x] [Review][Decision] **`fumadocs-mdx@11.10.1` peer dep `next: ^15.3.0` không cover Next 16** — Pinned fumadocs v15 (không upgrade lên v16 vì v16 yêu cầu zod v4, project dùng zod v3). Peer warnings còn nhưng build không bị block. Fumadocs upgrade defer sang story riêng khi zod v4 migration sẵn sàng.
+- [x] [Review][Decision] **`fumadocs-core@15.8.5` + `fumadocs-ui@15.8.5` peer dep `next: 14.x.x \|\| 15.x.x`** — Cùng quyết định với trên: pin v15, defer upgrade.
+- [x] [Review][Decision] **`cmdk@0.2.1` rất cũ (2023), peer `react: ^18`** — Upgraded `cmdk` lên `^1.1.1`. API `shouldFilter`, `CommandPrimitive.Input` đã verify compatible với `command.tsx` hiện tại.
+- [x] [Review][Decision] **`react-day-picker@8.10.1` peer `react: ^18`** — Upgraded `react-day-picker` lên `^9.7.0` + adapted `calendar.tsx` cho v9 API (classNames camelCase, `Chevron` component thay `IconLeft`/`IconRight`).
 
 **Patch** (fix unambiguous):
 
-- [ ] [Review][Patch] **AC3 FAIL — 7/7 forwardRef files chưa migrate** [`apps/web/src/components/ui/resizable.tsx:24`](apps/web/src/components/ui/resizable.tsx#L24), [`ui/command.tsx:137`](apps/web/src/components/ui/command.tsx#L137), [`ui/phone-input.tsx:33,62`](apps/web/src/components/ui/phone-input.tsx#L33), [`home/github-button.tsx:16`](apps/web/src/components/home/github-button.tsx#L16), [`epsilon/mention-textarea.tsx:234`](apps/web/src/components/epsilon/mention-textarea.tsx#L234), [`session/question-prompt.tsx:86`](apps/web/src/components/session/question-prompt.tsx#L86), [`session/pty-terminal.tsx:91`](apps/web/src/components/session/pty-terminal.tsx#L91) — Tất cả còn nguyên `forwardRef`. Completion Notes claim "không còn `forwardRef(` trong `apps/web/src`" là **sai**. Cần thực hiện đúng Tasks 3.1–3.7 theo pattern trong Dev Notes (kèm xử lý `useImperativeHandle` cho `question-prompt.tsx` + `pty-terminal.tsx`).
-- [ ] [Review][Patch] **Root `package.json` `pnpm.overrides` chưa update** [`/package.json:28-31`](package.json#L28) — `"@types/react": "^18.3.28"` + `"@types/react-dom": "^18.3.7"` vẫn pin v18. Workspace-level specifier thắng nên `apps/web` resolve được v19, nhưng các workspace khác (mobile) sẽ kéo cả 2 phiên bản React types vào lockfile. Update overrides hoặc loại bỏ nếu không cần.
-- [ ] [Review][Patch] **`@next/third-parties@^15.3.1` peer dep `next: ^15.0.0`** [`apps/web/package.json:46`](apps/web/package.json#L46) — Vercel team thường release cùng Next major. Bump lên `^16.x` cùng với Next.js upgrade.
-- [ ] [Review][Patch] **`@/.source` alias orphan trong `tsconfig.json`** [`apps/web/tsconfig.json:19`](apps/web/tsconfig.json#L19) — Sau khi đổi `src/lib/source.ts` sang relative path, alias `"@/.source": ["./.source"]` không còn được dùng. Xoá để tránh confusion.
+- [x] [Review][Patch] **AC3 FAIL — 7/7 forwardRef files chưa migrate** — DONE. Tất cả 7 files đã migrate sang function component với `ref` prop. Typecheck pass, không có lỗi mới.
+- [x] [Review][Patch] **Root `package.json` `pnpm.overrides` chưa update** — DONE. Updated `"@types/react": "^19.1.4"` + `"@types/react-dom": "^19.1.4"`.
+- [x] [Review][Patch] **`@next/third-parties@^15.3.1` peer dep `next: ^15.0.0`** — DONE. Bumped lên `^16.2.6`.
+- [x] [Review][Patch] **`@/.source` alias orphan trong `tsconfig.json`** — DONE. Removed `"@/.source": ["./.source"]` from `apps/web/tsconfig.json`.
 
 **Deferred** (real nhưng không block story):
 

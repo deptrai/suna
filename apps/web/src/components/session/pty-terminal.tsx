@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useCallback, useState, useImperativeHandle, forwardRef } from 'react';
+import React, { useRef, useEffect, useCallback, useState, useImperativeHandle } from 'react';
 import { cn } from '@/lib/utils';
 import { Terminal as XTerm, ITheme } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
@@ -88,13 +88,14 @@ function sanitizeTerminalChunk(chunk: string): string {
 
 let globalPtyConnectionId = 0;
 
-export const PtyTerminal = forwardRef<PtyTerminalHandle, PtyTerminalProps>(function PtyTerminal({
+export function PtyTerminal({
   pty,
   className,
   hidden,
   serverUrl,
   onStatusChange,
-}, ref) {
+  ref,
+}: PtyTerminalProps & { ref?: React.Ref<PtyTerminalHandle> }) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<XTerm | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -371,6 +372,4 @@ export const PtyTerminal = forwardRef<PtyTerminalHandle, PtyTerminalProps>(funct
       )}
     />
   );
-});
-
-PtyTerminal.displayName = 'PtyTerminal';
+}

@@ -13,31 +13,29 @@ export interface GithubButtonProps
   href?: string
 }
 
-const GithubButton = React.forwardRef<HTMLButtonElement, GithubButtonProps>(
-  ({ 
-    className, 
-    variant = "outline", 
-    href = "https://github.com/epsilon-ai/chainlens", 
-    children, 
-    ...props 
-  }, ref) => {
-    return (
-      <Button
-        ref={ref}
-        variant={variant}
-        className={cn("rounded-full", className)}
-        asChild
-        {...props}
-      >
-        <Link href={href!} target="_blank" rel="noopener noreferrer">
-          <SiGithub className="size-4" />
-          <span>{children || "View on GitHub"}</span>
-          <ArrowTopRightIcon className="size-4 opacity-70" />
-        </Link>
-      </Button>
-    )
-  }
-)
-GithubButton.displayName = "GithubButton"
+function GithubButton({
+  className,
+  variant = "outline",
+  href = "https://github.com/epsilon-ai/chainlens",
+  children,
+  ref,
+  ...props
+}: GithubButtonProps & { ref?: React.Ref<HTMLButtonElement> }) {
+  return (
+    <Button
+      ref={ref}
+      variant={variant}
+      className={cn("rounded-full", className)}
+      asChild
+      {...props}
+    >
+      <Link href={href!} target="_blank" rel="noopener noreferrer">
+        <SiGithub className="size-4" />
+        <span>{children || "View on GitHub"}</span>
+        <ArrowTopRightIcon className="size-4 opacity-70" />
+      </Link>
+    </Button>
+  )
+}
 
 export { GithubButton }
