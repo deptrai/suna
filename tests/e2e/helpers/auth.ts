@@ -20,9 +20,25 @@ export function getResolvedSupabaseUrl(): string {
   return process.env.E2E_SUPABASE_URL || readWebEnvVar('NEXT_PUBLIC_SUPABASE_URL') || supabaseUrl;
 }
 
-export function getSupabaseCookieName(baseUrl = process.env.E2E_BASE_URL || 'http://localhost:13737'): string {
-  const port = new URL(baseUrl).port;
-  return port ? `sb-epsilon-auth-token-${port}` : 'sb-epsilon-auth-token';
+export function getSupabaseCookieName(baseUrl?: string): string {
+  // Mirror the same resolution order as apps/web/src/lib/supabase/constants.ts
+  // so the cookie name the test sets matches what the app reads.
+  const appUrl =
+    process.env.EPSILON_PUBLIC_APP_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.NEXT_PUBLIC_URL ||
+    process.env.PUBLIC_URL ||
+    baseUrl ||
+    process.env.E2E_BASE_URL ||
+    'http://localhost:3000';
+  try {
+    const url = new URL(appUrl);
+    const isLocalhost = ['localhost', '127.0.0.1'].includes(url.hostname);
+    if (isLocalhost && url.port) return `sb-epsilon-auth-token-${url.port}`;
+  } catch {
+    // fall through
+  }
+  return 'sb-epsilon-auth-token';
 }
 
 export function getSupabaseAnonKeyFromWebEnv(): string {
@@ -120,13 +136,41 @@ export async function loginToDashboard(
   const signInHeading = page.getByRole('heading', { name: /^Sign in$/i });
   await expect(signInHeading).toBeVisible({ timeout: 15_000 });
 
-  await page.locator('input[name="email"]').fill(email);
-  await page.locator('input[name="password"]').fill(password);
-  await page.locator('form').getByRole('button', { name: 'Sign in' }).click();
+  const form = page.locator('form').filter({ has: page.locator('input[name="email"]') }).first();
+  const emailInput = form.locator('input[name="email"]').first();
+  const passwordInput = form.locator('input[name="password"]').first();
+  await expect(emailInput).toBeVisible({ timeout: 15_000 });
+  await expect(passwordInput).toBeVisible({ timeout: 15_000 });
+  await emailInput.fill(email);
+  await passwordInput.fill(password);
+
+  const submitBtn = form.getByRole('button', { name: /^Sign in$/i }).first();
+  await expect(submitBtn).toBeVisible({ timeout: 15_000 });
+  await submitBtn.click();
+
+  // Wait for auth route to resolve (either success redirect, or explicit failure state).
+  await page.waitForTimeout(1_500);
+  if (/\/auth(\/|$)/.test(page.url())) {
+    const passwordModeLink = page.getByRole('link', { name: /sign in with password/i });
+    if (await passwordModeLink.isVisible({ timeout: 2_000 }).catch(() => false)) {
+      await passwordModeLink.click();
+      await expect(signInHeading).toBeVisible({ timeout: 15_000 });
+      await emailInput.fill(email);
+      await passwordInput.fill(password);
+      await submitBtn.click();
+      await page.waitForTimeout(1_500);
+    }
+  }
 
   const providerStep = page.getByRole('heading', { name: /Connect a provider/i });
   if (await providerStep.isVisible({ timeout: 10_000 }).catch(() => false)) {
     await page.goto('/onboarding?skip_onboarding=1');
+  }
+
+  // If we're still on /auth, fail fast with useful context.
+  if (/\/auth(\/|$)/.test(page.url())) {
+    const bodyText = (await page.locator('body').innerText().catch(() => '')).slice(0, 500);
+    throw new Error(`Login did not leave /auth route. Current URL: ${page.url()}. Body excerpt: ${bodyText}`);
   }
 
   await page.goto('/instances', { waitUntil: 'commit', timeout: 120_000 });
@@ -151,13 +195,24 @@ export async function loginBySessionCookie(
   expect(authRes.status()).toBe(200);
   const session = await authRes.json();
 
-  const url = new URL(process.env.E2E_BASE_URL || 'http://localhost:13737');
+  // Use the app's own URL (NEXT_PUBLIC_APP_URL) as the cookie domain source so
+  // the domain matches what the browser sees when navigating to the app.
+  // E2E_BASE_URL may use 127.0.0.1 while the app runs on localhost — those are
+  // different cookie domains and the browser will not send the cookie.
+  const appUrlStr =
+    process.env.E2E_BASE_URL ||
+    process.env.EPSILON_PUBLIC_APP_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    readWebEnvVar('NEXT_PUBLIC_APP_URL') ||
+    'http://localhost:3000';
+  const appUrl = new URL(appUrlStr);
+  const cookieName = getSupabaseCookieName(appUrlStr);
   await page.context().clearCookies();
   await page.context().addCookies([
     {
-      name: getSupabaseCookieName(url.toString()),
-      value: `base64-${Buffer.from(JSON.stringify(session)).toString('base64')}`,
-      domain: url.hostname,
+      name: cookieName,
+      value: `base64-${Buffer.from(JSON.stringify(session)).toString('base64url')}`,
+      domain: appUrl.hostname,
       path: '/',
       httpOnly: false,
       sameSite: 'Lax',
@@ -169,6 +224,10 @@ export async function loginBySessionCookie(
 export async function ensureServicesHealthy(page: Page): Promise<void> {
   const apiHealth = await page.request.get((process.env.E2E_API_URL || 'http://localhost:13738/v1').replace(/\/v1$/, '/health'));
   expect(apiHealth.ok()).toBeTruthy();
-  const webHealth = await page.request.get((process.env.E2E_BASE_URL || 'http://localhost:13737') + '/auth');
+  // Use HEAD to avoid waiting for the full streaming HTML body from Next.js dev server.
+  const webHealth = await page.request.fetch(
+    (process.env.E2E_BASE_URL || 'http://localhost:13737') + '/auth',
+    { method: 'HEAD', timeout: 30_000 },
+  );
   expect(webHealth.ok()).toBeTruthy();
 }

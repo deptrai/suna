@@ -1,9 +1,10 @@
 'use client';
 
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import type { MultiSubmitItem, RunResponse } from '@/lib/backtest-api';
-import { computeCorrelationMatrix, formatKpi, heatmapColor } from './comparison-visualizer.utils';
-import { Line, LineChart, ResponsiveContainer, Tooltip, type TooltipProps, XAxis, YAxis } from 'recharts';
+import { computeCorrelationMatrix, formatKpi, heatmapColor, metricWithFallback } from './comparison-visualizer.utils';
+import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, type TooltipProps, XAxis, YAxis } from 'recharts';
 
 type TabRunState = {
   run: RunResponse | null;
@@ -13,14 +14,44 @@ type TabRunState = {
 
 const KPI_KEYS = ['sharpe', 'max_drawdown', 'cagr', 'win_rate', 'max_loss'] as const;
 const LINE_COLORS = ['#2563eb', '#dc2626', '#16a34a', '#9333ea', '#ea580c'];
+const LINE_PATTERNS = ['', '8 4', '4 4', '10 3 2 3', '2 3'];
 
 type KpiKey = (typeof KPI_KEYS)[number];
 
-function pickBest(rows: Array<{ tab_id: string; run: RunResponse | null }>, key: KpiKey): string | null {
+function pickEquityValue(point: Record<string, unknown> | undefined): number | null {
+  if (!point) return null;
+  // NOTE: `close` deliberately excluded. If equity_curve ever embeds OHLC price
+  // data with a `close` field, we'd silently plot price instead of equity — a
+  // material misread for trading strategies. Equity-specific keys only.
+  const candidates = [
+    point.value,
+    point.equity,
+    point.balance,
+    point.portfolio_value,
+    point.account_value,
+    point.total_equity,
+    point.nav,
+  ];
+  for (const c of candidates) {
+    const n = Number(c);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
+// Defensive accessor: VT may return malformed payloads (string/null/object shape
+// drift). Cast-only typing in TS doesn't catch this at runtime; without this guard
+// Recharts will crash on `undefined.length` (the prior `0.0.0-dev` regression).
+function safeEquityCurve(run: RunResponse | null): Array<Record<string, unknown>> {
+  const raw = (run as unknown as { equity_curve?: unknown } | null)?.equity_curve;
+  return Array.isArray(raw) ? (raw as Array<Record<string, unknown>>) : [];
+}
+
+function pickBest(rows: Array<{ tab_id: string; run: RunResponse | null; submission?: unknown }>, key: KpiKey): string | null {
   let bestTab: string | null = null;
   let best: number | null = null;
   for (const row of rows) {
-    const metric = (row.run?.metrics as Record<string, unknown> | undefined)?.[key];
+    const metric = metricWithFallback(row.run, key);
     const value = Number(metric);
     if (!Number.isFinite(value)) continue;
     const score = key === 'max_drawdown' || key === 'max_loss' ? -Math.abs(value) : value;
@@ -83,34 +114,47 @@ export function ComparisonVisualizer({
   onCancelAll: () => void;
   tabLabels?: Record<string, string>;
 }) {
+  const [normalizeTo100, setNormalizeTo100] = useState(false);
   const labelOf = (tabId: string) => tabLabels?.[tabId] ?? tabId;
-  const rows = submissions.map((s) => ({ tab_id: s.tab_id, run: runStates[s.tab_id]?.run ?? null }));
+  const rows = submissions.map((s) => ({
+    tab_id: s.tab_id,
+    run: runStates[s.tab_id]?.run ?? null,
+    submission: s,
+  }));
   const completedCount = rows.filter((r) => {
     const state = runStates[r.tab_id];
-    return r.run?.status === 'success' || r.run?.status === 'failed' || !!state?.timeout;
+    return (r.run?.status === 'success' || r.run?.status === 'failed') && !state?.timeout;
   }).length;
   const timeoutCount = rows.filter((r) => !!runStates[r.tab_id]?.timeout).length;
-  const curves = rows.map((r) =>
-    (r.run?.equity_curve as Array<{ value?: unknown }> | undefined) ?? [],
-  );
+  const curves = rows.map((r) => safeEquityCurve(r.run) as Array<{ value?: unknown }>);
   const corr = computeCorrelationMatrix(curves);
 
   const bestByKey = Object.fromEntries(KPI_KEYS.map((k) => [k, pickBest(rows, k)])) as Record<KpiKey, string | null>;
-  const chartData = (() => {
-    const longest = Math.max(
-      0,
-      ...rows.map((r) => ((r.run?.equity_curve as Array<Record<string, unknown>> | undefined) ?? []).length),
-    );
+  const chartData = useMemo(() => {
+    const longest = Math.max(0, ...rows.map((r) => safeEquityCurve(r.run).length));
     return Array.from({ length: longest }, (_, i) => {
       const point: Record<string, unknown> = { index: i + 1 };
       rows.forEach((row) => {
-        const curve = (row.run?.equity_curve as Array<Record<string, unknown>> | undefined) ?? [];
-        const value = curve[i]?.value;
-        point[row.tab_id] = Number.isFinite(Number(value)) ? Number(value) : null;
+        const curve = safeEquityCurve(row.run);
+        const numeric = pickEquityValue(curve[i]);
+        if (numeric == null) {
+          point[row.tab_id] = null;
+          return;
+        }
+        if (!normalizeTo100) {
+          point[row.tab_id] = numeric;
+          return;
+        }
+        const firstValid = curve
+          .map((p) => pickEquityValue(p))
+          .find((n): n is number => n != null && Number.isFinite(n) && n > 0);
+        // Normalize as percent return from each strategy's own starting point.
+        // 0 means flat vs start, 10 means +10%, -5 means -5%.
+        point[row.tab_id] = firstValid ? ((numeric / firstValid) - 1) * 100 : null;
       });
       return point;
     });
-  })();
+  }, [rows, normalizeTo100]);
 
   return (
     <div className="space-y-4 rounded-lg border border-border p-4">
@@ -120,7 +164,9 @@ export function ComparisonVisualizer({
       </div>
 
       <div className="overflow-x-auto">
-        {timeoutCount > 0 && (
+        {/* Spec AC4: banner appears only when ALL streams time out — earlier behavior
+            (any-timeout) was noisy when one slow strategy timed out among successes. */}
+        {timeoutCount > 0 && timeoutCount === rows.length && (
           <div className="mb-3 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
             {completedCount} of {rows.length} completed in time. Charged: full credits per atomic billing policy.
           </div>
@@ -140,9 +186,12 @@ export function ComparisonVisualizer({
           <tbody>
             {rows.map((row) => {
               const state = runStates[row.tab_id];
-              const m = row.run?.metrics as Record<string, unknown> | undefined;
               const isTimeout = !!state?.timeout;
               const isFailed = row.run?.status === 'failed';
+              // submit_failed entries never receive a RunResponse → previously stuck on
+              // skeleton forever. Surface the error inline so users can act on it.
+              const isSubmitFailed = row.submission.status === 'submit_failed';
+              const submitError = row.submission.error;
               const jobId = state?.job_id;
               return (
                 <tr key={row.tab_id} className="border-b border-border/50" data-testid={`kpi-row-${row.tab_id}`}>
@@ -162,14 +211,28 @@ export function ComparisonVisualizer({
                           )}
                         </span>
                       )}
+                      {isSubmitFailed && (
+                        <span
+                          className="text-xs text-red-700"
+                          data-testid={`submit-failed-msg-${row.tab_id}`}
+                          title={submitError ?? 'Submission rejected by Vibe-Trading'}
+                        >
+                          Submission failed{submitError ? `: ${submitError}` : ''}
+                        </span>
+                      )}
                     </div>
                   </td>
                   {KPI_KEYS.map((k) => {
                     const best = bestByKey[k] === row.tab_id;
+                    const value = metricWithFallback(row.run, k);
                     return (
                       <td key={k} className={`py-2 pr-3 ${best ? 'font-semibold text-green-600' : ''}`}>
-                        {m ? (
-                          formatKpi(k, m[k])
+                        {row.run ? (
+                          formatKpi(k, value)
+                        ) : isSubmitFailed ? (
+                          <span className="text-xs text-muted-foreground" aria-label="No data">
+                            —
+                          </span>
                         ) : (
                           <span
                             className="inline-block h-4 w-12 animate-pulse rounded bg-muted"
@@ -186,10 +249,11 @@ export function ComparisonVisualizer({
                       size="sm"
                       onClick={() => onPromote(row.tab_id)}
                       data-testid={`promote-${row.tab_id}`}
+                      disabled={isSubmitFailed && !row.run}
                     >
                       Promote
                     </Button>
-                    {(isTimeout || isFailed) && (
+                    {(isTimeout || isFailed || isSubmitFailed) && (
                       <Button variant="outline" size="sm" onClick={() => onRetry(row.tab_id)}>Retry</Button>
                     )}
                   </td>
@@ -201,16 +265,27 @@ export function ComparisonVisualizer({
       </div>
 
       <div className="space-y-2">
-        <h4 className="font-medium">Equity Curve Overlay</h4>
+        <div className="flex items-center justify-between">
+          <h4 className="font-medium">Equity Curve Overlay</h4>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setNormalizeTo100((v) => !v)}
+          >
+            {normalizeTo100 ? 'Show Raw Equity' : 'Normalize to % Return'}
+          </Button>
+        </div>
         <div className="h-64 w-full rounded border border-border p-2">
           {chartData.length === 0 ? (
             <p className="text-sm text-muted-foreground">Waiting for phase_b results...</p>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="index" />
                 <YAxis />
                 <Tooltip content={<MultiStrategyTooltip />} />
+                <Legend />
                 {rows.map((row, idx) => (
                   <Line
                     key={row.tab_id}
@@ -218,6 +293,11 @@ export function ComparisonVisualizer({
                     dataKey={row.tab_id}
                     name={labelOf(row.tab_id)}
                     stroke={LINE_COLORS[idx % LINE_COLORS.length]}
+                    strokeWidth={2.5}
+                    activeDot={{ r: 4 }}
+                    strokeDasharray={LINE_PATTERNS[idx % LINE_PATTERNS.length]}
+                    isAnimationActive={false}
+                    connectNulls={false}
                     dot={false}
                   />
                 ))}

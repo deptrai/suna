@@ -28,17 +28,32 @@ describe('story 5.9 backtest-multi route source checks', () => {
     expect(checkIdx).toBeLessThan(settleIdx);
   });
 
-  test('deducts credits after at least one successful submit', () => {
-    const guardIdx = multiSection.indexOf('if (successCount === 0)');
-    const deductIdx = multiSection.indexOf('await deductToolCredits(');
-    expect(guardIdx).toBeGreaterThan(-1);
+  test('atomic pre-deduct happens BEFORE Promise.allSettled (matches spec AC2 + Story 5.5 parity)', () => {
+    // Route uses deductCreditsRepo (alias for deductCredits from repositories/credits)
+    // pre-deduct must execute before the fan-out so concurrent multi-backtests cannot
+    // both pass the snapshot gate.
+    const deductIdx = multiSection.indexOf('await deductCreditsRepo(');
+    const settleIdx = multiSection.indexOf('await Promise.allSettled');
     expect(deductIdx).toBeGreaterThan(-1);
-    expect(guardIdx).toBeLessThan(deductIdx);
+    expect(settleIdx).toBeGreaterThan(-1);
+    expect(deductIdx).toBeLessThan(settleIdx);
     expect(multiSection).toContain('Multi-strategy backtest: ${count}');
+  });
+
+  test('refunds via refundCreditsRepo on all-fail (close the billing-orphan loophole)', () => {
+    expect(multiSection).toContain('if (successCount === 0)');
+    expect(multiSection).toContain('await refundCreditsRepo(');
+    expect(multiSection).toContain('billing-orphan');
   });
 
   test('returns submit_failed for per-strategy failures without aborting siblings', () => {
     expect(routeSource).toContain("status: 'submit_failed' as const");
     expect(routeSource).toContain("item.reason instanceof Error ? item.reason.message : 'Submit failed'");
+  });
+
+  test('sanitizes tab_id before echoing into 400 error message (no log/header injection)', () => {
+    // tab_id is user-supplied; the error path strips control chars and clamps length.
+    expect(multiSection).toContain("replace(/[\\r\\n\\t]/g, ' ')");
+    expect(multiSection).toContain('.slice(0, 64)');
   });
 });

@@ -124,18 +124,10 @@ export async function submitBacktestMulti(
   });
 
   if (res.status === 401) {
-    if (process.env.NODE_ENV === 'development') {
-      return {
-        success: true,
-        cost: 0,
-        submissions: strategies.map((s, idx) => ({
-          tab_id: s.tab_id,
-          status: 'accepted',
-          job_id: `mock-job-${idx + 1}`,
-          run_id: `mock-run-${idx + 1}`,
-        })),
-      };
-    }
+    // No dev-mode mock for multi-submit: faking `accepted` here means the caller
+    // immediately opens SSE streams with `mock-job-N` ids that re-401 — UI ends in
+    // `failed` per tab anyway, but with confusing intermediate state. Better to fail
+    // loudly so the dev hits the real auth issue.
     throw new BacktestError(401, 'Unauthorized');
   }
   if (res.status === 402) throw new BacktestError(402, 'Insufficient credits');

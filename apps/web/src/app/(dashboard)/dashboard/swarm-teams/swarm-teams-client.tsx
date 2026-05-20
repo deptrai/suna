@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react';
 import { Users } from 'lucide-react';
-import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { TierGateBanner } from '@/components/tier-gate-banner';
 import { isTier1 } from '@/components/tier-gate.utils';
@@ -56,8 +55,7 @@ export function SwarmTeamsClient() {
       <PageHeader icon={Users}>Swarm Teams</PageHeader>
 
       <div className="rounded-xl border border-border/50 bg-muted/30 p-4 text-sm">
-        Some swarm presets require your OpenAI key. Configure it in{' '}
-        <Link href="/settings/api-keys" className="underline">Settings → AI Keys</Link>.
+        Swarm presets use the system-managed LLM configuration.
       </div>
 
       {blocked ? (

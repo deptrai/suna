@@ -92,6 +92,7 @@ export function useSandboxConnection() {
 			// that return synthetic 401s and cause false "unreachable" status.
 			const token = await getAuthToken();
 			if (!token) {
+				markInitialCheckDone();
 				scheduleNext();
 				return;
 			}

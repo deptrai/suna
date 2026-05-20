@@ -145,11 +145,39 @@ export class DaytonaProvider implements SandboxProvider {
           }
         : {}),
     };
-    const daytonaSandbox = await this.withTimeout(
-      daytona.create(createPayload, createOptions),
-      960_000,
-      `daytona.create timed out after 960s (snapshot=${snapshot}, target=${config.DAYTONA_TARGET})`,
-    );
+    const maxAllowedDisk = DaytonaProvider.extractMaxAllowedDiskFromError;
+    let daytonaSandbox;
+    try {
+      daytonaSandbox = await this.withTimeout(
+        daytona.create(createPayload, createOptions),
+        960_000,
+        `daytona.create timed out after 960s (snapshot=${snapshot}, target=${config.DAYTONA_TARGET})`,
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      const providerMaxDisk = maxAllowedDisk(message);
+      if (!providerMaxDisk || providerMaxDisk >= resources.disk) {
+        throw err;
+      }
+      console.warn(
+        `[DAYTONA] create failed with disk quota (${resources.disk}GiB requested > ${providerMaxDisk}GiB allowed). Retrying once with ${providerMaxDisk}GiB.`,
+      );
+      createPayload.resources.disk = providerMaxDisk;
+      try {
+        daytonaSandbox = await this.withTimeout(
+          daytona.create(createPayload, createOptions),
+          960_000,
+          `daytona.create timed out after 960s (snapshot=${snapshot}, target=${config.DAYTONA_TARGET})`,
+        );
+      } catch (retryErr) {
+        const retryMsg = retryErr instanceof Error ? retryErr.message : String(retryErr);
+        throw new Error(
+          `daytona.create failed on disk-quota retry (reduced to ${providerMaxDisk}GiB): ${retryMsg}`,
+          { cause: retryErr },
+        );
+      }
+      resources.disk = providerMaxDisk;
+    }
     console.log(
       `[DAYTONA] create done sandbox=${daytonaSandbox.id} state=${String(daytonaSandbox.state ?? 'unknown')} durationMs=${Date.now() - createStartedAt}`,
     );
@@ -203,6 +231,16 @@ export class DaytonaProvider implements SandboxProvider {
         version: SANDBOX_VERSION,
       },
     };
+  }
+
+  private static extractMaxAllowedDiskFromError(message: string): number | null {
+    // Daytona error message uses "GB" (gigabytes). The resources.disk field is also
+    // treated as GB by the Daytona SDK — no GiB conversion needed.
+    const m = message.match(/Disk request\s+\d+GB\s+exceeds\s+maximum\s+allowed\s+per\s+sandbox\s+\((\d+)GB\)/i);
+    if (!m?.[1]) return null;
+    const parsed = Number(m[1]);
+    if (!Number.isFinite(parsed) || parsed <= 0) return null;
+    return parsed;
   }
 
   async start(externalId: string): Promise<void> {

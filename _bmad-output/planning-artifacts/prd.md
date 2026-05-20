@@ -45,6 +45,27 @@ editHistory:
 **Author:** Luisphan
 **Date:** 2026-05-08
 
+## 0. Product Introduction (Project Narrative)
+
+### 0.1. Vấn đề Chainlens giải quyết
+Người dùng crypto hiện phải đi qua quá nhiều công cụ rời rạc: đọc tin ở một nơi, kiểm tra rủi ro contract ở nơi khác, phân tích dòng tiền ở nơi khác nữa, rồi tự dựng môi trường backtest để xác thực chiến lược. Quy trình này chậm, dễ sai, và khó kiểm soát chất lượng quyết định.
+
+### 0.2. Chainlens là gì
+Chainlens là nền tảng AI crypto-native hợp nhất **research + risk intelligence + strategy validation** trong một workflow liền mạch:
+- Phát hiện tín hiệu và rủi ro thị trường theo thời gian gần real-time.
+- Phân tích bằng các tool chuyên dụng on-chain/DeFi thay vì chỉ trả lời LLM chung chung.
+- Xác thực chiến lược bằng sandbox/backtest trước khi đưa ra quyết định triển khai.
+
+### 0.3. Giá trị cốt lõi theo 3 tầng
+- **Tier 1 - Free Intelligence:** Cảnh báo rủi ro, Discover feed, và insight research cho người dùng phổ thông.
+- **Tier 2 - Premium Execution:** Bộ Vibe-Trading toolkit, backtest/sandbox, multi-strategy & swarm workflows cho trader/quant.
+- **Tier 3 - Enterprise Privacy:** Triển khai private/on-prem với kiểm soát dữ liệu và boundary bảo mật cấp doanh nghiệp.
+
+### 0.4. Đối tượng chính
+- Nhà đầu tư cá nhân cần tín hiệu nhanh và kiểm tra rủi ro.
+- Trader/quant cần vòng lặp nghiên cứu → giả thuyết → backtest.
+- Team/quỹ cần môi trường private deployment và kiểm soát dữ liệu nghiêm ngặt.
+
 ## 1. Project Classification
 * **Loại hình:** SaaS B2B / Enterprise / Blockchain Web3 (AI Advisory, Code Gen & Backtesting).
 * **Domain:** Fintech (Crypto Intelligence & Algorithmic Strategy Validation).

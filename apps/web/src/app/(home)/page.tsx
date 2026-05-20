@@ -84,8 +84,8 @@ export default function Home() {
           >
             <div className="flex-1 flex items-center justify-center pt-40 pointer-events-none">
               <h1 className="text-4xl sm:text-5xl md:text-6xl font-medium tracking-tight text-foreground text-center">
-                Chainlens for Web3 Research &amp; Trading<br />
-                <span className="text-muted-foreground">Free signals. Premium backtests. Private enterprise deployment.</span>
+                Chainlens: Crypto Intelligence to Execution<br />
+                <span className="text-muted-foreground">Detect risk, validate strategy, and scale privately in one platform.</span>
               </h1>
             </div>
             <div className="relative z-[1] pb-8 px-4 flex flex-col items-center gap-6">
@@ -127,17 +127,17 @@ export default function Home() {
         <section className="max-w-3xl mx-auto px-6 py-10 sm:py-14">
           <Reveal>
           <p className="text-2xl sm:text-3xl md:text-4xl font-medium text-foreground leading-snug tracking-tight">
-            One platform, three clear tiers.
+            One crypto workflow, from signal to validated action.
           </p>
           </Reveal>
           <Reveal delay={0.1}>
           <p className="mt-3 text-base sm:text-lg text-muted-foreground leading-relaxed max-w-2xl">
-            Chainlens is a crypto-native intelligence platform for investors, quants, and teams. We combine AI research, market data workers, and secure execution so users can move from idea to validated strategy faster.
+            Chainlens is a crypto-native AI platform for investors, traders, and research teams. It unifies research, on-chain risk checks, and strategy validation so decisions are faster and more reliable.
           </p>
           </Reveal>
           <Reveal delay={0.15}>
           <p className="mt-3 text-base sm:text-lg text-muted-foreground leading-relaxed max-w-2xl">
-            Tier 1 gives free users live AI risk alerts and discovery insights. Tier 2 unlocks Vibe-Trading backtesting and advanced research tools in isolated sandboxes. Tier 3 adds on-prem/private deployment with local LLM support for zero-data-leakage workflows.
+            Tier 1 provides free intelligence and alerts. Tier 2 unlocks Vibe-Trading backtests, multi-strategy workflows, and premium toolchains. Tier 3 delivers private deployment and strict data boundaries for enterprise-grade operations.
           </p>
           </Reveal>
         </section>
@@ -146,23 +146,23 @@ export default function Home() {
         <section className="max-w-3xl mx-auto px-6 py-10 sm:py-14">
           <Reveal>
           <h2 className="text-2xl sm:text-3xl font-medium tracking-tight text-foreground mb-2">
-            3-Tier Experience
+            Why teams use Chainlens
           </h2>
           </Reveal>
           <Reveal delay={0.1}>
           <p className="text-sm text-muted-foreground leading-relaxed max-w-2xl mb-2">
-            A simple progression model from discovery to execution to institutional privacy.
+            A focused progression from discovery to execution to private scale.
           </p>
           </Reveal>
           <Reveal delay={0.15}>
           <div className="flex flex-col gap-4 mt-6">
             {[
-              { icon: <Globe className="size-4" />, title: 'Tier 1 — Free Intelligence', desc: 'AI-generated Discover feed, contract/token risk snapshots, and early alerts driven by background data workers.' },
-              { icon: <LineChart className="size-4" />, title: 'Tier 2 — Premium Execution', desc: 'Vibe-Trading toolkit, backtest sandbox visualizer, and advanced strategy validation with measurable KPIs.' },
-              { icon: <Shield className="size-4" />, title: 'Tier 3 — Enterprise Privacy', desc: 'Deploy in your own environment with local LLM options and strict data boundary controls for sensitive strategies.' },
-              { icon: <Database className="size-4" />, title: 'Continuous Data Flywheel', desc: 'Worker pipelines continuously enrich crypto context so insights stay fresh across all tiers.' },
-              { icon: <Bot className="size-4" />, title: 'Crypto-Native AI Tools', desc: 'Integrated research workflows for on-chain risk, protocol metrics, market monitoring, and strategy ideation.' },
-              { icon: <Cpu className="size-4" />, title: 'Agent-First Workflow', desc: 'From quick advisory prompts to multi-step trading analysis loops in one unified product experience.' },
+              { icon: <Globe className="size-4" />, title: 'Tier 1 — Free Intelligence', desc: 'Live Discover feed, token/contract risk snapshots, and early warning signals for everyday crypto users.' },
+              { icon: <LineChart className="size-4" />, title: 'Tier 2 — Premium Execution', desc: 'Vibe-Trading toolkit with sandbox backtesting, multi-strategy comparison, and measurable KPI validation.' },
+              { icon: <Shield className="size-4" />, title: 'Tier 3 — Enterprise Privacy', desc: 'Private/on-prem deployment with optional local LLM and strict governance over research and strategy data.' },
+              { icon: <Database className="size-4" />, title: 'Data Flywheel', desc: 'Background workers continuously refresh market and on-chain context to keep analysis current.' },
+              { icon: <Bot className="size-4" />, title: 'Crypto-Native Tooling', desc: 'Purpose-built workflows for protocol intelligence, wallet/entity risk, and market monitoring.' },
+              { icon: <Cpu className="size-4" />, title: 'Agentic Workflows', desc: 'From fast Q&A to multi-step strategy research loops in a single operating surface.' },
             ].map(({ icon, title, desc }) => (
               <div key={title} className="flex items-start gap-3">
                 <div className="mt-0.5 flex items-center justify-center size-7 rounded-lg bg-foreground/[0.06] border border-foreground/[0.1] text-foreground/80 shrink-0">
@@ -182,12 +182,12 @@ export default function Home() {
         <section className="max-w-3xl mx-auto px-6 py-10 sm:py-14">
           <Reveal>
           <h2 className="text-2xl sm:text-3xl font-medium tracking-tight text-foreground mb-2">
-            How it works
+            How Chainlens works
           </h2>
           </Reveal>
           <Reveal delay={0.1}>
           <p className="text-base text-muted-foreground leading-relaxed max-w-2xl mb-8">
-            Move from detection to validated execution in three steps.
+            A practical 3-step path from market signal to validated strategy.
           </p>
           </Reveal>
 
@@ -200,7 +200,7 @@ export default function Home() {
                 <span className="text-sm font-semibold text-foreground">Detect &amp; Research</span>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed mb-4 max-w-xl">
-                Start with Discover and AI widgets to monitor token, protocol, and market risks. Chainlens aggregates multi-source crypto data into concise, actionable intelligence.
+                Start with Discover and AI widgets to monitor token, protocol, and wallet risk. Chainlens consolidates crypto signals into concise, actionable insights.
               </p>
               <div className="flex flex-wrap gap-2">
                 <IntegrationPill icon={<Sparkles className="size-4 text-foreground" />} name="AI Chat" />
@@ -217,7 +217,7 @@ export default function Home() {
                 <span className="text-sm font-semibold text-foreground">Build &amp; Backtest</span>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed mb-4 max-w-xl">
-                Use the premium sandbox to iterate on strategy code, run multi-strategy backtests, and review outcomes with KPI-driven visual outputs before any live execution.
+                In Tier 2, iterate strategy logic in sandbox, run multi-strategy backtests, and compare KPI outputs before any live deployment.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <ConfigCard
@@ -242,7 +242,7 @@ export default function Home() {
                 <span className="text-sm font-semibold text-foreground">Scale Privately</span>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed mb-4 max-w-xl">
-                For funds and teams, deploy with enterprise controls and optional local LLMs so research, code, and strategy operations remain under your own governance boundary.
+                For teams and funds, deploy privately with enterprise controls and optional local LLMs so research and strategy stay inside your governance boundary.
               </p>
             </div>
             </Reveal>

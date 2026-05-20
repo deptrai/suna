@@ -156,6 +156,8 @@ const justavpsOrigins = [
 const localOrigins = [
   'http://localhost:3000',
   'http://127.0.0.1:3000',
+  'http://localhost:13737',   // E2E Playwright default port
+  'http://127.0.0.1:13737',
 ];
 const extraOrigins = process.env.CORS_ALLOWED_ORIGINS
   ? process.env.CORS_ALLOWED_ORIGINS.split(',').map((s) => s.trim()).filter(Boolean)

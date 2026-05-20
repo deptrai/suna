@@ -24,8 +24,10 @@ export default tool({
     "Format: NNNN.HK.\n" +
     "• NOT supported: gold/commodities, A-shares (CN), futures (no auth token configured).\n\n" +
     "EXCHANGE VALUES: use 'okx' for crypto, 'yfinance' for US/HK stocks. Never use 'binance'.\n" +
-    "CRITICAL: If the user asks you to run a backtest, DO NOT call this tool. " +
-    "Instead, reply with the JSON configuration inside a ```json block so the user can execute it using the UI.",
+    "CRITICAL EXECUTION POLICY:\n" +
+    "- If user asks to run/execute/test a backtest, call this tool first (do not only return JSON).\n" +
+    "- Only return JSON-only guidance when user explicitly asks for config/template/spec without execution.\n" +
+    "- For multi-strategy requests, ensure each strategy is materially different (at least 2 axes differ: logic family, timeframe, risk profile, or indicator set) before execution.",
   args: {
     simulation_environment: tool.schema.object({
       exchange: tool.schema.string().describe("'okx' for crypto, 'yfinance' for US/HK stocks. Never 'binance'."),

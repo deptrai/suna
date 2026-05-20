@@ -8,10 +8,34 @@ import { useAuth } from '@/components/AuthProvider';
 import { CodeEditor } from '@/components/file-editors/code-editor';
 import { Button } from '@/components/ui/button';
 import { INITIAL_TEMPLATE } from './strategy-editor';
+function escapeReplacement(value: string): string {
+  return value.replace(/\$/g, '$$$$');
+}
+function applyContextToTemplate(
+  template: string,
+  asset?: string,
+  timeframe?: string,
+): string {
+  let out = template;
+  if (asset) {
+    out = out.replace(
+      /"assets":\s*\["[^"]+"\]/,
+      `"assets": ["${escapeReplacement(asset)}"]`,
+    );
+  }
+  if (timeframe) {
+    out = out.replace(
+      /"timeframe":\s*"[^"]+"/,
+      `"timeframe": "${escapeReplacement(timeframe)}"`,
+    );
+  }
+  return out;
+}
 import { ComparisonVisualizer } from './comparison-visualizer';
 import { BacktestResultVisualizer } from './result-visualizer';
 import {
   BacktestError,
+  pollRun,
   submitBacktestMulti,
   streamRun,
   type MultiSubmitItem,
@@ -34,15 +58,49 @@ function makeTab(index: number, content = INITIAL_TEMPLATE): Tab {
   return { id: `strat-${crypto.randomUUID()}`, label: `Strategy ${index}`, content };
 }
 
+function normalizePayload(
+  payload: Record<string, unknown>,
+): { payload: Record<string, unknown>; rewrites: string[] } {
+  const normalized = structuredClone(payload) as Record<string, unknown>;
+  const rewrites: string[] = [];
+  const sim = normalized.simulation_environment as Record<string, unknown> | undefined;
+  if (sim) {
+    if (typeof sim.exchange === 'string' && sim.exchange.toLowerCase() === 'binance') {
+      sim.exchange = 'okx';
+      rewrites.push('exchange:binance→okx');
+    }
+    if (typeof sim.instrument_type === 'string') {
+      const it = sim.instrument_type.toUpperCase();
+      const nextIt = it === 'FUTURES' ? 'PERPETUAL' : it;
+      if (sim.instrument_type !== nextIt) rewrites.push(`instrument_type:${sim.instrument_type}→${nextIt}`);
+      sim.instrument_type = nextIt;
+    }
+    if (typeof sim.historical_range === 'string') {
+      const n = Number.parseInt(sim.historical_range, 10);
+      sim.historical_range = Number.isFinite(n) ? Math.min(Math.max(n, 1), 730) : 90;
+    } else if (typeof sim.historical_range === 'number') {
+      sim.historical_range = Math.min(Math.max(sim.historical_range, 1), 730);
+    }
+  }
+  return { payload: normalized, rewrites };
+}
+
 export function MultiBacktestStrategyEditorClient({
   initialCode,
+  initialAsset,
+  initialTimeframe,
   onExecutingChange,
 }: {
   initialCode?: string;
+  initialAsset?: string;
+  initialTimeframe?: string;
   onExecutingChange?: (executing: boolean) => void;
 } = {}) {
   const { user } = useAuth();
-  const [tabs, setTabs] = useState<Tab[]>(() => [makeTab(1, initialCode || INITIAL_TEMPLATE)]);
+  const [tabs, setTabs] = useState<Tab[]>(() => {
+    const base = initialCode || applyContextToTemplate(INITIAL_TEMPLATE, initialAsset, initialTimeframe);
+    return [makeTab(1, base)];
+  });
   const [activeTabId, setActiveTabId] = useState<string>('');
   const [statuses, setStatuses] = useState<Record<string, TabStatus>>({});
   const [jsonErrors, setJsonErrors] = useState<Record<string, string | null>>({});
@@ -52,11 +110,18 @@ export function MultiBacktestStrategyEditorClient({
   const [runs, setRuns] = useState<Record<string, { run: RunResponse | null; timeout?: boolean; job_id?: string }>>({});
   const [promotedTabId, setPromotedTabId] = useState<string | null>(null);
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
+  const promotedViewRef = useRef<HTMLDivElement | null>(null);
 
   const streamRefs = useRef<Map<string, { close: () => void }>>(new Map());
   const abortRefs = useRef<Map<string, AbortController>>(new Map());
   const saveDebounce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const mountedRef = useRef(true);
+  const quotaWarnedRef = useRef(false);
+  // Monotonic run id: each `runAll` increments this; long-tail async tasks (timeout
+  // poll IIFE) bail when they see the id has advanced — prevents stale callbacks
+  // from clobbering newer-run state.
+  const runIdRef = useRef(0);
+  const normalizeWarnedRef = useRef(false);
 
   useEffect(() => {
     if (!activeTabId && tabs[0]) setActiveTabId(tabs[0].id);
@@ -90,6 +155,13 @@ export function MultiBacktestStrategyEditorClient({
     onExecutingChange?.(executing);
   }, [executing, onExecutingChange]);
 
+  useEffect(() => {
+    if (!promotedTabId) return;
+    requestAnimationFrame(() => {
+      promotedViewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [promotedTabId]);
+
   const safeSetStatuses = useCallback(
     (updater: (prev: Record<string, TabStatus>) => Record<string, TabStatus>) => {
       if (!mountedRef.current) return;
@@ -114,7 +186,14 @@ export function MultiBacktestStrategyEditorClient({
           keyFor(user.id),
           JSON.stringify({ tabs: nextTabs, activeTabId: nextActive, savedAt: Date.now() }),
         );
-      } catch {}
+      } catch {
+        // Parity Story 5.2 quotaWarnedRef: silent fallback after first user notice so
+        // we don't spam toasts when sessionStorage is full or unavailable (private mode).
+        if (!quotaWarnedRef.current) {
+          quotaWarnedRef.current = true;
+          toast.warning('Multi-strategy drafts could not be saved (storage full or unavailable). Edits stay in this session only.');
+        }
+      }
     }, DEBOUNCE_MS);
   }, [user?.id]);
 
@@ -143,30 +222,33 @@ export function MultiBacktestStrategyEditorClient({
   }, [activeTabId, persist]);
 
   const addTab = useCallback(() => {
-    setTabs((prev) => {
-      if (prev.length >= MAX_TABS) return prev;
-      const next = [...prev, makeTab(prev.length + 1)];
-      const nextActive = next[next.length - 1].id;
-      setActiveTabId(nextActive);
-      persist(next, nextActive);
-      return next;
-    });
-  }, [persist]);
+    // Compute next state outside `setTabs` so side-effects (setActiveTabId, persist)
+    // don't fire twice under React 18 StrictMode (which invokes updaters twice in dev).
+    if (tabs.length >= MAX_TABS) return;
+    const next = [...tabs, makeTab(tabs.length + 1)];
+    const nextActive = next[next.length - 1].id;
+    setTabs(next);
+    setActiveTabId(nextActive);
+    persist(next, nextActive);
+  }, [tabs, persist]);
 
   const removeTab = useCallback((id: string) => {
     if (tabs.length <= 1) return;
     if (!confirm('Remove this strategy tab?')) return;
-    setTabs((prev) => {
-      if (prev.length <= 1) return prev;
-      const next = prev.filter((t) => t.id !== id);
-      const nextActive = activeTabId === id ? next[0].id : activeTabId;
-      setActiveTabId(nextActive);
-      persist(next, nextActive);
-      return next;
-    });
-  }, [activeTabId, persist, tabs.length]);
+    const next = tabs.filter((t) => t.id !== id);
+    if (next.length === 0) return;
+    const nextActive = activeTabId === id ? next[0].id : activeTabId;
+    setTabs(next);
+    setActiveTabId(nextActive);
+    persist(next, nextActive);
+  }, [activeTabId, persist, tabs]);
 
   const closeAllStreams = useCallback(() => {
+    const hadActive =
+      abortRefs.current.size > 0 ||
+      streamRefs.current.size > 0 ||
+      Object.values(executingByTab).some(Boolean) ||
+      executing;
     abortRefs.current.forEach((ctrl) => ctrl.abort());
     streamRefs.current.forEach((s) => s.close());
     abortRefs.current.clear();
@@ -174,24 +256,48 @@ export function MultiBacktestStrategyEditorClient({
     if (mountedRef.current) {
       setExecutingByTab({});
       setExecuting(false);
+      setStatuses((prev) => {
+        const next: Record<string, TabStatus> = { ...prev };
+        for (const [tabId, st] of Object.entries(prev)) {
+          if (st === 'running') next[tabId] = 'idle';
+        }
+        return next;
+      });
     }
-  }, []);
+    toast.info(hadActive ? 'Cancelled active streams and local polling' : 'No active runs to cancel');
+  }, [executingByTab, executing]);
 
   const runAll = useCallback(async () => {
     closeAllStreams();
     const payloads: Array<{ tab_id: string; payload: Record<string, unknown> }> = [];
+    const allRewrites = new Set<string>();
     for (const tab of tabs) {
       try {
-        payloads.push({ tab_id: tab.id, payload: JSON5.parse(tab.content) as Record<string, unknown> });
+        const parsed = JSON5.parse(tab.content) as Record<string, unknown>;
+        const result = normalizePayload(parsed);
+        payloads.push({ tab_id: tab.id, payload: result.payload });
+        result.rewrites.forEach((r) => allRewrites.add(r));
       } catch {
         toast.error(`Invalid JSON5 in ${tab.label}`);
         return;
       }
     }
+    // Surface normalization rewrites loudly the first time so users understand why
+    // backtest results differ from what they wrote (Binance prices → OKX prices).
+    if (allRewrites.size > 0 && !normalizeWarnedRef.current) {
+      normalizeWarnedRef.current = true;
+      toast.warning(`Payload coerced for engine compatibility: ${Array.from(allRewrites).join(', ')}`);
+    }
+
+    // Increment run id BEFORE clearing state so any in-flight onTimeout IIFE from a
+    // previous run sees a stale id and bails before touching new run state.
+    runIdRef.current += 1;
+    const thisRun = runIdRef.current;
 
     setExecuting(true);
     setStatuses(Object.fromEntries(tabs.map((t) => [t.id, 'running'])) as Record<string, TabStatus>);
     setRuns({});
+    setSubmissions([]);
 
     const markTerminal = (tabId: string) => {
       setExecutingByTab((prev) => {
@@ -209,9 +315,11 @@ export function MultiBacktestStrategyEditorClient({
         Object.fromEntries(result.submissions.map((s) => [s.tab_id, s.status === 'accepted'])) as Record<string, boolean>,
       );
 
-      // Open all SSE streams. Await each `streamRun()` resolution so the stream handle
-      // is registered in `streamRefs` BEFORE the next iteration / before any
-      // synchronous SSE events could fire — closes the .then-microtask race.
+      // Open all SSE streams. Register the AbortController synchronously BEFORE the
+      // `await streamRun(...)` resolves so a synchronous error inside `stream.connect()`
+      // (which runs during streamRun) doesn't leak an un-tracked stream: unmount
+      // cleanup iterates `streamRefs`/`abortRefs` and must be able to abort/close
+      // whatever was started.
       await Promise.all(
         result.submissions.map(async (sub) => {
           if (sub.status !== 'accepted' || !sub.job_id) {
@@ -221,26 +329,70 @@ export function MultiBacktestStrategyEditorClient({
           }
           const ctrl = new AbortController();
           abortRefs.current.set(sub.tab_id, ctrl);
+          // Bail early if the run id has already advanced (user fired runAll again
+          // mid-iteration). Treat as cancelled.
+          if (runIdRef.current !== thisRun) {
+            ctrl.abort();
+            return;
+          }
           try {
             const stream = await streamRun(
               sub.job_id,
               {
                 onPhaseB: (data) => {
+                  if (runIdRef.current !== thisRun) return;
                   safeSetRuns((prev) => ({ ...prev, [sub.tab_id]: { run: data, job_id: sub.job_id } }));
                   safeSetStatuses((prev) => ({ ...prev, [sub.tab_id]: 'done' }));
                   markTerminal(sub.tab_id);
                 },
                 onFailed: (data) => {
+                  if (runIdRef.current !== thisRun) return;
                   safeSetRuns((prev) => ({ ...prev, [sub.tab_id]: { run: data, job_id: sub.job_id } }));
                   safeSetStatuses((prev) => ({ ...prev, [sub.tab_id]: 'failed' }));
                   markTerminal(sub.tab_id);
                 },
                 onTimeout: () => {
+                  if (runIdRef.current !== thisRun) return;
                   safeSetRuns((prev) => ({ ...prev, [sub.tab_id]: { run: null, timeout: true, job_id: sub.job_id } }));
                   safeSetStatuses((prev) => ({ ...prev, [sub.tab_id]: 'timeout' }));
-                  markTerminal(sub.tab_id);
+                  // Timeout from SSE budget does not mean backend run failed.
+                  // Fallback to polling for a longer window, then finalize status.
+                  void (async () => {
+                    try {
+                      const finalRun = await pollRun(sub.job_id as string, {
+                        intervalMs: 2500,
+                        maxWaitMs: 180_000,
+                        signal: ctrl.signal,
+                      });
+                      // Stale-run guard: if a newer runAll was triggered while we
+                      // were polling, drop the result instead of clobbering new state.
+                      if (runIdRef.current !== thisRun) return;
+                      safeSetRuns((prev) => ({
+                        ...prev,
+                        [sub.tab_id]: { run: finalRun, timeout: false, job_id: sub.job_id },
+                      }));
+                      safeSetStatuses((prev) => ({
+                        ...prev,
+                        [sub.tab_id]:
+                          finalRun.status === 'success'
+                            ? 'done'
+                            : finalRun.status === 'failed'
+                              ? 'failed'
+                              : 'failed',
+                      }));
+                    } catch (err) {
+                      // Aborted (user cancelled or stale run) — emit a quiet console
+                      // breadcrumb so ops can diagnose when polling really hangs.
+                      if (err instanceof Error && err.message !== 'Cancelled') {
+                        console.warn(`[multi-backtest] poll fallback failed for tab=${sub.tab_id}:`, err.message);
+                      }
+                    } finally {
+                      if (runIdRef.current === thisRun) markTerminal(sub.tab_id);
+                    }
+                  })();
                 },
                 onError: () => {
+                  if (runIdRef.current !== thisRun) return;
                   safeSetStatuses((prev) => ({ ...prev, [sub.tab_id]: 'failed' }));
                   markTerminal(sub.tab_id);
                 },
@@ -248,6 +400,9 @@ export function MultiBacktestStrategyEditorClient({
               ctrl.signal,
             );
             streamRefs.current.set(sub.tab_id, stream);
+            // If the run was cancelled between the controller registration and the
+            // stream resolution, close the just-opened stream eagerly.
+            if (runIdRef.current !== thisRun) stream.close();
           } catch {
             safeSetStatuses((prev) => ({ ...prev, [sub.tab_id]: 'failed' }));
             markTerminal(sub.tab_id);
@@ -281,45 +436,50 @@ export function MultiBacktestStrategyEditorClient({
 
       <div className="flex flex-wrap gap-2">
         {tabs.map((tab) => (
-          <button
+          // a11y: tab pill uses inline-flex container with sibling buttons, NOT a
+          // nested <button><span role="button"/></button> (invalid HTML, screen
+          // readers can't reach the close action).
+          <div
             key={tab.id}
-            type="button"
-            onClick={() => setActiveTabId(tab.id)}
-            onDoubleClick={() => setEditingTabId(tab.id)}
-            className={`px-3 py-1.5 rounded-md border text-sm ${activeTabId === tab.id ? 'bg-secondary' : ''}`}
+            className={`inline-flex items-center gap-1 px-1 py-0.5 rounded-md border text-sm ${activeTabId === tab.id ? 'bg-secondary' : ''}`}
           >
-            {editingTabId === tab.id ? (
-              <input
-                autoFocus
-                defaultValue={tab.label}
-                onBlur={(e) => {
-                  renameTab(tab.id, e.currentTarget.value);
-                  setEditingTabId(null);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    renameTab(tab.id, (e.target as HTMLInputElement).value);
+            <button
+              type="button"
+              onClick={() => setActiveTabId(tab.id)}
+              onDoubleClick={() => setEditingTabId(tab.id)}
+              className="px-2 py-1 rounded"
+            >
+              {editingTabId === tab.id ? (
+                <input
+                  autoFocus
+                  defaultValue={tab.label}
+                  onBlur={(e) => {
+                    renameTab(tab.id, e.currentTarget.value);
                     setEditingTabId(null);
-                  }
-                }}
-                className="w-28 rounded border border-border bg-background px-1 text-xs"
-              />
-            ) : (
-              <>{tab.label} · {statuses[tab.id] ?? 'idle'}</>
-            )}
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      renameTab(tab.id, (e.target as HTMLInputElement).value);
+                      setEditingTabId(null);
+                    }
+                  }}
+                  className="w-28 rounded border border-border bg-background px-1 text-xs"
+                />
+              ) : (
+                <>{tab.label} · {statuses[tab.id] ?? 'idle'}</>
+              )}
+            </button>
             {tabs.length > 1 && (
-              <span
-                role="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  removeTab(tab.id);
-                }}
-                className="ml-2 inline-flex align-middle"
+              <button
+                type="button"
+                aria-label={`Remove ${tab.label}`}
+                onClick={() => removeTab(tab.id)}
+                className="inline-flex items-center justify-center rounded p-0.5 hover:bg-destructive/10"
               >
                 <X className="h-3 w-3" />
-              </span>
+              </button>
             )}
-          </button>
+          </div>
         ))}
       </div>
 
@@ -353,13 +513,14 @@ export function MultiBacktestStrategyEditorClient({
           onPromote={(tabId) => {
             setPromotedTabId(tabId);
             setActiveTabId(tabId);
+            toast.success(`Promoted ${tabs.find((t) => t.id === tabId)?.label ?? tabId}`);
           }}
           onCancelAll={closeAllStreams}
         />
       )}
 
       {promotedTabId && runs[promotedTabId]?.run && (
-        <div className="space-y-2">
+        <div ref={promotedViewRef} className="space-y-2 rounded-lg border border-border p-3">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold">Single Strategy View</h3>
             <Button variant="outline" size="sm" onClick={() => setPromotedTabId(null)}>

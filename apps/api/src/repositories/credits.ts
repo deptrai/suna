@@ -152,3 +152,50 @@ export async function deductCredits(
     return { success: false, error: 'Deduction error' };
   }
 }
+
+/**
+ * Refund credits atomically using database function.
+ * Wraps `atomic_add_credits` with `is_expiring=false` and `type='refund'` so the ledger
+ * surfaces the reversal distinctly from a tier grant. When billing is disabled
+ * (self-hosted), no-ops successfully so callers can use the same code path.
+ */
+export async function refundCredits(
+  accountId: string,
+  amount: number,
+  description: string,
+): Promise<CreditDeductResult> {
+  if (!config.EPSILON_BILLING_INTERNAL_ENABLED) {
+    return { success: true, amountDeducted: 0, newBalance: 0 };
+  }
+
+  try {
+    const result = await db.execute(sql`SELECT atomic_add_credits(
+      ${accountId}::uuid,
+      ${amount}::numeric,
+      false,
+      ${description}::text,
+      NULL,
+      'refund'
+    ) as result`);
+
+    const row = result[0] as Record<string, unknown> | undefined;
+    const data = row?.result as {
+      success: boolean;
+      message?: string;
+      total_balance?: number;
+    } | undefined;
+
+    if (!data || !data.success) {
+      return { success: false, error: 'Refund failed' };
+    }
+
+    return {
+      success: true,
+      amountDeducted: amount,
+      newBalance: data.total_balance,
+    };
+  } catch (err) {
+    console.error('refundCredits error:', err);
+    return { success: false, error: 'Refund error' };
+  }
+}

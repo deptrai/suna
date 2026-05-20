@@ -35,13 +35,33 @@ export interface EnsureSandboxResult {
   created: boolean;
 }
 
+function requiresLocalDaytonaNamePrefix(providerName?: ProviderName): boolean {
+  return config.ENV_MODE === 'local' && providerName === 'daytona';
+}
+
+function assertLocalDaytonaNamePrefix(name: string): void {
+  if (!name.startsWith('dev-')) {
+    throw new Error('Local Daytona sandbox names must start with "dev-" to prevent prod/local namespace collisions');
+  }
+}
+
 /**
  * Generate a unique sandbox name: sandbox-{accountPrefix}-{N}
  * Counts all existing sandboxes for the account to pick the next number.
  */
-export async function generateSandboxName(accountId: string, customName?: string): Promise<string> {
-  if (customName) return customName;
-  const prefix = `sandbox-${accountId.slice(0, 8)}`;
+export async function generateSandboxName(
+  accountId: string,
+  customName?: string,
+  providerName?: ProviderName,
+): Promise<string> {
+  if (customName) {
+    if (requiresLocalDaytonaNamePrefix(providerName)) {
+      assertLocalDaytonaNamePrefix(customName);
+    }
+    return customName;
+  }
+  const basePrefix = `sandbox-${accountId.slice(0, 8)}`;
+  const prefix = requiresLocalDaytonaNamePrefix(providerName) ? `dev-${basePrefix}` : basePrefix;
   const count = await db
     .select()
     .from(sandboxes)
@@ -145,7 +165,7 @@ async function tryClaimFromPool(
     claimed = await pool.grab({ serverType: opts.serverType, location: opts.location });
     if (!claimed) return null;
 
-    const name = await generateSandboxName(accountId);
+    const name = await generateSandboxName(accountId, undefined, claimed.poolSandbox.provider as ProviderName);
     const [row] = await db
       .insert(sandboxes)
       .values({
@@ -258,7 +278,7 @@ async function provisionNewSandbox(
 }
 
 async function insertProvisioningRow(accountId: string, providerName: ProviderName, isIncluded?: boolean) {
-  const name = await generateSandboxName(accountId);
+  const name = await generateSandboxName(accountId, undefined, providerName);
   const [sandbox] = await db
     .insert(sandboxes)
     .values({

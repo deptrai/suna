@@ -97,7 +97,7 @@ const PROTECTED_ROUTES = [
   '/onboarding',
 ];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const instanceRoute = extractInstanceRoute(pathname);
   const isInstanceDetailRoute = isInstanceDetailPath(pathname);
@@ -117,6 +117,12 @@ export async function middleware(request: NextRequest) {
         request.url,
       ),
     );
+  }
+
+  // DEV BYPASS: E2E/backtest should not wait on auth/provisioning checks.
+  // Keep this early to avoid hanging on downstream auth calls during local dev.
+  if (process.env.NODE_ENV === 'development' && pathname.startsWith('/dashboard/backtest')) {
+    return NextResponse.next();
   }
   
   // Skip middleware for static files, API routes, and telemetry endpoints.
@@ -296,7 +302,7 @@ export async function middleware(request: NextRequest) {
     // Treat as authenticated (session cookie still exists) to avoid redirect storm.
     if (
       authError &&
-      'status' in (authError as Record<string, unknown>) &&
+      'status' in (authError as unknown as Record<string, unknown>) &&
       (authError as unknown as { status: number }).status === 409
     ) {
       try {
@@ -383,6 +389,14 @@ export async function middleware(request: NextRequest) {
   // Everything else requires authentication - reuse the user we already fetched
   try {
     
+    // Product decision: provider/model/API-key setup is system-managed.
+    // Hide these legacy config pages from all users (including admins).
+    if (pathname.startsWith('/settings/providers') || pathname.startsWith('/settings/api-keys')) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/dashboard';
+      return NextResponse.redirect(url);
+    }
+
     // DEV BYPASS: Allow E2E tests to access backtest without auth
     if (process.env.NODE_ENV === 'development' && pathname.startsWith('/dashboard/backtest')) {
       return supabaseResponse;

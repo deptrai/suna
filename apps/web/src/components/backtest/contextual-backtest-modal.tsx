@@ -104,6 +104,8 @@ export function ContextualBacktestModal({
           ) : (
             <MultiBacktestStrategyEditorClient
               initialCode={initialCode}
+              initialAsset={initialAsset}
+              initialTimeframe={initialTimeframe}
               onExecutingChange={setIsExecuting}
             />
           )}

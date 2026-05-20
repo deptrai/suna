@@ -290,7 +290,16 @@ export function createCloudSandboxRouter(
         }
       }
 
-      const sandboxName = await generateSandboxName(accountId, customName);
+      let sandboxName: string;
+      try {
+        sandboxName = await generateSandboxName(accountId, customName, providerName);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes('must start with "dev-"')) {
+          return c.json({ success: false, error: msg }, 400);
+        }
+        throw err;
+      }
 
       // Managed VPS sandboxes are billed independently as their own Stripe subscriptions.
       if (isManagedVpsProvider(providerName) && config.EPSILON_BILLING_INTERNAL_ENABLED) {

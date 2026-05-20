@@ -278,3 +278,12 @@ Items deferred from code reviews — pre-existing issues or hard policy calls th
 - AC4 timeout banner triggers on any-timeout vs spec's all-timeout — current behavior arguably more informative; spec is ambiguous. [apps/web/src/components/backtest/comparison-visualizer.tsx:84]
 - AC2 outer `session_id` not forwarded into per-job VT payload — observability gap, not user-visible. [apps/api/src/router/routes/vibe-trading.ts:170-172]
 - AC2 response shape missing `run_id` per submission — requires service-layer `SubmitJobResponse` change; frontend already treats as optional. [apps/api/src/router/routes/vibe-trading.ts:200-214]
+
+## Deferred from: code review of 5-9-multi-strategy-backtest-comparison (2026-05-21)
+
+- No per-account multi-backtest rate limit — user can fire 4 × 5-strategy requests = 20 concurrent VT submissions. Same class as `/jobs` abuse. System-wide rate-limit story needed. [apps/api/src/router/routes/vibe-trading.ts:136-269]
+- `pollRun` storm during all-timeout — 5 concurrent strategies × 180s × 2.5s interval = ~360 fetches in 3min. Coordinated backoff needed but acceptable at current scale. [apps/web/src/components/backtest/multi-strategy-editor.tsx:280]
+- sessionStorage 7-day TTL is dead code — TTL only meaningful for localStorage; either change storage or remove TTL constant. [apps/web/src/components/backtest/multi-strategy-editor.tsx:977-985]
+- `STREAM_BUDGET_MS` tripled (60s → 180s) — intentional per spec; observe load impact in future capacity review.
+- `bestByKey` arbitrary "winner" when all rows share same value (e.g., all-zero drawdown) — cosmetic only. [apps/web/src/components/backtest/comparison-visualizer.tsx:471-474]
+- Stream-open loop uses `Promise.all` (each iteration own try/catch) — optical guardrail violation but semantically equivalent to `allSettled`. [apps/web/src/components/backtest/multi-strategy-editor.tsx:1211]

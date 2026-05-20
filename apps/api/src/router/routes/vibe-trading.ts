@@ -11,7 +11,7 @@ import {
   VibeTradingDownstreamError,
 } from '../services/vibe-trading';
 import { checkCredits, deductToolCredits, resolveAccountTier } from '../services/billing';
-import { deductCredits as deductCreditsRepo } from '../../repositories/credits';
+import { deductCredits as deductCreditsRepo, refundCredits as refundCreditsRepo } from '../../repositories/credits';
 import { claimOrAssertShadowOwnership, ShadowOwnershipError } from '../services/shadow-ownership';
 import { config, getToolCost } from '../../config';
 import type { AppContext } from '../../types';
@@ -147,7 +147,10 @@ vibeTrading.post('/backtest-multi', async (c) => {
       const idx = path[1] as number;
       const tabId = (body as { strategies?: Array<{ tab_id?: unknown }> })?.strategies?.[idx]?.tab_id;
       if (typeof tabId === 'string' && tabId.length > 0) {
-        tabIdHint = ` [tab=${tabId}]`;
+        // Sanitize: tab_id is user-supplied; strip control chars + clamp length so it
+        // can't poison logs or HTTP response bodies via newline/script injection.
+        const safe = tabId.replace(/[\r\n\t]/g, ' ').slice(0, 64);
+        tabIdHint = ` [tab=${safe}]`;
       }
     }
     const msg = first
@@ -216,7 +219,15 @@ vibeTrading.post('/backtest-multi', async (c) => {
           402,
         );
       }
-      totalDeducted = result.amountDeducted ?? totalCost;
+      // Trust the repo's reported deduction — never silently substitute the requested
+      // totalCost. If `amountDeducted` is undefined the repo contract is broken; treat
+      // as 0 deducted to avoid lying to the client.
+      totalDeducted = result.amountDeducted ?? 0;
+      if (totalDeducted < totalCost) {
+        console.warn(
+          `[EPSILON][billing-partial-deduct] tool=${TOOL} account=${accountId} requested=${totalCost} actual=${totalDeducted}`,
+        );
+      }
     } catch (e) {
       console.warn(
         `[EPSILON][billing-failure] tool=${TOOL} account=${accountId} err=${e instanceof Error ? e.message : String(e)}`,
@@ -230,16 +241,43 @@ vibeTrading.post('/backtest-multi', async (c) => {
   );
   const successCount = settled.filter((r) => r.status === 'fulfilled').length;
   if (successCount === 0) {
-    // All submits failed AFTER atomic deduct. No refund infra exists yet — log loud
-    // for ops to manually credit-back if needed. Rare event (VT entirely down).
-    console.error(
-      `[EPSILON][billing-orphan] tool=${TOOL} account=${accountId} charged=$${totalDeducted.toFixed(4)} count=${count} reason=all_vt_submits_failed`,
-    );
+    // All submits failed AFTER atomic deduct — close the orphan loophole by refunding
+    // automatically via `atomic_add_credits`. Per spec line 1251, partial failures are
+    // still charged (intentional), but all-fail is treated as "no compute happened" so
+    // a full refund matches Story 5.5 atomic billing parity. Refund failure is logged
+    // loud for ops; the client still sees a 503 either way.
+    let refundedAmount = 0;
+    let refundError: string | null = null;
+    if (config.EPSILON_BILLING_INTERNAL_ENABLED && totalDeducted > 0) {
+      try {
+        const refund = await refundCreditsRepo(
+          accountId,
+          totalDeducted,
+          `Refund: multi-strategy backtest all-fail (${count} strategies)`,
+        );
+        if (refund.success) {
+          refundedAmount = refund.amountDeducted ?? totalDeducted;
+        } else {
+          refundError = refund.error ?? 'unknown refund error';
+        }
+      } catch (e) {
+        refundError = e instanceof Error ? e.message : String(e);
+      }
+    }
+    if (refundError || (config.EPSILON_BILLING_INTERNAL_ENABLED && totalDeducted > 0 && refundedAmount === 0)) {
+      console.error(
+        `[EPSILON][billing-orphan] tool=${TOOL} account=${accountId} charged=$${totalDeducted.toFixed(4)} refunded=$${refundedAmount.toFixed(4)} count=${count} reason=all_vt_submits_failed refund_error=${refundError ?? 'no-op'}`,
+      );
+    }
+    const refunded = refundedAmount > 0;
     return c.json(
       {
         success: false,
-        error: 'All VT submits failed — credit charged, contact support for refund',
-        cost: totalDeducted,
+        error: refunded
+          ? 'All VT submits failed — credits refunded automatically'
+          : 'All VT submits failed — credit charged, contact support for refund',
+        cost: refunded ? 0 : totalDeducted,
+        refunded,
       },
       503,
     );
@@ -407,7 +445,9 @@ export function isTerminalEvent(event: StreamEventName): boolean {
   return event === 'phase_b' || event === 'failed' || event === 'timeout';
 }
 
-const STREAM_BUDGET_MS = 60_000;
+// 60s was too aggressive for heavier strategies in multi-run mode and caused
+// false timeout states on the UI while backend jobs were still progressing.
+const STREAM_BUDGET_MS = 180_000;
 const POLL_INTERVAL_MS = 1_000;
 const HEARTBEAT_INTERVAL_MS = 15_000;
 
@@ -474,7 +514,10 @@ vibeTrading.get('/runs/:jobId/stream', async (c) => {
       }
 
       if (!isDone() && !terminalEmitted) {
-        const reason = prevEvent === null ? 'No state observed within budget' : 'Backtest exceeded 60s server-side budget';
+        const reason =
+          prevEvent === null
+            ? 'No state observed within budget'
+            : `Backtest exceeded ${Math.round(STREAM_BUDGET_MS / 1000)}s server-side budget`;
         await safeWrite({ event: 'timeout', data: JSON.stringify({ success: false, run_id: jobId, reason }) });
       }
     } finally {
@@ -552,7 +595,10 @@ export function streamVibeTradingSSE(jobId: string, origin: string | null): Resp
         }
 
         if (!isDone() && !terminalEmitted) {
-          const reason = prevEvent === null ? 'No state observed within budget' : 'Backtest exceeded 60s server-side budget';
+          const reason =
+            prevEvent === null
+              ? 'No state observed within budget'
+              : `Backtest exceeded ${Math.round(STREAM_BUDGET_MS / 1000)}s server-side budget`;
           safeEnqueue(sseChunk('timeout', JSON.stringify({ success: false, run_id: jobId, reason })));
         }
       } finally {

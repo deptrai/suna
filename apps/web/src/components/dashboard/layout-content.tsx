@@ -708,8 +708,25 @@ export default function DashboardLayoutContent({
 					}
 					setOnboardingChecked(true);
 				} else {
-					// Enter onboarding mode. If there's an existing session, skip boot + setup.
-					// Also clear any stale "onboarding complete" cache for this instance.
+					const existing = await readEnv("ONBOARDING_SESSION_ID");
+					// Product decision: onboarding screen appears only on first-ever login.
+					// If an onboarding session already exists, treat user as onboarded and
+					// never show onboarding UI again.
+					if (existing) {
+						await persistEnv("ONBOARDING_COMPLETE", "true");
+						try {
+							localStorage.setItem(
+								`epsilon-onboarding-complete:${routeInstanceId || "default"}`,
+								"true",
+							);
+						} catch {
+							/* non-fatal */
+						}
+						ob.done();
+						setOnboardingChecked(true);
+						return;
+					}
+					// First-time user: enter onboarding flow.
 					try {
 						localStorage.removeItem(
 							`epsilon-onboarding-complete:${routeInstanceId || "default"}`,
@@ -717,8 +734,7 @@ export default function DashboardLayoutContent({
 					} catch {
 						/* non-fatal */
 					}
-					const existing = await readEnv("ONBOARDING_SESSION_ID");
-					ob.enter({ skipBoot: !!existing, skipSetup: !!existing });
+					ob.enter({ skipBoot: true, skipSetup: true });
 					setOnboardingChecked(true);
 				}
 			} catch {
