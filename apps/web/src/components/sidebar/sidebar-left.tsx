@@ -1546,6 +1546,19 @@ export function SidebarLeft({ ...props }: React.ComponentProps<typeof Sidebar>) 
               });
             }}
           />
+          <CollapsedIconButton
+            icon={<Activity className="h-4 w-4" />}
+            label="Backtest"
+            isActive={pathname === '/dashboard/backtest'}
+            onClick={() => {
+              openTabAndNavigate({
+                id: 'page:/dashboard/backtest',
+                title: 'Backtest',
+                type: 'page',
+                href: '/dashboard/backtest',
+              });
+            }}
+          />
           {/* Collapsed-sidebar Projects flyout removed — single-project
               paradigm has no list to flyout to. */}
           <CollapsedIconButton
@@ -1649,6 +1662,21 @@ export function SidebarLeft({ ...props }: React.ComponentProps<typeof Sidebar>) 
             >
               <LineChart className="h-4 w-4 flex-shrink-0 text-sidebar-foreground" />
               <span className="flex-1 text-left">Markets</span>
+            </Button>
+            <Button
+              onClick={() => {
+                openTabAndNavigate({
+                  id: 'page:/dashboard/backtest',
+                  title: 'Backtest',
+                  type: 'page',
+                  href: '/dashboard/backtest',
+                });
+              }}
+              variant="sidebar"
+              className="rounded-lg"
+            >
+              <Activity className="h-4 w-4 flex-shrink-0 text-sidebar-foreground" />
+              <span className="flex-1 text-left">Backtest</span>
             </Button>
             <Button
               onClick={() => {
