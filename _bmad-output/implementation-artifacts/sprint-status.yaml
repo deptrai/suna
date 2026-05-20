@@ -33,7 +33,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-20 (Story 11.1 done — Next.js 16.2.6 + React 19.2.6 upgrade; 7 forwardRef fixes; 248/248 tests pass)
+last_updated: 2026-05-21 (Story 5.9 moved to review for final verification and sign-off)
 project: chainlens
 project_key: NOKEY
 tracking_system: file-system
@@ -108,7 +108,7 @@ development_status:
   5-6-shadow-account-swarm-ui: done  # 2026-05-18 review→done after fixing shadow-reports-route.test.ts regression (Q2 tier gate needed billing mock update); 7+4+7+8=26 tests pass; 16 review patches + 3 deferred + 2 audit fixes (M4 link, Q2 tier gate)
   5-7-user-llm-key-management: backlog
   5-8-per-user-persistent-memory: done  # 2026-05-18 /bmad-code-review applied 39 patches: pgvector removed, IDOR fixed, URL mount corrected, transactions, tests added
-  5-9-multi-strategy-backtest-comparison: done  # 2026-05-20 code-review: 11 patches applied (atomic billing, local dev 402 fix, tab_id dedupe, executing flag race, confirm() StrictMode, streamRun ref race, mounted guard, custom tooltip, job_id display, pearsonCorrelation NaN for mismatched lengths, heatmapColor neutral gray); 20 utils tests pass; typecheck clean
+  5-9-multi-strategy-backtest-comparison: review  # 2026-05-21 moved from done to review for final verification and sign-off
   epic-5-retrospective: optional
 
   # Epic 6: Browser Intelligence Extension
