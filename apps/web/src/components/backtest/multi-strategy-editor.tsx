@@ -30,13 +30,19 @@ function keyFor(accountId: string): string {
   return `${KEY_PREFIX}${accountId}`;
 }
 
-function makeTab(index: number): Tab {
-  return { id: `strat-${crypto.randomUUID()}`, label: `Strategy ${index}`, content: INITIAL_TEMPLATE };
+function makeTab(index: number, content = INITIAL_TEMPLATE): Tab {
+  return { id: `strat-${crypto.randomUUID()}`, label: `Strategy ${index}`, content };
 }
 
-export function MultiBacktestStrategyEditorClient() {
+export function MultiBacktestStrategyEditorClient({
+  initialCode,
+  onExecutingChange,
+}: {
+  initialCode?: string;
+  onExecutingChange?: (executing: boolean) => void;
+} = {}) {
   const { user } = useAuth();
-  const [tabs, setTabs] = useState<Tab[]>(() => [makeTab(1)]);
+  const [tabs, setTabs] = useState<Tab[]>(() => [makeTab(1, initialCode || INITIAL_TEMPLATE)]);
   const [activeTabId, setActiveTabId] = useState<string>('');
   const [statuses, setStatuses] = useState<Record<string, TabStatus>>({});
   const [jsonErrors, setJsonErrors] = useState<Record<string, string | null>>({});
@@ -70,12 +76,19 @@ export function MultiBacktestStrategyEditorClient() {
     } catch {}
   }, [user?.id]);
 
-  useEffect(() => () => {
-    mountedRef.current = false;
-    clearTimeout(saveDebounce.current);
-    abortRefs.current.forEach((ctrl) => ctrl.abort());
-    streamRefs.current.forEach((s) => s.close());
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      clearTimeout(saveDebounce.current);
+      abortRefs.current.forEach((ctrl) => ctrl.abort());
+      streamRefs.current.forEach((s) => s.close());
+    };
   }, []);
+
+  useEffect(() => {
+    onExecutingChange?.(executing);
+  }, [executing, onExecutingChange]);
 
   const safeSetStatuses = useCallback(
     (updater: (prev: Record<string, TabStatus>) => Record<string, TabStatus>) => {

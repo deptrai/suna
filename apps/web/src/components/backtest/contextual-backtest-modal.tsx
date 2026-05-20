@@ -8,7 +8,9 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { BacktestStrategyEditorClient } from './strategy-editor';
+import { MultiBacktestStrategyEditorClient } from './multi-strategy-editor';
 import { shouldCloseContextualModal, shouldRemountEditor } from './contextual-backtest-modal.utils';
 import type { RunResponse } from '@/lib/backtest-api';
 
@@ -35,6 +37,7 @@ export function ContextualBacktestModal({
   const [editorKey, setEditorKey] = React.useState(0);
   const prevCodeRef = React.useRef<string | undefined>(initialCode);
   const [isExecuting, setIsExecuting] = React.useState(false);
+  const [mode, setMode] = React.useState<'single' | 'multi'>('single');
 
   React.useEffect(() => {
     if (shouldRemountEditor(prevCodeRef.current, initialCode)) {
@@ -67,18 +70,43 @@ export function ContextualBacktestModal({
           <DialogDescription>
             Review, edit, and run this strategy directly in the Vibe Sandbox.
           </DialogDescription>
+          <div className="flex items-center gap-2 pt-2">
+            <Button
+              type="button"
+              size="sm"
+              variant={mode === 'single' ? 'default' : 'outline'}
+              onClick={() => setMode('single')}
+            >
+              Single Strategy
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={mode === 'multi' ? 'default' : 'outline'}
+              onClick={() => setMode('multi')}
+            >
+              Multi Strategy
+            </Button>
+          </div>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-6 py-4">
-          <BacktestStrategyEditorClient
-            key={editorKey}
-            initialCode={initialCode}
-            initialAsset={initialAsset}
-            initialTimeframe={initialTimeframe}
-            onExecutingChange={setIsExecuting}
-            initialResult={initialResult}
-            onResult={onResult}
-          />
+          {mode === 'single' ? (
+            <BacktestStrategyEditorClient
+              key={editorKey}
+              initialCode={initialCode}
+              initialAsset={initialAsset}
+              initialTimeframe={initialTimeframe}
+              onExecutingChange={setIsExecuting}
+              initialResult={initialResult}
+              onResult={onResult}
+            />
+          ) : (
+            <MultiBacktestStrategyEditorClient
+              initialCode={initialCode}
+              onExecutingChange={setIsExecuting}
+            />
+          )}
         </div>
       </DialogContent>
     </Dialog>
