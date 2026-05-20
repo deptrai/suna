@@ -33,7 +33,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-19 (Story 5.5.2 spec drafted — follow-up to 5.5.1 LLM swap to claude-haiku-4-5 via v98store + worker prompt tune; ready for /bmad-code-review adversarial pass)
+last_updated: 2026-05-20 (Story 11.1 done — Next.js 16.2.6 + React 19.2.6 upgrade; 7 forwardRef fixes; 248/248 tests pass)
 project: chainlens
 project_key: NOKEY
 tracking_system: file-system
@@ -108,7 +108,7 @@ development_status:
   5-6-shadow-account-swarm-ui: done  # 2026-05-18 review→done after fixing shadow-reports-route.test.ts regression (Q2 tier gate needed billing mock update); 7+4+7+8=26 tests pass; 16 review patches + 3 deferred + 2 audit fixes (M4 link, Q2 tier gate)
   5-7-user-llm-key-management: backlog
   5-8-per-user-persistent-memory: done  # 2026-05-18 /bmad-code-review applied 39 patches: pgvector removed, IDOR fixed, URL mount corrected, transactions, tests added
-  5-9-multi-strategy-backtest-comparison: review  # 2026-05-19 implementation completed; targeted unit/lint/typecheck pass, live e2e remains env-dependent (auth/sign-in state)
+  5-9-multi-strategy-backtest-comparison: done  # 2026-05-20 code-review: 11 patches applied (atomic billing, local dev 402 fix, tab_id dedupe, executing flag race, confirm() StrictMode, streamRun ref race, mounted guard, custom tooltip, job_id display, pearsonCorrelation NaN for mismatched lengths, heatmapColor neutral gray); 20 utils tests pass; typecheck clean
   epic-5-retrospective: optional
 
   # Epic 6: Browser Intelligence Extension
@@ -148,8 +148,8 @@ development_status:
   # ─── Phase 1 Addendum — FE Performance ───
 
   # Epic 11: Frontend Performance & Platform Upgrade
-  epic-11: backlog
-  11-1-nextjs-16-react-19-upgrade: backlog
+  epic-11: in-progress
+  11-1-nextjs-16-react-19-upgrade: done  # 2026-05-20: next@16.2.6 + react@19.2.6 + @sentry/nextjs@10.53.1; 7 forwardRef → function component; build pass; 248/248 tests pass
   11-2-bundle-splitting-heavy-libraries: backlog
   11-3-loading-states-route-skeletons: backlog
   11-4-react-compiler-performance-validation: backlog

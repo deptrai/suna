@@ -5,6 +5,34 @@ export const ownerPassword = process.env.E2E_OWNER_PASSWORD || 'testpass123';
 export const apiBase = process.env.E2E_API_URL || 'http://localhost:13738/v1';
 export const supabaseUrl = process.env.E2E_SUPABASE_URL || 'http://localhost:13740';
 
+function readWebEnvVar(key: string): string | null {
+  const fs = require('fs');
+  const path = require('path');
+  const envPath = path.resolve(__dirname, '../../../apps/web/.env');
+  if (!fs.existsSync(envPath)) return null;
+  const content = fs.readFileSync(envPath, 'utf8');
+  const match = content.match(new RegExp(`^${key}=(.+)$`, 'm'));
+  if (!match) return null;
+  return match[1].trim().replace(/^"|"$/g, '');
+}
+
+export function getResolvedSupabaseUrl(): string {
+  return process.env.E2E_SUPABASE_URL || readWebEnvVar('NEXT_PUBLIC_SUPABASE_URL') || supabaseUrl;
+}
+
+export function getSupabaseCookieName(baseUrl = process.env.E2E_BASE_URL || 'http://localhost:13737'): string {
+  const port = new URL(baseUrl).port;
+  return port ? `sb-epsilon-auth-token-${port}` : 'sb-epsilon-auth-token';
+}
+
+export function getSupabaseAnonKeyFromWebEnv(): string {
+  const key = readWebEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  if (!key) {
+    throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY not found in apps/web/.env');
+  }
+  return key;
+}
+
 /**
  * Read the anon key from the Epsilon .env file.
  */
@@ -102,4 +130,45 @@ export async function loginToDashboard(
   }
 
   await page.goto('/instances', { waitUntil: 'commit', timeout: 120_000 });
+}
+
+export async function loginBySessionCookie(
+  page: Page,
+  credentials: { email?: string; password?: string } = {},
+): Promise<void> {
+  const email = credentials.email || ownerEmail;
+  const password = credentials.password || ownerPassword;
+  const anonKey = getSupabaseAnonKeyFromWebEnv();
+  const resolvedSupabaseUrl = getResolvedSupabaseUrl();
+
+  const authRes = await page.request.post(`${resolvedSupabaseUrl}/auth/v1/token?grant_type=password`, {
+    headers: {
+      apikey: anonKey,
+      'Content-Type': 'application/json',
+    },
+    data: { email, password },
+  });
+  expect(authRes.status()).toBe(200);
+  const session = await authRes.json();
+
+  const url = new URL(process.env.E2E_BASE_URL || 'http://localhost:13737');
+  await page.context().clearCookies();
+  await page.context().addCookies([
+    {
+      name: getSupabaseCookieName(url.toString()),
+      value: `base64-${Buffer.from(JSON.stringify(session)).toString('base64')}`,
+      domain: url.hostname,
+      path: '/',
+      httpOnly: false,
+      sameSite: 'Lax',
+      secure: false,
+    },
+  ]);
+}
+
+export async function ensureServicesHealthy(page: Page): Promise<void> {
+  const apiHealth = await page.request.get((process.env.E2E_API_URL || 'http://localhost:13738/v1').replace(/\/v1$/, '/health'));
+  expect(apiHealth.ok()).toBeTruthy();
+  const webHealth = await page.request.get((process.env.E2E_BASE_URL || 'http://localhost:13737') + '/auth');
+  expect(webHealth.ok()).toBeTruthy();
 }

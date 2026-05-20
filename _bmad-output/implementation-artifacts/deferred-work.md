@@ -259,3 +259,11 @@ Items deferred from code reviews — pre-existing issues or hard policy calls th
 - `pkill -f "bun run.*apps/api"` pattern pode não matar processo correto — risco baixo em runner efêmero (processo morre com o runner). Considerar `kill $(lsof -ti:8008)` como alternativa mais precisa.
 - `tail -3` no Summary trunca nomes de testes — cosmético. Considerar `grep "(fail)" /tmp/api-results.txt | head -20` para mostrar nomes dos testes que falharam.
 - `continue-on-error: true` mascara falhas de infra (OOM, disk) — design tradeoff intencional para não bloquear merge. Considerar threshold check (total tests < 400 → alerta) em story futura.
+
+## Deferred from: code review of 5-9-multi-strategy-backtest-comparison (2026-05-20)
+
+- AC2 per-tab Zod error message uses array index, not `tab_id` — polish for client-side error mapping. [apps/api/src/router/routes/vibe-trading.ts:137-143]
+- AC1 `quotaWarnedRef` warn-once-per-session toast not implemented — silent fallback works, only user notice missing. [apps/web/src/components/backtest/multi-strategy-editor.tsx:81-87]
+- AC4 timeout banner triggers on any-timeout vs spec's all-timeout — current behavior arguably more informative; spec is ambiguous. [apps/web/src/components/backtest/comparison-visualizer.tsx:84]
+- AC2 outer `session_id` not forwarded into per-job VT payload — observability gap, not user-visible. [apps/api/src/router/routes/vibe-trading.ts:170-172]
+- AC2 response shape missing `run_id` per submission — requires service-layer `SubmitJobResponse` change; frontend already treats as optional. [apps/api/src/router/routes/vibe-trading.ts:200-214]

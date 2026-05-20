@@ -21,14 +21,14 @@ function ResizablePanelGroup({
   )
 }
 
-const ResizablePanel = React.forwardRef<
-  React.ElementRef<typeof ResizablePrimitive.Panel>,
-  React.ComponentPropsWithoutRef<typeof ResizablePrimitive.Panel>
->((props, ref) => {
+function ResizablePanel({
+  ref,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof ResizablePrimitive.Panel> & {
+  ref?: React.Ref<React.ElementRef<typeof ResizablePrimitive.Panel>>;
+}) {
   return <ResizablePrimitive.Panel ref={ref} data-slot="resizable-panel" {...props} />
-});
-
-ResizablePanel.displayName = "ResizablePanel";
+}
 
 function ResizableHandle({
   withHandle,

@@ -16,19 +16,22 @@ export function returnsFromEquityCurve(curve: EquityValuePoint[]): number[] {
 }
 
 export function pearsonCorrelation(a: number[], b: number[]): number {
-  const n = Math.min(a.length, b.length);
+  // Sentinel for incomparable series. Callers (ComparisonVisualizer heatmap) render NaN as '—'
+  // and heatmapColor coerces non-finite values to neutral. Prior behavior silently truncated to
+  // min(a.length, b.length), which produced misleading correlations when strategies ran with
+  // different `historical_range` values.
+  if (a.length !== b.length) return Number.NaN;
+  const n = a.length;
   if (n < 2) return 0;
-  const aa = a.slice(0, n);
-  const bb = b.slice(0, n);
-  const meanA = aa.reduce((s, v) => s + v, 0) / n;
-  const meanB = bb.reduce((s, v) => s + v, 0) / n;
+  const meanA = a.reduce((s, v) => s + v, 0) / n;
+  const meanB = b.reduce((s, v) => s + v, 0) / n;
 
   let num = 0;
   let da = 0;
   let db = 0;
   for (let i = 0; i < n; i += 1) {
-    const xa = aa[i] - meanA;
-    const xb = bb[i] - meanB;
+    const xa = a[i] - meanA;
+    const xb = b[i] - meanB;
     num += xa * xb;
     da += xa * xa;
     db += xb * xb;
@@ -47,6 +50,7 @@ export function computeCorrelationMatrix(curves: EquityValuePoint[][]): number[]
 }
 
 export function heatmapColor(value: number): string {
+  if (!Number.isFinite(value)) return 'rgb(229, 231, 235)'; // neutral gray for incomparable
   const clamped = Math.max(-1, Math.min(1, value));
   if (clamped >= 0) {
     const t = Math.round(255 - clamped * 120);

@@ -11,6 +11,7 @@ import {
   VibeTradingDownstreamError,
 } from '../services/vibe-trading';
 import { checkCredits, deductToolCredits, resolveAccountTier } from '../services/billing';
+import { deductCredits as deductCreditsRepo } from '../../repositories/credits';
 import { claimOrAssertShadowOwnership, ShadowOwnershipError } from '../services/shadow-ownership';
 import { config, getToolCost } from '../../config';
 import type { AppContext } from '../../types';
@@ -71,7 +72,11 @@ const VibeTradingMultiBacktestSchema = z.object({
       }),
     )
     .min(2, 'between 2 and 5 strategies required')
-    .max(5, 'between 2 and 5 strategies required'),
+    .max(5, 'between 2 and 5 strategies required')
+    .refine(
+      (arr) => new Set(arr.map((s) => s.tab_id)).size === arr.length,
+      { message: 'tab_id values must be unique across strategies' },
+    ),
   session_id: SESSION_ID,
 });
 
@@ -136,8 +141,17 @@ vibeTrading.post('/backtest-multi', async (c) => {
   const parsed = VibeTradingMultiBacktestSchema.safeParse(body);
   if (!parsed.success) {
     const first = parsed.error.issues[0];
+    const path = first?.path ?? [];
+    let tabIdHint = '';
+    if (typeof path[0] === 'string' && path[0] === 'strategies' && typeof path[1] === 'number') {
+      const idx = path[1] as number;
+      const tabId = (body as { strategies?: Array<{ tab_id?: unknown }> })?.strategies?.[idx]?.tab_id;
+      if (typeof tabId === 'string' && tabId.length > 0) {
+        tabIdHint = ` [tab=${tabId}]`;
+      }
+    }
     const msg = first
-      ? `${first.path.join('.') || 'body'} — ${first.message}`
+      ? `${path.join('.') || 'body'}${tabIdHint} — ${first.message}`
       : 'Invalid request body';
     throw new HTTPException(400, { message: msg });
   }
@@ -155,9 +169,12 @@ vibeTrading.post('/backtest-multi', async (c) => {
 
   const unitCost = getToolCost(TOOL, 0);
   const totalCost = count * unitCost;
-  const credit = await checkCredits(accountId);
-  const available = credit.balance ?? 0;
-  if (!credit.hasCredits || available < totalCost) {
+  // Atomic gate: pass totalCost so DB enforces the threshold per call.
+  // Local mode (no DB) returns hasCredits=true with balance=0 — handled by hasCredits check only,
+  // matching parity with POST /jobs (line 105).
+  const credit = await checkCredits(accountId, totalCost);
+  if (!credit.hasCredits) {
+    const available = credit.balance ?? 0;
     return c.json(
       {
         success: false,
@@ -167,14 +184,10 @@ vibeTrading.post('/backtest-multi', async (c) => {
     );
   }
 
-  const settled = await Promise.allSettled(
-    strategies.map((item) => submitBacktestJob(item.payload)),
-  );
-  const successCount = settled.filter((r) => r.status === 'fulfilled').length;
-  if (successCount === 0) {
-    return c.json({ success: false, error: 'All VT submits failed', cost: 0 }, 503);
-  }
-
+  // Atomic billing pattern (parity Story 5.5 + spec AC2 "Pre-deducts BEFORE any VT submit"):
+  // deduct N × cost up-front via atomic_use_credits PG function. This closes the snapshot race
+  // where two concurrent requests could both pass checkCredits.
+  // If ALL VT submits fail downstream, we log a loud charged-but-no-jobs alert (rare; ops triages).
   const assets = Array.from(
     new Set(
       strategies.flatMap((s) =>
@@ -182,18 +195,53 @@ vibeTrading.post('/backtest-multi', async (c) => {
       ),
     ),
   ).join(',');
-  try {
-    // Atomic multi-charge policy: if at least one VT submit is accepted, charge full N attempts.
-    await deductToolCredits(
-      accountId,
-      TOOL,
-      0,
-      `Multi-strategy backtest: ${count} × ${assets || 'assets'}`,
-      session_id,
+  let totalDeducted = 0;
+  if (config.EPSILON_BILLING_INTERNAL_ENABLED) {
+    // Bypass deductToolCredits (which uses getToolCost(toolName, resultCount) and the
+    // perResultCost formula doesn't scale tool calls by N) — go direct to atomic_use_credits
+    // with the explicit totalCost.
+    try {
+      const sessionSuffix = session_id ? ` [session:${session_id}]` : '';
+      const result = await deductCreditsRepo(
+        accountId,
+        totalCost,
+        `Multi-strategy backtest: ${count} × ${assets || 'assets'}${sessionSuffix}`,
+      );
+      if (!result.success) {
+        return c.json(
+          {
+            success: false,
+            error: result.error || `Insufficient credits for ${count} strategies (need ${totalCost})`,
+          },
+          402,
+        );
+      }
+      totalDeducted = result.amountDeducted ?? totalCost;
+    } catch (e) {
+      console.warn(
+        `[EPSILON][billing-failure] tool=${TOOL} account=${accountId} err=${e instanceof Error ? e.message : String(e)}`,
+      );
+      return c.json({ success: false, error: 'Billing service unavailable' }, 503);
+    }
+  }
+
+  const settled = await Promise.allSettled(
+    strategies.map((item) => submitBacktestJob(item.payload)),
+  );
+  const successCount = settled.filter((r) => r.status === 'fulfilled').length;
+  if (successCount === 0) {
+    // All submits failed AFTER atomic deduct. No refund infra exists yet — log loud
+    // for ops to manually credit-back if needed. Rare event (VT entirely down).
+    console.error(
+      `[EPSILON][billing-orphan] tool=${TOOL} account=${accountId} charged=$${totalDeducted.toFixed(4)} count=${count} reason=all_vt_submits_failed`,
     );
-  } catch (e) {
-    console.warn(
-      `[EPSILON][billing-failure] tool=${TOOL} account=${accountId} err=${e instanceof Error ? e.message : String(e)}`,
+    return c.json(
+      {
+        success: false,
+        error: 'All VT submits failed — credit charged, contact support for refund',
+        cost: totalDeducted,
+      },
+      503,
     );
   }
 
@@ -215,7 +263,7 @@ vibeTrading.post('/backtest-multi', async (c) => {
 
   return c.json({
     success: true,
-    cost: totalCost,
+    cost: totalDeducted,
     submissions,
   });
 });

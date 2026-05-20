@@ -41,6 +41,7 @@ export function MultiBacktestStrategyEditorClient() {
   const [statuses, setStatuses] = useState<Record<string, TabStatus>>({});
   const [jsonErrors, setJsonErrors] = useState<Record<string, string | null>>({});
   const [executing, setExecuting] = useState(false);
+  const [executingByTab, setExecutingByTab] = useState<Record<string, boolean>>({});
   const [submissions, setSubmissions] = useState<MultiSubmitItem[]>([]);
   const [runs, setRuns] = useState<Record<string, { run: RunResponse | null; timeout?: boolean; job_id?: string }>>({});
   const [promotedTabId, setPromotedTabId] = useState<string | null>(null);
@@ -49,6 +50,7 @@ export function MultiBacktestStrategyEditorClient() {
   const streamRefs = useRef<Map<string, { close: () => void }>>(new Map());
   const abortRefs = useRef<Map<string, AbortController>>(new Map());
   const saveDebounce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
     if (!activeTabId && tabs[0]) setActiveTabId(tabs[0].id);
@@ -69,10 +71,26 @@ export function MultiBacktestStrategyEditorClient() {
   }, [user?.id]);
 
   useEffect(() => () => {
+    mountedRef.current = false;
     clearTimeout(saveDebounce.current);
     abortRefs.current.forEach((ctrl) => ctrl.abort());
     streamRefs.current.forEach((s) => s.close());
   }, []);
+
+  const safeSetStatuses = useCallback(
+    (updater: (prev: Record<string, TabStatus>) => Record<string, TabStatus>) => {
+      if (!mountedRef.current) return;
+      setStatuses(updater);
+    },
+    [],
+  );
+  const safeSetRuns = useCallback(
+    (updater: (prev: Record<string, { run: RunResponse | null; timeout?: boolean; job_id?: string }>) => Record<string, { run: RunResponse | null; timeout?: boolean; job_id?: string }>) => {
+      if (!mountedRef.current) return;
+      setRuns(updater);
+    },
+    [],
+  );
 
   const persist = useCallback((nextTabs: Tab[], nextActive: string) => {
     if (!user?.id) return;
@@ -123,22 +141,27 @@ export function MultiBacktestStrategyEditorClient() {
   }, [persist]);
 
   const removeTab = useCallback((id: string) => {
+    if (tabs.length <= 1) return;
+    if (!confirm('Remove this strategy tab?')) return;
     setTabs((prev) => {
       if (prev.length <= 1) return prev;
-      if (!confirm('Remove this strategy tab?')) return prev;
       const next = prev.filter((t) => t.id !== id);
       const nextActive = activeTabId === id ? next[0].id : activeTabId;
       setActiveTabId(nextActive);
       persist(next, nextActive);
       return next;
     });
-  }, [activeTabId, persist]);
+  }, [activeTabId, persist, tabs.length]);
 
   const closeAllStreams = useCallback(() => {
     abortRefs.current.forEach((ctrl) => ctrl.abort());
     streamRefs.current.forEach((s) => s.close());
     abortRefs.current.clear();
     streamRefs.current.clear();
+    if (mountedRef.current) {
+      setExecutingByTab({});
+      setExecuting(false);
+    }
   }, []);
 
   const runAll = useCallback(async () => {
@@ -157,51 +180,74 @@ export function MultiBacktestStrategyEditorClient() {
     setStatuses(Object.fromEntries(tabs.map((t) => [t.id, 'running'])) as Record<string, TabStatus>);
     setRuns({});
 
+    const markTerminal = (tabId: string) => {
+      setExecutingByTab((prev) => {
+        const next = { ...prev, [tabId]: false };
+        const anyStillRunning = Object.values(next).some(Boolean);
+        if (!anyStillRunning && mountedRef.current) setExecuting(false);
+        return next;
+      });
+    };
+
     try {
       const result = await submitBacktestMulti(payloads);
       setSubmissions(result.submissions);
+      setExecutingByTab(
+        Object.fromEntries(result.submissions.map((s) => [s.tab_id, s.status === 'accepted'])) as Record<string, boolean>,
+      );
 
-      for (const sub of result.submissions) {
-        if (sub.status !== 'accepted' || !sub.job_id) {
-          setStatuses((prev) => ({ ...prev, [sub.tab_id]: 'failed' }));
-          continue;
-        }
-        const ctrl = new AbortController();
-        abortRefs.current.set(sub.tab_id, ctrl);
-
-        streamRun(
-          sub.job_id,
-          {
-            onPhaseB: (data) => {
-              setRuns((prev) => ({ ...prev, [sub.tab_id]: { run: data, job_id: sub.job_id } }));
-              setStatuses((prev) => ({ ...prev, [sub.tab_id]: 'done' }));
-            },
-            onFailed: (data) => {
-              setRuns((prev) => ({ ...prev, [sub.tab_id]: { run: data, job_id: sub.job_id } }));
-              setStatuses((prev) => ({ ...prev, [sub.tab_id]: 'failed' }));
-            },
-            onTimeout: () => {
-              setRuns((prev) => ({ ...prev, [sub.tab_id]: { run: null, timeout: true, job_id: sub.job_id } }));
-              setStatuses((prev) => ({ ...prev, [sub.tab_id]: 'timeout' }));
-            },
-            onError: () => {
-              setStatuses((prev) => ({ ...prev, [sub.tab_id]: 'failed' }));
-            },
-          },
-          ctrl.signal,
-        ).then((stream) => {
-          streamRefs.current.set(sub.tab_id, stream);
-        }).catch(() => {
-          setStatuses((prev) => ({ ...prev, [sub.tab_id]: 'failed' }));
-        });
-      }
+      // Open all SSE streams. Await each `streamRun()` resolution so the stream handle
+      // is registered in `streamRefs` BEFORE the next iteration / before any
+      // synchronous SSE events could fire — closes the .then-microtask race.
+      await Promise.all(
+        result.submissions.map(async (sub) => {
+          if (sub.status !== 'accepted' || !sub.job_id) {
+            safeSetStatuses((prev) => ({ ...prev, [sub.tab_id]: 'failed' }));
+            markTerminal(sub.tab_id);
+            return;
+          }
+          const ctrl = new AbortController();
+          abortRefs.current.set(sub.tab_id, ctrl);
+          try {
+            const stream = await streamRun(
+              sub.job_id,
+              {
+                onPhaseB: (data) => {
+                  safeSetRuns((prev) => ({ ...prev, [sub.tab_id]: { run: data, job_id: sub.job_id } }));
+                  safeSetStatuses((prev) => ({ ...prev, [sub.tab_id]: 'done' }));
+                  markTerminal(sub.tab_id);
+                },
+                onFailed: (data) => {
+                  safeSetRuns((prev) => ({ ...prev, [sub.tab_id]: { run: data, job_id: sub.job_id } }));
+                  safeSetStatuses((prev) => ({ ...prev, [sub.tab_id]: 'failed' }));
+                  markTerminal(sub.tab_id);
+                },
+                onTimeout: () => {
+                  safeSetRuns((prev) => ({ ...prev, [sub.tab_id]: { run: null, timeout: true, job_id: sub.job_id } }));
+                  safeSetStatuses((prev) => ({ ...prev, [sub.tab_id]: 'timeout' }));
+                  markTerminal(sub.tab_id);
+                },
+                onError: () => {
+                  safeSetStatuses((prev) => ({ ...prev, [sub.tab_id]: 'failed' }));
+                  markTerminal(sub.tab_id);
+                },
+              },
+              ctrl.signal,
+            );
+            streamRefs.current.set(sub.tab_id, stream);
+          } catch {
+            safeSetStatuses((prev) => ({ ...prev, [sub.tab_id]: 'failed' }));
+            markTerminal(sub.tab_id);
+          }
+        }),
+      );
     } catch (e) {
       if (e instanceof BacktestError) toast.error(e.message);
       else toast.error('Run all failed');
-    } finally {
-      setExecuting(false);
+      // Submit failed entirely — clear executing immediately.
+      if (mountedRef.current) setExecuting(false);
     }
-  }, [closeAllStreams, tabs]);
+  }, [closeAllStreams, tabs, safeSetStatuses, safeSetRuns]);
 
   const anyInvalid = tabs.some((t) => !!jsonErrors[t.id]);
 
@@ -284,6 +330,7 @@ export function MultiBacktestStrategyEditorClient() {
         <ComparisonVisualizer
           submissions={submissions}
           runStates={runs}
+          tabLabels={Object.fromEntries(tabs.map((t) => [t.id, t.label]))}
           onRetry={(tabId) => {
             const tab = tabs.find((t) => t.id === tabId);
             if (!tab) return;
