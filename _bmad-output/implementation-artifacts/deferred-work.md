@@ -2,6 +2,17 @@
 
 Items deferred from code reviews — pre-existing issues or hard policy calls that aren't actionable in the current change.
 
+## Deferred from: code review of story-11.1 (2026-05-20)
+
+- **`react-diff-viewer-continued@3.4.0` peer `react: ^18`** — `apps/web/package.json:224`. Class component nội bộ; chưa thấy UNSAFE_* lifecycle gây crash với React 19, nhưng peer dep gap thực. Track upgrade hoặc replacement (`@monaco-editor/react` cho diff view) ở story FE-cleanup riêng.
+- **`@novu/nextjs@3.13.0` peer dep + dead dep** — `apps/web/package.json:47`. Không có import nào trong `apps/web/src` dùng package này. Xoá ở story cleanup deps riêng (cùng `@novu/notification-center`).
+- **`@cyntler/react-doc-viewer@1.17.1` React 19 compat unverified** — `apps/web/package.json:29`. `peerDependencies: { react: ">=17.0.0" }` match v19 theo semver nhưng dùng class component nội bộ. Smoke test PPTX khi có usage.
+- **`@logtail/next withBetterStack` production-only path chưa verified với Next 16** — `apps/web/next.config.ts:131`. Local `bun run dev` không trigger wrapper. Verify ở deploy preview.
+- **`eslint-config-next@16` rule changes chưa verified** — `apps/web/eslint.config.mjs`. Chạy `next lint` khi CI fast-tier expand để catch deprecated/renamed rules.
+- **AC4 Build pass — không có CI artifact** — Dev Agent Record claim "build pass với env runtime tối thiểu" nhưng không có log. Verify lại sau khi fix AC3 (forwardRef).
+- **AC5 Tests pass — claim 248/248 không có evidence** — Verify lại sau khi fix AC3.
+- **`cmdk` runtime warnings từ `forwardRef` nội bộ** — `apps/web/src/components/ui/command.tsx`. Phụ thuộc decision upgrade `cmdk@1.x`. Nếu chọn pin v0.2.1, accept warnings và defer cho story upgrade dep batch riêng.
+
 ## Deferred from: Story 5.5.1 (2026-05-19)
 
 - **Sunset `run_swarm` MCP tool by 2026-06-19.** Story 5.5.1 deprecates the synchronous tool via proxy 410 Gone + docstring marker. Separate cleanup story Q3 should remove the tool body from `Vibe-Trading/agent/mcp_server.py` (after the 30-day grace window expires) and drop the `vt_mcp_run_swarm` `TOOL_PRICING` entry in `apps/api/src/config.ts`. Until then the entry is kept so direct-sandbox-bypass test rigs still bill correctly.

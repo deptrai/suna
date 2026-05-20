@@ -139,7 +139,7 @@ function CommandPopoverTrigger({
   ref,
   ...props
 }: Omit<React.ComponentPropsWithoutRef<typeof PopoverTrigger>, 'asChild'> & {
-  ref?: React.Ref<React.ElementRef<typeof PopoverTrigger>>;
+  ref?: React.Ref<React.ElementRef<typeof PopoverTrigger>>
 }) {
   return (
     <PopoverTrigger ref={ref} asChild {...props}>

@@ -83,9 +83,9 @@ interface QuestionPromptProps {
 // Component
 // ---------------------------------------------------------------------------
 
-export function QuestionPrompt(
-  { request, onReply, onReject, onActionChange, ref }: QuestionPromptProps & { ref?: React.Ref<QuestionPromptHandle> },
-) {
+export function QuestionPrompt({
+	request, onReply, onReject, onActionChange, ref,
+}: QuestionPromptProps & { ref?: React.Ref<QuestionPromptHandle> }) {
 	const questions = request.questions;
 	const isSingle = questions.length === 1 && !questions[0].multiple;
 

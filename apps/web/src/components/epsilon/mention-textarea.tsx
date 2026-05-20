@@ -232,10 +232,11 @@ export interface MentionTextareaProps
 }
 
 export function MentionTextarea(
-  { value, onChange, agents, userHandle, userAvatarUrl, onKeyDown, className, ref: forwardedRef, ...textareaProps }: MentionTextareaProps & { ref?: Ref<HTMLTextAreaElement> },
+  { value, onChange, agents, userHandle, userAvatarUrl, onKeyDown, className, ref: forwardedRef, ...textareaProps }:
+  MentionTextareaProps & { ref?: Ref<HTMLTextAreaElement> },
 ) {
-  const innerRef = useRef<HTMLTextAreaElement>(null);
-  useImperativeHandle(forwardedRef, () => innerRef.current!);
+    const innerRef = useRef<HTMLTextAreaElement>(null);
+    useImperativeHandle(forwardedRef, () => innerRef.current!);
 
     // Guard against undefined leaking in — we always drive the textarea with
     // a string so it's controlled from first render.

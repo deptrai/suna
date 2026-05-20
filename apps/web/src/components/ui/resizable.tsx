@@ -25,7 +25,7 @@ function ResizablePanel({
   ref,
   ...props
 }: React.ComponentPropsWithoutRef<typeof ResizablePrimitive.Panel> & {
-  ref?: React.Ref<React.ElementRef<typeof ResizablePrimitive.Panel>>;
+  ref?: React.Ref<React.ElementRef<typeof ResizablePrimitive.Panel>>
 }) {
   return <ResizablePrimitive.Panel ref={ref} data-slot="resizable-panel" {...props} />
 }

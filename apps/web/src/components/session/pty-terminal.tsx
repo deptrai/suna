@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useCallback, useState, useImperativeHandle } from 'react';
+import React, { useRef, useEffect, useCallback, useState, useImperativeHandle } from 'react';
 import { cn } from '@/lib/utils';
 import { Terminal as XTerm, ITheme } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
