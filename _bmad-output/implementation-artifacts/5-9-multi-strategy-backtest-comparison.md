@@ -164,6 +164,30 @@ so that tôi đánh giá nhanh strategy nào tốt nhất trước khi triển k
   - Add 3 strategies → Run All → all 3 succeed → KPI table + Equity Curve + heatmap visible
   - Gate behind `BACKTEST_E2E_ENABLED=true` (parity Story 5.0.4 chaos gating) since requires VT backend live
 
+### AC6 — Multi-Strategy available directly in Chat
+
+**Given** user is in chat/contextual backtest flow
+**When** user requests multi-strategy compare (or provides multiple strategy variants)
+**Then** chat can launch multi-strategy execution (same backend endpoint `/v1/router/vibe-trading/backtest-multi`) instead of only single-run.
+
+**And** chat surface must support:
+- multi payload collection (2-5 strategies),
+- per-strategy run status (`idle/running/done/failed/timeout`),
+- comparison summary render (reuse ComparisonVisualizer patterns; compact mode acceptable).
+
+**And** existing single-strategy chat flow remains backward-compatible (no regression).
+
+### AC7 — Backtest discoverability UX
+
+**Given** user does not know where backtest lives
+**When** user explores product navigation/chat
+**Then** there are clear entry points to Backtest:
+- persistent `Backtest` navigation item,
+- command palette intents (`Backtest`, `Multi Backtest`),
+- chat quick action/CTA (e.g. `Run Backtest`, `Run Multi Backtest`).
+
+**And** UX copy must not route users to deprecated user-managed LLM/API-key setup for this feature (system-managed model/provider policy).
+
 ## Tasks / Subtasks
 
 - [x] **Task 1: Backend coordinator route** (AC2)
@@ -218,6 +242,18 @@ so that tôi đánh giá nhanh strategy nào tốt nhất trước khi triển k
   - [x] 5.1 In [strategy-editor.tsx](apps/web/src/components/backtest/strategy-editor.tsx) (or new wrapper component), implement `handleRunAll()`:
     - Parse JSON5 for each tab, collect into strategies array
     - Call `submitBacktestMulti`
+
+- [ ] **Task 8: Chat multi-strategy integration** (AC6)
+  - [ ] 8.1 Extend contextual chat backtest entry to support multi-mode launch (not only `BacktestStrategyEditorClient` single mode).
+  - [ ] 8.2 Add multi-strategy payload assembly in chat flow (2-5 strategies) and call `submitBacktestMulti`.
+  - [ ] 8.3 Add per-strategy progress/status in chat UI; reuse existing SSE handling and status taxonomy.
+  - [ ] 8.4 Add regression tests: single chat backtest unchanged + multi chat path works.
+
+- [ ] **Task 9: Discoverability UX uplift** (AC7)
+  - [ ] 9.1 Expose persistent Backtest entry point in navigation surfaces used by target users.
+  - [ ] 9.2 Add command palette aliases/intents for single + multi backtest.
+  - [ ] 9.3 Add chat-level CTA/quick actions to open backtest directly.
+  - [ ] 9.4 Remove/replace stale copy that instructs users to configure per-user LLM/API keys for backtest.
     - For each successful submission, open `streamRun` and store handle in `Map<tab_id, StreamHandle>`
     - On each `phase_b` event, update component state with that tab's RunResponse
   - [x] 5.2 Open N concurrent SSE streams — each with own `AbortController` stored in ref Map
