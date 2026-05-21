@@ -6,7 +6,7 @@ import type { AppContext } from '../../types';
 
 let _accountId: string | undefined = 'acct-ext-123';
 let _hasCredits = true;
-let _accountTier: 'tier1' | 'tier2' | 'tier3' = 'tier2';
+let _accountTier: 'free' | 'pro' | 'enterprise' = 'pro';
 
 const deductCalls: Array<{ toolName: string }> = [];
 
@@ -80,7 +80,7 @@ describe('vibe-trading-mcp proxy — extended coverage', () => {
   beforeEach(async () => {
     _accountId = 'acct-ext-123';
     _hasCredits = true;
-    _accountTier = 'tier2';
+    _accountTier = 'pro';
     deductCalls.length = 0;
     app = await makeApp();
   });
@@ -177,7 +177,7 @@ describe('vibe-trading-mcp proxy — extended coverage', () => {
   // ── Tier 2 allowed ────────────────────────────────────────────────────────
 
   test('[P0] Tier 2 allowed through tier gate', async () => {
-    _accountTier = 'tier2';
+    _accountTier = 'pro';
     globalThis.fetch = makeFetch({ ok: true, body: { result: {} } });
     const req = new Request('http://localhost/v1/router/vibe-trading-mcp/', {
       method: 'POST',
@@ -193,7 +193,7 @@ describe('vibe-trading-mcp proxy — extended coverage', () => {
   // ── Story 5.5.1: run_swarm deprecation 410 ─────────────────────────────────
 
   test('[P0] tools/call run_swarm returns 410 with deprecation hint (Story 5.5.1)', async () => {
-    _accountTier = 'tier2';
+    _accountTier = 'pro';
     globalThis.fetch = makeFetch({ ok: true, body: { result: {} } });
     const req = new Request('http://localhost/v1/router/vibe-trading-mcp/', {
       method: 'POST',

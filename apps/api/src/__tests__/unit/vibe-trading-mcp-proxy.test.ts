@@ -6,7 +6,7 @@ import type { AppContext } from '../../types';
 
 let _accountId: string | undefined = 'acct-123';
 let _hasCredits = true;
-let _accountTier: 'tier1' | 'tier2' | 'tier3' = 'tier2';
+let _accountTier: 'free' | 'pro' | 'enterprise' = 'pro';
 
 const deductCalls: Array<{ toolName: string }> = [];
 
@@ -72,7 +72,7 @@ describe('vibe-trading-mcp proxy', () => {
   beforeEach(async () => {
     _accountId = 'acct-123';
     _hasCredits = true;
-    _accountTier = 'tier2';
+    _accountTier = 'pro';
     deductCalls.length = 0;
     app = await makeApp();
   });
@@ -93,7 +93,7 @@ describe('vibe-trading-mcp proxy', () => {
   // ── Tier gate ─────────────────────────────────────────────────────────────
 
   test('[P0] 403 when Tier 1 calls tools/call', async () => {
-    _accountTier = 'tier1';
+    _accountTier = 'free';
     globalThis.fetch = makeFetch({ ok: true, body: { result: {} } });
     const req = new Request('http://localhost/v1/router/vibe-trading-mcp/', {
       method: 'POST',
@@ -103,12 +103,12 @@ describe('vibe-trading-mcp proxy', () => {
     const res = await app.request(req);
     expect(res.status).toBe(403);
     const body = await res.json() as { error: string };
-    expect(body.error).toContain('Tier 2');
+    expect(body.error).toContain('Pro tier');
     expect(deductCalls).toHaveLength(0);
   });
 
   test('[P0] Tier 3 allowed through tier gate', async () => {
-    _accountTier = 'tier3';
+    _accountTier = 'enterprise';
     globalThis.fetch = makeFetch({ ok: true, body: { result: {} } });
     const req = new Request('http://localhost/v1/router/vibe-trading-mcp/', {
       method: 'POST',
@@ -184,7 +184,7 @@ describe('vibe-trading-mcp proxy', () => {
   // ── Non-billable passthrough ──────────────────────────────────────────────
 
   test('[P0] tools/list passthrough — no billing, no tier check', async () => {
-    _accountTier = 'tier1'; // even tier1 can list tools
+    _accountTier = 'free'; // even free tier can list tools
     globalThis.fetch = makeFetch({ ok: true, body: { result: { tools: [] } } });
     const req = new Request('http://localhost/v1/router/vibe-trading-mcp/', {
       method: 'POST',

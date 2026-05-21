@@ -288,7 +288,57 @@ Items deferred from code reviews — pre-existing issues or hard policy calls th
 - `bestByKey` arbitrary "winner" when all rows share same value (e.g., all-zero drawdown) — cosmetic only. [apps/web/src/components/backtest/comparison-visualizer.tsx:471-474]
 - Stream-open loop uses `Promise.all` (each iteration own try/catch) — optical guardrail violation but semantically equivalent to `allSettled`. [apps/web/src/components/backtest/multi-strategy-editor.tsx:1211]
 
+## Deferred from: code review of think-mode-infra (2026-05-21)
+
+- **D1 — Pool counters reset on deploy (thundering herd on list[0])** — `freeIdx`, `premiumIdx`, `freeThinkIdx`, `premiumThinkIdx` are module-level integers; every `apps/api` restart routes the first N calls to `list[0]` until traffic rotates them. At current scale (single process, low RPS) impact is negligible, but with ≥2 pool models the skew is observable in logs. Fix: randomize starting offset via `Math.floor(Math.random() * list.length)` at module init, or store counter in Redis. Defer to platform-hardening story. [`apps/api/src/router/services/model-pool.ts`]
+
+- **D2 — `validatePoolConfig()` doesn't cross-check `ANTHROPIC_PROXY_URL` presence** — if `FREE_THINK_MODEL_POOL` or `PREMIUM_THINK_MODEL_POOL` is set but `ANTHROPIC_PROXY_URL` is absent, server boots without warning and every think request gets a runtime `[LLM] Think mode requires ANTHROPIC_PROXY_URL` error. Boot-time validation should emit a `console.warn` when a think pool is non-empty but the proxy URL is unset. [`apps/api/src/router/services/model-pool.ts:validatePoolConfig`]
+
+- **D3 — `validatePoolConfig()` skips `FREE_MODEL_POOL` / `PREMIUM_MODEL_POOL`** — the function validates think-mode pools but not the base free/premium pools. An empty `FREE_MODEL_POOL` silently causes 503 on every non-think request. Extend validation to cover all four pool env vars. [`apps/api/src/router/services/model-pool.ts:validatePoolConfig`]
+
+- **D4 — Think response `extractUsage()` not integration-tested against real chainlens-proxy** — F2 added `input_tokens`/`output_tokens` fallback fields, but unit tests mock `response.json()`. If chainlens-proxy ever returns a streaming SSE body on the think endpoint (format change upstream), `response.json()` throws and billing silently fails. Add an integration smoke test when chainlens-proxy is deployed. [`apps/api/src/router/services/llm.ts:extractUsage`]
+
+- **D5 — Forced non-streaming (F3) unverified end-to-end with billing** — `apps/api/src/router/routes/llm.ts` forces `stream: false` for think requests and switches to `deductLLMCredits(... usage)` path. The `usage` field from a non-streaming Anthropic response includes `reasoning_tokens` which are not currently counted in `calculateCost()` (only `promptTokens` + `completionTokens`). Reasoning tokens are billed at input rate by Anthropic — verify billing accuracy once chainlens-proxy is live. [`apps/api/src/router/services/llm.ts:calculateCost`]
+
+- **D6 — Think model `openrouterId` field is misleading** — `epsilon/free-think` and `epsilon/premium-think` entries in `MODELS` have `openrouterId: 'anthropic/...'` which is never used (think requests bypass OpenRouter entirely via `proxyToThinkEndpoint`). The field could confuse future devs or cause accidental OpenRouter routing if pool alias detection fails. Either remove `openrouterId` for think aliases or add a comment. [`apps/api/src/router/config/models.ts`]
+
+- **D7 — Think pricing entries are placeholders** — `epsilon/free-think` and `epsilon/premium-think` in `MODELS` carry the same `inputPer1M`/`outputPer1M` as their base model counterparts. Anthropic charges reasoning tokens at input rate, capped by `budget_tokens` × input price. Until reasoning-token billing is wired into `calculateCost()`, the `TOOL_PRICING` entry cost effectively undercounts think call cost. Document as placeholder; revisit when chainlens-proxy usage data is available. [`apps/api/src/router/config/models.ts`]
+
+## Deferred from: session 2026-05-21 — Think Mode UI & Model Picker Simplification
+
+**Quyết định kiến trúc**: Giữ UI đơn giản (Free | Premium), backend tự routing. Think mode infra đã implement nhưng chưa expose UI.
+
+**Đã implement (backend, không expose UI):**
+- `apps/api/src/router/services/model-pool.ts`: `PoolType` mở rộng thành 4 values (`'free' | 'premium' | 'free-think' | 'premium-think'`). Helpers mới: `isThinkPool()`, `thinkBudgetTokens()`, `freeThinkIdx`, `premiumThinkIdx`
+- `apps/api/src/router/services/llm.ts`: `proxyToThinkEndpoint()` — route think requests tới `ANTHROPIC_PROXY_URL` (chainlens-proxy) với `thinking: { type: 'enabled', budget_tokens: N }` + `temperature: 1`
+- `apps/api/src/router/routes/llm.ts`: POOL_ALIAS mở rộng thành 4 entries; conditional routing `thinkPool ? proxyToThinkEndpoint : proxyToOpenRouter`
+- `apps/api/src/config.ts`: 4 env vars mới: `FREE_THINK_MODEL_POOL`, `PREMIUM_THINK_MODEL_POOL`, `FREE_THINK_BUDGET_TOKENS` (default 5000), `PREMIUM_THINK_BUDGET_TOKENS` (default 10000)
+- `apps/api/.env`: env vars đã populate (`FREE_THINK_MODEL_POOL=claude-haiku-4-5-20251001`, `PREMIUM_THINK_MODEL_POOL=claude-sonnet-4-6`)
+- `apps/api/src/router/config/models.ts`: 2 virtual model entries `epsilon/free-think` + `epsilon/premium-think` (placeholder pricing)
+
+**Không expose UI (intentional):**
+- `core/epsilon-master/opencode/opencode.jsonc`: chỉ có `epsilon/free` và `epsilon/premium` — `free-think`/`premium-think` đã bị remove
+- Reason: chainlens-proxy (port 3002) không chạy local + v98store silently drops `thinking` param → feature broken nếu expose
+
+**Blockers để activate think mode:**
+1. Deploy `apps/chainlens-proxy` (port 3002) — hoặc configure `ANTHROPIC_PROXY_URL` trỏ tới service đang chạy
+2. Verify upstream (v98store hoặc Anthropic direct) support `thinking: { type: 'enabled', budget_tokens: N }` và trả về non-zero `reasoning_tokens`
+3. Uncomment `free-think` / `premium-think` trong `opencode.jsonc` epsilon provider models
+
+**Implementation delta so với Story 7.1 spec:**
+- Spec: `thinkingEnabled: boolean` flag trong deductTokens. Actual: separate PoolType values (`free-think`/`premium-think`) — semantic equivalent nhưng routing-first thay vì billing-first. Billing vẫn dùng boolean `thinkingEnabled` (AC20). Không có conflict — billing layer nhận `thinkingEnabled=true` từ pool type detection.
+
 ## Deferred from: code review of 7-1-internal-credits-system (2026-05-21)
 
 - **W1 — `/dashboard/billing` route doesn't exist** [apps/web/src/app/(home)/pricing/page.tsx:144-146] — pricing CTA links to `/dashboard/billing?upgrade=tierN` but route doesn't exist (404 on click). Belongs to a future frontend story. Workaround until then: CTA can call `/v1/billing/subscriptions/upgrade` API directly and redirect to Stripe `checkoutUrl`. Track as new story.
 - **W2 — AC16 402 `insufficient_tokens` response wrapper missing** — story 7.1 scope boundary explicitly says "KHÔNG wire `deductTokens()` vào LLM call chain — transition story riêng". The 402 HTTP wrapper belongs in that LLM-chain wiring story, not here.
+
+## Deferred from: code review of 5-9-1-conversational-multi-backtest (2026-05-21)
+
+- E2E spec for `chat-multi-backtest-agent` is smoke-quality, gated `BACKTEST_E2E_ENABLED=true`, relies on real LLM invoking the tool from Vietnamese NL — non-deterministic; needs mocking infra. [tests/e2e/specs/chat-multi-backtest-agent.spec.ts]
+- Source-string sniffing tests (parity Story 5.9 backend tests) give false confidence — behavioral regressions pass if source text unchanged. [apps/api/src/__tests__/unit/vibe-trading-propose-multi-route.test.ts]
+- `parsedResultSchema` strict enum on `caller_tier` — future tier additions break proposal rendering. [OcProposeBacktestMultiToolView.tsx:25]
+- Revise path silently swaps `strategy_family` — user asks to revise SMA strat → service returns breakout under same tab_id. UX polish needed. [apps/api/src/router/services/vibe-trading.ts:123-132]
+- `proposeBacktestStrategies` is synchronous — combined with bare-catch, hides programming bugs. Small N OK at current scale. [apps/api/src/router/services/vibe-trading.ts:487-527]
+- Test files read source via `process.cwd()` — works from apps/api only; use `import.meta.dir` for portability. [apps/api/src/__tests__/unit/vibe-trading-propose-multi-route.test.ts:6-11]
+- Tests mock `sanitizeUpstreamErr` as identity — doesn't verify real sanitize strips tokens/URLs in production. [core/epsilon-master/opencode/tools/__tests__/propose_backtest_multi.test.ts:13-15]
