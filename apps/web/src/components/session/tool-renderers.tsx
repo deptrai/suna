@@ -123,6 +123,7 @@ import { OcTokenInfoToolView } from '@/components/thread/tool-views/opencode/OcT
 import { OcContractRiskToolView } from '@/components/thread/tool-views/opencode/OcContractRiskToolView';
 import { OcTxSimulationToolView } from '@/components/thread/tool-views/opencode/OcTxSimulationToolView';
 import { OcVibeTradingSwarmToolView } from '@/components/thread/tool-views/opencode/OcVibeTradingSwarmToolView';
+import { OcProposeBacktestMultiToolView } from '@/components/thread/tool-views/opencode/OcProposeBacktestMultiToolView';
 
 import {
   type ApplyPatchFile,
@@ -8912,6 +8913,7 @@ function ocPartToViewProps(part: ToolPart, sessionId?: string) {
 function OcTokenInfoTool({ part, sessionId }: ToolProps) { return <OcTokenInfoToolView {...ocPartToViewProps(part, sessionId)} />; }
 function OcContractRiskTool({ part, sessionId }: ToolProps) { return <OcContractRiskToolView {...ocPartToViewProps(part, sessionId)} />; }
 function OcTxSimulationTool({ part, sessionId }: ToolProps) { return <OcTxSimulationToolView {...ocPartToViewProps(part, sessionId)} />; }
+function OcProposeBacktestMultiTool({ part, sessionId }: ToolProps) { return <OcProposeBacktestMultiToolView {...ocPartToViewProps(part, sessionId)} />; }
 ToolRegistry.register('token_info', OcTokenInfoTool);
 ToolRegistry.register('token-info', OcTokenInfoTool);
 ToolRegistry.register('contract_risk', OcContractRiskTool);
@@ -8925,3 +8927,7 @@ ToolRegistry.register('vibe-trading-swarm', OcVibeTradingSwarmToolView);
 // oc_ / oc- prefix (parity with other oc_* tools). Story 5.5.1 review L6.
 ToolRegistry.register('oc_vibe_trading_swarm', OcVibeTradingSwarmToolView);
 ToolRegistry.register('oc-vibe-trading-swarm', OcVibeTradingSwarmToolView);
+ToolRegistry.register('propose_backtest_multi', OcProposeBacktestMultiTool);
+ToolRegistry.register('propose-backtest-multi', OcProposeBacktestMultiTool);
+ToolRegistry.register('oc_propose_backtest_multi', OcProposeBacktestMultiTool);
+ToolRegistry.register('oc-propose-backtest-multi', OcProposeBacktestMultiTool);

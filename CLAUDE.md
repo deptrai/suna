@@ -60,6 +60,7 @@ Repo này lớn (3,642 indexed files / 83k functions). **Đừng `grep -r` hoặ
 - Tool views render qua post-hoc parser: `apps/web/src/components/session/tool-renderers.tsx` (`ToolRegistry.register(name, Component)`)
 - Existing OcXxxToolView pattern: `apps/web/src/components/thread/tool-views/opencode/OcXxxToolView.tsx`
 - KHÔNG có `apps/web/src/app/api/chat/route.ts` — chat đi qua sandbox proxy `apps/api/v1/p/{sandboxId}/...`
+- Multi-backtest proposal flow (`propose_backtest_multi`) uses platform-managed LLM/tooling path; avoid BYOK/API-key setup instructions in user-facing messages.
 
 ### Backend convention
 - Service layer parity: `apps/api/src/router/services/{name}.ts` (vd `defillama.ts`, `perplexity.ts`)

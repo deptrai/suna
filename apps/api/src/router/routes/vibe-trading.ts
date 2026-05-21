@@ -5,6 +5,7 @@ import { z } from 'zod';
 import {
   submitBacktestJob,
   getBacktestRun,
+  proposeBacktestStrategies,
   VibeTradingAuthError,
   VibeTradingForbiddenError,
   VibeTradingNotFoundError,
@@ -79,9 +80,20 @@ const VibeTradingMultiBacktestSchema = z.object({
     ),
   session_id: SESSION_ID,
 });
+const ProposeMultiBacktestSchema = z.object({
+  asset: z.string().min(1),
+  count: z.number().int().min(2).max(5).optional(),
+  hint: z.string().optional(),
+  revise_tab_id: z.string().min(1).max(128).optional(),
+  timeframe: z.string().regex(/^\d+[mhdwHMD]$/).optional(),
+  session_id: z.string().min(1),
+});
 
 export const vibeTrading = new Hono<{ Variables: AppContext }>();
 const SHADOW_ID_RE = /^shadow_[0-9a-f]{8}$/;
+const proposeRouteRateLimit = new Map<string, number[]>();
+const PROPOSE_RATE_LIMIT_WINDOW_MS = 60_000;
+const PROPOSE_RATE_LIMIT_MAX = 10;
 
 vibeTrading.post('/jobs', async (c) => {
   const accountId = c.get('accountId');
@@ -304,6 +316,54 @@ vibeTrading.post('/backtest-multi', async (c) => {
     cost: totalDeducted,
     submissions,
   });
+});
+
+vibeTrading.post('/propose-multi', async (c) => {
+  const accountId = c.get('accountId');
+  const body = await c.req.json().catch(() => null);
+  if (body === null) throw new HTTPException(400, { message: 'Invalid JSON body' });
+
+  const parsed = ProposeMultiBacktestSchema.safeParse(body);
+  if (!parsed.success) {
+    const first = parsed.error.issues[0];
+    const msg = first
+      ? `${first.path.join('.') || 'body'} — ${first.message}`
+      : 'Invalid request body';
+    throw new HTTPException(400, { message: msg });
+  }
+
+  const now = Date.now();
+  const history = proposeRouteRateLimit.get(accountId) ?? [];
+  const recent = history.filter((ts) => now - ts < PROPOSE_RATE_LIMIT_WINDOW_MS);
+  if (recent.length >= PROPOSE_RATE_LIMIT_MAX) {
+    c.header('Retry-After', '60');
+    return c.json({ success: false, error: 'Rate limit exceeded. Try again in a minute.' }, 429);
+  }
+  recent.push(now);
+  proposeRouteRateLimit.set(accountId, recent);
+
+  const tier = await resolveAccountTier(accountId);
+  const ua = (c.req.header('user-agent') ?? '').replace(/[\r\n\t]/g, ' ').slice(0, 80);
+  console.log(
+    `[TIER-BYPASS-SUSPECT] propose_backtest_multi account=${accountId} tier=${tier} ua="${ua}"`,
+  );
+
+  try {
+    const result = proposeBacktestStrategies({
+      asset: parsed.data.asset,
+      count: parsed.data.count ?? 3,
+      hint: parsed.data.hint,
+      revise_tab_id: parsed.data.revise_tab_id,
+      timeframe: parsed.data.timeframe ?? '4h',
+      caller_tier: tier,
+    });
+    return c.json({ success: true, ...result });
+  } catch {
+    return c.json(
+      { success: false, error: 'Strategy generation temporarily unavailable; please try again in a moment' },
+      503,
+    );
+  }
 });
 
 vibeTrading.get('/runs/:jobId', async (c) => {

@@ -33,17 +33,10 @@ function applyContextToTemplate(
 }
 import { ComparisonVisualizer } from './comparison-visualizer';
 import { BacktestResultVisualizer } from './result-visualizer';
-import {
-  BacktestError,
-  pollRun,
-  submitBacktestMulti,
-  streamRun,
-  type MultiSubmitItem,
-  type RunResponse,
-} from '@/lib/backtest-api';
+import { type RunResponse } from '@/lib/backtest-api';
+import { useMultiBacktestRun } from './use-multi-backtest-run';
 
 type Tab = { id: string; label: string; content: string };
-type TabStatus = 'idle' | 'running' | 'done' | 'failed' | 'timeout';
 
 const KEY_PREFIX = 'chainlens:backtest:multi-draft:';
 const DEBOUNCE_MS = 500;
@@ -102,26 +95,23 @@ export function MultiBacktestStrategyEditorClient({
     return [makeTab(1, base)];
   });
   const [activeTabId, setActiveTabId] = useState<string>('');
-  const [statuses, setStatuses] = useState<Record<string, TabStatus>>({});
   const [jsonErrors, setJsonErrors] = useState<Record<string, string | null>>({});
-  const [executing, setExecuting] = useState(false);
-  const [executingByTab, setExecutingByTab] = useState<Record<string, boolean>>({});
-  const [submissions, setSubmissions] = useState<MultiSubmitItem[]>([]);
-  const [runs, setRuns] = useState<Record<string, { run: RunResponse | null; timeout?: boolean; job_id?: string }>>({});
   const [promotedTabId, setPromotedTabId] = useState<string | null>(null);
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const promotedViewRef = useRef<HTMLDivElement | null>(null);
 
-  const streamRefs = useRef<Map<string, { close: () => void }>>(new Map());
-  const abortRefs = useRef<Map<string, AbortController>>(new Map());
   const saveDebounce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const mountedRef = useRef(true);
   const quotaWarnedRef = useRef(false);
-  // Monotonic run id: each `runAll` increments this; long-tail async tasks (timeout
-  // poll IIFE) bail when they see the id has advanced — prevents stale callbacks
-  // from clobbering newer-run state.
-  const runIdRef = useRef(0);
   const normalizeWarnedRef = useRef(false);
+  const {
+    run,
+    cancelAll,
+    submissions,
+    statuses,
+    runStates: runs,
+    executing,
+  } = useMultiBacktestRun();
 
   useEffect(() => {
     if (!activeTabId && tabs[0]) setActiveTabId(tabs[0].id);
@@ -146,8 +136,6 @@ export function MultiBacktestStrategyEditorClient({
     return () => {
       mountedRef.current = false;
       clearTimeout(saveDebounce.current);
-      abortRefs.current.forEach((ctrl) => ctrl.abort());
-      streamRefs.current.forEach((s) => s.close());
     };
   }, []);
 
@@ -161,21 +149,6 @@ export function MultiBacktestStrategyEditorClient({
       promotedViewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   }, [promotedTabId]);
-
-  const safeSetStatuses = useCallback(
-    (updater: (prev: Record<string, TabStatus>) => Record<string, TabStatus>) => {
-      if (!mountedRef.current) return;
-      setStatuses(updater);
-    },
-    [],
-  );
-  const safeSetRuns = useCallback(
-    (updater: (prev: Record<string, { run: RunResponse | null; timeout?: boolean; job_id?: string }>) => Record<string, { run: RunResponse | null; timeout?: boolean; job_id?: string }>) => {
-      if (!mountedRef.current) return;
-      setRuns(updater);
-    },
-    [],
-  );
 
   const persist = useCallback((nextTabs: Tab[], nextActive: string) => {
     if (!user?.id) return;
@@ -244,31 +217,11 @@ export function MultiBacktestStrategyEditorClient({
   }, [activeTabId, persist, tabs]);
 
   const closeAllStreams = useCallback(() => {
-    const hadActive =
-      abortRefs.current.size > 0 ||
-      streamRefs.current.size > 0 ||
-      Object.values(executingByTab).some(Boolean) ||
-      executing;
-    abortRefs.current.forEach((ctrl) => ctrl.abort());
-    streamRefs.current.forEach((s) => s.close());
-    abortRefs.current.clear();
-    streamRefs.current.clear();
-    if (mountedRef.current) {
-      setExecutingByTab({});
-      setExecuting(false);
-      setStatuses((prev) => {
-        const next: Record<string, TabStatus> = { ...prev };
-        for (const [tabId, st] of Object.entries(prev)) {
-          if (st === 'running') next[tabId] = 'idle';
-        }
-        return next;
-      });
-    }
-    toast.info(hadActive ? 'Cancelled active streams and local polling' : 'No active runs to cancel');
-  }, [executingByTab, executing]);
+    cancelAll();
+    toast.info('Cancelled active streams and local polling');
+  }, [cancelAll]);
 
   const runAll = useCallback(async () => {
-    closeAllStreams();
     const payloads: Array<{ tab_id: string; payload: Record<string, unknown> }> = [];
     const allRewrites = new Set<string>();
     for (const tab of tabs) {
@@ -289,133 +242,11 @@ export function MultiBacktestStrategyEditorClient({
       toast.warning(`Payload coerced for engine compatibility: ${Array.from(allRewrites).join(', ')}`);
     }
 
-    // Increment run id BEFORE clearing state so any in-flight onTimeout IIFE from a
-    // previous run sees a stale id and bails before touching new run state.
-    runIdRef.current += 1;
-    const thisRun = runIdRef.current;
-
-    setExecuting(true);
-    setStatuses(Object.fromEntries(tabs.map((t) => [t.id, 'running'])) as Record<string, TabStatus>);
-    setRuns({});
-    setSubmissions([]);
-
-    const markTerminal = (tabId: string) => {
-      setExecutingByTab((prev) => {
-        const next = { ...prev, [tabId]: false };
-        const anyStillRunning = Object.values(next).some(Boolean);
-        if (!anyStillRunning && mountedRef.current) setExecuting(false);
-        return next;
-      });
-    };
-
-    try {
-      const result = await submitBacktestMulti(payloads);
-      setSubmissions(result.submissions);
-      setExecutingByTab(
-        Object.fromEntries(result.submissions.map((s) => [s.tab_id, s.status === 'accepted'])) as Record<string, boolean>,
-      );
-
-      // Open all SSE streams. Register the AbortController synchronously BEFORE the
-      // `await streamRun(...)` resolves so a synchronous error inside `stream.connect()`
-      // (which runs during streamRun) doesn't leak an un-tracked stream: unmount
-      // cleanup iterates `streamRefs`/`abortRefs` and must be able to abort/close
-      // whatever was started.
-      await Promise.all(
-        result.submissions.map(async (sub) => {
-          if (sub.status !== 'accepted' || !sub.job_id) {
-            safeSetStatuses((prev) => ({ ...prev, [sub.tab_id]: 'failed' }));
-            markTerminal(sub.tab_id);
-            return;
-          }
-          const ctrl = new AbortController();
-          abortRefs.current.set(sub.tab_id, ctrl);
-          // Bail early if the run id has already advanced (user fired runAll again
-          // mid-iteration). Treat as cancelled.
-          if (runIdRef.current !== thisRun) {
-            ctrl.abort();
-            return;
-          }
-          try {
-            const stream = await streamRun(
-              sub.job_id,
-              {
-                onPhaseB: (data) => {
-                  if (runIdRef.current !== thisRun) return;
-                  safeSetRuns((prev) => ({ ...prev, [sub.tab_id]: { run: data, job_id: sub.job_id } }));
-                  safeSetStatuses((prev) => ({ ...prev, [sub.tab_id]: 'done' }));
-                  markTerminal(sub.tab_id);
-                },
-                onFailed: (data) => {
-                  if (runIdRef.current !== thisRun) return;
-                  safeSetRuns((prev) => ({ ...prev, [sub.tab_id]: { run: data, job_id: sub.job_id } }));
-                  safeSetStatuses((prev) => ({ ...prev, [sub.tab_id]: 'failed' }));
-                  markTerminal(sub.tab_id);
-                },
-                onTimeout: () => {
-                  if (runIdRef.current !== thisRun) return;
-                  safeSetRuns((prev) => ({ ...prev, [sub.tab_id]: { run: null, timeout: true, job_id: sub.job_id } }));
-                  safeSetStatuses((prev) => ({ ...prev, [sub.tab_id]: 'timeout' }));
-                  // Timeout from SSE budget does not mean backend run failed.
-                  // Fallback to polling for a longer window, then finalize status.
-                  void (async () => {
-                    try {
-                      const finalRun = await pollRun(sub.job_id as string, {
-                        intervalMs: 2500,
-                        maxWaitMs: 180_000,
-                        signal: ctrl.signal,
-                      });
-                      // Stale-run guard: if a newer runAll was triggered while we
-                      // were polling, drop the result instead of clobbering new state.
-                      if (runIdRef.current !== thisRun) return;
-                      safeSetRuns((prev) => ({
-                        ...prev,
-                        [sub.tab_id]: { run: finalRun, timeout: false, job_id: sub.job_id },
-                      }));
-                      safeSetStatuses((prev) => ({
-                        ...prev,
-                        [sub.tab_id]:
-                          finalRun.status === 'success'
-                            ? 'done'
-                            : finalRun.status === 'failed'
-                              ? 'failed'
-                              : 'failed',
-                      }));
-                    } catch (err) {
-                      // Aborted (user cancelled or stale run) — emit a quiet console
-                      // breadcrumb so ops can diagnose when polling really hangs.
-                      if (err instanceof Error && err.message !== 'Cancelled') {
-                        console.warn(`[multi-backtest] poll fallback failed for tab=${sub.tab_id}:`, err.message);
-                      }
-                    } finally {
-                      if (runIdRef.current === thisRun) markTerminal(sub.tab_id);
-                    }
-                  })();
-                },
-                onError: () => {
-                  if (runIdRef.current !== thisRun) return;
-                  safeSetStatuses((prev) => ({ ...prev, [sub.tab_id]: 'failed' }));
-                  markTerminal(sub.tab_id);
-                },
-              },
-              ctrl.signal,
-            );
-            streamRefs.current.set(sub.tab_id, stream);
-            // If the run was cancelled between the controller registration and the
-            // stream resolution, close the just-opened stream eagerly.
-            if (runIdRef.current !== thisRun) stream.close();
-          } catch {
-            safeSetStatuses((prev) => ({ ...prev, [sub.tab_id]: 'failed' }));
-            markTerminal(sub.tab_id);
-          }
-        }),
-      );
-    } catch (e) {
-      if (e instanceof BacktestError) toast.error(e.message);
-      else toast.error('Run all failed');
-      // Submit failed entirely — clear executing immediately.
-      if (mountedRef.current) setExecuting(false);
+    const result = await run(payloads);
+    if (!result.ok) {
+      toast.error(result.error.message);
     }
-  }, [closeAllStreams, tabs, safeSetStatuses, safeSetRuns]);
+  }, [tabs, run]);
 
   const anyInvalid = tabs.some((t) => !!jsonErrors[t.id]);
 

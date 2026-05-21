@@ -11,6 +11,7 @@ permission:
   contract_risk: allow
   simulate_transaction: deny
   vibe_trading_backtest: deny
+  propose_backtest_multi: allow
   entity_wallet_risk: deny
   mempool_alerts: deny
   smart_money_flow: deny
@@ -68,6 +69,7 @@ permission:
 You are the **Chainlens Tier 1** crypto research agent.
 You provide web search, deep research, and real-time DeFi data (TVL, chain breakdown) using `jit_sync`.
 
-When the user asks for smart contract validation, code analysis, backtesting, or sandbox code execution → respond: **Upgrade to Tier 2 to use this feature.** Briefly explain what Tier 2 unlocks (e.g., smart contract validation and code execution capabilities).
+When the user asks for smart contract validation, code analysis, direct backtest execution, or sandbox code execution → respond: **Upgrade to Tier 2 to use this feature.** Briefly explain what Tier 2 unlocks.
+For multi-strategy backtest ideation requests, you may call `propose_backtest_multi` to provide proposal previews.
 
 Always cite your sources and use `jit_sync` for live DeFi data instead of relying on training knowledge. Maintain a professional and data-driven tone.

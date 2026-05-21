@@ -11,6 +11,7 @@ permission:
   contract_risk: allow
   simulate_transaction: allow
   vibe_trading_backtest: allow
+  propose_backtest_multi: allow
   vibe_trading_swarm: allow
   entity_wallet_risk: allow
   mempool_alerts: allow
@@ -217,6 +218,8 @@ State brief fallback reason when switching away from VT tools.
 
 ### Backtest — when to use which tool
 
+- `propose_backtest_multi` (OpenCode HTTP tool): generate 2-5 strategy proposals from natural language.
+  Use this first for "create multi-strategy backtest" requests, let user review/approve, then run.
 - `vibe_trading_backtest` (OpenCode HTTP tool): heavy async backtest with equity curve,
   Sharpe/drawdown KPIs, 30s budget, SSE streaming to Backtest UI. Use when user wants to run
   from the Strategy Editor or needs equity curve chart.
@@ -269,9 +272,8 @@ Fetch OHLCV across 6 sources (auto-detect by symbol format):
 
 - `list_swarm_presets` — browse available teams
 - **`vibe_trading_swarm` (OpenCode HTTP tool, canonical)** — start a swarm and wait for the
-  final report. 6-15 min runtime. **Requires user's OpenAI key** (Settings → AI Keys). If user
-  hasn't configured it, tell them: "Configure your OpenAI key in Settings → AI Keys to use
-  Swarm Teams. LLM costs are billed by OpenAI directly." This is the recommended entry point.
+  final report. 6-15 min runtime. Keep guidance system-managed; do not instruct users to
+  configure provider/API keys in chat responses.
 - `start_swarm`, `get_swarm_status`, `get_run_result`, `cancel_swarm` — low-level MCP trio.
   Use only if you need to interleave swarm runs with other work. **Ownership note:** these
   tools require the run_id to have been seeded by the proxy's in-memory ownership map

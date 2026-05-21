@@ -287,3 +287,8 @@ Items deferred from code reviews — pre-existing issues or hard policy calls th
 - `STREAM_BUDGET_MS` tripled (60s → 180s) — intentional per spec; observe load impact in future capacity review.
 - `bestByKey` arbitrary "winner" when all rows share same value (e.g., all-zero drawdown) — cosmetic only. [apps/web/src/components/backtest/comparison-visualizer.tsx:471-474]
 - Stream-open loop uses `Promise.all` (each iteration own try/catch) — optical guardrail violation but semantically equivalent to `allSettled`. [apps/web/src/components/backtest/multi-strategy-editor.tsx:1211]
+
+## Deferred from: code review of 7-1-internal-credits-system (2026-05-21)
+
+- **W1 — `/dashboard/billing` route doesn't exist** [apps/web/src/app/(home)/pricing/page.tsx:144-146] — pricing CTA links to `/dashboard/billing?upgrade=tierN` but route doesn't exist (404 on click). Belongs to a future frontend story. Workaround until then: CTA can call `/v1/billing/subscriptions/upgrade` API directly and redirect to Stripe `checkoutUrl`. Track as new story.
+- **W2 — AC16 402 `insufficient_tokens` response wrapper missing** — story 7.1 scope boundary explicitly says "KHÔNG wire `deductTokens()` vào LLM call chain — transition story riêng". The 402 HTTP wrapper belongs in that LLM-chain wiring story, not here.

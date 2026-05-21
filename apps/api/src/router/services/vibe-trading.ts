@@ -1,4 +1,12 @@
 import { config } from '../../config';
+import type { AccountTier } from './billing';
+import {
+  BACKTEST_PROPOSAL_TEMPLATES,
+  proposalUnitCostCredits,
+  rankTemplates,
+  type ProposalPayload,
+  type StrategyFamily,
+} from './backtest-proposal-templates';
 
 const SERVICE_TIMEOUT_MS = 28_000;
 
@@ -62,6 +70,87 @@ export interface BacktestRunResponse {
 // Key: job_id, Value: data_summary from submit response.
 // When VT 2.3 done, this cache becomes irrelevant (Phase B response has full metrics).
 const dataSummaryCache = new Map<string, Record<string, unknown>>();
+
+export interface ProposalItem {
+  tab_id: string;
+  summary: string;
+  strategy_family: StrategyFamily;
+  payload: ProposalPayload;
+}
+
+function sanitizeSummary(value: string): string {
+  return value.replace(/[\r\n\t]/g, ' ').slice(0, 240);
+}
+
+function assertProposalPayload(payload: ProposalPayload): void {
+  const assets = payload?.context_rules?.assets;
+  if (!Array.isArray(assets) || assets.length < 1) {
+    throw new Error('Invalid proposal payload: context_rules.assets required');
+  }
+  if (!payload?.context_rules?.timeframe) {
+    throw new Error('Invalid proposal payload: timeframe required');
+  }
+}
+
+// Module-load assertion: fail fast in dev/build if a template regresses.
+for (const template of BACKTEST_PROPOSAL_TEMPLATES) {
+  assertProposalPayload(template.build('BTC-USDT', '4h'));
+}
+
+function pickUniqueTemplates(hint: string | undefined, count: number) {
+  const ranked = rankTemplates(hint);
+  const picked = [];
+  const used = new Set<StrategyFamily>();
+  for (const t of ranked) {
+    if (used.has(t.family)) continue;
+    picked.push(t);
+    used.add(t.family);
+    if (picked.length >= count) break;
+  }
+  return picked;
+}
+
+export function proposeBacktestStrategies(args: {
+  asset: string;
+  count: number;
+  hint?: string;
+  revise_tab_id?: string;
+  timeframe: string;
+  caller_tier: AccountTier;
+}): { proposals: ProposalItem[]; unit_cost_credits: number; caller_tier: AccountTier } {
+  const templates = pickUniqueTemplates(args.hint, args.count);
+  const proposals: ProposalItem[] = [];
+
+  if (args.revise_tab_id) {
+    const revised = templates[0] ?? BACKTEST_PROPOSAL_TEMPLATES[0];
+    const payload = revised.build(args.asset, args.timeframe);
+    assertProposalPayload(payload);
+    proposals.push({
+      tab_id: args.revise_tab_id,
+      summary: sanitizeSummary(revised.summary),
+      strategy_family: revised.family,
+      payload,
+    });
+  } else {
+    for (let i = 0; i < templates.length; i++) {
+      const t = templates[i];
+      const payload = t.build(args.asset, args.timeframe);
+      assertProposalPayload(payload);
+      proposals.push({
+        tab_id: `strat-${i + 1}`,
+        summary: sanitizeSummary(t.summary),
+        strategy_family: t.family,
+        payload,
+      });
+    }
+  }
+
+  return {
+    proposals,
+    unit_cost_credits: proposalUnitCostCredits(),
+    caller_tier: args.caller_tier,
+  };
+}
 
 function buildHeaders(): Record<string, string> {
   return {
