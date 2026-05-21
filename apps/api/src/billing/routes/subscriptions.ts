@@ -138,7 +138,8 @@ subscriptionsRouter.post('/confirm-checkout-session', async (c) => {
   return c.json(result);
 });
 
-subscriptionsRouter.post('/subscriptions/upgrade', async (c) => {
+// P12: route is /upgrade (not /subscriptions/upgrade — was double-nesting under subscriptionsRouter)
+subscriptionsRouter.post('/upgrade', async (c) => {
   const accountId = await resolveAccountId(c.get('userId'));
   const body = await c.req.json<{ targetTier?: 'pro' | 'enterprise'; success_url?: string; cancel_url?: string }>();
   const targetTier = body.targetTier;
@@ -151,8 +152,15 @@ subscriptionsRouter.post('/subscriptions/upgrade', async (c) => {
     return c.json({ error: 'Stripe monthly price ID not configured' }, 500);
   }
 
+  // P5: bind checkout to the user's Stripe customer so a stolen URL cannot upgrade a different account
+  const { getOrCreateStripeCustomer } = await import('../services/subscriptions');
+  const email = c.get('userEmail');
+  const customerId = await getOrCreateStripeCustomer(accountId, email);
+
   const stripe = getStripe();
   const session = await stripe.checkout.sessions.create({
+    customer: customerId,
+    client_reference_id: accountId,
     mode: 'subscription',
     line_items: [{ price: tier.stripeMonthlyPriceId, quantity: 1 }],
     success_url: body.success_url ?? `${config.FRONTEND_URL}/dashboard/billing?checkout=success`,
@@ -171,8 +179,14 @@ subscriptionsRouter.post('/topup/checkout', async (c) => {
   const accountId = await resolveAccountId(c.get('userId'));
   const body = await c.req.json<{ packageTokens?: number; success_url?: string; cancel_url?: string }>();
   const packageTokens = Math.floor(body.packageTokens ?? 0);
-  if (packageTokens <= 0) {
-    return c.json({ error: 'packageTokens must be > 0' }, 400);
+  // P4: reject unreasonably large top-ups (> 10B tokens)
+  if (packageTokens <= 0 || packageTokens > 10_000_000_000) {
+    return c.json({ error: 'packageTokens must be between 1 and 10,000,000,000' }, 400);
+  }
+  // P2: minimum 1M tokens (= 1 pricing unit) to avoid sub-cent charges
+  const priceInCents = Math.ceil((packageTokens / 1_000_000) * config.TOPUP_TOKEN_UNIT_PRICE_CENTS);
+  if (priceInCents < 1) {
+    return c.json({ error: 'Minimum top-up is 1,000,000 tokens' }, 400);
   }
 
   const { getCreditAccount } = await import('../repositories/credit-accounts');
@@ -182,7 +196,6 @@ subscriptionsRouter.post('/topup/checkout', async (c) => {
     return c.json({ error: 'Top-up is not available for this tier' }, 403);
   }
 
-  const priceInCents = Math.ceil((packageTokens / 1_000_000) * config.TOPUP_TOKEN_UNIT_PRICE_CENTS);
   const stripe = getStripe();
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',

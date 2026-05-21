@@ -40,7 +40,8 @@ export async function deductTokens(params: TokenDeductParams): Promise<TokenDedu
     if (!row?.success) {
       return {
         success: false,
-        tokensDeducted: BigInt(cost),
+        // P18: tokensDeducted=0n on failure — nothing was actually deducted
+        tokensDeducted: 0n,
         subRemaining: BigInt(row?.sub_remaining ?? 0),
         topupRemaining: BigInt(row?.topup_remaining ?? 0),
         error: 'insufficient_tokens',
@@ -53,8 +54,11 @@ export async function deductTokens(params: TokenDeductParams): Promise<TokenDedu
       subRemaining: BigInt(row.sub_remaining ?? 0),
       topupRemaining: BigInt(row.topup_remaining ?? 0),
     };
-  } catch {
-    return { success: false, tokensDeducted: BigInt(cost), subRemaining: 0n, topupRemaining: 0n, error: 'db_error' };
+  } catch (err) {
+    // P8: log DB errors instead of silently swallowing them
+    console.error('[token-billing] deductTokens DB error:', err);
+    // P18: tokensDeducted=0n on db_error path too
+    return { success: false, tokensDeducted: 0n, subRemaining: 0n, topupRemaining: 0n, error: 'db_error' };
   }
 }
 

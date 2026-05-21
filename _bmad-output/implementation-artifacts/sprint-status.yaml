@@ -128,7 +128,7 @@ development_status:
 
   # Epic 7: Credit Economy & Tokenomics
   epic-7: in-progress
-  7-1-internal-credits-system: review
+  7-1-internal-credits-system: done
   7-2-clens-token-smart-contract: backlog
   7-3-affiliate-and-airdrop-reward-system: backlog
   epic-7-retrospective: optional

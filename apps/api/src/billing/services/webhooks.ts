@@ -26,13 +26,15 @@ import { grantMachineBonusOnce, getStripeMachineBonusKey } from './machine-bonus
 import { cancelFreeSubscriptionForUpgrade } from './subscriptions';
 import { AUTO_TOPUP_DEFAULT_AMOUNT, AUTO_TOPUP_DEFAULT_THRESHOLD } from '@epsilon/shared';
 import { resolveAccountId } from '../../shared/resolve-account';
-import { grantSubscriptionTokensFromStripePeriod } from './token-grants';
+import { grantSubscriptionTokens, grantSubscriptionTokensFromStripePeriod, resetSubscriptionTokensFromStoredGrant } from './token-grants';
 
 // ─── Stripe Webhook Processing ──────────────────────────────────────────────
 
 // Simple in-memory dedup for Stripe webhook events.
 // Stripe CLI + configured endpoints can deliver the same event twice.
 const processedEvents = new Set<string>();
+// P1: Per-payment_intent dedup for top-up grants (prevents double-grant across event types)
+const processedTopups = new Set<string>();
 const DEDUP_MAX = 500;
 
 export async function processStripeWebhook(rawBody: string, signature: string) {
@@ -75,12 +77,6 @@ export async function processStripeWebhook(rawBody: string, signature: string) {
     case 'invoice.paid':
       await handleInvoicePaid(event.data.object as Stripe.Invoice);
       break;
-    case 'invoice.payment_succeeded':
-      await handleInvoicePaid(event.data.object as Stripe.Invoice);
-      break;
-    case 'payment_intent.succeeded':
-      await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent);
-      break;
 
     case 'invoice.payment_failed':
       await handleInvoiceFailed(event.data.object as Stripe.Invoice);
@@ -110,7 +106,13 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     return;
   }
 
-  if (session.mode === 'payment' && session.metadata?.type !== 'topup') {
+  if (session.mode === 'payment') {
+    // P21: only process when Stripe confirms payment is settled
+    if (session.payment_status !== 'paid') return;
+    if (session.metadata?.type === 'topup') {
+      await handleTopupCheckout(session, accountId);
+      return;
+    }
     await handleCreditPurchase(session, accountId);
     return;
   }
@@ -160,8 +162,19 @@ async function handleSubscriptionCheckout(session: Stripe.Checkout.Session, acco
   const commitmentType = session.metadata?.commitment_type;
   const isYearly = commitmentType === 'yearly' || commitmentType === 'yearly_commitment';
 
+  // P6: Fetch Stripe period before DB write so both tier change + token grant are atomic
+  const monthlyTokenGrant = BigInt(tier.monthlyTokenGrant ?? 0);
+  let cycleEnd: Date | null = null;
+  try {
+    const stripe = getStripe();
+    const sub = await stripe.subscriptions.retrieve(subscriptionId);
+    cycleEnd = new Date(sub.current_period_end * 1000);
+  } catch {
+    cycleEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  }
+
   // Ensure credit account exists (for credits system — separate from instance billing).
-  // Use the latest subscription ID so account-state reflects a paid tier.
+  // P6: combine tier upsert + token grant in a single DB write for atomicity.
   await upsertCreditAccount(accountId, {
     tier: tierKey,
     provider: 'stripe',
@@ -170,12 +183,14 @@ async function handleSubscriptionCheckout(session: Stripe.Checkout.Session, acco
     planType: isYearly ? 'yearly' : 'monthly',
     commitmentType: commitmentType === 'yearly_commitment' ? commitmentType : null,
     ...(isYearly ? { nextCreditGrant: calculateNextCreditGrant(new Date()).toISOString() } : {}),
-    // Auto-topup on by default: charge $5 when balance drops below $1
     autoTopupEnabled: true,
     autoTopupThreshold: String(AUTO_TOPUP_DEFAULT_THRESHOLD),
     autoTopupAmount: String(AUTO_TOPUP_DEFAULT_AMOUNT),
+    subscriptionTokens: monthlyTokenGrant,
+    monthlyGrantAmount: monthlyTokenGrant,
+    subscriptionCycleEnd: cycleEnd.toISOString(),
   });
-  await grantSubscriptionTokensFromStripePeriod(accountId, tierKey, subscriptionId);
+  console.log(`[TOKEN] accountId=${accountId} granted ${monthlyTokenGrant} subscription_tokens on checkout (tier=${tierKey})`);
 
   // Grant tier credits if applicable (credits system, separate from instances)
   if (tier.monthlyCredits > 0) {
@@ -416,29 +431,60 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   const nextCreditGrant = planType === 'yearly'
     ? calculateNextCreditGrant(new Date()).toISOString()
     : new Date(subscription.current_period_end * 1000).toISOString();
+  const cycleEnd = new Date(subscription.current_period_end * 1000);
 
   await updateCreditAccount(accountId, {
     lastRenewalPeriodStart: periodStart,
     lastProcessedInvoiceId: invoice.id,
     lastGrantDate: new Date().toISOString(),
     nextCreditGrant,
-    subscriptionCycleEnd: new Date(subscription.current_period_end * 1000).toISOString(),
+    subscriptionCycleEnd: cycleEnd.toISOString(),
   });
-  await grantSubscriptionTokensFromStripePeriod(accountId, tierName, subscription.id);
+  // P22: use stored monthly_grant_amount (snapshotted at tier-change) for renewal
+  await resetSubscriptionTokensFromStoredGrant(accountId, cycleEnd);
 
   console.log(`[Webhook] Renewal processed: ${credits} credits for ${accountId}`);
 }
 
-async function handlePaymentIntentSucceeded(intent: Stripe.PaymentIntent) {
-  if (intent.metadata?.type !== 'topup') return;
-  const accountId = intent.metadata?.account_id;
-  const topupTokens = Number(intent.metadata?.topup_tokens ?? 0);
-  if (!accountId || topupTokens <= 0) return;
+// P21: Top-up grants come from checkout.session.completed (payment_status='paid')
+// P1: Idempotency by payment_intent.id — prevents double-grant if webhook is retried
+async function handleTopupCheckout(session: Stripe.Checkout.Session, accountId: string) {
+  const paymentIntentId = typeof session.payment_intent === 'string'
+    ? session.payment_intent
+    : session.payment_intent?.id;
+  if (!paymentIntentId) {
+    console.warn('[Webhook] topup checkout missing payment_intent');
+    return;
+  }
+
+  if (processedTopups.has(paymentIntentId)) {
+    console.log(`[Webhook] Skipping duplicate topup for payment_intent ${paymentIntentId}`);
+    return;
+  }
+  processedTopups.add(paymentIntentId);
+  if (processedTopups.size > DEDUP_MAX) {
+    const first = processedTopups.values().next().value;
+    if (first) processedTopups.delete(first);
+  }
+
+  const packageTokens = Number(session.metadata?.topup_tokens ?? 0);
+  if (packageTokens <= 0) {
+    console.warn(`[Webhook] topup: invalid packageTokens=${packageTokens} for ${accountId}`);
+    return;
+  }
+
+  // P2: Validate amount charged matches what we quoted at checkout creation
+  const expectedCents = Math.ceil((packageTokens / 1_000_000) * config.TOPUP_TOKEN_UNIT_PRICE_CENTS);
+  const actualCents = session.amount_total ?? 0;
+  if (Math.abs(actualCents - expectedCents) > 1) {
+    console.error(`[Webhook] topup amount mismatch: expected ${expectedCents}¢ got ${actualCents}¢ for ${packageTokens} tokens on ${accountId}`);
+    return;
+  }
 
   await updateCreditAccount(accountId, {
-    topupTokens: sql`${creditAccounts.topupTokens} + ${topupTokens}`,
+    topupTokens: sql`${creditAccounts.topupTokens} + ${BigInt(packageTokens)}`,
   } as any);
-  console.log(`[TOKEN] accountId=${accountId} topup: added ${topupTokens} topup_tokens`);
+  console.log(`[TOKEN] accountId=${accountId} topup: added ${packageTokens} topup_tokens`);
 }
 
 async function applyScheduledDowngrade(accountId: string, targetTier: string, account: any) {

@@ -26,3 +26,8 @@ export function pickModel(pool: 'free' | 'premium'): string {
 export function poolForTier(tier: string): 'free' | 'premium' {
   return tier === 'free' ? 'free' : 'premium';
 }
+
+export function resetPoolCounters() {
+  freeIdx = 0;
+  premiumIdx = 0;
+}

@@ -646,10 +646,10 @@ export const creditAccounts = epsilonSchema.table(
     autoTopupThreshold: numeric('auto_topup_threshold', { precision: 10, scale: 2 }).default('5').notNull(),
     autoTopupAmount: numeric('auto_topup_amount', { precision: 10, scale: 2 }).default('20').notNull(),
     autoTopupLastCharged: timestamp('auto_topup_last_charged', { withTimezone: true, mode: 'string' }),
-    subscriptionTokens: bigint('subscription_tokens', { mode: 'number' }).default(0).notNull(),
-    topupTokens: bigint('topup_tokens', { mode: 'number' }).default(0).notNull(),
+    subscriptionTokens: bigint('subscription_tokens', { mode: 'bigint' }).default(0n).notNull(),
+    topupTokens: bigint('topup_tokens', { mode: 'bigint' }).default(0n).notNull(),
     subscriptionCycleEnd: timestamp('subscription_cycle_end', { withTimezone: true, mode: 'string' }),
-    monthlyGrantAmount: bigint('monthly_grant_amount', { mode: 'number' }).default(0).notNull(),
+    monthlyGrantAmount: bigint('monthly_grant_amount', { mode: 'bigint' }).default(0n).notNull(),
   },
   (table) => [
     index('epsilon_credit_accounts_account_id_idx').on(table.accountId),

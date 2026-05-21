@@ -11,7 +11,7 @@ import { trackCtaSignup } from '@/lib/analytics/gtm';
 const TIERS = [
   {
     name: 'Free',
-    tier: 'tier1',
+    tier: 'free',
     price: '$0',
     period: '/month',
     tokens: '10M tokens',
@@ -30,7 +30,7 @@ const TIERS = [
   },
   {
     name: 'Pro',
-    tier: 'tier2',
+    tier: 'pro',
     price: '$40',
     period: '/month',
     tokens: '200M tokens',
@@ -50,7 +50,7 @@ const TIERS = [
   },
   {
     name: 'Enterprise',
-    tier: 'tier3',
+    tier: 'enterprise',
     price: '$200',
     period: '/month',
     tokens: '1.5B tokens',
@@ -144,7 +144,7 @@ export default function PricingPage() {
         window.location.href = '/auth';
         return;
       }
-      if (tier.tier === 'tier1') {
+      if (tier.tier === 'free') {
         window.location.href = '/dashboard';
       } else {
         window.location.href = `/dashboard/billing?upgrade=${tier.tier}`;

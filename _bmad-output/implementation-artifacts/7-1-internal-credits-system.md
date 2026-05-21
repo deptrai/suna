@@ -1,6 +1,6 @@
 # Story 7.1: Token Economy Foundation + Subscription Billing
 
-Status: review
+Status: done
 
 ## Story
 

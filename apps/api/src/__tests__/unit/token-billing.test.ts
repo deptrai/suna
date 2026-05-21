@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach } from 'bun:test';
 import { config } from '../../config';
 import { getMultiplier, deductTokens } from '../../router/services/token-billing';
-import { pickModel, poolForTier } from '../../router/services/model-pool';
+import { pickModel, poolForTier, resetPoolCounters } from '../../router/services/model-pool';
 
 describe('token billing', () => {
   beforeEach(() => {
@@ -12,6 +12,8 @@ describe('token billing', () => {
     (config as any).FREE_MODEL_POOL = 'gpt-4o-mini,claude-haiku';
     (config as any).PREMIUM_MODEL_POOL = 'gpt-4o,claude-sonnet';
     (config as any).EPSILON_BILLING_INTERNAL_ENABLED = false;
+    // P19: reset round-robin counters so each test starts from idx=0
+    resetPoolCounters();
   });
 
   it('multiplier free normal', () => expect(getMultiplier('free', false)).toBe(1));
@@ -24,7 +26,10 @@ describe('token billing', () => {
   it('poolForTier enterprise', () => expect(poolForTier('enterprise')).toBe('premium'));
 
   it('pickModel free round robin 1', () => expect(pickModel('free')).toBe('gpt-4o-mini'));
-  it('pickModel free round robin 2', () => expect(pickModel('free')).toBe('claude-haiku'));
+  it('pickModel free round robin 2', () => {
+    pickModel('free');
+    expect(pickModel('free')).toBe('claude-haiku');
+  });
   it('pickModel free round robin loops', () => {
     pickModel('free');
     pickModel('free');
@@ -32,7 +37,10 @@ describe('token billing', () => {
   });
 
   it('pickModel premium round robin 1', () => expect(pickModel('premium')).toBe('gpt-4o'));
-  it('pickModel premium round robin 2', () => expect(pickModel('premium')).toBe('claude-sonnet'));
+  it('pickModel premium round robin 2', () => {
+    pickModel('premium');
+    expect(pickModel('premium')).toBe('claude-sonnet');
+  });
   it('pickModel premium round robin loops', () => {
     pickModel('premium');
     pickModel('premium');
@@ -80,5 +88,56 @@ describe('token billing', () => {
   it('deductTokens bypass regardless of token amount', async () => {
     const result = await deductTokens({ accountId: '00000000-0000-0000-0000-000000000000', actualTokens: 999999, modelPool: 'premium', thinkingEnabled: false });
     expect(result.success).toBe(true);
+  });
+
+  // P17: additional tests for real deduct paths
+  it('deductTokens insufficient_tokens returns tokensDeducted=0n', async () => {
+    (config as any).EPSILON_BILLING_INTERNAL_ENABLED = true;
+    // Mock db.execute to return insufficient_tokens response
+    const { db } = await import('../../shared/db');
+    const origExecute = db.execute.bind(db);
+    (db as any).execute = async () => [{ success: false, sub_remaining: 500n, topup_remaining: 0n }];
+    try {
+      const result = await deductTokens({ accountId: '00000000-0000-0000-0000-000000000000', actualTokens: 100, modelPool: 'free', thinkingEnabled: false });
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('insufficient_tokens');
+      // P18: tokensDeducted must be 0n on failure — nothing was actually deducted
+      expect(result.tokensDeducted).toBe(0n);
+    } finally {
+      (db as any).execute = origExecute;
+    }
+  });
+
+  it('deductTokens db_error returns tokensDeducted=0n', async () => {
+    (config as any).EPSILON_BILLING_INTERNAL_ENABLED = true;
+    const { db } = await import('../../shared/db');
+    const origExecute = db.execute.bind(db);
+    (db as any).execute = async () => { throw new Error('connection refused'); };
+    try {
+      const result = await deductTokens({ accountId: '00000000-0000-0000-0000-000000000000', actualTokens: 100, modelPool: 'premium', thinkingEnabled: false });
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('db_error');
+      // P18: tokensDeducted must be 0n on db_error too
+      expect(result.tokensDeducted).toBe(0n);
+    } finally {
+      (db as any).execute = origExecute;
+    }
+  });
+
+  it('deductTokens success returns correct tokensDeducted', async () => {
+    (config as any).EPSILON_BILLING_INTERNAL_ENABLED = true;
+    const { db } = await import('../../shared/db');
+    const origExecute = db.execute.bind(db);
+    // 100 tokens × 4× premium multiplier = 400 cost
+    (db as any).execute = async () => [{ success: true, sub_remaining: 9600n, topup_remaining: 1000n }];
+    try {
+      const result = await deductTokens({ accountId: '00000000-0000-0000-0000-000000000000', actualTokens: 100, modelPool: 'premium', thinkingEnabled: false });
+      expect(result.success).toBe(true);
+      expect(result.tokensDeducted).toBe(400n);
+      expect(result.subRemaining).toBe(9600n);
+      expect(result.topupRemaining).toBe(1000n);
+    } finally {
+      (db as any).execute = origExecute;
+    }
   });
 });

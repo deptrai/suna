@@ -67,28 +67,9 @@ billingApp.post('/setup/initialize', async (c: any) => {
   if (existing?.stripeSubscriptionId) {
     subscriptionStatus = 'already_initialized';
   } else {
-    const customerId = await getOrCreateStripeCustomer(accountId, email);
-    const { getStripe } = await import('../shared/stripe');
-    const stripe = getStripe();
-
-    const freePriceId = resolvePriceId('free', 'monthly');
-    if (!freePriceId) {
-      return c.json({ error: 'Free tier price not configured' }, 500);
-    }
-
-    const subscription = await stripe.subscriptions.create({
-      customer: customerId,
-      items: [{ price: freePriceId }],
-      payment_behavior: 'allow_incomplete',
-      payment_settings: { save_default_payment_method: 'on_subscription' },
-      metadata: { account_id: accountId, tier_key: 'free' },
-    });
-
+    // P15: Free tier doesn't need a Stripe subscription — just upsert credit account + grant tokens directly
     await upsertCreditAccount(accountId, {
       tier: 'free',
-      provider: 'stripe',
-      stripeSubscriptionId: subscription.id,
-      stripeSubscriptionStatus: 'active',
       planType: 'monthly',
       balance: '0',
       dailyCreditsBalance: '0',
@@ -100,9 +81,8 @@ billingApp.post('/setup/initialize', async (c: any) => {
 
   // Initial token grant for free tier (token economy).
   if (subscriptionStatus === 'initialized' && currentTier === 'free') {
-    const { grantSubscriptionTokensFromStripePeriod } = await import('./services/token-grants');
-    const latest = await getCreditAccount(accountId);
-    await grantSubscriptionTokensFromStripePeriod(accountId, 'free', latest?.stripeSubscriptionId ?? null);
+    const { grantSubscriptionTokens } = await import('./services/token-grants');
+    await grantSubscriptionTokens(accountId, 'free');
   }
 
   // ── Step 2: Sandbox provisioning (only for paid plans) ────────────────
@@ -151,26 +131,47 @@ billingApp.post('/cron/yearly-rotation', async (c: any) => {
   return c.json(result);
 });
 
-if (config.EPSILON_BILLING_INTERNAL_ENABLED) {
-  const YEARLY_ROTATION_INTERVAL_MS = 60 * 60 * 1000;
-  setInterval(async () => {
-    try {
-      const { processYearlyCreditRotation } = await import('./services/yearly-rotation');
-      await processYearlyCreditRotation();
-    } catch (err) {
-      console.error('[BillingApp] Yearly rotation interval error:', err);
-    }
-  }, YEARLY_ROTATION_INTERVAL_MS);
+if (!config.EPSILON_BILLING_INTERNAL_ENABLED && config.INTERNAL_EPSILON_ENV === 'prod') {
+  console.warn('[BillingApp] WARNING: EPSILON_BILLING_INTERNAL_ENABLED=false in prod — token billing is disabled');
+}
 
-  const TIER1_MONTHLY_RESET_INTERVAL_MS = 24 * 60 * 60 * 1000;
-  setInterval(async () => {
+if (config.EPSILON_BILLING_INTERNAL_ENABLED) {
+  // P13: BullMQ repeatable jobs — survive replica restarts, avoid multi-instance race
+  void (async () => {
     try {
-      const { resetExpiredTier1Tokens } = await import('./cron/tier1-monthly-reset');
-      await resetExpiredTier1Tokens();
+      const { Queue } = await import('bullmq');
+      const { redisConnection } = await import('../queue/bullmq/connection');
+
+      const billingQueue = new Queue('billing-cron', { connection: redisConnection });
+
+      await billingQueue.upsertJobScheduler(
+        'yearly-credit-rotation',
+        { every: 60 * 60 * 1000 },
+        { name: 'yearly-credit-rotation', data: {} },
+      );
+
+      await billingQueue.upsertJobScheduler(
+        'tier1-monthly-reset',
+        { every: 24 * 60 * 60 * 1000 },
+        { name: 'tier1-monthly-reset', data: {} },
+      );
+
+      const { Worker } = await import('bullmq');
+      new Worker('billing-cron', async (job) => {
+        if (job.name === 'yearly-credit-rotation') {
+          const { processYearlyCreditRotation } = await import('./services/yearly-rotation');
+          await processYearlyCreditRotation();
+        } else if (job.name === 'tier1-monthly-reset') {
+          const { resetExpiredTier1Tokens } = await import('./cron/tier1-monthly-reset');
+          await resetExpiredTier1Tokens();
+        }
+      }, { connection: redisConnection, concurrency: 1 });
+
+      console.log('[BillingApp] BullMQ billing-cron workers registered');
     } catch (err) {
-      console.error('[BillingApp] Tier1 monthly reset interval error:', err);
+      console.error('[BillingApp] Failed to register BullMQ billing-cron workers:', err);
     }
-  }, TIER1_MONTHLY_RESET_INTERVAL_MS);
+  })();
 }
 
 export { billingApp, accountDeletionApp };
