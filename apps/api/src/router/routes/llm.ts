@@ -1,8 +1,9 @@
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import type { AppContext } from '../../types';
-import { proxyToOpenRouter, extractUsage, calculateCost, getModel, getAllModels } from '../services/llm';
-import { checkCredits, deductLLMCredits } from '../services/billing';
+import { proxyToOpenRouter, proxyToThinkEndpoint, extractUsage, calculateCost, getModel, getAllModels } from '../services/llm';
+import { checkCredits, deductLLMCredits, resolveAccountTier } from '../services/billing';
+import { pickModel, getOrderedPool, isThinkPool, thinkBudgetTokens, type PoolType } from '../services/model-pool';
 import {
   applyActorSpend,
   dollarsToCents,
@@ -32,8 +33,69 @@ llm.post('/chat/completions', async (c) => {
     throw new HTTPException(400, { message: 'Validation error: messages is required and must be a non-empty array' });
   }
 
-  const modelId = body.model as string;
+  // Resolve pool model aliases. Virtual IDs exposed to UI:
+  //   epsilon/free          → FREE_MODEL_POOL   (fast, cheap)
+  //   epsilon/premium       → PREMIUM_MODEL_POOL (fast, smart)
+  //   epsilon/free-think    → FREE_THINK_MODEL_POOL  + extended thinking
+  //   epsilon/premium-think → PREMIUM_THINK_MODEL_POOL + extended thinking
+  // F10: use Map instead of plain object to avoid prototype-chain collision
+  //   (body.model === 'constructor' / '__proto__' would match `in` on plain object)
+  const POOL_ALIAS = new Map<string, PoolType>([
+    ['epsilon/free',          'free'],
+    ['epsilon/premium',       'premium'],
+    ['epsilon/free-think',    'free-think'],
+    ['epsilon/premium-think', 'premium-think'],
+  ]);
+
+  let thinkPool: PoolType | null = null;
+  let poolType: PoolType | null = null;
+  if (POOL_ALIAS.has(body.model)) {
+    const pool = POOL_ALIAS.get(body.model)!;
+
+    // F1: gate premium aliases — free-tier accounts may not request paid pools
+    if (pool === 'premium' || pool === 'premium-think') {
+      const tier = await resolveAccountTier(accountId);
+      if (tier === 'free') {
+        throw new HTTPException(403, {
+          message: 'Premium model access requires a paid plan. Please upgrade to access premium models.',
+        });
+      }
+    }
+
+    if (isThinkPool(pool)) {
+      // Think pools: resolve immediately with round-robin (single model per tier, no failover)
+      let resolved: string;
+      try {
+        resolved = pickModel(pool);
+      } catch {
+        throw new HTTPException(503, {
+          message: `Model pool temporarily unavailable (${pool}). Please try again later.`,
+        });
+      }
+      console.log(`[LLM] Pool resolve: ${body.model} → ${resolved}`);
+      body = { ...body, model: resolved };
+      thinkPool = pool;
+    } else {
+      // Non-think pools: defer to priority failover loop below
+      poolType = pool;
+    }
+  }
+
+  // modelId assigned AFTER failover so it reflects the winner model ID
+  // (set to placeholder here; overwritten after pool resolution below)
+  let modelId = body.model as string;
   const isStreaming = body.stream === true;
+
+  // F3: think path uses chainlens-proxy which returns Anthropic SSE format — not
+  // OpenAI SSE. extractUsageFromStream reads OpenAI chunks so billing would be
+  // silently skipped. Force non-streaming until Anthropic SSE is fully wired.
+  if (thinkPool && isStreaming) {
+    console.warn('[LLM] Think mode: forcing non-streaming (Anthropic SSE billing not yet implemented)');
+    body = { ...body, stream: false };
+  }
+  // effectiveStreaming: what we actually send downstream (false for think path)
+  const effectiveStreaming = thinkPool ? false : isStreaming;
+
   const sessionId =
     (typeof body.session_id === 'string' ? body.session_id : undefined) ??
     c.req.header('X-Session-ID') ??
@@ -55,15 +117,61 @@ llm.post('/chat/completions', async (c) => {
     throw new HTTPException(402, { message: creditCheck.message || 'Insufficient credits' });
   }
 
-  const modelConfig = getModel(modelId);
   // Pass through headers so proxyToOpenRouter can detect the loop-guard
-  // (X-Fallback-Source) when the request is already a fallback retry from
-  // chainlens-proxy.
+  // (X-Fallback-Source) on fallback retries from chainlens-proxy.
   const requestHeaders: Record<string, string> = {};
   for (const [k, v] of Object.entries(c.req.header())) {
     if (typeof v === 'string') requestHeaders[k.toLowerCase()] = v;
   }
-  const response = await proxyToOpenRouter(body, isStreaming, requestHeaders);
+
+  let response: Response;
+  if (poolType) {
+    // Priority failover for non-think pool aliases (epsilon/free, epsilon/premium).
+    // Candidates are ordered by priority (env var order). Try each in sequence;
+    // on 429 or >=500 → next candidate. 4xx (400, 401, 403) are NOT retried.
+    const candidates = getOrderedPool(poolType);
+    if (candidates.length === 0) {
+      throw new HTTPException(503, {
+        message: `Model pool temporarily unavailable (${poolType}). Please try again later.`,
+      });
+    }
+    let winner: { response: Response; model: string } | null = null;
+    for (const candidate of candidates) {
+      try {
+        const r = await proxyToOpenRouter(
+          { ...body, model: candidate },
+          effectiveStreaming,
+          requestHeaders,
+        );
+        if (r.status === 429 || r.status >= 500) {
+          console.warn(`[LLM] Pool failover: ${candidate} → ${r.status}, trying next`);
+          continue;
+        }
+        winner = { response: r, model: candidate };
+        break;
+      } catch (err) {
+        console.warn(`[LLM] Pool failover: ${candidate} threw (${(err as Error).message}), trying next`);
+      }
+    }
+    if (!winner) {
+      throw new HTTPException(503, {
+        message: `All models in pool '${poolType}' are unavailable. Please try again later.`,
+      });
+    }
+    response = winner.response;
+    body = { ...body, model: winner.model };
+    modelId = winner.model; // update billing ID to reflect winner
+    console.log(`[LLM] Pool resolve: epsilon/${poolType} → ${winner.model}`);
+  } else if (thinkPool) {
+    // Think-mode: route to chainlens-proxy with extended thinking params
+    const budget = thinkBudgetTokens(thinkPool);
+    response = await proxyToThinkEndpoint(body, budget);
+  } else {
+    // Direct model (no pool alias): single upstream call
+    response = await proxyToOpenRouter(body, effectiveStreaming, requestHeaders);
+  }
+
+  const modelConfig = getModel(modelId);
 
   if (!response.ok) {
     const errorBody = await response.text();
@@ -74,7 +182,7 @@ llm.post('/chat/completions', async (c) => {
     });
   }
 
-  if (isStreaming) {
+  if (effectiveStreaming) {
     const upstreamBody = response.body;
     if (!upstreamBody) {
       throw new HTTPException(502, { message: 'No response body from upstream' });

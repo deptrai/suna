@@ -13,7 +13,7 @@ import type { AppContext } from '../../types';
 
 let _accountId: string | undefined = 'acct-A';
 let _hasCredits = true;
-let _accountTier: 'tier1' | 'tier2' | 'tier3' = 'tier2';
+let _accountTier: 'free' | 'pro' | 'enterprise' = 'pro';
 
 const deductCalls: Array<{ accountId: string; toolName: string; description?: string }> = [];
 
@@ -30,6 +30,8 @@ mock.module('../../router/services/billing', () => ({
     deductCalls.push({ accountId, toolName, description });
     return { success: true, cost: 0.05, newBalance: 9.95 };
   },
+  // no-op: required by llm.ts import when test files run in combined suite
+  deductLLMCredits: async () => ({ success: true }),
   resolveAccountTier: async () => _accountTier,
 }));
 
@@ -114,7 +116,7 @@ describe('vibe-trading-mcp — async swarm pattern (Story 5.5.1)', () => {
   beforeEach(async () => {
     _accountId = 'acct-A';
     _hasCredits = true;
-    _accountTier = 'tier2';
+    _accountTier = 'pro';
     deductCalls.length = 0;
     app = await makeApp();
   });
@@ -132,7 +134,7 @@ describe('vibe-trading-mcp — async swarm pattern (Story 5.5.1)', () => {
   });
 
   test('[P0] run_swarm 410 fires AFTER tier gate — tier 1 still 403 first', async () => {
-    _accountTier = 'tier1';
+    _accountTier = 'free';
     globalThis.fetch = makeFetch({ ok: true, body: fastMcpEnvelope({}) });
     const res = await app.request(toolCallRequest('run_swarm', {}));
     expect(res.status).toBe(403);

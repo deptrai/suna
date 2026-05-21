@@ -18,6 +18,8 @@ mock.module('../../router/services/billing', () => ({
     deductCalls.push({ toolName });
     return { success: true, cost: 0.05, newBalance: 9.95 };
   },
+  // no-op: required by llm.ts import when test files run in combined suite
+  deductLLMCredits: async () => ({ success: true }),
   resolveAccountTier: async () => _accountTier,
 }));
 

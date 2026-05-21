@@ -148,7 +148,8 @@ cd apps/api && bun test \
   src/__tests__/unit/sandbox-provisioner-rollback.test.ts \
   src/__tests__/unit/vibe-trading-swarm-async.test.ts \
   src/__tests__/unit/swarm-finalize-billing.test.ts \
-  src/__tests__/unit/vibe-trading-mcp-proxy-extended.test.ts
+  src/__tests__/unit/vibe-trading-mcp-proxy-extended.test.ts \
+  src/__tests__/unit/model-pool-failover.test.ts
 
 # epsilon-master
 cd core/epsilon-master && bun test \
