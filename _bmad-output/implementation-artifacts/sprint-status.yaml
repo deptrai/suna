@@ -1,5 +1,5 @@
 # generated: 2026-05-09
-# last_updated: 2026-05-21 (Story 7.1 moved to review via bmad-dev-story)
+# last_updated: 2026-05-21 (Story 5.9.1 code review complete — 21 patches applied, status → done)
 # project: chainlensnlens
 # project_key: NOKEY
 # tracking_system: file-system
@@ -33,7 +33,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-21 (Story 7.1 moved to review via bmad-dev-story)
+last_updated: 2026-05-21 (Story 5.9.1 code review complete — 21 patches applied, status → done)
 project: chainlens
 project_key: NOKEY
 tracking_system: file-system
@@ -109,7 +109,7 @@ development_status:
   5-7-user-llm-key-management: backlog
   5-8-per-user-persistent-memory: done  # 2026-05-18 /bmad-code-review applied 39 patches: pgvector removed, IDOR fixed, URL mount corrected, transactions, tests added
   5-9-multi-strategy-backtest-comparison: done  # 2026-05-21 /bmad-code-review applied 19 patches (refund-on-all-fail, equity_curve Array guard, submit_failed UX, tab_id sanitize, runIdRef cancel token, sync stream registration, a11y, etc); AC7 deferred to 5.9.1
-  5-9-1-conversational-multi-backtest: in-progress  # 2026-05-21 agent-driven chat flow; architect review (Winston) passed second pass — AC5 resolved as Zustand store + pure helper, tier gate split (tier1 propose / tier2 run), LLM Phase 2 gated behind 10/min rate-limit, session_id required, hook-extraction safety net mandated
+  5-9-1-conversational-multi-backtest: done  # 2026-05-21 /bmad-code-review applied 21 patches: deep-merge edit composition fix, Zustand persist for refresh hydration, accountId→userId fallback + Map eviction, /backtest-multi server-side tier gate, cross-instance session run-lock, poll fallback catch re-added, bare-catch logging, mergeRevised outcome enum, session_id/hint/asset bounds, focusAndPrefillInput scoped + React setter, tabLabels uses summary, Reject clears approval, onPromote wires to dashboard deeplink. 71/71 backend + 41/41 frontend tests pass.
   epic-5-retrospective: optional
 
   # Epic 6: Browser Intelligence Extension
@@ -128,7 +128,7 @@ development_status:
 
   # Epic 7: Credit Economy & Tokenomics
   epic-7: in-progress
-  7-1-internal-credits-system: done
+  7-1-internal-credits-system: done  # AC20 added 2026-05-21: wire deductTokens → billing.ts (checkCredits token balance, deductLLMCredits weighted formula input×0.25+output, 2-pool free/premium). 2026-05-21 session: extended PoolType to 4 values (free-think/premium-think) + proxyToThinkEndpoint in llm.ts + FREE/PREMIUM_THINK_* env vars — infra ready, UI exposure deferred (chainlens-proxy not deployed). opencode.jsonc reverted to 2 models (Free/Premium) only.
   7-2-clens-token-smart-contract: backlog
   7-3-affiliate-and-airdrop-reward-system: backlog
   epic-7-retrospective: optional

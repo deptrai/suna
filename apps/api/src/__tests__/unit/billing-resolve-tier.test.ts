@@ -31,10 +31,14 @@ mock.module('../../shared/db', () => ({
       }),
     }),
   },
+  hasDatabase: true,
 }));
 
 mock.module('drizzle-orm', () => ({
   eq: (a: unknown, b: unknown) => ({ a, b }),
+  sql: (() => { const fn: any = () => 'sql'; fn.raw = (s: string) => s; return fn; })(),
+  relations: (..._args: unknown[]) => ({}),
+  inArray: (a: unknown, b: unknown) => ({ a, b }),
 }));
 
 mock.module('@epsilon/db', () => ({
@@ -65,42 +69,42 @@ describe('resolveAccountTier', () => {
 
   // ── DB tier mapping ───────────────────────────────────────────────────────
 
-  test('[P0] "pro" DB value maps to tier2', async () => {
+  test('[P0] "pro" DB value returns pro', async () => {
     _dbTier = 'pro';
     const tier = await resolveAccountTier('acct-pro');
-    expect(tier).toBe('tier2');
+    expect(tier).toBe('pro');
   });
 
-  test('[P0] "enterprise" DB value maps to tier3', async () => {
+  test('[P0] "enterprise" DB value returns enterprise', async () => {
     _dbTier = 'enterprise';
     const tier = await resolveAccountTier('acct-ent');
-    expect(tier).toBe('tier3');
+    expect(tier).toBe('enterprise');
   });
 
-  test('[P0] "free" DB value maps to tier1', async () => {
+  test('[P0] "free" DB value returns free', async () => {
     _dbTier = 'free';
     const tier = await resolveAccountTier('acct-free');
-    expect(tier).toBe('tier1');
+    expect(tier).toBe('free');
   });
 
-  test('[P0] missing row (null) defaults to tier1', async () => {
+  test('[P0] missing row (null) defaults to free', async () => {
     _dbTier = null;
     const tier = await resolveAccountTier('acct-unknown');
-    expect(tier).toBe('tier1');
+    expect(tier).toBe('free');
   });
 
   // ── Fallback behavior ─────────────────────────────────────────────────────
 
-  test('[P0] returns tier1 when DATABASE_URL is absent', async () => {
+  test('[P0] returns free when DATABASE_URL is absent', async () => {
     _hasDatabaseUrl = false;
     const tier = await resolveAccountTier('acct-nodb');
-    expect(tier).toBe('tier1');
+    expect(tier).toBe('free');
   });
 
-  test('[P0] returns tier1 when DB throws (fail-safe)', async () => {
+  test('[P0] returns free when DB throws (fail-safe)', async () => {
     _dbThrows = true;
     const tier = await resolveAccountTier('acct-dberr');
-    expect(tier).toBe('tier1');
+    expect(tier).toBe('free');
   });
 
   // ── Cache behavior ────────────────────────────────────────────────────────
@@ -108,26 +112,26 @@ describe('resolveAccountTier', () => {
   test('[P1] second call for same accountId returns cached value without re-querying DB', async () => {
     _dbTier = 'enterprise';
     const first = await resolveAccountTier('acct-cache-test');
-    expect(first).toBe('tier3');
+    expect(first).toBe('enterprise');
 
-    // Change DB value — cache should still return tier3
+    // Change DB value — cache should still return enterprise
     _dbTier = 'free';
     const second = await resolveAccountTier('acct-cache-test');
-    expect(second).toBe('tier3');
+    expect(second).toBe('enterprise');
   });
 
   test('[P1] different accountIds are cached independently', async () => {
     _dbTier = 'pro';
     const tierA = await resolveAccountTier('acct-a-independent');
-    expect(tierA).toBe('tier2');
+    expect(tierA).toBe('pro');
 
     _dbTier = 'enterprise';
     const tierB = await resolveAccountTier('acct-b-independent');
-    expect(tierB).toBe('tier3');
+    expect(tierB).toBe('enterprise');
 
-    // acct-a should still be tier2 from cache
+    // acct-a should still be pro from cache
     _dbTier = 'free';
     const tierAAgain = await resolveAccountTier('acct-a-independent');
-    expect(tierAAgain).toBe('tier2');
+    expect(tierAAgain).toBe('pro');
   });
 });

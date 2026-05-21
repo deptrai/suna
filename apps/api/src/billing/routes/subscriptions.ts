@@ -183,11 +183,12 @@ subscriptionsRouter.post('/topup/checkout', async (c) => {
   if (packageTokens <= 0 || packageTokens > 10_000_000_000) {
     return c.json({ error: 'packageTokens must be between 1 and 10,000,000,000' }, 400);
   }
-  // P2: minimum 1M tokens (= 1 pricing unit) to avoid sub-cent charges
-  const priceInCents = Math.ceil((packageTokens / 1_000_000) * config.TOPUP_TOKEN_UNIT_PRICE_CENTS);
-  if (priceInCents < 1) {
+  // P2: enforce minimum 1M tokens (one pricing unit) — Math.ceil rounds any positive
+  //     fraction up to 1 cent, so check the count explicitly.
+  if (packageTokens < 1_000_000) {
     return c.json({ error: 'Minimum top-up is 1,000,000 tokens' }, 400);
   }
+  const priceInCents = Math.ceil((packageTokens / 1_000_000) * config.TOPUP_TOKEN_UNIT_PRICE_CENTS);
 
   const { getCreditAccount } = await import('../repositories/credit-accounts');
   const account = await getCreditAccount(accountId);

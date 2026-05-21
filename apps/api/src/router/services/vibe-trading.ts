@@ -7,6 +7,7 @@ import {
   type ProposalPayload,
   type StrategyFamily,
 } from './backtest-proposal-templates';
+import { VibeTradingJobSchema } from './vibe-trading-schema';
 
 const SERVICE_TIMEOUT_MS = 28_000;
 
@@ -83,18 +84,19 @@ function sanitizeSummary(value: string): string {
 }
 
 function assertProposalPayload(payload: ProposalPayload): void {
-  const assets = payload?.context_rules?.assets;
-  if (!Array.isArray(assets) || assets.length < 1) {
-    throw new Error('Invalid proposal payload: context_rules.assets required');
-  }
-  if (!payload?.context_rules?.timeframe) {
-    throw new Error('Invalid proposal payload: timeframe required');
+  const parsed = VibeTradingJobSchema.safeParse(payload);
+  if (!parsed.success) {
+    const first = parsed.error.issues[0];
+    throw new Error(`Invalid proposal payload: ${first?.message ?? 'schema mismatch'}`);
   }
 }
 
 // Module-load assertion: fail fast in dev/build if a template regresses.
+// Test BOTH exchange branches (crypto/okx via BTC-USDT, stocks/yfinance via AAPL) so a
+// future yfinance-specific schema constraint can't slip through.
 for (const template of BACKTEST_PROPOSAL_TEMPLATES) {
   assertProposalPayload(template.build('BTC-USDT', '4h'));
+  assertProposalPayload(template.build('AAPL', '1d'));
 }
 
 function pickUniqueTemplates(hint: string | undefined, count: number) {

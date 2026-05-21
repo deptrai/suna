@@ -6,7 +6,7 @@ import { getStripe } from '../../shared/stripe';
 
 export async function grantSubscriptionTokens(accountId: string, tierName: string, cycleEnd?: Date | null) {
   const tier = getTier(tierName);
-  const monthlyTokenGrant = tier.monthlyTokenGrant ?? 0;
+  const monthlyTokenGrant = BigInt(tier.monthlyTokenGrant ?? 0);
   const nextCycleEnd = cycleEnd ? cycleEnd.toISOString() : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
   await db

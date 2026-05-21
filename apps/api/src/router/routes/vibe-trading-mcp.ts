@@ -274,8 +274,8 @@ vibeTradingMcp.all('/*', async (c) => {
 
     // Tier gate — MCP tools bypass OpenCode permission system (Risk R5)
     const tier = await resolveAccountTier(accountId);
-    if (tier !== 'tier2' && tier !== 'tier3') {
-      return c.json({ error: 'Tier 2 required for Vibe-Trading MCP tools' }, 403);
+    if (tier !== 'pro' && tier !== 'enterprise') {
+      return c.json({ error: 'Pro tier required for Vibe-Trading MCP tools' }, 403);
     }
 
     // Story 5.5.1 AC2 — deprecated synchronous tool, fail with 410 Gone.

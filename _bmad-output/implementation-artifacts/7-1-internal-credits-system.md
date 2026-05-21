@@ -402,6 +402,37 @@ Coverage bắt buộc:
 
 Minimum: 20 test cases. `cd apps/api && bun test src/__tests__/unit/token-billing.test.ts` → all green.
 
+### AC20 — Wire token billing vào `billing.ts` (LLM call chain)
+
+File: `apps/api/src/router/services/billing.ts`
+
+**`checkCredits()`** — đổi nguồn balance từ USD sang token:
+- Khi `EPSILON_BILLING_INTERNAL_ENABLED=true`: gọi `getTokenBalances(accountId)`, `hasCredits = total > 0n`
+- Khi disabled / local: giữ nguyên bypass (return `{ hasCredits: true }`)
+- Return `balance: Number(total)` (token count, không phải USD)
+
+**`deductLLMCredits()`** — swap implementation sang token:
+```typescript
+// Formula
+const actualTokens = Math.round(inputTokens * 0.25 + outputTokens);
+const tier = await resolveAccountTier(accountId);   // 'free'|'pro'|'enterprise'
+const pool = poolForTier(tier);                     // 'free'|'premium'
+const result = await deductTokens({ accountId, actualTokens, modelPool: pool, thinkingEnabled: opts?.thinkingEnabled ?? false });
+```
+- Thêm optional param `opts?: { thinkingEnabled?: boolean }` — backward compat (default false)
+- Return `{ success, cost: Number(tokensDeducted), newBalance: Number(subRemaining + topupRemaining) }`
+- Failure path: return `{ success: false, error: result.error }`
+
+**`resolveAccountTier()`** — fix return type từ 'tier1'|'tier2'|'tier3' → 'free'|'pro'|'enterprise':
+```typescript
+export type AccountTier = 'free' | 'pro' | 'enterprise';
+// raw DB value = 'free'|'pro'|'enterprise' → trả về as-is
+```
+
+**`deductToolCredits()`** — KHÔNG thay đổi. Tool calls không tính token (bên ngoài token economy).
+
+**Backward compat**: signature `deductLLMCredits(accountId, model, inputTokens, outputTokens, calculatedCost, sessionId?, opts?)` — 5 params đầu giữ nguyên, chỉ thêm `opts` tùy chọn.
+
 ---
 
 ## Tasks / Subtasks
@@ -478,10 +509,16 @@ Chỉ ADD column. KHÔNG rename/drop `balance`, `tier`, `stripeSubscriptionId`, 
 | `packages/shared/src/types/` | Toàn bộ | TierConfig interface cần update |
 
 ### Token deduction formula
+
 ```
-cost_tokens = Math.ceil(actual_llm_tokens × getMultiplier(pool, thinking))
+actual_llm_tokens = Math.round(inputTokens × 0.25 + outputTokens)
+cost_tokens       = Math.ceil(actual_llm_tokens × getMultiplier(pool, thinking))
 ```
-`Math.ceil` — làm tròn lên, platform không lỗ token.
+
+- `inputTokens × 0.25` — input tokens rẻ hơn output (reflect Anthropic pricing ratio)
+- `outputTokens × 1.0` — output tokens là cost chủ yếu
+- `Math.ceil` — làm tròn lên, platform không lỗ token
+- **2 pools**: `free` (tier='free') và `premium` (tier='pro'|'enterprise') — không tính riêng theo model name
 
 ### 2-pool deduction order
 subscription_tokens tiêu trước → khi hết → topup_tokens. Không bao giờ deduct ngược lại. Rationale: subscription tokens expire nên ưu tiên tiêu trước.
@@ -497,11 +534,11 @@ subscription_tokens tiêu trước → khi hết → topup_tokens. Không bao gi
 Luôn check `metadata.type` trước khi process — không dựa vào event type alone.
 
 ### Scope boundary (story này KHÔNG làm)
-- **KHÔNG** wire `deductTokens()` vào LLM call chain — transition story riêng
 - **KHÔNG** thay đổi sandbox provisioning logic (all-tiers-get-sandbox) — story riêng  
 - **KHÔNG** implement entitlement middleware — story T1.2
 - **KHÔNG** ẩn "Add LLM Mode" UI — story T2.7
 - **ĐÃ DONE (2026-05-21)**: Pricing page và nav link — xem AC18/AC19
+- **ĐÃ DONE (AC20)**: Wire `deductTokens()` vào billing.ts — xem AC20
 
 ### Bun runtime (AR2)
 `bun test`, `Bun.file`/`Bun.write`, ESM imports.
@@ -588,6 +625,7 @@ GPT-5 Codex CLI
 
 - 2026-05-21: Completed Story 7.1 implementation for Token Economy Foundation + Subscription Billing (backend scope), validated with token-billing unit tests and API typecheck; story moved to review.
 - 2026-05-21: `/bmad-code-review` complete — 3 reviewers (Blind Hunter / Edge Case Hunter / Acceptance Auditor) → 28 deduped findings (3 decision-needed, 20 patches, 2 deferred, 3 dismissed).
+- 2026-05-21: Post-review session: Extended `model-pool.ts` PoolType to 4 values (added `free-think`, `premium-think`). Added `proxyToThinkEndpoint()` in `llm.ts` + routing logic + 4 new env vars (`FREE_THINK_MODEL_POOL`, `PREMIUM_THINK_MODEL_POOL`, `FREE_THINK_BUDGET_TOKENS`, `PREMIUM_THINK_BUDGET_TOKENS`). UI exposure of think models deferred — see `deferred-work.md` "session 2026-05-21 — Think Mode UI". `opencode.jsonc` kept at 2 models (Free/Premium) only. **Implementation divergence from spec**: spec uses `thinkingEnabled: boolean` flag; actual uses separate PoolType routing first, then `thinkingEnabled` flows to billing — semantically equivalent, billing layer unchanged.
 
 ---
 

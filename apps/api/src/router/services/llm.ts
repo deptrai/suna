@@ -118,6 +118,73 @@ export async function proxyToOpenRouter(
   }
 }
 
+/**
+ * Forward a chat completion request to the chainlens-proxy (Anthropic-compatible)
+ * with extended thinking enabled. Used for epsilon/free-think and epsilon/premium-think.
+ *
+ * Injects:
+ *   - `thinking: { type: 'enabled', budget_tokens }` — enables reasoning tokens
+ *   - `temperature: 1` — required by Anthropic for extended thinking
+ *   - `X-Fallback-Source` — loop-guard header so chainlens-proxy won't re-route back
+ *
+ * @param body      Request body with model already resolved to a Claude model ID
+ * @param budgetTokens  Max reasoning tokens to spend (5000 for free, 10000 for premium)
+ */
+export async function proxyToThinkEndpoint(
+  body: Record<string, unknown>,
+  budgetTokens: number,
+): Promise<Response> {
+  if (!config.ANTHROPIC_PROXY_URL || !config.ANTHROPIC_PROXY_API_KEY) {
+    throw new Error('[LLM] Think mode requires ANTHROPIC_PROXY_URL and ANTHROPIC_PROXY_API_KEY to be set');
+  }
+
+  // F9: warn if caller set a temperature that will be overridden
+  if (body.temperature !== undefined && body.temperature !== 1) {
+    console.warn(
+      `[LLM] Think: overriding temperature ${body.temperature} → 1 (Anthropic extended thinking requirement)`,
+    );
+  }
+
+  // F8: budget_tokens must be < max_tokens; clamp to avoid Anthropic 400
+  let effectiveBudget = budgetTokens;
+  if (typeof body.max_tokens === 'number' && body.max_tokens > 0 && effectiveBudget >= body.max_tokens) {
+    effectiveBudget = Math.max(1, Math.floor(body.max_tokens * 0.8));
+    console.warn(
+      `[LLM] Think: budget_tokens (${budgetTokens}) >= max_tokens (${body.max_tokens}); clamped to ${effectiveBudget}`,
+    );
+  }
+
+  const thinkBody = {
+    ...body,
+    // Extended thinking params (Anthropic API)
+    thinking: { type: 'enabled', budget_tokens: effectiveBudget },
+    temperature: 1,  // Anthropic requires temp=1 when thinking is enabled
+  };
+
+  // F12: strip all trailing slashes (not just one)
+  const url = `${config.ANTHROPIC_PROXY_URL.replace(/\/+$/, '')}/chat/completions`;
+  const modelId = body.model as string;
+  console.log(`[LLM] Think proxy → chainlens-proxy: ${modelId} (budget=${effectiveBudget})`);
+
+  // F4: add timeout + structured error for network failures
+  // F7: add loop-guard header to prevent chainlens-proxy re-routing back here
+  try {
+    return await fetch(url, {
+      method: 'POST',
+      signal: AbortSignal.timeout(120_000), // 2 min — thinking requests are slow
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.ANTHROPIC_PROXY_API_KEY}`,
+        [FALLBACK_HEADER]: FALLBACK_SOURCE_TAG, // F7: loop guard
+      },
+      body: JSON.stringify(thinkBody),
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`[LLM] Think proxy request failed (${modelId}): ${msg}`);
+  }
+}
+
 export interface UsageInfo {
   promptTokens: number;
   completionTokens: number;
@@ -126,15 +193,22 @@ export interface UsageInfo {
 }
 
 /**
- * Extract usage from a non-streaming OpenAI-compatible response body.
+ * Extract usage from a non-streaming response body.
+ *
+ * Handles two response shapes:
+ * - OpenAI/OpenRouter: `prompt_tokens` / `completion_tokens`
+ * - Anthropic (think path via chainlens-proxy): `input_tokens` / `output_tokens`
+ *
  * Includes cache metrics from prompt_tokens_details when available.
  */
 export function extractUsage(responseBody: any): UsageInfo | null {
   if (!responseBody?.usage) return null;
-  const details = responseBody.usage.prompt_tokens_details;
+  const u = responseBody.usage;
+  const details = u.prompt_tokens_details;
   return {
-    promptTokens: responseBody.usage.prompt_tokens ?? 0,
-    completionTokens: responseBody.usage.completion_tokens ?? 0,
+    // F2: accept both OpenAI and Anthropic field names
+    promptTokens: u.prompt_tokens ?? u.input_tokens ?? 0,
+    completionTokens: u.completion_tokens ?? u.output_tokens ?? 0,
     cachedTokens: details?.cached_tokens ?? 0,
     cacheWriteTokens: details?.cache_write_tokens ?? 0,
   };

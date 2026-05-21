@@ -26,22 +26,32 @@ async function listEpsilonCustomersByAccountId(accountId: string): Promise<Billi
 }
 
 async function getLegacyCustomerByAccountId(accountId: string) {
-  const rows = await db
-    .select()
-    .from(billingCustomersInBasejump)
-    .where(eq(billingCustomersInBasejump.accountId, accountId));
+  try {
+    const rows = await db
+      .select()
+      .from(billingCustomersInBasejump)
+      .where(eq(billingCustomersInBasejump.accountId, accountId));
 
-  return pickCanonicalCustomer(rows as BillingCustomerRow[]);
+    return pickCanonicalCustomer(rows as BillingCustomerRow[]);
+  } catch {
+    // basejump schema may not exist in local dev environments
+    return null;
+  }
 }
 
 async function getLegacyCustomerByStripeId(stripeCustomerId: string) {
-  const [row] = await db
-    .select()
-    .from(billingCustomersInBasejump)
-    .where(eq(billingCustomersInBasejump.id, stripeCustomerId))
-    .limit(1);
+  try {
+    const [row] = await db
+      .select()
+      .from(billingCustomersInBasejump)
+      .where(eq(billingCustomersInBasejump.id, stripeCustomerId))
+      .limit(1);
 
-  return row ?? null;
+    return row ?? null;
+  } catch {
+    // basejump schema may not exist in local dev environments
+    return null;
+  }
 }
 
 async function deactivateConflictingCustomers(accountId: string, canonicalId: string, provider?: string | null) {

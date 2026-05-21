@@ -13,6 +13,7 @@ export const POPULAR_PROVIDER_IDS = [
 ];
 
 export const MODEL_SELECTOR_PROVIDER_IDS = [
+  'opencode',
   'epsilon-yolo',
   'epsilon',
   'anthropic',

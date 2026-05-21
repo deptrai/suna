@@ -16,54 +16,11 @@ import { deductCredits as deductCreditsRepo, refundCredits as refundCreditsRepo 
 import { claimOrAssertShadowOwnership, ShadowOwnershipError } from '../services/shadow-ownership';
 import { config, getToolCost } from '../../config';
 import type { AppContext } from '../../types';
+import { VibeTradingJobSchema } from '../services/vibe-trading-schema';
 
 const TOOL = 'vibe_trading_backtest';
 
 const SESSION_ID = z.string().max(128).regex(/^[A-Za-z0-9_-]+$/).optional();
-
-const VibeTradingJobSchema = z
-  .object({
-    simulation_environment: z.object({
-      exchange: z.string().min(1),
-      instrument_type: z.enum(['SPOT', 'PERPETUAL']), // NOT 'FUTURES' — verified api_models.py:7-9
-      initial_capital: z.string(),
-      trading_fees: z.string().optional(),
-      slippage_tolerance: z.string().optional(),
-      historical_range: z.number().int().min(1).max(730), // Vibe-Trading API actual limit: le=730
-      gas_fee_model: z.string().optional(),
-      track_impermanent_loss: z.boolean().optional(),
-    }),
-    risk_management: z.object({
-      max_drawdown_percentage: z.string(),
-      stop_loss: z.string().optional(),
-      take_profit: z.string().optional(),
-      position_sizing: z.string(),
-      leverage: z.string().optional(),
-    }),
-    context_rules: z.object({
-      assets: z.array(z.string()).min(1),
-      timeframe: z.string().regex(/^\d+[mhdwHMD]$/), // Pydantic pattern
-      indicators: z.array(z.string()).optional(),
-      natural_language_rules: z.string().max(10000).optional(),
-      executable_code: z.string().max(50000).optional(),
-    }),
-    execution_flags: z
-      .object({
-        enable_monte_carlo_stress_test: z.boolean().optional(),
-        enable_rl_optimization: z.boolean().optional(),
-      })
-      .optional(),
-    session_id: SESSION_ID,
-  })
-  .refine(
-    (d) =>
-      !(
-        d.simulation_environment.instrument_type === 'SPOT' &&
-        d.risk_management.leverage &&
-        Number(d.risk_management.leverage) > 1.0
-      ),
-    { message: 'Leverage greater than 1.0 is not supported for SPOT instruments.' },
-  );
 const VibeTradingMultiBacktestSchema = z.object({
   strategies: z
     .array(
@@ -81,12 +38,17 @@ const VibeTradingMultiBacktestSchema = z.object({
   session_id: SESSION_ID,
 });
 const ProposeMultiBacktestSchema = z.object({
-  asset: z.string().min(1),
+  // Bound asset to a sensible charset; prevents DoS via huge strings and the brittle
+  // `includes('-')` exchange split from silently mis-routing odd inputs like "BTC USDT".
+  asset: z.string().min(1).max(32).regex(/^[A-Z0-9]{1,16}([-.][A-Z0-9]{1,16})?$/, 'invalid asset format'),
   count: z.number().int().min(2).max(5).optional(),
-  hint: z.string().optional(),
+  // Bound hint length to prevent DoS through `.toLowerCase().includes()` scoring.
+  hint: z.string().max(512).optional(),
   revise_tab_id: z.string().min(1).max(128).optional(),
   timeframe: z.string().regex(/^\d+[mhdwHMD]$/).optional(),
-  session_id: z.string().min(1),
+  // Reuse the SESSION_ID constraint shape from the file (charset + length) — was previously
+  // unbounded `min(1)` which allowed 10MB session_id to bloat Map keys + log injection.
+  session_id: z.string().min(1).max(128).regex(/^[A-Za-z0-9_-]+$/, 'invalid session_id'),
 });
 
 export const vibeTrading = new Hono<{ Variables: AppContext }>();
@@ -177,9 +139,20 @@ vibeTrading.post('/backtest-multi', async (c) => {
     throw new HTTPException(400, { message: 'between 2 and 5 strategies required' });
   }
 
+  // Tier gate (defense in depth — Story 5.9.1 D2a): the UI disables Run All for tier1, the
+  // agent permission denies the tool to free tier, but a browser user can bypass both by hand-
+  // crafting an HTTP call. Enforce server-side so billing-sensitive multi-run requires pro+.
+  const tier = await resolveAccountTier(accountId);
+  if (tier !== 'pro' && tier !== 'enterprise') {
+    return c.json(
+      { success: false, error: 'Multi-strategy backtest requires Pro — upgrade to run' },
+      403,
+    );
+  }
+
   const ua = (c.req.header('user-agent') ?? '').replace(/[\r\n\t]/g, ' ').slice(0, 80);
   console.log(
-    `[TIER-BYPASS-SUSPECT] vibe_trading_backtest_multi account=${accountId} count=${count} ua="${ua}"`,
+    `[TIER-BYPASS-SUSPECT] vibe_trading_backtest_multi account=${accountId} count=${count} tier=${tier} ua="${ua}"`,
   );
 
   const unitCost = getToolCost(TOOL, 0);
@@ -319,7 +292,15 @@ vibeTrading.post('/backtest-multi', async (c) => {
 });
 
 vibeTrading.post('/propose-multi', async (c) => {
+  // Rate-limit key fallback: combinedAuth only sets `accountId` on the Epsilon-token path;
+  // Supabase-JWT (web) and local-dev users have accountId=undefined. Fall back to `userId`
+  // so each user gets their own bucket instead of all web users sharing the `undefined` slot.
+  // Final fallback to user-agent prevents global single-bucket collapse for completely
+  // anonymous unauth (shouldn't happen behind combinedAuth, but defensive).
   const accountId = c.get('accountId');
+  const userId = c.get('userId');
+  const rateLimitKey = accountId || userId || `anon:${(c.req.header('user-agent') ?? 'unknown').slice(0, 32)}`;
+
   const body = await c.req.json().catch(() => null);
   if (body === null) throw new HTTPException(400, { message: 'Invalid JSON body' });
 
@@ -333,20 +314,30 @@ vibeTrading.post('/propose-multi', async (c) => {
   }
 
   const now = Date.now();
-  const history = proposeRouteRateLimit.get(accountId) ?? [];
+  const history = proposeRouteRateLimit.get(rateLimitKey) ?? [];
   const recent = history.filter((ts) => now - ts < PROPOSE_RATE_LIMIT_WINDOW_MS);
   if (recent.length >= PROPOSE_RATE_LIMIT_MAX) {
     c.header('Retry-After', '60');
     return c.json({ success: false, error: 'Rate limit exceeded. Try again in a minute.' }, 429);
   }
   recent.push(now);
-  proposeRouteRateLimit.set(accountId, recent);
+  // Map eviction: delete the entry when no recent timestamps remain, so unique keys don't
+  // accumulate indefinitely. (Map.set with empty array would leave a phantom row in memory.)
+  if (recent.length === 0) {
+    proposeRouteRateLimit.delete(rateLimitKey);
+  } else {
+    proposeRouteRateLimit.set(rateLimitKey, recent);
+  }
 
   const tier = await resolveAccountTier(accountId);
-  const ua = (c.req.header('user-agent') ?? '').replace(/[\r\n\t]/g, ' ').slice(0, 80);
-  console.log(
-    `[TIER-BYPASS-SUSPECT] propose_backtest_multi account=${accountId} tier=${tier} ua="${ua}"`,
-  );
+  // Only emit tier-bypass log on the actual "free tier attempts propose" path, not happy path —
+  // happy-path logging would flood logs and dilute the security signal of the prefix.
+  if (tier === 'free') {
+    const ua = (c.req.header('user-agent') ?? '').replace(/[\r\n\t]/g, ' ').slice(0, 80);
+    console.log(
+      `[TIER-BYPASS-SUSPECT] propose_backtest_multi free account=${accountId ?? 'jwt-user'} ua="${ua}"`,
+    );
+  }
 
   try {
     const result = proposeBacktestStrategies({
@@ -358,7 +349,10 @@ vibeTrading.post('/propose-multi', async (c) => {
       caller_tier: tier,
     });
     return c.json({ success: true, ...result });
-  } catch {
+  } catch (err) {
+    // Log the actual error so template regressions or schema-assert failures don't silently
+    // disappear behind a "temporarily unavailable" 503. User still sees the generic message.
+    console.error('[propose-multi] strategy generation failed:', err);
     return c.json(
       { success: false, error: 'Strategy generation temporarily unavailable; please try again in a moment' },
       503,
@@ -392,8 +386,8 @@ vibeTrading.get('/shadow-reports/:shadowId', async (c) => {
   // TODO: when shadow accounts get DB-backed ownership tracking (future story),
   // add `WHERE owner_account_id = ?` check to scope reports to their owner.
   const tier = await resolveAccountTier(accountId);
-  if (tier !== 'tier2' && tier !== 'tier3') {
-    throw new HTTPException(403, { message: 'Tier 2 required for Shadow Account reports' });
+  if (tier !== 'pro' && tier !== 'enterprise') {
+    throw new HTTPException(403, { message: 'Pro tier required for Shadow Account reports' });
   }
 
   const shadowId = c.req.param('shadowId');

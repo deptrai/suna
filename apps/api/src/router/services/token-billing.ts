@@ -34,7 +34,7 @@ export async function deductTokens(params: TokenDeductParams): Promise<TokenDedu
 
   try {
     const result = await db.execute(sql`
-      SELECT * FROM atomic_use_tokens(${params.accountId}::uuid, ${cost}::bigint)
+      SELECT * FROM epsilon.atomic_use_tokens(${params.accountId}::uuid, ${cost}::bigint)
     `);
     const row = (result as any)[0] ?? (result as any).rows?.[0];
     if (!row?.success) {

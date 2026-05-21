@@ -10,6 +10,7 @@ import { getCustomerByAccountId, upsertCustomer } from '../repositories/customer
 import { BillingError, SubscriptionError } from '../../errors';
 import { getTier, isUpgrade, isDowngrade, getMonthlyCredits, resolvePriceId, getComputeDisplayPriceCents, getComputeProductId, getComputeDescription } from './tiers';
 import { grantCredits, resetExpiringCredits } from './credits';
+import { grantSubscriptionTokensFromStripePeriod } from './token-grants';
 import { isPlatformAdmin } from '../../shared/platform-roles';
 import Stripe from 'stripe';
 import { AUTO_TOPUP_DEFAULT_AMOUNT, AUTO_TOPUP_DEFAULT_THRESHOLD } from '@epsilon/shared';
@@ -322,6 +323,14 @@ export async function confirmInlineCheckout(params: {
 
   const billingPeriod = (subscription.metadata?.billing_period ?? 'monthly') as string;
   await activateSubscription(accountId, subscriptionId, tierKey, billingPeriod);
+
+  // Grant subscription tokens — idempotent: webhook may also fire but won't double-grant
+  // because grantSubscriptionTokensFromStripePeriod sets subscriptionTokens absolutely (not additive).
+  try {
+    await grantSubscriptionTokensFromStripePeriod(accountId, tierKey, subscriptionId);
+  } catch (err) {
+    console.error('[Billing] confirmInlineCheckout: failed to grant subscription tokens:', err);
+  }
 
   const previousSubscriptionId = subscription.metadata?.previous_subscription_id;
   if (previousSubscriptionId) {
@@ -719,6 +728,14 @@ export async function confirmCheckoutSession(params: {
 
   const commitmentType = session.metadata?.commitment_type ?? 'monthly';
   await activateSubscription(accountId, subscriptionId, tierKey, commitmentType);
+
+  // Grant subscription tokens — idempotent with webhook checkout.session.completed path
+  // (absolute SET, not additive — safe to call even if webhook already fired).
+  try {
+    await grantSubscriptionTokensFromStripePeriod(accountId, tierKey, subscriptionId);
+  } catch (err) {
+    console.error('[Billing] confirmCheckoutSession: failed to grant subscription tokens:', err);
+  }
 
   const tier = getTier(tierKey);
   if (tier.monthlyCredits > 0) {

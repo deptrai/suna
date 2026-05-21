@@ -11,12 +11,14 @@ export default tool({
     'CRITICAL EXECUTION POLICY: when user asks for multi-strategy backtest in natural language, call this tool before writing any JSON. ' +
     'Never instruct users to configure LLM/API keys.',
   args: {
-    asset: tool.schema.string(),
+    // Mirror backend ProposeMultiBacktestSchema bounds — fail fast at tool boundary so the
+    // agent gets a clear validation error instead of an opaque 400 from the route.
+    asset: tool.schema.string().min(1).max(32),
     count: tool.schema.number().min(2).max(5).optional(),
-    hint: tool.schema.string().optional(),
-    revise_tab_id: tool.schema.string().optional(),
+    hint: tool.schema.string().max(512).optional(),
+    revise_tab_id: tool.schema.string().min(1).max(128).optional(),
     timeframe: tool.schema.string().optional(),
-    session_id: tool.schema.string(),
+    session_id: tool.schema.string().min(1).max(128),
   },
   async execute(args) {
     const epsilonToken = getEnv('EPSILON_TOKEN');

@@ -6,12 +6,15 @@ import {
   checkCredits as checkCreditsDb,
   deductCredits as deductCreditsDb,
 } from '../../repositories/credits';
+import { deductTokens, getTokenBalances } from './token-billing';
+import { poolForTier } from './model-pool';
 import type { BillingCheckResult, BillingDeductResult } from '../../types';
 
 /**
- * Check if account has sufficient credits.
+ * Check if account has sufficient tokens (token economy) or credits (USD legacy).
  *
- * Uses direct DB query via Drizzle. Requires DATABASE_URL to be configured.
+ * When EPSILON_BILLING_INTERNAL_ENABLED: checks subscription_tokens + topup_tokens > 0.
+ * Falls back to local/no-DB bypass for self-hosted deployments.
  */
 export async function checkCredits(
   accountId: string,
@@ -19,24 +22,29 @@ export async function checkCredits(
   options?: { skipDevCheck?: boolean }
 ): Promise<BillingCheckResult> {
   if (!config.DATABASE_URL) {
-    // In local mode without a DB, skip credit checks entirely
     if (config.isLocal()) {
       return { hasCredits: true, balance: 0, message: 'Credits check skipped (local mode, no DB)' };
     }
     throw new Error('DATABASE_URL is required for credit checks');
   }
 
-  const result = await checkCreditsDb(accountId, minimumRequired);
+  if (!config.EPSILON_BILLING_INTERNAL_ENABLED) {
+    return { hasCredits: true, balance: 0, message: 'Credits check skipped (billing disabled)' };
+  }
 
-  // In local mode, allow even when no credit account row exists (e.g. migrations not run)
-  if (!result.hasCredits && config.isLocal()) {
+  // Token economy: check subscription_tokens + topup_tokens
+  const balances = await getTokenBalances(accountId);
+  const hasCredits = balances.total > 0n;
+
+  // In local mode, allow even when no credit account row exists
+  if (!hasCredits && config.isLocal()) {
     return { hasCredits: true, balance: 0, message: 'Credits check skipped (local mode)' };
   }
 
   return {
-    hasCredits: result.hasCredits,
-    message: result.message,
-    balance: result.balance,
+    hasCredits,
+    balance: Number(balances.total),
+    message: hasCredits ? 'OK' : 'Insufficient tokens — please top up or upgrade your plan',
   };
 }
 
@@ -97,9 +105,13 @@ export async function deductToolCredits(
 }
 
 /**
- * Deduct credits for LLM usage.
+ * Deduct tokens for LLM usage (token economy).
  *
- * Uses direct DB atomic deduction via Drizzle. Requires DATABASE_URL to be configured.
+ * Formula: actualTokens = round(inputTokens × 0.25 + outputTokens)
+ * Cost:    Math.ceil(actualTokens × getMultiplier(pool, thinking))
+ *
+ * Pool is resolved from account tier: free → 'free', pro/enterprise → 'premium'.
+ * Signature is backward-compatible — callers pass same 5 positional args; opts is new.
  */
 export async function deductLLMCredits(
   accountId: string,
@@ -107,15 +119,9 @@ export async function deductLLMCredits(
   inputTokens: number,
   outputTokens: number,
   calculatedCost: number,
-  sessionId?: string
+  sessionId?: string,
+  opts?: { thinkingEnabled?: boolean }
 ): Promise<BillingDeductResult> {
-  if (calculatedCost <= 0) {
-    return { success: true, cost: 0, newBalance: 0 };
-  }
-
-  const baseDescription = `LLM: ${model} (${inputTokens}/${outputTokens} tokens)`;
-  const description = sessionId ? `${baseDescription} [session:${sessionId}]` : baseDescription;
-
   if (!config.DATABASE_URL) {
     if (config.isLocal()) {
       return { success: true, cost: 0, newBalance: 0 };
@@ -123,30 +129,40 @@ export async function deductLLMCredits(
     throw new Error('DATABASE_URL is required for credit deductions');
   }
 
-  // Skip deduction in local mode (see deductToolCredits for full rationale).
   if (!config.EPSILON_BILLING_INTERNAL_ENABLED) {
     return { success: true, cost: 0, newBalance: 0 };
   }
 
-  console.info(`[BILLING] Deducting $${calculatedCost.toFixed(6)} for ${model} (direct DB)`);
+  // Weighted token formula: input counts as 0.25× (cheaper), output counts as 1×
+  const actualTokens = Math.round(inputTokens * 0.25 + outputTokens);
+  if (actualTokens <= 0) {
+    return { success: true, cost: 0, newBalance: 0 };
+  }
 
-  const result = await deductCreditsDb(accountId, calculatedCost, description);
+  const tier = await resolveAccountTier(accountId);
+  const pool = poolForTier(tier);
+  const thinkingEnabled = opts?.thinkingEnabled ?? false;
+
+  console.info(`[BILLING] token deduct: model=${model} input=${inputTokens} output=${outputTokens} actual=${actualTokens} pool=${pool} thinking=${thinkingEnabled}`);
+
+  const result = await deductTokens({ accountId, actualTokens, modelPool: pool, thinkingEnabled });
 
   if (!result.success) {
+    console.warn(`[BILLING] token deduct failed: ${result.error} sub=${result.subRemaining} topup=${result.topupRemaining}`);
     return { success: false, cost: 0, newBalance: 0, error: result.error };
   }
 
-  console.info(`[BILLING] Deducted $${calculatedCost.toFixed(6)}. New balance: $${result.newBalance?.toFixed(2)}`);
+  const newBalance = Number(result.subRemaining + result.topupRemaining);
+  console.info(`[BILLING] deducted ${result.tokensDeducted} tokens. remaining=${newBalance}`);
 
   return {
     success: true,
-    cost: result.amountDeducted || calculatedCost,
-    newBalance: result.newBalance || 0,
-    transactionId: result.transactionId,
+    cost: Number(result.tokensDeducted),
+    newBalance,
   };
 }
 
-export type AccountTier = 'tier1' | 'tier2' | 'tier3';
+export type AccountTier = 'free' | 'pro' | 'enterprise';
 
 // In-memory cache: accountId → { tier, expiresAt }
 const tierCache = new Map<string, { tier: AccountTier; expiresAt: number }>();
@@ -154,14 +170,14 @@ const TIER_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 /**
  * Resolve account tier from credit_accounts.tier column.
- * Tier values in DB: 'free' → tier1, 'pro' → tier2, 'enterprise' → tier3.
- * Defaults to tier1 if account not found or DB unavailable.
+ * Returns canonical tier name: 'free' | 'pro' | 'enterprise'.
+ * Defaults to 'free' if account not found or DB unavailable.
  */
 export async function resolveAccountTier(accountId: string): Promise<AccountTier> {
   const cached = tierCache.get(accountId);
   if (cached && Date.now() < cached.expiresAt) return cached.tier;
 
-  if (!config.DATABASE_URL) return 'tier1';
+  if (!config.DATABASE_URL) return 'free';
 
   try {
     const [row] = await db
@@ -172,13 +188,13 @@ export async function resolveAccountTier(accountId: string): Promise<AccountTier
 
     const raw = row?.tier ?? 'free';
     const tier: AccountTier =
-      raw === 'enterprise' ? 'tier3' :
-      raw === 'pro' ? 'tier2' :
-      'tier1';
+      raw === 'enterprise' ? 'enterprise' :
+      raw === 'pro' ? 'pro' :
+      'free';
 
     tierCache.set(accountId, { tier, expiresAt: Date.now() + TIER_CACHE_TTL_MS });
     return tier;
   } catch {
-    return 'tier1';
+    return 'free';
   }
 }

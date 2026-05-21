@@ -12,6 +12,12 @@ import {
 } from '../repositories/transactions';
 import { BillingError } from '../../errors';
 import { resolveAccountId } from '../../shared/resolve-account';
+import { config } from '../../config';
+
+function isStripeTestMode(): boolean {
+  const key = config.STRIPE_SECRET_KEY ?? '';
+  return key.includes('placeholder') || !key.startsWith('sk_');
+}
 
 export const paymentsRouter = new Hono<AppEnv>();
 
@@ -22,6 +28,13 @@ paymentsRouter.post('/purchase-credits', async (c) => {
   const amount = Number(body.amount);
 
   if (!amount || amount <= 0) throw new BillingError('Invalid amount');
+
+  // Local dev bypass — Stripe placeholder key cannot create real sessions
+  if (isStripeTestMode()) {
+    const mockUrl = `${body.success_url || 'http://localhost:3000'}?mock_purchase=true&amount=${amount}&account=${accountId}`;
+    console.log(`[billing/dev] Mock purchase-credits: $${amount} for account ${accountId}`);
+    return c.json({ checkout_url: mockUrl });
+  }
 
   const account = await getCreditAccount(accountId);
   const tierName = account?.tier ?? 'free';

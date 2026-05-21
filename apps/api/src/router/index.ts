@@ -22,11 +22,15 @@ import { onchainFactCheck } from './routes/onchain-fact-check';
 import { smartMoneyFlow } from './routes/smart-money-flow';
 import { protocolValuation } from './routes/protocol-valuation';
 import { llm } from './routes/llm';
+import { validatePoolConfig } from './services/model-pool';
 import { proxy } from './routes/proxy';
 import { anthropic } from './routes/anthropic';
 import { memory } from './routes/memory';
 
 const router = new Hono();
+
+// F13/F14: Validate think-mode pool config at startup (logs warnings, doesn't throw)
+validatePoolConfig();
 
 // Health checks (no auth)
 router.get('/health', (c) => {
